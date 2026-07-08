@@ -8,7 +8,7 @@ const router = Router();
 
 router.use(authenticate);
 
-async function createFriendNotification(userId, sender, type) {
+async function createFriendNotification(userId, sender, _type) {
   await Notification.create({
     userId,
     type: 'friend_request',
@@ -130,8 +130,6 @@ router.get('/', async (req, res) => {
     const user = await User.findById(req.user._id).populate('friends', 'username displayName avatar balance createdAt');
     const friendsWithNetWorth = await Promise.all(
       (user.friends || []).map(async (f) => {
-        const UserModel = User;
-        const friendUser = await UserModel.findById(f._id);
         const Property = (await import('../models/Property.js')).default;
         const properties = await Property.find({ ownerId: f._id });
         const portfolioValue = properties.reduce((sum, p) => sum + p.currentPrice, 0);

@@ -157,7 +157,7 @@ function calculateProjectCost(project, city, location) {
   return Math.round(project.baseCost * cityMultiplier * locationMultiplier.costMultiplier * marketMultiplier);
 }
 
-function calculateUnitRent(project, city, location, unitIndex) {
+function calculateUnitRent(project, city, location, _unitIndex) {
   const cityMultiplier = getCityCostMultiplier(city?.name || '');
   const locationMultiplier = getLocationMultiplier(location);
   const demandMultiplier = city ? 0.7 + (city.demandIndex || 1.0) * 0.3 : 1.0;

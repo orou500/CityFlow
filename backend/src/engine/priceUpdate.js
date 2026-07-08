@@ -1,5 +1,4 @@
 import Property from '../models/Property.js';
-import City from '../models/City.js';
 import { getTickNumber } from '../models/GameState.js';
 
 function clamp(value, min, max) {

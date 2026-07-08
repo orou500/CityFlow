@@ -1,10 +1,9 @@
 import ConstructionProject from '../models/ConstructionProject.js';
 import Property from '../models/Property.js';
-import City from '../models/City.js';
 import User from '../models/User.js';
 import Notification from '../models/Notification.js';
 import { getTickNumber } from '../models/GameState.js';
-import { getAllProjects, calculateProjectCost, calculateUnitRent } from '../config/developmentProjects.js';
+import { getAllProjects, calculateUnitRent } from '../config/developmentProjects.js';
 
 export async function processConstruction() {
   const tickNumber = await getTickNumber();

@@ -32,7 +32,7 @@ export async function executeTick() {
     const loanResults = await processLoans();
 
     console.log('[TICK] Balancing market...');
-    const marketResults = await balanceMarket();
+    await balanceMarket();
 
     console.log('[TICK] Processing construction...');
     const constructionResults = await processConstruction();

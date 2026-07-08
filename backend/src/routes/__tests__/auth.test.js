@@ -1,6 +1,5 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
-import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import { createApp } from '../../test/createApp.js';
 import {
