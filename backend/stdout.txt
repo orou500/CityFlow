@@ -1,0 +1,4 @@
+MongoDB connected
+CityFlow API running on port 5000
+[SCHEDULER] World tick scheduled every 60 minutes (*/60 * * * *)
+[SCHEDULER] Scheduler started

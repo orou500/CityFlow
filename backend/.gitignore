@@ -1,0 +1,32 @@
+# === Secrets & Environment ===
+.env
+.env.*
+!.env.example
+
+# === Dependencies ===
+node_modules/
+
+# === Build Outputs ===
+dist/
+build/
+
+# === Logs ===
+*.log
+logs/
+
+# === Database ===
+*.sqlite
+*.db
+data/
+mongodb-data/
+uploads/
+
+# === Coverage ===
+coverage/
+.nyc_output/
+
+# === Keys ===
+*.pem
+*.key
+*.crt
+*.cert

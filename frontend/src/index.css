@@ -1,0 +1,154 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-surface: #ffffff;
+  --color-card: #ffffff;
+  --color-border: #e2e8f0;
+  --color-primary: #0f172a;
+  --color-secondary: #475569;
+  --color-muted: #64748b;
+  --color-bg-overlay: rgba(0, 0, 0, 0.5);
+  --color-chart-line: #10b981;
+  --color-chart-fill: #6ee7b7;
+  --color-chart-grid: #e2e8f0;
+  --color-chart-text: #475569;
+  --color-notification-glow: rgba(239, 68, 68, 0.45);
+}
+
+.dark {
+  --color-surface: #0f172a;
+  --color-card: #1e293b;
+  --color-border: #334155;
+  --color-primary: #f8fafc;
+  --color-secondary: #cbd5e1;
+  --color-muted: #64748b;
+  --color-bg-overlay: rgba(0, 0, 0, 0.6);
+  --color-chart-line: #34d399;
+  --color-chart-fill: #6ee7b7;
+  --color-chart-grid: #334155;
+  --color-chart-text: #94a3b8;
+  --color-notification-glow: rgba(248, 113, 113, 0.5);
+}
+
+.theme-transition * {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease !important;
+}
+
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  direction: ltr;
+}
+
+body[dir="rtl"] {
+  direction: rtl;
+}
+
+@keyframes avatar-pulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 var(--color-notification-glow); }
+  50% { transform: scale(1.08); box-shadow: 0 0 0 6px transparent; }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 transparent; }
+}
+
+@keyframes badge-pop {
+  0% { transform: scale(0); }
+  60% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+
+.animate-avatar-pulse {
+  animation: avatar-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes evt-glow {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.18); }
+}
+
+@keyframes evt-pulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.25); }
+}
+
+.animate-evt-pulse {
+  animation: evt-pulse 2s ease-in-out infinite;
+}
+
+.evt-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  animation: evt-glow 2.4s ease-in-out infinite;
+}
+
+.country-pin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.country-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+}
+
+.country-pin:hover .country-dot {
+  transform: scale(1.2);
+}
+
+.country-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(0,0,0,0.65);
+  padding: 2px 8px;
+  border-radius: 5px;
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
+  letter-spacing: 0.01em;
+}
+
+.country-meta {
+  font-size: 9px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.8);
+  background: rgba(0,0,0,0.4);
+  padding: 0 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
+}
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: var(--color-card) !important;
+  color: var(--color-primary) !important;
+}
+
+.leaflet-popup-content-wrapper {
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.leaflet-popup-content {
+  margin: 12px 16px !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
+
+.leaflet-popup-close-button {
+  color: var(--color-muted) !important;
+}
