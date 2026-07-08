@@ -20,6 +20,9 @@ async function createFriendNotification(userId, sender, type) {
 
 router.post('/request/:username', async (req, res) => {
   try {
+    if (req.params.username === '__system__') {
+      return res.status(404).json({ error: 'User not found' });
+    }
     const target = await User.findOne({ username: req.params.username });
     if (!target) return res.status(404).json({ error: 'User not found' });
     if (req.user._id.equals(target._id)) return res.status(400).json({ error: 'Cannot send request to yourself' });
@@ -166,6 +169,9 @@ router.get('/requests', async (req, res) => {
 
 router.get('/status/:username', async (req, res) => {
   try {
+    if (req.params.username === '__system__') {
+      return res.status(404).json({ error: 'User not found' });
+    }
     const target = await User.findOne({ username: req.params.username });
     if (!target) return res.status(404).json({ error: 'User not found' });
 

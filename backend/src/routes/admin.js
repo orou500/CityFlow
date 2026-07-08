@@ -85,7 +85,7 @@ router.post('/tick/run', async (req, res) => {
 
 router.get('/users', async (req, res) => {
   try {
-    const users = await User.find().select('-password').sort({ createdAt: -1 });
+    const users = await User.find({ username: { $ne: '__system__' } }).select('-password').sort({ createdAt: -1 });
     const usersWithStats = await Promise.all(users.map(async (u) => {
       const propCount = await Property.countDocuments({ ownerId: u._id });
       return { ...u.toObject(), propertyCount: propCount };

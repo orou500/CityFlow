@@ -95,14 +95,6 @@ async function seed() {
     });
     console.log(`Created admin user: ${adminUser.username} (role: ${adminUser.role})`);
 
-    const demoUser = await User.create({
-      username: 'demo',
-      email: 'demo@cityflow.com',
-      password: 'demo123',
-      balance: 100000,
-    });
-    console.log(`Created demo user: ${demoUser.username}`);
-
     console.log('Seed completed successfully!');
     process.exit(0);
   } catch (err) {
