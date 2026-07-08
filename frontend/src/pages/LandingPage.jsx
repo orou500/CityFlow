@@ -143,22 +143,22 @@ export default function LandingPage() {
   }, []);
 
   function formatActivity(tx) {
-    const buyerName = tx.buyerId?.displayName || tx.buyerId?.username || 'Someone';
-    const sellerName = tx.sellerId?.displayName || tx.sellerId?.username || 'Someone';
-    const propName = tx.propertyId?.name || 'a property';
+    const buyer = tx.buyerId?.displayName || tx.buyerId?.username || 'Someone';
+    const seller = tx.sellerId?.displayName || tx.sellerId?.username || 'Someone';
+    const property = tx.propertyId?.name || 'a property';
     const amount = tx.price?.toLocaleString();
 
     switch (tx.type) {
       case 'buy':
-        return `${buyerName} bought ${propName} for $${amount}`;
+        return t('landing.activity.buy', { buyer, property, amount });
       case 'sell':
-        return `${sellerName} sold ${propName} for $${amount}`;
+        return t('landing.activity.sell', { seller, property, amount });
       case 'construction':
-        return `${buyerName} completed construction on ${propName}`;
+        return t('landing.activity.construction', { buyer, property });
       case 'upgrade':
-        return `${buyerName} upgraded ${propName}`;
+        return t('landing.activity.upgrade', { buyer, property });
       default:
-        return `${propName} was transacted for $${amount}`;
+        return t('landing.activity.default', { property, amount });
     }
   }
 
