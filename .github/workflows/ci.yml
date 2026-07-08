@@ -25,9 +25,23 @@ jobs:
 
       - run: npm install
 
-      - run: npm run test
+      - name: Lint
+        run: npm run lint
 
-      - run: npm run build
+      - name: Format check
+        run: npm run format
+
+      - name: Test with coverage
+        run: npm run test:coverage
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/
 
   backend:
     runs-on: ubuntu-latest
@@ -47,6 +61,27 @@ jobs:
 
       - run: npm install
 
-      - run: npm run test
+      - name: Lint
+        run: npm run lint
 
-      - run: npm run build --if-present
+      - name: Format check
+        run: npm run format
+
+      - name: Test with coverage
+        run: npm run test:coverage
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage/
+
+  lint-format-summary:
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [frontend, backend]
+    steps:
+      - run: |
+          echo "## CI Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Frontend: lint, format, test, build" >> $GITHUB_STEP_SUMMARY
+          echo "- Backend: lint, format, test" >> $GITHUB_STEP_SUMMARY

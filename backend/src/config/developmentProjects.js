@@ -124,23 +124,21 @@ const DEVELOPMENT_PROJECTS = {
 };
 
 const LOCATION_MULTIPLIERS = {
-  'Manhattan': { costMultiplier: 1.5, rentMultiplier: 1.8 },
-  'Downtown': { costMultiplier: 1.3, rentMultiplier: 1.4 },
-  'Midtown': { costMultiplier: 1.25, rentMultiplier: 1.35 },
+  Manhattan: { costMultiplier: 1.5, rentMultiplier: 1.8 },
+  Downtown: { costMultiplier: 1.3, rentMultiplier: 1.4 },
+  Midtown: { costMultiplier: 1.25, rentMultiplier: 1.35 },
   'Upper East Side': { costMultiplier: 1.4, rentMultiplier: 1.6 },
-  'Brooklyn': { costMultiplier: 1.1, rentMultiplier: 1.2 },
-  'Central': { costMultiplier: 1.2, rentMultiplier: 1.3 },
+  Brooklyn: { costMultiplier: 1.1, rentMultiplier: 1.2 },
+  Central: { costMultiplier: 1.2, rentMultiplier: 1.3 },
   'Business District': { costMultiplier: 1.35, rentMultiplier: 1.5 },
-  'Waterfront': { costMultiplier: 1.3, rentMultiplier: 1.45 },
-  'Suburban': { costMultiplier: 0.8, rentMultiplier: 0.9 },
+  Waterfront: { costMultiplier: 1.3, rentMultiplier: 1.45 },
+  Suburban: { costMultiplier: 0.8, rentMultiplier: 0.9 },
   'Industrial Zone': { costMultiplier: 0.7, rentMultiplier: 0.8 },
 };
 
 function getLocationMultiplier(location) {
   if (!location) return { costMultiplier: 1.0, rentMultiplier: 1.0 };
-  const key = Object.keys(LOCATION_MULTIPLIERS).find(
-    k => location.toLowerCase().includes(k.toLowerCase())
-  );
+  const key = Object.keys(LOCATION_MULTIPLIERS).find((k) => location.toLowerCase().includes(k.toLowerCase()));
   return key ? LOCATION_MULTIPLIERS[key] : { costMultiplier: 1.0, rentMultiplier: 1.0 };
 }
 
@@ -164,7 +162,9 @@ function calculateUnitRent(project, city, location, unitIndex) {
   const locationMultiplier = getLocationMultiplier(location);
   const demandMultiplier = city ? 0.7 + (city.demandIndex || 1.0) * 0.3 : 1.0;
   const variance = 0.9 + Math.random() * 0.2;
-  return Math.round(project.baseRentPerUnit * cityMultiplier * locationMultiplier.rentMultiplier * demandMultiplier * variance);
+  return Math.round(
+    project.baseRentPerUnit * cityMultiplier * locationMultiplier.rentMultiplier * demandMultiplier * variance,
+  );
 }
 
 function getAllProjects() {

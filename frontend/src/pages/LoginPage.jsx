@@ -20,8 +20,7 @@ export default function LoginPage() {
         await login(form.email.trim(), form.password);
       }
       navigate('/');
-    } catch {
-    }
+    } catch {}
   };
 
   return (
@@ -51,7 +50,9 @@ export default function LoginPage() {
             </div>
           )}
           <div>
-            <label className="block text-sm text-muted mb-1">{isRegister ? t('auth.email') : t('auth.loginLabel')}</label>
+            <label className="block text-sm text-muted mb-1">
+              {isRegister ? t('auth.email') : t('auth.loginLabel')}
+            </label>
             <input
               type={isRegister ? 'email' : 'text'}
               value={form.email}

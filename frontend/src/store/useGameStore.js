@@ -57,7 +57,9 @@ export const useGameStore = create((set, get) => ({
       const events = await api('/events/active');
       set({ activeEvents: events });
       return events;
-    } catch { return []; }
+    } catch {
+      return [];
+    }
   },
 
   fetchProperties: async (params = {}) => {
@@ -119,7 +121,9 @@ export const useGameStore = create((set, get) => ({
       const loans = await api('/bank/my');
       set({ loans });
       return loans;
-    } catch { return []; }
+    } catch {
+      return [];
+    }
   },
 
   fetchLoanOptions: async () => {
@@ -244,7 +248,9 @@ export const useGameStore = create((set, get) => ({
       const offers = await api('/offers/sent');
       set({ sentOffers: offers });
       return offers;
-    } catch { return []; }
+    } catch {
+      return [];
+    }
   },
 
   fetchReceivedOffers: async () => {
@@ -252,7 +258,9 @@ export const useGameStore = create((set, get) => ({
       const offers = await api('/offers/received');
       set({ receivedOffers: offers });
       return offers;
-    } catch { return []; }
+    } catch {
+      return [];
+    }
   },
 
   createOffer: async (propertyId, amount) => {
@@ -286,7 +294,9 @@ export const useGameStore = create((set, get) => ({
       const notifications = await api('/notifications');
       set({ notifications });
       return notifications;
-    } catch { return []; }
+    } catch {
+      return [];
+    }
   },
 
   fetchUnreadCount: async () => {
@@ -294,7 +304,9 @@ export const useGameStore = create((set, get) => ({
       const { count } = await api('/notifications/unread-count');
       set({ unreadCount: count });
       return count;
-    } catch { return 0; }
+    } catch {
+      return 0;
+    }
   },
 
   markNotificationRead: async (id) => {

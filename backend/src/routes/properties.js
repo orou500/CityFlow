@@ -10,8 +10,17 @@ const router = Router();
 router.get('/', async (req, res) => {
   try {
     const {
-      search, minPrice, maxPrice, city, country,
-      type, seller, sort, page = '1', limit = '21', forSale,
+      search,
+      minPrice,
+      maxPrice,
+      city,
+      country,
+      type,
+      seller,
+      sort,
+      page = '1',
+      limit = '21',
+      forSale,
     } = req.query;
 
     const filter = {};
@@ -45,7 +54,7 @@ router.get('/', async (req, res) => {
       if (city) cityQuery.name = { $regex: `^${esc(city)}$`, $options: 'i' };
       if (country) cityQuery.country = { $regex: `^${esc(country)}$`, $options: 'i' };
       const found = await City.find(cityQuery).select('_id').lean();
-      filter.cityId = { $in: found.length ? found.map(c => c._id) : [null] };
+      filter.cityId = { $in: found.length ? found.map((c) => c._id) : [null] };
     }
 
     if (search) {
@@ -53,7 +62,7 @@ router.get('/', async (req, res) => {
       const nameCond = { name: searchRegex };
       const searchedCities = await City.find({ name: searchRegex }).select('_id').lean();
       if (searchedCities.length) {
-        const cityCond = { cityId: { $in: searchedCities.map(c => c._id) } };
+        const cityCond = { cityId: { $in: searchedCities.map((c) => c._id) } };
         filter.$or = [nameCond, cityCond];
       } else {
         filter.name = searchRegex;
@@ -62,10 +71,18 @@ router.get('/', async (req, res) => {
 
     let sortOption = { createdAt: -1 };
     switch (sort) {
-      case 'price_asc': sortOption = { currentPrice: 1 }; break;
-      case 'price_desc': sortOption = { currentPrice: -1 }; break;
-      case 'oldest': sortOption = { createdAt: 1 }; break;
-      case 'return': sortOption = { rent: -1 }; break;
+      case 'price_asc':
+        sortOption = { currentPrice: 1 };
+        break;
+      case 'price_desc':
+        sortOption = { currentPrice: -1 };
+        break;
+      case 'oldest':
+        sortOption = { createdAt: 1 };
+        break;
+      case 'return':
+        sortOption = { rent: -1 };
+        break;
     }
 
     const pageNum = Math.max(1, parseInt(page) || 1);
@@ -101,11 +118,13 @@ router.get('/:id/detail', authenticate, async (req, res) => {
     const totalRentEarned = rentTransactions.reduce((sum, t) => sum + t.price, 0);
 
     const ownerId = property.ownerId?._id || property.ownerId;
-    const investmentTransactions = ownerId ? await Transaction.find({
-      propertyId: property._id,
-      type: { $in: ['buy', 'construction', 'upgrade'] },
-      buyerId: ownerId,
-    }) : [];
+    const investmentTransactions = ownerId
+      ? await Transaction.find({
+          propertyId: property._id,
+          type: { $in: ['buy', 'construction', 'upgrade'] },
+          buyerId: ownerId,
+        })
+      : [];
     const totalInvestment = investmentTransactions.reduce((sum, t) => sum + t.price, 0);
 
     res.json({ property, totalRentEarned, totalInvestment });
@@ -165,9 +184,7 @@ router.post('/buy', authenticate, async (req, res) => {
       const seller = await User.findById(sellerId);
       if (seller) {
         seller.balance += price;
-        seller.ownedProperties = seller.ownedProperties.filter(
-          p => p.toString() !== propertyId
-        );
+        seller.ownedProperties = seller.ownedProperties.filter((p) => p.toString() !== propertyId);
         await seller.save();
       }
     }
@@ -216,9 +233,7 @@ router.post('/sell', authenticate, async (req, res) => {
     const salePrice = property.currentPrice;
 
     seller.balance += salePrice;
-    seller.ownedProperties = seller.ownedProperties.filter(
-      p => p.toString() !== propertyId
-    );
+    seller.ownedProperties = seller.ownedProperties.filter((p) => p.toString() !== propertyId);
     await seller.save();
 
     const systemUser = await User.findOne({ username: '__system__' });

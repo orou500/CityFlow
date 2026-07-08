@@ -17,16 +17,18 @@ router.use(requireAdmin);
 
 router.get('/overview', async (req, res) => {
   try {
-    const [users, cities, properties, transactions, events, loans, constructionProjects, gameState] = await Promise.all([
-      User.countDocuments(),
-      City.countDocuments(),
-      Property.countDocuments(),
-      Transaction.countDocuments(),
-      Event.countDocuments({ active: true }),
-      Loan.countDocuments({ active: true }),
-      ConstructionProject.countDocuments({ status: 'under_construction' }),
-      getGameState(),
-    ]);
+    const [users, cities, properties, transactions, events, loans, constructionProjects, gameState] = await Promise.all(
+      [
+        User.countDocuments(),
+        City.countDocuments(),
+        Property.countDocuments(),
+        Transaction.countDocuments(),
+        Event.countDocuments({ active: true }),
+        Loan.countDocuments({ active: true }),
+        ConstructionProject.countDocuments({ status: 'under_construction' }),
+        getGameState(),
+      ],
+    );
 
     const allUsers = await User.find();
     const totalBalance = allUsers.reduce((s, u) => s + u.balance, 0);
@@ -85,11 +87,15 @@ router.post('/tick/run', async (req, res) => {
 
 router.get('/users', async (req, res) => {
   try {
-    const users = await User.find({ username: { $ne: '__system__' } }).select('-password').sort({ createdAt: -1 });
-    const usersWithStats = await Promise.all(users.map(async (u) => {
-      const propCount = await Property.countDocuments({ ownerId: u._id });
-      return { ...u.toObject(), propertyCount: propCount };
-    }));
+    const users = await User.find({ username: { $ne: '__system__' } })
+      .select('-password')
+      .sort({ createdAt: -1 });
+    const usersWithStats = await Promise.all(
+      users.map(async (u) => {
+        const propCount = await Property.countDocuments({ ownerId: u._id });
+        return { ...u.toObject(), propertyCount: propCount };
+      }),
+    );
     res.json(usersWithStats);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -124,7 +130,10 @@ router.put('/users/:id/ban', async (req, res) => {
 
 router.get('/properties', async (req, res) => {
   try {
-    const properties = await Property.find().populate('ownerId', 'username').populate('cityId', 'name').sort({ createdAt: -1 });
+    const properties = await Property.find()
+      .populate('ownerId', 'username')
+      .populate('cityId', 'name')
+      .sort({ createdAt: -1 });
     res.json(properties);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -138,8 +147,14 @@ router.post('/properties', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
     const property = await Property.create({
-      cityId, type, name, basePrice, currentPrice: basePrice,
-      rent: Math.round(basePrice * 0.004), ownerId: ownerId || null, forSale: true,
+      cityId,
+      type,
+      name,
+      basePrice,
+      currentPrice: basePrice,
+      rent: Math.round(basePrice * 0.004),
+      ownerId: ownerId || null,
+      forSale: true,
     });
     if (ownerId) {
       await User.findByIdAndUpdate(ownerId, { $push: { ownedProperties: property._id } });
@@ -206,13 +221,16 @@ router.post('/events', async (req, res) => {
   try {
     const { name, description, type, impact, affectedCities, duration } = req.body;
     const event = await Event.create({
-      name, description, type, impact: impact || {},
+      name,
+      description,
+      type,
+      impact: impact || {},
       affectedCities: affectedCities || [],
       duration: duration || 3,
       remainingTicks: duration || 3,
       active: true,
     });
-    for (const cityId of (affectedCities || [])) {
+    for (const cityId of affectedCities || []) {
       await City.findByIdAndUpdate(cityId, {
         $push: { activeEvents: { eventId: event._id, remainingTicks: duration || 3 } },
       });
@@ -233,13 +251,13 @@ router.put('/events/:id', async (req, res) => {
       if (!event.active && wasActive) {
         const cities = await City.find({ 'activeEvents.eventId': event._id });
         for (const city of cities) {
-          city.activeEvents = city.activeEvents.filter(e => e.eventId.toString() !== event._id.toString());
+          city.activeEvents = city.activeEvents.filter((e) => e.eventId.toString() !== event._id.toString());
           await city.save();
         }
       } else if (event.active && !wasActive) {
         const cities = await City.find({ _id: { $in: event.affectedCities } });
         for (const city of cities) {
-          if (!city.activeEvents.some(e => e.eventId.toString() === event._id.toString())) {
+          if (!city.activeEvents.some((e) => e.eventId.toString() === event._id.toString())) {
             city.activeEvents.push({ eventId: event._id, remainingTicks: event.remainingTicks });
             await city.save();
           }
@@ -325,14 +343,14 @@ router.post('/construction-projects/trigger-event', async (req, res) => {
 router.get('/development-zones', async (req, res) => {
   try {
     const zones = Object.entries(DEVELOPMENT_PROJECTS).flatMap(([cat, catData]) =>
-      catData.projects.map(p => ({
+      catData.projects.map((p) => ({
         id: p.id,
         name: p.name,
         category: cat,
         baseCost: p.baseCost,
         constructionPeriods: p.constructionPeriods,
         unitsGenerated: p.unitsGenerated,
-      }))
+      })),
     );
     res.json(zones);
   } catch (err) {

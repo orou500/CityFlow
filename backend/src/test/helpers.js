@@ -56,12 +56,11 @@ export async function createTestCity(overrides = {}) {
 }
 
 export async function createTestProperty(overrides = {}) {
-  const city = overrides.cityId || await createTestCity();
+  const city = overrides.cityId || (await createTestCity());
   const data = {
     name: `TestProp_${Date.now()}`,
     type: 'apartment',
     currentPrice: 100000,
-    cityId: city._id,
     ...overrides,
     cityId: overrides.cityId || city._id,
   };

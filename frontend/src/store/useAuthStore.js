@@ -71,6 +71,6 @@ export const useAuthStore = create(
         set({ user: null, token: null });
       },
     }),
-    { name: 'cityflow-auth', partialize: (state) => ({ token: state.token }) }
-  )
+    { name: 'cityflow-auth', partialize: (state) => ({ token: state.token }) },
+  ),
 );

@@ -329,10 +329,19 @@
       "hospitality": { "label": "Hospitality", "description": "Build hotels and resorts for tourism-based income" }
     },
     "proj": {
-      "apartment_building": { "name": "Apartment Building", "description": "Standard apartment building with 50 units" },
-      "luxury_apartments": { "name": "Luxury Apartments", "description": "High-end luxury apartment tower with 100 units" },
+      "apartment_building": {
+        "name": "Apartment Building",
+        "description": "Standard apartment building with 50 units"
+      },
+      "luxury_apartments": {
+        "name": "Luxury Apartments",
+        "description": "High-end luxury apartment tower with 100 units"
+      },
       "housing_complex": { "name": "Housing Complex", "description": "Large housing complex with 200 units" },
-      "office_building": { "name": "Office Building", "description": "Commercial office building with premium rental space" },
+      "office_building": {
+        "name": "Office Building",
+        "description": "Commercial office building with premium rental space"
+      },
       "shopping_center": { "name": "Shopping Center", "description": "Large shopping center with retail spaces" },
       "retail_complex": { "name": "Retail Complex", "description": "Small retail complex with storefronts" },
       "hotel": { "name": "Hotel", "description": "Full-service hotel with 150 rooms" },

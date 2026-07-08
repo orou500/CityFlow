@@ -20,7 +20,7 @@ router.get('/:id', async (req, res) => {
     if (!city) return res.status(404).json({ error: 'City not found' });
     const properties = await Property.find({ cityId: city._id }).populate('ownerId', 'username');
     const activeEvents = await Event.find({
-      _id: { $in: city.activeEvents.map(e => e.eventId) },
+      _id: { $in: city.activeEvents.map((e) => e.eventId) },
       active: true,
     });
     res.json({ city, properties, activeEvents });

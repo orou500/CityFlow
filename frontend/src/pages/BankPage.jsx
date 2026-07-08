@@ -18,14 +18,22 @@ export default function BankPage() {
   const [repayAmounts, setRepayAmounts] = useState({});
 
   useEffect(() => {
-    if (!user) { navigate('/login'); return; }
+    if (!user) {
+      navigate('/login');
+      return;
+    }
     fetchMe();
     fetchUserData();
     fetchLoans();
-    fetchLoanOptions().then(setOptions).catch(() => {});
+    fetchLoanOptions()
+      .then(setOptions)
+      .catch(() => {});
     fetch('/api/bank/summary', {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-    }).then(r => r.json()).then(setSummary).catch(() => {});
+    })
+      .then((r) => r.json())
+      .then(setSummary)
+      .catch(() => {});
   }, []);
 
   const handleApply = async () => {
@@ -40,7 +48,10 @@ export default function BankPage() {
       setSelectedOption(null);
       fetch('/api/bank/summary', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      }).then(r => r.json()).then(setSummary).catch(() => {});
+      })
+        .then((r) => r.json())
+        .then(setSummary)
+        .catch(() => {});
     } catch (err) {
       setError(translateError(err, t));
     }
@@ -57,7 +68,10 @@ export default function BankPage() {
       fetchUserData();
       fetch('/api/bank/summary', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      }).then(r => r.json()).then(setSummary).catch(() => {});
+      })
+        .then((r) => r.json())
+        .then(setSummary)
+        .catch(() => {});
     } catch {}
   };
 
@@ -82,7 +96,9 @@ export default function BankPage() {
         </div>
         <div className="bg-white dark:bg-gray-900 p-4 rounded-lg">
           <p className="text-sm text-gray-500 dark:text-gray-400">{t('bank.totalDebt')}</p>
-          <p className={`text-2xl font-bold ${summary?.totalDebt > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-400 dark:text-gray-500'}`}>
+          <p
+            className={`text-2xl font-bold ${summary?.totalDebt > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-400 dark:text-gray-500'}`}
+          >
             ${summary?.totalDebt?.toLocaleString() || '0'}
           </p>
         </div>
@@ -113,29 +129,46 @@ export default function BankPage() {
                         : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
                     }`}
                   >
-                    <input
-                      type="radio"
-                      name="loanOption"
-                      className="sr-only"
-                      onChange={() => setSelectedOption(opt)}
-                    />
+                    <input type="radio" name="loanOption" className="sr-only" onChange={() => setSelectedOption(opt)} />
                     <div className="flex justify-between items-center">
                       <div>
                         <p className="font-semibold">${opt.principal?.toLocaleString()}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{opt.durationTicks} {t('bank.duration')}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {opt.durationTicks} {t('bank.duration')}
+                        </p>
                       </div>
                       <div className="text-right text-sm">
-                        <p className="text-emerald-600 dark:text-emerald-400">${opt.paymentPerTick?.toLocaleString()}/{t('general.period')}</p>
-                        <p className="text-gray-500 dark:text-gray-400">{(opt.interestRate * 100).toFixed(1)}% {t('bank.interest')}</p>
+                        <p className="text-emerald-600 dark:text-emerald-400">
+                          ${opt.paymentPerTick?.toLocaleString()}/{t('general.period')}
+                        </p>
+                        <p className="text-gray-500 dark:text-gray-400">
+                          {(opt.interestRate * 100).toFixed(1)}% {t('bank.interest')}
+                        </p>
                       </div>
                     </div>
-                    {selectedOption?.principal === opt.principal && selectedOption?.durationTicks === opt.durationTicks && (
-                      <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 grid grid-cols-2 gap-2">
-                        <span>{t('bank.totalRepayment')}: <span className="text-gray-900 dark:text-white">${opt.totalRepayment?.toLocaleString()}</span></span>
-                        <span>{t('bank.interestCost')}: <span className="text-yellow-600 dark:text-yellow-400">${opt.totalInterest?.toLocaleString()}</span></span>
-                        <span>{t('bank.paymentPerTick')}: <span className="text-emerald-600 dark:text-emerald-400">${opt.paymentPerTick?.toLocaleString()}</span></span>
-                      </div>
-                    )}
+                    {selectedOption?.principal === opt.principal &&
+                      selectedOption?.durationTicks === opt.durationTicks && (
+                        <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 grid grid-cols-2 gap-2">
+                          <span>
+                            {t('bank.totalRepayment')}:{' '}
+                            <span className="text-gray-900 dark:text-white">
+                              ${opt.totalRepayment?.toLocaleString()}
+                            </span>
+                          </span>
+                          <span>
+                            {t('bank.interestCost')}:{' '}
+                            <span className="text-yellow-600 dark:text-yellow-400">
+                              ${opt.totalInterest?.toLocaleString()}
+                            </span>
+                          </span>
+                          <span>
+                            {t('bank.paymentPerTick')}:{' '}
+                            <span className="text-emerald-600 dark:text-emerald-400">
+                              ${opt.paymentPerTick?.toLocaleString()}
+                            </span>
+                          </span>
+                        </div>
+                      )}
                   </label>
                 ))}
               </div>
@@ -152,7 +185,9 @@ export default function BankPage() {
 
         <div>
           <div className="bg-white dark:bg-gray-900 rounded-lg p-6">
-            <h2 className="text-xl font-bold mb-4">{t('bank.activeLoans')} ({loans?.length || 0})</h2>
+            <h2 className="text-xl font-bold mb-4">
+              {t('bank.activeLoans')} ({loans?.length || 0})
+            </h2>
             {!loans || loans.length === 0 ? (
               <p className="text-gray-500 dark:text-gray-400">{t('bank.noLoans')}</p>
             ) : (
@@ -179,11 +214,15 @@ export default function BankPage() {
                       </div>
                       <div>
                         <p className="text-gray-500 dark:text-gray-400">{t('bank.paymentPerTick')}</p>
-                        <p className="font-semibold text-emerald-600 dark:text-emerald-400">${loan.paymentPerTick?.toLocaleString()}</p>
+                        <p className="font-semibold text-emerald-600 dark:text-emerald-400">
+                          ${loan.paymentPerTick?.toLocaleString()}
+                        </p>
                       </div>
                       <div>
                         <p className="text-gray-500 dark:text-gray-400">{t('bank.missedPayments')}</p>
-                        <p className={`font-semibold ${loan.missedPayments > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                        <p
+                          className={`font-semibold ${loan.missedPayments > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}
+                        >
                           {loan.missedPayments || 0}
                         </p>
                       </div>

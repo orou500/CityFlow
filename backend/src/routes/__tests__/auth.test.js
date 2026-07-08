@@ -42,36 +42,28 @@ describe('POST /auth/register', () => {
   });
 
   it('rejects when username is missing', async () => {
-    const res = await request(app)
-      .post('/auth/register')
-      .send({ email: 'test@example.com', password: 'SecurePass1' });
+    const res = await request(app).post('/auth/register').send({ email: 'test@example.com', password: 'SecurePass1' });
 
     expect(res.status).toBe(400);
     expect(res.body.error).toBe('All fields are required');
   });
 
   it('rejects when email is missing', async () => {
-    const res = await request(app)
-      .post('/auth/register')
-      .send({ username: 'testuser', password: 'SecurePass1' });
+    const res = await request(app).post('/auth/register').send({ username: 'testuser', password: 'SecurePass1' });
 
     expect(res.status).toBe(400);
     expect(res.body.error).toBe('All fields are required');
   });
 
   it('rejects when password is missing', async () => {
-    const res = await request(app)
-      .post('/auth/register')
-      .send({ username: 'testuser', email: 'test@example.com' });
+    const res = await request(app).post('/auth/register').send({ username: 'testuser', email: 'test@example.com' });
 
     expect(res.status).toBe(400);
     expect(res.body.error).toBe('All fields are required');
   });
 
   it('rejects when all fields are missing', async () => {
-    const res = await request(app)
-      .post('/auth/register')
-      .send({});
+    const res = await request(app).post('/auth/register').send({});
 
     expect(res.status).toBe(400);
     expect(res.body.error).toBe('All fields are required');
@@ -112,9 +104,7 @@ describe('POST /auth/login', () => {
   });
 
   it('logs in with username', async () => {
-    const res = await request(app)
-      .post('/auth/login')
-      .send({ login: 'logintest', password: 'SecurePass1' });
+    const res = await request(app).post('/auth/login').send({ login: 'logintest', password: 'SecurePass1' });
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('token');
@@ -124,9 +114,7 @@ describe('POST /auth/login', () => {
   });
 
   it('logs in with email', async () => {
-    const res = await request(app)
-      .post('/auth/login')
-      .send({ login: 'login@example.com', password: 'SecurePass1' });
+    const res = await request(app).post('/auth/login').send({ login: 'login@example.com', password: 'SecurePass1' });
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('token');
@@ -134,63 +122,49 @@ describe('POST /auth/login', () => {
   });
 
   it('logs in with email in different case', async () => {
-    const res = await request(app)
-      .post('/auth/login')
-      .send({ login: 'LOGIN@EXAMPLE.COM', password: 'SecurePass1' });
+    const res = await request(app).post('/auth/login').send({ login: 'LOGIN@EXAMPLE.COM', password: 'SecurePass1' });
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('token');
   });
 
   it('rejects wrong password', async () => {
-    const res = await request(app)
-      .post('/auth/login')
-      .send({ login: 'logintest', password: 'WrongPassword1' });
+    const res = await request(app).post('/auth/login').send({ login: 'logintest', password: 'WrongPassword1' });
 
     expect(res.status).toBe(401);
     expect(res.body.error).toMatch(/invalid/i);
   });
 
   it('rejects non-existent username', async () => {
-    const res = await request(app)
-      .post('/auth/login')
-      .send({ login: 'nonexistentuser', password: 'SecurePass1' });
+    const res = await request(app).post('/auth/login').send({ login: 'nonexistentuser', password: 'SecurePass1' });
 
     expect(res.status).toBe(401);
     expect(res.body.error).toMatch(/invalid/i);
   });
 
   it('rejects non-existent email', async () => {
-    const res = await request(app)
-      .post('/auth/login')
-      .send({ login: 'noone@example.com', password: 'SecurePass1' });
+    const res = await request(app).post('/auth/login').send({ login: 'noone@example.com', password: 'SecurePass1' });
 
     expect(res.status).toBe(401);
     expect(res.body.error).toMatch(/invalid/i);
   });
 
   it('rejects missing login field', async () => {
-    const res = await request(app)
-      .post('/auth/login')
-      .send({ password: 'SecurePass1' });
+    const res = await request(app).post('/auth/login').send({ password: 'SecurePass1' });
 
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/required/i);
   });
 
   it('rejects missing password field', async () => {
-    const res = await request(app)
-      .post('/auth/login')
-      .send({ login: 'logintest' });
+    const res = await request(app).post('/auth/login').send({ login: 'logintest' });
 
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/required/i);
   });
 
   it('rejects empty login', async () => {
-    const res = await request(app)
-      .post('/auth/login')
-      .send({ login: '', password: 'SecurePass1' });
+    const res = await request(app).post('/auth/login').send({ login: '', password: 'SecurePass1' });
 
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/required/i);
@@ -201,9 +175,7 @@ describe('GET /auth/me', () => {
   it('returns the authenticated user profile', async () => {
     const { user, token } = await createAuthenticatedUser();
 
-    const res = await request(app)
-      .get('/auth/me')
-      .set(authHeader(token));
+    const res = await request(app).get('/auth/me').set(authHeader(token));
 
     expect(res.status).toBe(200);
     expect(res.body.username).toBe(user.username);
@@ -221,9 +193,7 @@ describe('GET /auth/me', () => {
   });
 
   it('returns 401 for invalid token', async () => {
-    const res = await request(app)
-      .get('/auth/me')
-      .set(authHeader('this-is-not-a-valid-jwt'));
+    const res = await request(app).get('/auth/me').set(authHeader('this-is-not-a-valid-jwt'));
 
     expect(res.status).toBe(401);
     expect(res.body.error).toBe('Invalid token');
@@ -233,9 +203,7 @@ describe('GET /auth/me', () => {
     const user = await createTestUser();
     const token = generateExpiredToken(user._id);
 
-    const res = await request(app)
-      .get('/auth/me')
-      .set(authHeader(token));
+    const res = await request(app).get('/auth/me').set(authHeader(token));
 
     expect(res.status).toBe(401);
     expect(res.body.error).toBe('Invalid token');
@@ -245,9 +213,7 @@ describe('GET /auth/me', () => {
     const user = await createTestUser();
     const token = generateTokenWithBadSecret(user._id);
 
-    const res = await request(app)
-      .get('/auth/me')
-      .set(authHeader(token));
+    const res = await request(app).get('/auth/me').set(authHeader(token));
 
     expect(res.status).toBe(401);
     expect(res.body.error).toBe('Invalid token');
@@ -257,27 +223,21 @@ describe('GET /auth/me', () => {
     const { user, token } = await createAuthenticatedUser();
     await user.constructor.findByIdAndDelete(user._id);
 
-    const res = await request(app)
-      .get('/auth/me')
-      .set(authHeader(token));
+    const res = await request(app).get('/auth/me').set(authHeader(token));
 
     expect(res.status).toBe(401);
     expect(res.body.error).toBe('User not found');
   });
 
   it('returns 401 with malformed authorization header', async () => {
-    const res = await request(app)
-      .get('/auth/me')
-      .set('Authorization', 'malformed');
+    const res = await request(app).get('/auth/me').set('Authorization', 'malformed');
 
     expect(res.status).toBe(401);
     expect(res.body.error).toBe('Authentication required');
   });
 
   it('returns 401 with empty Bearer token', async () => {
-    const res = await request(app)
-      .get('/auth/me')
-      .set(authHeader(''));
+    const res = await request(app).get('/auth/me').set(authHeader(''));
 
     expect(res.status).toBe(401);
   });

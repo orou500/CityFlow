@@ -67,9 +67,8 @@ export async function generateEvents() {
 
   const template = EVENT_TEMPLATES[Math.floor(Math.random() * EVENT_TEMPLATES.length)];
   const cities = await City.find();
-  const affectedCities = template.type === 'global'
-    ? cities.map(c => c._id)
-    : [cities[Math.floor(Math.random() * cities.length)]._id];
+  const affectedCities =
+    template.type === 'global' ? cities.map((c) => c._id) : [cities[Math.floor(Math.random() * cities.length)]._id];
 
   const event = await Event.create({
     name: template.name,
@@ -105,9 +104,7 @@ export async function tickEvents() {
 
       const cities = await City.find({ 'activeEvents.eventId': event._id });
       for (const city of cities) {
-        city.activeEvents = city.activeEvents.filter(
-          e => e.eventId.toString() !== event._id.toString()
-        );
+        city.activeEvents = city.activeEvents.filter((e) => e.eventId.toString() !== event._id.toString());
         await city.save();
       }
     }

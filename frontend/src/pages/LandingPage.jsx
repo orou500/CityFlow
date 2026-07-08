@@ -30,13 +30,18 @@ function AnimatedCounter({ target, suffix = '' }) {
           }, duration / steps);
         }
       },
-      { threshold: 0.3 }
+      { threshold: 0.3 },
     );
     if (ref.current) observer.observe(ref.current);
     return () => observer.disconnect();
   }, [target]);
 
-  return <span ref={ref}>{value.toLocaleString()}{suffix}</span>;
+  return (
+    <span ref={ref}>
+      {value.toLocaleString()}
+      {suffix}
+    </span>
+  );
 }
 
 function FeatureCard({ icon, title, description }) {
@@ -171,9 +176,7 @@ export default function LandingPage() {
         <HeroOverlay resolved={resolved} />
         <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
           <div className="text-6xl mb-6">🌍</div>
-          <h1 className="text-4xl md:text-6xl font-bold text-primary mb-6 leading-tight">
-            {t('landing.hero.title')}
-          </h1>
+          <h1 className="text-4xl md:text-6xl font-bold text-primary mb-6 leading-tight">{t('landing.hero.title')}</h1>
           <p className="text-lg md:text-xl text-secondary mb-8 max-w-2xl mx-auto leading-relaxed">
             {t('landing.hero.subtitle')}
           </p>
@@ -202,10 +205,7 @@ export default function LandingPage() {
       {/* How It Works */}
       <section id="how-it-works" className="py-20 px-4 bg-surface transition-colors duration-300">
         <div className="max-w-5xl mx-auto">
-          <SectionHeading
-            title={t('landing.how.title')}
-            description={t('landing.how.description')}
-          />
+          <SectionHeading title={t('landing.how.title')} description={t('landing.how.description')} />
           <div className="grid md:grid-cols-3 gap-8">
             {[1, 2, 3].map((i) => (
               <div key={i} className="text-center">
@@ -223,10 +223,7 @@ export default function LandingPage() {
       {/* Key Features */}
       <section className="py-20 px-4 bg-card transition-colors duration-300">
         <div className="max-w-5xl mx-auto">
-          <SectionHeading
-            title={t('landing.features.title')}
-            description={t('landing.features.description')}
-          />
+          <SectionHeading title={t('landing.features.title')} description={t('landing.features.description')} />
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
               { icon: '🌎', key: 'globalMap' },
@@ -250,10 +247,7 @@ export default function LandingPage() {
       {/* Statistics */}
       <section className="py-20 px-4 bg-surface transition-colors duration-300">
         <div className="max-w-5xl mx-auto">
-          <SectionHeading
-            title={t('landing.stats.title')}
-            description={null}
-          />
+          <SectionHeading title={t('landing.stats.title')} description={null} />
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {[
               { key: 'players', target: stats?.playersCount || 0, suffix: '' },
@@ -276,10 +270,7 @@ export default function LandingPage() {
       {leaderboard.length > 0 && (
         <section className="py-20 px-4 bg-card transition-colors duration-300">
           <div className="max-w-3xl mx-auto">
-            <SectionHeading
-              title={t('landing.leaderboard.title')}
-              description={t('landing.leaderboard.description')}
-            />
+            <SectionHeading title={t('landing.leaderboard.title')} description={t('landing.leaderboard.description')} />
             <div className="bg-surface rounded-xl border border-border overflow-hidden">
               {leaderboard.map((player, i) => (
                 <Link
@@ -288,7 +279,9 @@ export default function LandingPage() {
                   className={`flex items-center justify-between px-6 py-4 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors ${i < leaderboard.length - 1 ? 'border-b border-border' : ''}`}
                 >
                   <div className="flex items-center gap-4">
-                    <span className={`text-lg font-bold w-8 ${i === 0 ? 'text-yellow-600 dark:text-yellow-400' : i === 1 ? 'text-gray-500 dark:text-gray-300' : i === 2 ? 'text-amber-600 dark:text-amber-500' : 'text-muted'}`}>
+                    <span
+                      className={`text-lg font-bold w-8 ${i === 0 ? 'text-yellow-600 dark:text-yellow-400' : i === 1 ? 'text-gray-500 dark:text-gray-300' : i === 2 ? 'text-amber-600 dark:text-amber-500' : 'text-muted'}`}
+                    >
                       {i + 1}
                     </span>
                     <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-sm text-muted">
@@ -296,7 +289,9 @@ export default function LandingPage() {
                     </div>
                     <span className="text-primary font-medium">{player.displayName || player.username}</span>
                   </div>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold">${(player.netWorth || 0).toLocaleString()}</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                    ${(player.netWorth || 0).toLocaleString()}
+                  </span>
                 </Link>
               ))}
             </div>
@@ -308,17 +303,12 @@ export default function LandingPage() {
       {activity.length > 0 && (
         <section className="py-20 px-4 bg-surface transition-colors duration-300">
           <div className="max-w-3xl mx-auto">
-            <SectionHeading
-              title={t('landing.activity.title')}
-              description={t('landing.activity.description')}
-            />
+            <SectionHeading title={t('landing.activity.title')} description={t('landing.activity.description')} />
             <div className="space-y-3">
               {activity.map((tx) => (
                 <div key={tx._id} className="bg-card rounded-lg px-5 py-3 border border-border text-sm">
                   <span className="text-primary">{formatActivity(tx)}</span>
-                  <span className="text-muted text-xs ml-2">
-                    {new Date(tx.createdAt).toLocaleDateString()}
-                  </span>
+                  <span className="text-muted text-xs ml-2">{new Date(tx.createdAt).toLocaleDateString()}</span>
                 </div>
               ))}
             </div>
@@ -340,7 +330,6 @@ export default function LandingPage() {
           </Link>
         </div>
       </section>
-
     </div>
   );
 }

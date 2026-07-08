@@ -99,11 +99,20 @@ export default function Navbar() {
           aria-label="Toggle navigation menu"
         >
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={mobileMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d={mobileMenuOpen ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h16'}
+            />
           </svg>
         </button>
 
-        <Link to="/" onClick={closeMobileMenu} className="text-xl font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
+        <Link
+          to="/"
+          onClick={closeMobileMenu}
+          className="text-xl font-bold text-emerald-600 dark:text-emerald-400 shrink-0"
+        >
           CityFlow
         </Link>
 
@@ -159,7 +168,12 @@ export default function Navbar() {
               title={t('nav.notifications')}
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                />
               </svg>
               {unreadCount > 0 && (
                 <span className="absolute -top-1.5 -end-1.5 bg-red-500 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
@@ -168,13 +182,14 @@ export default function Navbar() {
               )}
             </Link>
 
-            <button
-              className="relative text-muted opacity-50 cursor-not-allowed"
-              disabled
-              title="Coming soon"
-            >
+            <button className="relative text-muted opacity-50 cursor-not-allowed" disabled title="Coming soon">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+                />
               </svg>
             </button>
 
@@ -195,7 +210,9 @@ export default function Navbar() {
                       className={`w-6 h-6 rounded-full object-cover ${unreadCount > 0 ? 'animate-avatar-pulse' : ''}`}
                     />
                   ) : (
-                    <div className={`w-6 h-6 rounded-full bg-emerald-600 text-white text-xs flex items-center justify-center font-medium ${unreadCount > 0 ? 'animate-avatar-pulse' : ''}`}>
+                    <div
+                      className={`w-6 h-6 rounded-full bg-emerald-600 text-white text-xs flex items-center justify-center font-medium ${unreadCount > 0 ? 'animate-avatar-pulse' : ''}`}
+                    >
                       {userInitial}
                     </div>
                   )}
@@ -208,7 +225,12 @@ export default function Navbar() {
                 <span className="text-sm text-secondary hidden sm:inline max-w-[100px] truncate">
                   {user.displayName || user.username}
                 </span>
-                <svg className={`w-3 h-3 text-muted shrink-0 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg
+                  className={`w-3 h-3 text-muted shrink-0 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
@@ -246,7 +268,9 @@ export default function Navbar() {
                   </Link>
                   <Link
                     to="/settings"
-                    onClick={(e) => { e.preventDefault(); }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                    }}
                     className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted cursor-not-allowed transition-colors"
                   >
                     <span className="text-base">{'\u2699\uFE0F'}</span>
@@ -255,7 +279,9 @@ export default function Navbar() {
                   </Link>
                   <Link
                     to="/help"
-                    onClick={(e) => { e.preventDefault(); }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                    }}
                     className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted cursor-not-allowed transition-colors"
                   >
                     <span className="text-base">{'\u2753'}</span>
@@ -264,7 +290,10 @@ export default function Navbar() {
                   </Link>
                   <div className="border-t border-border my-1" />
                   <button
-                    onClick={() => { handleLogout(); setUserMenuOpen(false); }}
+                    onClick={() => {
+                      handleLogout();
+                      setUserMenuOpen(false);
+                    }}
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                   >
                     <span className="text-base">{'\uD83D\uDEAA'}</span>

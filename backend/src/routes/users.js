@@ -32,7 +32,10 @@ router.get('/me', authenticate, async (req, res) => {
     const loans = await Loan.find({ userId: user._id, active: true });
     const transactions = await Transaction.find({
       $or: [{ buyerId: user._id }, { sellerId: user._id }],
-    }).sort({ createdAt: -1 }).limit(50).populate('propertyId');
+    })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .populate('propertyId');
     res.json({ user, properties, loans, transactions });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -46,12 +49,11 @@ router.get('/search', authenticate, async (req, res) => {
     const users = await User.find({
       $and: [
         { username: { $ne: '__system__' } },
-        { $or: [
-          { username: { $regex: q, $options: 'i' } },
-          { displayName: { $regex: q, $options: 'i' } },
-        ]},
+        { $or: [{ username: { $regex: q, $options: 'i' } }, { displayName: { $regex: q, $options: 'i' } }] },
       ],
-    }).select('username displayName avatar').limit(10);
+    })
+      .select('username displayName avatar')
+      .limit(10);
     res.json(users);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -76,7 +78,10 @@ router.get('/:username', authenticate, async (req, res) => {
     if (user.profileVisibility.activity || isOwner) {
       transactions = await Transaction.find({
         $or: [{ buyerId: user._id }, { sellerId: user._id }],
-      }).sort({ createdAt: -1 }).limit(20).populate('propertyId');
+      })
+        .sort({ createdAt: -1 })
+        .limit(20)
+        .populate('propertyId');
     }
 
     res.json({
@@ -99,8 +104,10 @@ router.put('/settings', authenticate, async (req, res) => {
     if (displayName !== undefined) req.user.displayName = String(displayName).slice(0, 50);
     if (bio !== undefined) req.user.bio = String(bio).slice(0, 500);
     if (profileVisibility) {
-      if (typeof profileVisibility.portfolio === 'boolean') req.user.profileVisibility.portfolio = profileVisibility.portfolio;
-      if (typeof profileVisibility.activity === 'boolean') req.user.profileVisibility.activity = profileVisibility.activity;
+      if (typeof profileVisibility.portfolio === 'boolean')
+        req.user.profileVisibility.portfolio = profileVisibility.portfolio;
+      if (typeof profileVisibility.activity === 'boolean')
+        req.user.profileVisibility.activity = profileVisibility.activity;
     }
     await req.user.save();
     res.json({ user: req.user });

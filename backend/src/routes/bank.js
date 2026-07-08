@@ -36,7 +36,7 @@ function computePayment(principal, rate, ticks) {
 }
 
 router.get('/options', (req, res) => {
-  const options = LOAN_OPTIONS.map(o => {
+  const options = LOAN_OPTIONS.map((o) => {
     const totalInterest = Math.round(o.principal * o.interestRate);
     return {
       ...o,
@@ -57,7 +57,7 @@ router.post('/apply', authenticate, async (req, res) => {
   try {
     const { principal, durationTicks } = req.body;
 
-    const option = LOAN_OPTIONS.find(o => o.principal === principal && o.durationTicks === durationTicks);
+    const option = LOAN_OPTIONS.find((o) => o.principal === principal && o.durationTicks === durationTicks);
     if (!option) {
       return res.status(400).json({ error: 'Invalid loan option' });
     }

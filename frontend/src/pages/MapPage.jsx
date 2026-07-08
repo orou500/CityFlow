@@ -18,11 +18,9 @@ export default function MapPage() {
       <h1 className="text-2xl font-bold mb-4 text-primary">{t('map.title')}</h1>
       <div className="flex-1 min-h-[500px] bg-card rounded-lg overflow-hidden relative border border-border">
         {loading ? (
-          <div className="flex items-center justify-center h-full text-muted">
-            {t('common.loading')}
-          </div>
+          <div className="flex items-center justify-center h-full text-muted">{t('common.loading')}</div>
         ) : (
-              <WorldMap cities={cities} activeEvents={activeEvents} />
+          <WorldMap cities={cities} activeEvents={activeEvents} />
         )}
         <MapLegend />
       </div>

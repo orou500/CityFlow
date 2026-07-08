@@ -4,16 +4,41 @@ import User from '../models/User.js';
 
 const PROPERTY_TYPES = ['apartment', 'house', 'commercial', 'land'];
 const PROPERTY_NAMES = [
-  'Sunset Tower', 'Harbor View', 'Central Plaza', 'Royal Manor', 'Sky Residence',
-  'Ocean Breeze', 'City Heights', 'Golden Gate', 'Silver Lake', 'Pinewood Estate',
-  'Metro Loft', 'Garden Villa', 'Urban Nest', 'Crystal Tower', 'Heritage Home',
-  'Park Avenue', 'Riverside Flat', 'Downtown Hub', 'Elite Suite', 'Grand Terrace',
+  'Sunset Tower',
+  'Harbor View',
+  'Central Plaza',
+  'Royal Manor',
+  'Sky Residence',
+  'Ocean Breeze',
+  'City Heights',
+  'Golden Gate',
+  'Silver Lake',
+  'Pinewood Estate',
+  'Metro Loft',
+  'Garden Villa',
+  'Urban Nest',
+  'Crystal Tower',
+  'Heritage Home',
+  'Park Avenue',
+  'Riverside Flat',
+  'Downtown Hub',
+  'Elite Suite',
+  'Grand Terrace',
 ];
 
 const LOCATIONS = [
-  'Downtown', 'Midtown', 'Suburban', 'Waterfront', 'Business District',
-  'Central', 'Industrial Zone', 'Residential Area', 'Commercial District',
-  'Historic District', 'Tech Hub', 'University Area',
+  'Downtown',
+  'Midtown',
+  'Suburban',
+  'Waterfront',
+  'Business District',
+  'Central',
+  'Industrial Zone',
+  'Residential Area',
+  'Commercial District',
+  'Historic District',
+  'Tech Hub',
+  'University Area',
 ];
 
 const LAND_SIZES = [2000, 3000, 4000, 5000, 6000, 7500, 8000, 10000, 12000, 15000, 20000];
@@ -74,7 +99,9 @@ export async function generateProperties() {
         volatility: 0.05 + Math.random() * 0.15,
         forSale: true,
         location,
-        ...(type === 'land' ? { size: LAND_SIZES[Math.floor(Math.random() * LAND_SIZES.length)], developmentLevel: 0 } : {}),
+        ...(type === 'land'
+          ? { size: LAND_SIZES[Math.floor(Math.random() * LAND_SIZES.length)], developmentLevel: 0 }
+          : {}),
       });
     }
 
@@ -92,7 +119,9 @@ export async function generateProperties() {
 
   const totalGenerated = results.reduce((s, r) => s + r.generated, 0);
   if (totalGenerated > 0) {
-    console.log(`[PROP_GEN] Generated ${totalGenerated} new properties across ${results.filter(r => r.generated > 0).length} cities`);
+    console.log(
+      `[PROP_GEN] Generated ${totalGenerated} new properties across ${results.filter((r) => r.generated > 0).length} cities`,
+    );
   }
   return results;
 }

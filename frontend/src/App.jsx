@@ -41,23 +41,136 @@ export default function App() {
         <Layout>
           <OnboardingWrapper>
             <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/map" element={<MapPage />} />
-            <Route path="/city/:id" element={<ErrorBoundary><CityDashboard /></ErrorBoundary>} />
-            <Route path="/property/:id" element={<ErrorBoundary><ProtectedRoute><PropertyPage /></ProtectedRoute></ErrorBoundary>} />
-            <Route path="/dashboard" element={<ErrorBoundary><ProtectedRoute><PlayerDashboard /></ProtectedRoute></ErrorBoundary>} />
-            <Route path="/bank" element={<ErrorBoundary><ProtectedRoute><BankPage /></ProtectedRoute></ErrorBoundary>} />
-            <Route path="/development" element={<ErrorBoundary><ProtectedRoute><DevelopmentPage /></ProtectedRoute></ErrorBoundary>} />
-            <Route path="/project/:id" element={<ErrorBoundary><ProtectedRoute><ProjectDetailsPage /></ProtectedRoute></ErrorBoundary>} />
-            <Route path="/marketplace" element={<ErrorBoundary><ProtectedRoute><Marketplace /></ProtectedRoute></ErrorBoundary>} />
-            <Route path="/admin" element={<ErrorBoundary><ProtectedRoute requiredRole="admin"><AdminPage /></ProtectedRoute></ErrorBoundary>} />
-            <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
-            <Route path="/profile/:username" element={<ErrorBoundary><ProtectedRoute><UserProfilePage /></ProtectedRoute></ErrorBoundary>} />
-            <Route path="/profile" element={<ErrorBoundary><ProtectedRoute><UserProfilePage /></ProtectedRoute></ErrorBoundary>} />
-            <Route path="/friends" element={<ErrorBoundary><ProtectedRoute><FriendsPage /></ProtectedRoute></ErrorBoundary>} />
-            <Route path="/notifications" element={<ErrorBoundary><ProtectedRoute><NotificationsPage /></ProtectedRoute></ErrorBoundary>} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/map" element={<MapPage />} />
+              <Route
+                path="/city/:id"
+                element={
+                  <ErrorBoundary>
+                    <CityDashboard />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/property/:id"
+                element={
+                  <ErrorBoundary>
+                    <ProtectedRoute>
+                      <PropertyPage />
+                    </ProtectedRoute>
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/dashboard"
+                element={
+                  <ErrorBoundary>
+                    <ProtectedRoute>
+                      <PlayerDashboard />
+                    </ProtectedRoute>
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/bank"
+                element={
+                  <ErrorBoundary>
+                    <ProtectedRoute>
+                      <BankPage />
+                    </ProtectedRoute>
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/development"
+                element={
+                  <ErrorBoundary>
+                    <ProtectedRoute>
+                      <DevelopmentPage />
+                    </ProtectedRoute>
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/project/:id"
+                element={
+                  <ErrorBoundary>
+                    <ProtectedRoute>
+                      <ProjectDetailsPage />
+                    </ProtectedRoute>
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/marketplace"
+                element={
+                  <ErrorBoundary>
+                    <ProtectedRoute>
+                      <Marketplace />
+                    </ProtectedRoute>
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <ErrorBoundary>
+                    <ProtectedRoute requiredRole="admin">
+                      <AdminPage />
+                    </ProtectedRoute>
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/login"
+                element={
+                  <GuestRoute>
+                    <LoginPage />
+                  </GuestRoute>
+                }
+              />
+              <Route
+                path="/profile/:username"
+                element={
+                  <ErrorBoundary>
+                    <ProtectedRoute>
+                      <UserProfilePage />
+                    </ProtectedRoute>
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <ErrorBoundary>
+                    <ProtectedRoute>
+                      <UserProfilePage />
+                    </ProtectedRoute>
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/friends"
+                element={
+                  <ErrorBoundary>
+                    <ProtectedRoute>
+                      <FriendsPage />
+                    </ProtectedRoute>
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/notifications"
+                element={
+                  <ErrorBoundary>
+                    <ProtectedRoute>
+                      <NotificationsPage />
+                    </ProtectedRoute>
+                  </ErrorBoundary>
+                }
+              />
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
           </OnboardingWrapper>
         </Layout>
       </BrowserRouter>
