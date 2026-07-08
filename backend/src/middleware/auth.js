@@ -21,7 +21,7 @@ export async function authenticate(req, res, next) {
   }
 }
 
-export function optionalAuth(req, res, next) {
+export async function optionalAuth(req, res, next) {
   const header = req.headers.authorization;
   if (!header || !header.startsWith('Bearer ')) {
     return next();
@@ -29,7 +29,7 @@ export function optionalAuth(req, res, next) {
   try {
     const token = header.split(' ')[1];
     const decoded = jwt.verify(token, config.jwtSecret);
-    const user = User.findById(decoded.userId);
+    const user = await User.findById(decoded.userId);
     req.user = user;
   } catch {
     // ignore

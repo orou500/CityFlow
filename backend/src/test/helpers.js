@@ -9,6 +9,14 @@ export function generateToken(userId) {
   return jwt.sign({ userId }, config.jwtSecret, { expiresIn: '7d' });
 }
 
+export function generateExpiredToken(userId) {
+  return jwt.sign({ userId }, config.jwtSecret, { expiresIn: '0s' });
+}
+
+export function generateTokenWithBadSecret(userId) {
+  return jwt.sign({ userId }, 'wrong-secret', { expiresIn: '7d' });
+}
+
 export async function createTestUser(overrides = {}) {
   const data = {
     username: `testuser_${Date.now()}`,
