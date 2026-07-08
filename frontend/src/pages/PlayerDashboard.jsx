@@ -17,6 +17,8 @@ export default function PlayerDashboard() {
   const [offersTab, setOffersTab] = useState('received');
   const [counterModal, setCounterModal] = useState(null);
   const [counterAmount, setCounterAmount] = useState('');
+  const [txPage, setTxPage] = useState(1);
+  const TX_PER_PAGE = 5;
 
   useEffect(() => {
     fetchMe();
@@ -262,8 +264,9 @@ export default function PlayerDashboard() {
         {data.transactions?.length === 0 ? (
           <p className="text-gray-500 dark:text-gray-400">{t('dashboard.noTransactions')}</p>
         ) : (
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            {data.transactions?.map((tx) => (
+          <>
+            <div className="space-y-2">
+              {data.transactions?.slice(0, txPage * TX_PER_PAGE).map((tx) => (
               <div key={tx._id} className="bg-gray-50 dark:bg-gray-800 p-2 rounded text-sm flex justify-between">
                 <div>
                   <span className={`font-semibold ${
@@ -295,7 +298,31 @@ export default function PlayerDashboard() {
                 </span>
               </div>
             ))}
-          </div>
+            </div>
+            {data.transactions?.length > TX_PER_PAGE && (
+              <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700 mt-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {t('dashboard.showing', { shown: Math.min(txPage * TX_PER_PAGE, data.transactions.length), total: data.transactions.length })}
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setTxPage(p => Math.max(1, p - 1))}
+                    disabled={txPage === 1}
+                    className="px-3 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {t('marketplace.previous')}
+                  </button>
+                  <button
+                    onClick={() => setTxPage(p => p + 1)}
+                    disabled={txPage * TX_PER_PAGE >= data.transactions.length}
+                    className="px-3 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {t('marketplace.next')}
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

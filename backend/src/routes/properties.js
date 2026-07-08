@@ -11,7 +11,7 @@ router.get('/', async (req, res) => {
   try {
     const {
       search, minPrice, maxPrice, city, country,
-      type, seller, sort, page = '1', limit = '20', forSale,
+      type, seller, sort, page = '1', limit = '21', forSale,
     } = req.query;
 
     const filter = {};
@@ -69,7 +69,7 @@ router.get('/', async (req, res) => {
     }
 
     const pageNum = Math.max(1, parseInt(page) || 1);
-    const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 20));
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 21));
     const skip = (pageNum - 1) * limitNum;
 
     const [total, properties] = await Promise.all([
@@ -100,7 +100,15 @@ router.get('/:id/detail', authenticate, async (req, res) => {
     });
     const totalRentEarned = rentTransactions.reduce((sum, t) => sum + t.price, 0);
 
-    res.json({ property, totalRentEarned });
+    const ownerId = property.ownerId?._id || property.ownerId;
+    const investmentTransactions = ownerId ? await Transaction.find({
+      propertyId: property._id,
+      type: { $in: ['buy', 'construction', 'upgrade'] },
+      buyerId: ownerId,
+    }) : [];
+    const totalInvestment = investmentTransactions.reduce((sum, t) => sum + t.price, 0);
+
+    res.json({ property, totalRentEarned, totalInvestment });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

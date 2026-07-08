@@ -15,6 +15,7 @@ import PropertyPage from './pages/PropertyPage';
 import BankPage from './pages/BankPage';
 import AdminPage from './pages/AdminPage';
 import DevelopmentPage from './pages/DevelopmentPage';
+import ProjectDetailsPage from './pages/ProjectDetailsPage';
 import UserProfilePage from './pages/UserProfilePage';
 import FriendsPage from './pages/FriendsPage';
 import NotificationsPage from './pages/NotificationsPage';
@@ -47,6 +48,7 @@ export default function App() {
             <Route path="/dashboard" element={<ErrorBoundary><ProtectedRoute><PlayerDashboard /></ProtectedRoute></ErrorBoundary>} />
             <Route path="/bank" element={<ErrorBoundary><ProtectedRoute><BankPage /></ProtectedRoute></ErrorBoundary>} />
             <Route path="/development" element={<ErrorBoundary><ProtectedRoute><DevelopmentPage /></ProtectedRoute></ErrorBoundary>} />
+            <Route path="/project/:id" element={<ErrorBoundary><ProtectedRoute><ProjectDetailsPage /></ProtectedRoute></ErrorBoundary>} />
             <Route path="/marketplace" element={<ErrorBoundary><ProtectedRoute><Marketplace /></ProtectedRoute></ErrorBoundary>} />
             <Route path="/admin" element={<ErrorBoundary><ProtectedRoute requiredRole="admin"><AdminPage /></ProtectedRoute></ErrorBoundary>} />
             <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />

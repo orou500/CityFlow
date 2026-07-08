@@ -66,7 +66,8 @@
     "noTransactions": "No transactions yet",
     "income": "Rent Income",
     "totalRent": "Total Rent Collected",
-    "language": "Language"
+    "language": "Language",
+    "showing": "Showing {{shown}} / {{total}}"
   },
   "marketplace": {
     "title": "Marketplace",
@@ -195,6 +196,7 @@
     "purchasePrice": "Purchase Price",
     "purchaseDate": "Purchase Date",
     "totalRentEarned": "Total Rent Earned",
+    "totalInvestment": "Total Investment",
     "unowned": "Not owned",
     "actions": "Actions",
     "sellProperty": "Sell Property",
@@ -336,6 +338,35 @@
       "hotel": { "name": "Hotel", "description": "Full-service hotel with 150 rooms" },
       "resort": { "name": "Resort", "description": "Luxury resort destination" }
     }
+  },
+  "projectDetail": {
+    "title": "Project Details",
+    "backToDevelopment": "← Back to Development",
+    "projectInfo": "Project Information",
+    "projectType": "Project Type",
+    "category": "Category",
+    "location": "Location",
+    "district": "District",
+    "owner": "Owner",
+    "remainingPeriods": "Remaining Periods",
+    "financials": "Financial Information",
+    "developmentCost": "Development Cost",
+    "investedAmount": "Invested Amount",
+    "projectCompleted": "Project Completed",
+    "viewProperty": "View Property",
+    "timeline": "Project Timeline",
+    "projectStarted": "Project Started",
+    "finished": "Finished",
+    "estimatedCompletion": "Est. Completion",
+    "noTimeline": "Timeline information will appear once construction begins.",
+    "statusPlanned": "Planned",
+    "statusUnderConstruction": "Under Construction",
+    "statusCompleted": "Completed",
+    "statusCancelled": "Cancelled",
+    "notFound": "Project Not Found",
+    "notFoundMsg": "The project you are looking for does not exist.",
+    "accessDenied": "Access Denied",
+    "accessDeniedMsg": "You do not have permission to view this project."
   },
   "offers": {
     "title": "Offers",
