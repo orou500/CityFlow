@@ -389,7 +389,9 @@ export default function PropertyPage() {
 
           {property.units && property.units.length > 0 && (
             <div className="bg-white dark:bg-gray-900 rounded-lg p-6">
-              <h2 className="text-lg font-bold mb-3">{t('propertyDetail.buildingUnits', { count: property.units.length })}</h2>
+              <h2 className="text-lg font-bold mb-3">
+                {t('propertyDetail.buildingUnits', { count: property.units.length })}
+              </h2>
               <div className="grid grid-cols-2 gap-2 mb-4">
                 <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
                   <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.occupancy')}</p>
@@ -416,12 +418,17 @@ export default function PropertyPage() {
                           className="bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded text-sm flex justify-between items-center"
                         >
                           <div>
-                            <span className="text-gray-500 dark:text-gray-400">{t('propertyDetail.unitNumber', { number: unit.unitNumber })}</span>
-                            <span className="text-gray-400 dark:text-gray-500 ml-2">{unit.type?.replace('_', ' ')}</span>
+                            <span className="text-gray-500 dark:text-gray-400">
+                              {t('propertyDetail.unitNumber', { number: unit.unitNumber })}
+                            </span>
+                            <span className="text-gray-400 dark:text-gray-500 ml-2">
+                              {unit.type?.replace('_', ' ')}
+                            </span>
                           </div>
                           <div className="flex items-center gap-3">
                             <span className="text-emerald-600 dark:text-emerald-400">
-                              ${unit.rentPrice?.toLocaleString()}{t('propertyDetail.perPeriod')}
+                              ${unit.rentPrice?.toLocaleString()}
+                              {t('propertyDetail.perPeriod')}
                             </span>
                             <span
                               className={`text-xs px-2 py-0.5 rounded ${unit.occupied ? 'bg-emerald-900 text-emerald-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}

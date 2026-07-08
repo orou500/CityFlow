@@ -37,9 +37,7 @@ router.get('/overview', async (req, res) => {
       Loan.countDocuments({ active: true }),
       ConstructionProject.countDocuments({ status: 'under_construction' }),
       getGameState(),
-      User.aggregate([
-        { $group: { _id: null, total: { $sum: '$balance' } } },
-      ]),
+      User.aggregate([{ $group: { _id: null, total: { $sum: '$balance' } } }]),
       Property.aggregate([{ $group: { _id: null, total: { $sum: '$currentPrice' } } }]),
     ]);
 
@@ -99,9 +97,7 @@ router.post('/tick/run', async (req, res) => {
 router.get('/users', async (req, res) => {
   try {
     const [users, propCounts] = await Promise.all([
-      User.find()
-        .select('-password')
-        .sort({ createdAt: -1 }),
+      User.find().select('-password').sort({ createdAt: -1 }),
       Property.aggregate([{ $group: { _id: '$ownerId', count: { $sum: 1 } } }]),
     ]);
     const propCountMap = new Map(propCounts.map((p) => [p._id?.toString(), p.count]));
