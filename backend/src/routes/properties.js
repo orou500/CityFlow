@@ -38,13 +38,10 @@ router.get('/', async (req, res) => {
       filter.type = type;
     }
 
-    const systemUser = await User.findOne({ username: '__system__' }).select('_id').lean();
-
-    if (seller === 'bank' && systemUser) {
-      filter.ownerId = systemUser._id;
+    if (seller === 'bank') {
+      filter.ownerId = null;
     } else if (seller === 'player') {
       filter.ownerId = { $exists: true, $ne: null };
-      if (systemUser) filter.ownerId.$nin = [systemUser._id];
     }
 
     const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -236,8 +233,7 @@ router.post('/sell', authenticate, async (req, res) => {
     seller.ownedProperties = seller.ownedProperties.filter((p) => p.toString() !== propertyId);
     await seller.save();
 
-    const systemUser = await User.findOne({ username: '__system__' });
-    property.ownerId = systemUser ? systemUser._id : null;
+    property.ownerId = null;
     property.forSale = true;
     property.lastPurchasePrice = salePrice;
     property.lastPurchaseDate = new Date();

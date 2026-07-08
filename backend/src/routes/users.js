@@ -47,10 +47,7 @@ router.get('/search', authenticate, async (req, res) => {
     const { q } = req.query;
     if (!q || q.length < 1) return res.json([]);
     const users = await User.find({
-      $and: [
-        { username: { $ne: '__system__' } },
-        { $or: [{ username: { $regex: q, $options: 'i' } }, { displayName: { $regex: q, $options: 'i' } }] },
-      ],
+      $or: [{ username: { $regex: q, $options: 'i' } }, { displayName: { $regex: q, $options: 'i' } }],
     })
       .select('username displayName avatar')
       .limit(10);
@@ -62,9 +59,6 @@ router.get('/search', authenticate, async (req, res) => {
 
 router.get('/:username', authenticate, async (req, res) => {
   try {
-    if (req.params.username === '__system__') {
-      return res.status(404).json({ error: 'User not found' });
-    }
     const user = await User.findOne({ username: req.params.username });
     if (!user) return res.status(404).json({ error: 'User not found' });
 

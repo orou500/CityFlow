@@ -249,6 +249,54 @@ router.get('/my-buildings', async (req, res) => {
   }
 });
 
+router.get('/upgrades/:propertyId', async (req, res) => {
+  try {
+    const property = await Property.findById(req.params.propertyId);
+    if (!property) return res.status(404).json({ error: 'Property not found' });
+    if (!property.ownerId || property.ownerId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: 'You do not own this property' });
+    }
+    if (property.developmentLevel < 1) {
+      return res.status(400).json({ error: 'Only developed properties can be upgraded' });
+    }
+
+    const UPGRADES = {
+      renovation: { costPercent: 0.1, valueBoost: 0.05, rentBoost: 0.2, conditionBoost: 10 },
+      security: { costPercent: 0.05, valueBoost: 0.03, rentBoost: 0.05, riskReduction: true },
+      luxury: { costPercent: 0.2, valueBoost: 0.1, rentBoost: 0.35, conditionBoost: 5 },
+      expansion: { costPercent: 0.3, valueBoost: 0.15, rentBoost: 0.25, unitBoost: 0.1 },
+    };
+
+    const currentRent = property.rent || 0;
+    const currentValue = property.currentPrice;
+
+    const upgrades = Object.entries(UPGRADES).map(([type, def]) => {
+      const cost = Math.round(currentValue * def.costPercent);
+      const projectedValue = Math.round(currentValue * (1 + (def.valueBoost || 0)));
+      const projectedRent = Math.round(currentRent * (1 + (def.rentBoost || 0)));
+      const rentIncrease = projectedRent - currentRent;
+
+      return {
+        type,
+        cost,
+        valueBoost: def.valueBoost || 0,
+        rentBoost: def.rentBoost || 0,
+        conditionBoost: def.conditionBoost || 0,
+        unitBoost: def.unitBoost || 0,
+        riskReduction: !!def.riskReduction,
+        projectedValue,
+        projectedRent,
+        rentIncrease,
+      };
+    });
+
+    const user = await User.findById(req.user._id);
+    res.json({ upgrades, propertyValue: currentValue, currentRent, balance: user.balance });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/upgrade', async (req, res) => {
   try {
     const { propertyId, upgradeType } = req.body;
@@ -266,10 +314,10 @@ router.post('/upgrade', async (req, res) => {
     const currentPeriod = gameState.tickNumber;
 
     const UPGRADES = {
-      renovation: { costPercent: 0.1, rentBoost: 0.2, conditionBoost: 10 },
-      security: { costPercent: 0.05, rentBoost: 0.05, riskReduction: true },
-      luxury: { costPercent: 0.2, rentBoost: 0.35, conditionBoost: 5 },
-      expansion: { costPercent: 0.3, rentBoost: 0.25, unitBoost: 0.1 },
+      renovation: { costPercent: 0.1, valueBoost: 0.05, rentBoost: 0.2, conditionBoost: 10 },
+      security: { costPercent: 0.05, valueBoost: 0.03, rentBoost: 0.05, riskReduction: true },
+      luxury: { costPercent: 0.2, valueBoost: 0.1, rentBoost: 0.35, conditionBoost: 5 },
+      expansion: { costPercent: 0.3, valueBoost: 0.15, rentBoost: 0.25, unitBoost: 0.1 },
     };
 
     const upgrade = UPGRADES[upgradeType];
@@ -283,6 +331,10 @@ router.post('/upgrade', async (req, res) => {
 
     user.balance -= cost;
     await user.save();
+
+    if (upgrade.valueBoost) {
+      property.currentPrice = Math.round(property.currentPrice * (1 + upgrade.valueBoost));
+    }
 
     if (upgrade.rentBoost) {
       const oldRent = property.rent || 0;

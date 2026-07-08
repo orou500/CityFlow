@@ -187,9 +187,9 @@ export const useGameStore = create((set, get) => ({
     return await api(`/admin/users/${userId}/ban`, { method: 'PUT' });
   },
 
-  fetchAdminProperties: async () => {
-    const data = await api('/admin/properties');
-    set({ adminProperties: data });
+  fetchAdminProperties: async (page = 1) => {
+    const data = await api(`/admin/properties?page=${page}&limit=200`);
+    set({ adminProperties: data.properties });
     return data;
   },
 
@@ -368,6 +368,10 @@ export const useGameStore = create((set, get) => ({
     const data = await api('/development/my-buildings');
     set({ myBuildings: data });
     return data;
+  },
+
+  fetchUpgradeOptions: async (propertyId) => {
+    return await api(`/development/upgrades/${propertyId}`);
   },
 
   upgradeBuilding: async (propertyId, upgradeType) => {

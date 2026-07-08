@@ -9,14 +9,13 @@ const router = Router();
 router.get('/', async (req, res) => {
   try {
     const [playersCount, propertiesCount, citiesCount, transactionsCount] = await Promise.all([
-      User.countDocuments({ username: { $ne: '__system__' } }),
+      User.countDocuments(),
       Property.countDocuments(),
       City.countDocuments(),
       Transaction.countDocuments(),
     ]);
 
     const topPlayers = await User.aggregate([
-      { $match: { username: { $ne: '__system__' } } },
       { $lookup: { from: 'properties', localField: '_id', foreignField: 'ownerId', as: 'props' } },
       { $addFields: { portfolioValue: { $sum: '$props.currentPrice' } } },
       { $addFields: { netWorth: { $add: ['$balance', '$portfolioValue'] } } },

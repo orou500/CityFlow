@@ -6,12 +6,31 @@ function clamp(value, min, max) {
 }
 
 export async function simulateCities(activeEvents) {
-  const cities = await City.find();
+  const [cities, propertyStats] = await Promise.all([
+    City.find(),
+    Property.aggregate([
+      {
+        $group: {
+          _id: '$cityId',
+          total: { $sum: 1 },
+          owned: { $sum: { $cond: [{ $ne: ['$ownerId', null] }, 1, 0] } },
+          totalPrice: { $sum: '$currentPrice' },
+        },
+      },
+    ]),
+  ]);
+
+  const statsMap = new Map();
+  for (const stat of propertyStats) {
+    statsMap.set(stat._id.toString(), stat);
+  }
+
   const results = [];
+  const bulkOps = [];
 
   for (const city of cities) {
     const activeForCity = activeEvents.filter(
-      (e) => e.type === 'global' || e.affectedCities.some((id) => id.toString() === city._id.toString()),
+      (e) => e.type === 'global' || e.affectedCities?.some((id) => id.toString() === city._id.toString()),
     );
 
     let demandMod = 0;
@@ -24,9 +43,9 @@ export async function simulateCities(activeEvents) {
       growthMod += event.impact.growthDelta || 0;
     }
 
-    const properties = await Property.find({ cityId: city._id });
-    const totalProperties = properties.length;
-    const ownedProperties = properties.filter((p) => p.ownerId).length;
+    const stats = statsMap.get(city._id.toString()) || { total: 0, owned: 0, totalPrice: 0 };
+    const totalProperties = stats.total;
+    const ownedProperties = stats.owned;
 
     const occupancyRate = totalProperties > 0 ? ownedProperties / totalProperties : 0.5;
 
@@ -47,11 +66,25 @@ export async function simulateCities(activeEvents) {
 
     city.growthRate = clamp(city.growthRate + 0.001 * (city.demandIndex - 1) + growthMod * 0.1, -0.05, 0.1);
 
-    const totalPrice = properties.reduce((sum, p) => sum + p.currentPrice, 0);
-    city.avgPrice = totalProperties > 0 ? totalPrice / totalProperties : city.avgPrice;
+    city.avgPrice = totalProperties > 0 ? stats.totalPrice / totalProperties : city.avgPrice;
     city.propertyCount = totalProperties;
 
-    await city.save();
+    bulkOps.push({
+      updateOne: {
+        filter: { _id: city._id },
+        update: {
+          $set: {
+            demandIndex: city.demandIndex,
+            supplyIndex: city.supplyIndex,
+            population: city.population,
+            growthRate: city.growthRate,
+            avgPrice: city.avgPrice,
+            propertyCount: city.propertyCount,
+          },
+        },
+      },
+    });
+
     results.push({
       cityId: city._id,
       name: city.name,
@@ -61,6 +94,10 @@ export async function simulateCities(activeEvents) {
       growthRate: city.growthRate,
       avgPrice: city.avgPrice,
     });
+  }
+
+  if (bulkOps.length > 0) {
+    await City.bulkWrite(bulkOps);
   }
 
   return results;
