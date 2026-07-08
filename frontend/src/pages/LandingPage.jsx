@@ -333,7 +333,7 @@ export default function LandingPage() {
           <h2 className="text-3xl md:text-5xl font-bold text-primary mb-6 leading-tight">{t('landing.cta.title')}</h2>
           <p className="text-lg text-secondary mb-8 max-w-xl mx-auto">{t('landing.cta.description')}</p>
           <Link
-            to="/register"
+            to="/login"
             className="inline-block bg-emerald-600 hover:bg-emerald-500 text-white text-xl px-10 py-4 rounded-lg font-bold transition-all hover:-translate-y-0.5 shadow-lg shadow-emerald-600/30"
           >
             {t('landing.cta.button')}
