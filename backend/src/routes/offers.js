@@ -29,9 +29,7 @@ router.post('/create', async (req, res) => {
       return res.status(400).json({ error: 'You cannot offer on your own property' });
     }
 
-    const seller = await User.findById(property.ownerId);
-    if (!seller) return res.status(400).json({ error: 'Owner not found' });
-    if (seller.username === '__system__') {
+    if (!property.ownerId) {
       return res.status(400).json({ error: 'Cannot make offers on bank properties — use Buy instead' });
     }
 

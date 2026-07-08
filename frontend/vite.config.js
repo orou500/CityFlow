@@ -9,11 +9,13 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:5000',
         changeOrigin: true,
+        timeout: 120000,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
       '/uploads': {
         target: 'http://localhost:5000',
         changeOrigin: true,
+        timeout: 120000,
       },
     },
   },

@@ -134,7 +134,10 @@
     "goHome": "Go Home",
     "soon": "Soon",
     "collapseSidebar": "Collapse sidebar",
-    "expandSidebar": "Expand sidebar"
+    "expandSidebar": "Expand sidebar",
+    "previous": "Previous",
+    "next": "Next",
+    "showingRange": "{{start}}–{{end}} of {{total}}"
   },
   "property": {
     "apartment": "Apartment",
@@ -219,7 +222,14 @@
     "chartChange": "Change:",
     "chartPrevious": "Previous:",
     "chartHistoricalPrice": "Historical Price",
-    "notEnoughData": "Not enough data yet"
+    "notEnoughData": "Not enough data yet",
+    "buildingUnits": "Building Units ({{count}})",
+    "occupancy": "Occupancy",
+    "maintenanceCost": "Maintenance Cost",
+    "unitNumber": "Unit #{{number}}",
+    "perPeriod": "/period",
+    "occupied": "Occupied",
+    "vacant": "Vacant"
   },
   "errors": {
     "Property not found": "Property not found",
@@ -323,6 +333,21 @@
     "city": "City:",
     "constructionStarted": "Construction started on \"{{name}}\"!",
     "upgradeApplied": "Upgrade applied successfully!",
+    "costLabel": "Cost",
+    "confirmUpgrade": "Confirm Upgrade",
+    "currentValue": "Current Value:",
+    "projectedValue": "Projected Value:",
+    "upgradeCost": "Upgrade Cost:",
+    "expectedRentIncrease": "Expected Rent Increase:",
+    "newBalance": "New Balance:",
+    "confirm": "Confirm",
+    "back": "Back",
+    "processing": "Processing...",
+    "insufficientFunds": "Insufficient Funds",
+    "reducedRisk": "Reduced Risk",
+    "rent": "Rent",
+    "condition": "Condition",
+    "units": "Units",
     "cat": {
       "residential": { "label": "Residential", "description": "Build homes and apartments for steady rental income" },
       "commercial": { "label": "Commercial", "description": "Build offices and retail spaces for higher income" },

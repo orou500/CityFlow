@@ -1,4 +1,3 @@
-import crypto from 'crypto';
 import mongoose from 'mongoose';
 import { config } from './config/index.js';
 import City from './models/City.js';
@@ -260,15 +259,6 @@ async function seed() {
     const cities = await City.insertMany(citiesData);
     console.log(`Seeded ${cities.length} cities`);
 
-    const systemUser = await User.create({
-      username: '__system__',
-      email: 'system@cityflow.internal',
-      password: crypto.randomUUID(),
-      balance: 0,
-      role: 'user',
-    });
-    console.log(`Created system user: ${systemUser.username}`);
-
     const propertiesToInsert = [];
     for (const city of cities) {
       const numProperties = 10 + Math.floor(Math.random() * 11);
@@ -280,7 +270,7 @@ async function seed() {
 
         propertiesToInsert.push({
           cityId: city._id,
-          ownerId: systemUser._id,
+          ownerId: null,
           type,
           name: `${propertyNames[nameIndex]} - ${city.name}`,
           basePrice: Math.round(baseP),

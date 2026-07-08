@@ -21,6 +21,7 @@ export default function DevelopmentPage() {
     estimateProject,
     startConstruction,
     upgradeBuilding,
+    fetchUpgradeOptions,
     fetchUserData,
   } = useGameStore();
 
@@ -33,6 +34,8 @@ export default function DevelopmentPage() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [upgradeModal, setUpgradeModal] = useState(null);
+  const [upgradeOptions, setUpgradeOptions] = useState(null);
+  const [confirmUpgrade, setConfirmUpgrade] = useState(null);
   const [upgrading, setUpgrading] = useState(false);
 
   useEffect(() => {
@@ -93,6 +96,16 @@ export default function DevelopmentPage() {
     return Math.min(100, Math.round(elapsed));
   }
 
+  useEffect(() => {
+    if (upgradeModal) {
+      setUpgradeOptions(null);
+      setConfirmUpgrade(null);
+      fetchUpgradeOptions(upgradeModal)
+        .then(setUpgradeOptions)
+        .catch((e) => setError(e.message));
+    }
+  }, [upgradeModal]);
+
   async function handleUpgrade(propertyId, upgradeType) {
     setUpgrading(true);
     setError(null);
@@ -100,6 +113,8 @@ export default function DevelopmentPage() {
       await upgradeBuilding(propertyId, upgradeType);
       setSuccess(t('development.upgradeApplied'));
       setUpgradeModal(null);
+      setUpgradeOptions(null);
+      setConfirmUpgrade(null);
       fetchMyBuildings();
       fetchMe();
       fetchUserData();
@@ -562,50 +577,152 @@ export default function DevelopmentPage() {
 
       {/* Upgrade Modal */}
       {upgradeModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 w-full max-w-sm">
-            <h3 className="text-gray-900 dark:text-white font-semibold mb-4">{t('development.buildingUpgrades')}</h3>
-            <div className="space-y-2">
-              <button
-                onClick={() => handleUpgrade(upgradeModal, 'renovation')}
-                disabled={upgrading}
-                className="w-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:bg-gray-200 dark:disabled:bg-gray-600 text-left p-3 rounded transition-colors"
-              >
-                <p className="font-semibold text-gray-900 dark:text-white">{t('development.renovation')}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{t('development.renovationDesc')}</p>
-              </button>
-              <button
-                onClick={() => handleUpgrade(upgradeModal, 'security')}
-                disabled={upgrading}
-                className="w-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:bg-gray-200 dark:disabled:bg-gray-600 text-left p-3 rounded transition-colors"
-              >
-                <p className="font-semibold text-gray-900 dark:text-white">{t('development.security')}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{t('development.securityDesc')}</p>
-              </button>
-              <button
-                onClick={() => handleUpgrade(upgradeModal, 'luxury')}
-                disabled={upgrading}
-                className="w-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:bg-gray-200 dark:disabled:bg-gray-600 text-left p-3 rounded transition-colors"
-              >
-                <p className="font-semibold text-gray-900 dark:text-white">{t('development.luxury')}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{t('development.luxuryDesc')}</p>
-              </button>
-              <button
-                onClick={() => handleUpgrade(upgradeModal, 'expansion')}
-                disabled={upgrading}
-                className="w-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:bg-gray-200 dark:disabled:bg-gray-600 text-left p-3 rounded transition-colors"
-              >
-                <p className="font-semibold text-gray-900 dark:text-white">{t('development.expansion')}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{t('development.expansionDesc')}</p>
-              </button>
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          {confirmUpgrade ? (
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 w-full max-w-sm">
+              <h3 className="text-gray-900 dark:text-white font-semibold mb-4">{t('development.confirmUpgrade')}</h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-400 dark:text-gray-500">{t('development.currentValue')}</span>
+                  <span className="text-gray-900 dark:text-white font-medium">
+                    ${upgradeOptions.propertyValue?.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400 dark:text-gray-500">{t('development.projectedValue')}</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                    ${confirmUpgrade.projectedValue?.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400 dark:text-gray-500">{t('development.upgradeCost')}</span>
+                  <span className="text-red-500 font-medium">-${confirmUpgrade.cost?.toLocaleString()}</span>
+                </div>
+                {confirmUpgrade.rentIncrease > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-400 dark:text-gray-500">{t('development.expectedRentIncrease')}</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                      +${confirmUpgrade.rentIncrease?.toLocaleString()}/{t('development.period')}
+                    </span>
+                  </div>
+                )}
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-3 flex justify-between font-semibold">
+                  <span className="text-gray-400 dark:text-gray-500">{t('development.newBalance')}</span>
+                  <span className="text-gray-900 dark:text-white">
+                    ${(upgradeOptions.balance - confirmUpgrade.cost)?.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={() => setConfirmUpgrade(null)}
+                  className="flex-1 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-900 dark:text-white py-2 rounded text-sm transition-colors"
+                >
+                  {t('development.back')}
+                </button>
+                <button
+                  onClick={() => handleUpgrade(upgradeModal, confirmUpgrade.type)}
+                  disabled={upgrading}
+                  className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white py-2 rounded text-sm transition-colors"
+                >
+                  {upgrading ? t('development.processing') : t('development.confirm')}
+                </button>
+              </div>
             </div>
-            <button
-              onClick={() => setUpgradeModal(null)}
-              className="w-full mt-3 bg-gray-200 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 text-gray-900 dark:text-white py-2 rounded text-sm transition-colors"
-            >
-              {t('development.cancel')}
-            </button>
-          </div>
+          ) : (
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 w-full max-w-md">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-gray-900 dark:text-white font-semibold">{t('development.buildingUpgrades')}</h3>
+                <button
+                  onClick={() => {
+                    setUpgradeModal(null);
+                    setUpgradeOptions(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl leading-none"
+                >
+                  &times;
+                </button>
+              </div>
+              {upgradeOptions ? (
+                <div className="space-y-3">
+                  {upgradeOptions.upgrades.map((u) => {
+                    const canAfford = u.cost <= upgradeOptions.balance;
+                    return (
+                      <div
+                        key={u.type}
+                        className={`bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border ${
+                          canAfford
+                            ? 'border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 cursor-pointer'
+                            : 'border-gray-200 dark:border-gray-700 opacity-60'
+                        } transition-colors`}
+                        onClick={() => canAfford && setConfirmUpgrade(u)}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="font-semibold text-gray-900 dark:text-white text-sm">
+                              {t(`development.${u.type}`)}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                              {t(`development.${u.type}Desc`)}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold text-gray-900 dark:text-white text-sm">
+                              ${u.cost?.toLocaleString()}
+                            </p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500">{t('development.costLabel')}</p>
+                          </div>
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                          {u.valueBoost > 0 && (
+                            <span className="text-emerald-600 dark:text-emerald-400">
+                              +{(u.valueBoost * 100).toFixed(0)}% {t('development.value')}
+                            </span>
+                          )}
+                          {u.rentBoost > 0 && (
+                            <span className="text-emerald-600 dark:text-emerald-400">
+                              +{(u.rentBoost * 100).toFixed(0)}% {t('development.rent')}
+                            </span>
+                          )}
+                          {u.conditionBoost > 0 && (
+                            <span className="text-blue-500">
+                              +{u.conditionBoost} {t('development.condition')}
+                            </span>
+                          )}
+                          {u.unitBoost > 0 && (
+                            <span className="text-blue-500">
+                              +{(u.unitBoost * 100).toFixed(0)}% {t('development.units')}
+                            </span>
+                          )}
+                          {u.riskReduction && <span className="text-purple-500">{t('development.reducedRisk')}</span>}
+                        </div>
+                        {!canAfford && (
+                          <p className="mt-2 text-xs text-red-500">
+                            {t('development.insufficientFunds')} — ${u.cost?.toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">{t('common.loading')}</p>
+                </div>
+              )}
+              {!confirmUpgrade && (
+                <button
+                  onClick={() => {
+                    setUpgradeModal(null);
+                    setUpgradeOptions(null);
+                  }}
+                  className="w-full mt-3 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-900 dark:text-white py-2 rounded text-sm transition-colors"
+                >
+                  {t('development.cancel')}
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

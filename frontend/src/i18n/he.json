@@ -134,7 +134,10 @@
     "goHome": "לדף הבית",
     "soon": "בקרוב",
     "collapseSidebar": "צמצם סרגל צד",
-    "expandSidebar": "הרחב סרגל צד"
+    "expandSidebar": "הרחב סרגל צד",
+    "previous": "הקודם",
+    "next": "הבא",
+    "showingRange": "{{start}}–{{end}} מתוך {{total}}"
   },
   "property": {
     "apartment": "דירה",
@@ -219,7 +222,14 @@
     "chartChange": "שינוי:",
     "chartPrevious": "קודם:",
     "chartHistoricalPrice": "מחיר היסטורי",
-    "notEnoughData": "עדיין אין מספיק נתונים"
+    "notEnoughData": "עדיין אין מספיק נתונים",
+    "buildingUnits": "יחידות בניין ({{count}})",
+    "occupancy": "תפוסה",
+    "maintenanceCost": "עלות תחזוקה",
+    "unitNumber": "יחידה #{{number}}",
+    "perPeriod": "/תקופה",
+    "occupied": "מושכר",
+    "vacant": "פנוי"
   },
   "errors": {
     "Property not found": "הנכס לא נמצא",
@@ -323,6 +333,21 @@
     "city": "עיר:",
     "constructionStarted": "הבנייה של \"{{name}}\" החלה!",
     "upgradeApplied": "השדרוג הוחל בהצלחה!",
+    "costLabel": "עלות",
+    "confirmUpgrade": "אישור שדרוג",
+    "currentValue": "שווי נוכחי:",
+    "projectedValue": "שווי משוער:",
+    "upgradeCost": "עלות שדרוג:",
+    "expectedRentIncrease": "תוספת שכירות צפויה:",
+    "newBalance": "יתרה חדשה:",
+    "confirm": "אישור",
+    "back": "חזור",
+    "processing": "מעבד...",
+    "insufficientFunds": "אין מספיק כספים",
+    "reducedRisk": "סיכון מופחת",
+    "rent": "שכירות",
+    "condition": "מצב",
+    "units": "יחידות",
     "cat": {
       "residential": { "label": "מגורים", "description": "בנה בתים ודירות להכנסת שכירות יציבה" },
       "commercial": { "label": "מסחרי", "description": "בנה משרדים ושטחי מסחר להכנסה גבוהה יותר" },

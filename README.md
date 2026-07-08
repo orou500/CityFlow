@@ -150,7 +150,7 @@ Each tick, the engine creates new properties for cities that have room:
 newProperties = population × developmentRate × (demandIndex / 100)
 ```
 
-New properties are assigned to the bank (`__system__` user) at a price of `city.avgPrice × locationMultiplier × marketCondition`, capped by `city.totalCapacity`.
+New properties are assigned to the bank (`ownerId: null`) at a price of `city.avgPrice × locationMultiplier × marketCondition`, capped by `city.totalCapacity`.
 
 ### Events
 

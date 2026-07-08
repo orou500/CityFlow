@@ -17,23 +17,32 @@ router.use(requireAdmin);
 
 router.get('/overview', async (req, res) => {
   try {
-    const [users, cities, properties, transactions, events, loans, constructionProjects, gameState] = await Promise.all(
-      [
-        User.countDocuments(),
-        City.countDocuments(),
-        Property.countDocuments(),
-        Transaction.countDocuments(),
-        Event.countDocuments({ active: true }),
-        Loan.countDocuments({ active: true }),
-        ConstructionProject.countDocuments({ status: 'under_construction' }),
-        getGameState(),
-      ],
-    );
+    const [
+      users,
+      cities,
+      properties,
+      transactions,
+      events,
+      loans,
+      constructionProjects,
+      gameState,
+      balanceResult,
+      propertyValueResult,
+    ] = await Promise.all([
+      User.countDocuments(),
+      City.countDocuments(),
+      Property.countDocuments(),
+      Transaction.countDocuments(),
+      Event.countDocuments({ active: true }),
+      Loan.countDocuments({ active: true }),
+      ConstructionProject.countDocuments({ status: 'under_construction' }),
+      getGameState(),
+      User.aggregate([{ $group: { _id: null, total: { $sum: '$balance' } } }]),
+      Property.aggregate([{ $group: { _id: null, total: { $sum: '$currentPrice' } } }]),
+    ]);
 
-    const allUsers = await User.find();
-    const totalBalance = allUsers.reduce((s, u) => s + u.balance, 0);
-    const allProperties = await Property.find();
-    const totalPropertyValue = allProperties.reduce((s, p) => s + p.currentPrice, 0);
+    const totalBalance = balanceResult[0]?.total || 0;
+    const totalPropertyValue = propertyValueResult[0]?.total || 0;
 
     res.json({
       totalUsers: users,
@@ -87,15 +96,15 @@ router.post('/tick/run', async (req, res) => {
 
 router.get('/users', async (req, res) => {
   try {
-    const users = await User.find({ username: { $ne: '__system__' } })
-      .select('-password')
-      .sort({ createdAt: -1 });
-    const usersWithStats = await Promise.all(
-      users.map(async (u) => {
-        const propCount = await Property.countDocuments({ ownerId: u._id });
-        return { ...u.toObject(), propertyCount: propCount };
-      }),
-    );
+    const [users, propCounts] = await Promise.all([
+      User.find().select('-password').sort({ createdAt: -1 }),
+      Property.aggregate([{ $group: { _id: '$ownerId', count: { $sum: 1 } } }]),
+    ]);
+    const propCountMap = new Map(propCounts.map((p) => [p._id?.toString(), p.count]));
+    const usersWithStats = users.map((u) => ({
+      ...u.toObject(),
+      propertyCount: propCountMap.get(u._id.toString()) || 0,
+    }));
     res.json(usersWithStats);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -130,11 +139,19 @@ router.put('/users/:id/ban', async (req, res) => {
 
 router.get('/properties', async (req, res) => {
   try {
-    const properties = await Property.find()
-      .populate('ownerId', 'username')
-      .populate('cityId', 'name')
-      .sort({ createdAt: -1 });
-    res.json(properties);
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(500, Math.max(1, parseInt(req.query.limit) || 200));
+    const skip = (page - 1) * limit;
+    const [properties, total] = await Promise.all([
+      Property.find()
+        .populate('ownerId', 'username')
+        .populate('cityId', 'name')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Property.countDocuments(),
+    ]);
+    res.json({ properties, total, page, pages: Math.ceil(total / limit) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

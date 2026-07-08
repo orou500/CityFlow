@@ -19,6 +19,7 @@ const userSchema = new mongoose.Schema(
     avatar: { type: String, default: '' },
     bio: { type: String, default: '', maxlength: 500 },
     displayName: { type: String, default: '', maxlength: 50 },
+    lastLoginAt: { type: Date, default: null },
     achievements: [{ type: String }],
     profileVisibility: {
       portfolio: { type: Boolean, default: true },

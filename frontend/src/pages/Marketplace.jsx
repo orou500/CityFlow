@@ -24,7 +24,7 @@ const INPUT_STYLE =
 function PropertyCard({ p, cities, propertyTypes, onBuy, t, user, navigate }) {
   const cityData = typeof p.cityId === 'object' ? p.cityId : cities.find((c) => c._id === p.cityId);
   const cityName = cityData?.name || '—';
-  const isBankOwned = p.ownerId?.username === '__system__';
+  const isBankOwned = !p.ownerId;
 
   return (
     <div className="bg-white dark:bg-gray-900 p-4 rounded flex flex-col gap-2 h-full">
@@ -189,8 +189,8 @@ export default function Marketplace() {
     land: t('property.land'),
   };
 
-  const bankProperties = properties.filter((p) => p.ownerId?.username === '__system__');
-  const playerProperties = properties.filter((p) => p.ownerId?.username !== '__system__');
+  const bankProperties = properties.filter((p) => !p.ownerId);
+  const playerProperties = properties.filter((p) => p.ownerId);
 
   return (
     <div className="flex-1 p-4 overflow-y-auto">

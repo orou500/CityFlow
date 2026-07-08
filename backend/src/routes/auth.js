@@ -40,6 +40,8 @@ router.post('/login', async (req, res) => {
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ error: 'Invalid username/email or password' });
     }
+    user.lastLoginAt = new Date();
+    await user.save();
     const token = generateToken(user._id);
     res.json({ token, user });
   } catch (err) {

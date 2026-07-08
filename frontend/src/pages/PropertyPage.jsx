@@ -240,6 +240,8 @@ export default function PropertyPage() {
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [offerAmount, setOfferAmount] = useState('');
   const [offerLoading, setOfferLoading] = useState(false);
+  const [unitsPage, setUnitsPage] = useState(0);
+  const UNITS_PER_PAGE = 5;
 
   const load = async () => {
     setLoading(true);
@@ -253,7 +255,10 @@ export default function PropertyPage() {
   };
 
   useEffect(() => {
-    if (id) load();
+    if (id) {
+      setUnitsPage(0);
+      load();
+    }
   }, [id]);
 
   const handleBuy = async () => {
@@ -322,7 +327,7 @@ export default function PropertyPage() {
 
   const { property, totalRentEarned, totalInvestment } = data;
   const isOwner = user && property.ownerId?._id === user._id;
-  const isBankOwned = property?.ownerId?.username === '__system__';
+  const isBankOwned = !property?.ownerId;
   const canOffer = user && !isOwner && !isBankOwned && property?.ownerId;
 
   return (
@@ -384,46 +389,83 @@ export default function PropertyPage() {
 
           {property.units && property.units.length > 0 && (
             <div className="bg-white dark:bg-gray-900 rounded-lg p-6">
-              <h2 className="text-lg font-bold mb-3">Building Units ({property.units.length})</h2>
+              <h2 className="text-lg font-bold mb-3">
+                {t('propertyDetail.buildingUnits', { count: property.units.length })}
+              </h2>
               <div className="grid grid-cols-2 gap-2 mb-4">
                 <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Occupancy</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.occupancy')}</p>
                   <p className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">{property.occupancy}%</p>
                 </div>
                 <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Maintenance Cost</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.maintenanceCost')}</p>
                   <p className="text-lg font-semibold text-red-600 dark:text-red-400">
                     ${property.maintenanceCost?.toLocaleString()}
                   </p>
                 </div>
               </div>
               <div className="max-h-64 overflow-y-auto space-y-1">
-                {property.units.slice(0, 50).map((unit, i) => (
-                  <div
-                    key={i}
-                    className="bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded text-sm flex justify-between items-center"
-                  >
-                    <div>
-                      <span className="text-gray-500 dark:text-gray-400">Unit #{unit.unitNumber}</span>
-                      <span className="text-gray-400 dark:text-gray-500 ml-2">{unit.type?.replace('_', ' ')}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-emerald-600 dark:text-emerald-400">
-                        ${unit.rentPrice?.toLocaleString()}/period
-                      </span>
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded ${unit.occupied ? 'bg-emerald-900 text-emerald-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}
-                      >
-                        {unit.occupied ? 'Occupied' : 'Vacant'}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-                {property.units.length > 50 && (
-                  <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-2">
-                    +{property.units.length - 50} more units
-                  </p>
-                )}
+                {(() => {
+                  const start = unitsPage * UNITS_PER_PAGE;
+                  const end = start + UNITS_PER_PAGE;
+                  const pageUnits = property.units.slice(start, end);
+                  const totalPages = Math.ceil(property.units.length / UNITS_PER_PAGE);
+                  return (
+                    <>
+                      {pageUnits.map((unit, i) => (
+                        <div
+                          key={start + i}
+                          className="bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded text-sm flex justify-between items-center"
+                        >
+                          <div>
+                            <span className="text-gray-500 dark:text-gray-400">
+                              {t('propertyDetail.unitNumber', { number: unit.unitNumber })}
+                            </span>
+                            <span className="text-gray-400 dark:text-gray-500 ml-2">
+                              {unit.type?.replace('_', ' ')}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-emerald-600 dark:text-emerald-400">
+                              ${unit.rentPrice?.toLocaleString()}
+                              {t('propertyDetail.perPeriod')}
+                            </span>
+                            <span
+                              className={`text-xs px-2 py-0.5 rounded ${unit.occupied ? 'bg-emerald-900 text-emerald-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}
+                            >
+                              {unit.occupied ? t('propertyDetail.occupied') : t('propertyDetail.vacant')}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                      {property.units.length > UNITS_PER_PAGE && (
+                        <div className="flex items-center justify-between pt-2 text-xs text-gray-500 dark:text-gray-400">
+                          <button
+                            onClick={() => setUnitsPage((p) => Math.max(0, p - 1))}
+                            disabled={unitsPage === 0}
+                            className="px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                          >
+                            &larr; {t('common.previous')}
+                          </button>
+                          <span>
+                            {t('common.showingRange', {
+                              start: start + 1,
+                              end: Math.min(end, property.units.length),
+                              total: property.units.length,
+                            })}
+                          </span>
+                          <button
+                            onClick={() => setUnitsPage((p) => Math.min(totalPages - 1, p + 1))}
+                            disabled={unitsPage >= totalPages - 1}
+                            className="px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                          >
+                            {t('common.next')} &rarr;
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
           )}
