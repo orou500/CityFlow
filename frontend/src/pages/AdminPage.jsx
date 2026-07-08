@@ -84,12 +84,31 @@ export default function AdminPage() {
 
   const [editPropId, setEditPropId] = useState(null);
   const [editPropData, setEditPropData] = useState({});
+  const [propPage, setPropPage] = useState(1);
+  const PROPS_PER_PAGE = 10;
 
   const [editCityId, setEditCityId] = useState(null);
   const [editCityData, setEditCityData] = useState({});
 
   const [editUserId, setEditUserId] = useState(null);
   const [editUserBalance, setEditUserBalance] = useState('');
+  const [propSearch, setPropSearch] = useState('');
+  const [userSearch, setUserSearch] = useState('');
+  const [userPage, setUserPage] = useState(1);
+  const USERS_PER_PAGE = 20;
+  const [eventSearch, setEventSearch] = useState('');
+  const [eventPage, setEventPage] = useState(1);
+  const EVENTS_PER_PAGE = 20;
+
+  function formatDate(date) {
+    const d = new Date(date);
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${mm}/${dd}/${yyyy} ${hh}:${min}`;
+  }
 
   useEffect(() => {
     loadData();
@@ -97,6 +116,9 @@ export default function AdminPage() {
 
   async function loadData() {
     setLoading(true);
+    setPropPage(1);
+    setUserPage(1);
+    setEventPage(1);
     try {
       await Promise.all([
         fetchAdminOverview(),
@@ -258,8 +280,8 @@ export default function AdminPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <StatCard label={t('admin.currentPeriod')} value={tickInfo.tickNumber || 0} />
               <StatCard label={t('admin.interval')} value={`${tickInfo.tickIntervalMinutes} min`} />
-              <StatCard label={t('admin.lastPeriod')} value={tickInfo.lastTickAt ? new Date(tickInfo.lastTickAt).toLocaleString() : t('admin.never')} />
-              <StatCard label={t('admin.nextAutoPeriod')} value={tickInfo.nextTickAt ? new Date(tickInfo.nextTickAt).toLocaleString() : t('admin.na')} />
+              <StatCard label={t('admin.lastPeriod')} value={tickInfo.lastTickAt ? formatDate(tickInfo.lastTickAt) : t('admin.never')} />
+              <StatCard label={t('admin.nextAutoPeriod')} value={tickInfo.nextTickAt ? formatDate(tickInfo.nextTickAt) : t('admin.na')} />
             </div>
           )}
 
@@ -293,59 +315,101 @@ export default function AdminPage() {
       )}
 
       {tab === 'users' && (
-        <Table
-          headers={[t('admin.username'), t('admin.email'), t('admin.role'), t('admin.balance'), t('admin.propertiesShort'), t('admin.banned'), t('admin.actions')]}
-          rows={adminUsers}
-          renderRow={(u) => (
-            <>
-              <td className="px-3 py-2 text-gray-900 dark:text-white">{u.username}</td>
-              <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{u.email}</td>
-              <td className="px-3 py-2">
-                <span className={`text-xs px-2 py-0.5 rounded ${u.role === 'admin' ? 'bg-purple-900 text-purple-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}>
-                  {u.role}
-                </span>
-              </td>
-              <td className="px-3 py-2 text-emerald-600 dark:text-emerald-400">
-                {editUserId === u._id ? (
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="number"
-                      value={editUserBalance}
-                      onChange={e => setEditUserBalance(e.target.value)}
-                      className="w-24 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 text-gray-900 dark:text-white text-xs"
-                    />
-                    <button onClick={() => handleSetBalance(u._id)} className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300">{t('common.save')}</button>
-                    <button onClick={() => setEditUserId(null)} className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">X</button>
+        <>
+          <input
+            value={userSearch}
+            onChange={e => { setUserSearch(e.target.value); setUserPage(1); }}
+            placeholder={t('searchPlayers')}
+            className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-3 py-1.5 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-emerald-500"
+          />
+
+          {(() => {
+            const filtered = userSearch
+              ? adminUsers.filter(u =>
+                  [u.username, u.email, u.role]
+                    .some(v => v?.toLowerCase().includes(userSearch.toLowerCase()))
+                )
+              : adminUsers;
+            return <>
+          <Table
+            headers={[t('admin.username'), t('admin.email'), t('admin.role'), t('admin.balance'), t('admin.propertiesShort'), t('admin.banned'), t('admin.actions')]}
+            rows={filtered.slice(0, userPage * USERS_PER_PAGE)}
+            renderRow={(u) => (
+              <>
+                <td className="px-3 py-2 text-gray-900 dark:text-white">{u.username}</td>
+                <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{u.email}</td>
+                <td className="px-3 py-2">
+                  <span className={`text-xs px-2 py-0.5 rounded ${u.role === 'admin' ? 'bg-purple-900 text-purple-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}>
+                    {u.role}
+                  </span>
+                </td>
+                <td className="px-3 py-2 text-emerald-600 dark:text-emerald-400">
+                  {editUserId === u._id ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        value={editUserBalance}
+                        onChange={e => setEditUserBalance(e.target.value)}
+                        className="w-24 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 text-gray-900 dark:text-white text-xs"
+                      />
+                      <button onClick={() => handleSetBalance(u._id)} className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300">{t('common.save')}</button>
+                      <button onClick={() => setEditUserId(null)} className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">X</button>
+                    </div>
+                  ) : (
+                    <span>${u.balance?.toLocaleString()}</span>
+                  )}
+                </td>
+                <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{u.propertyCount || 0}</td>
+                <td className="px-3 py-2">
+                  <span className={`text-xs px-2 py-0.5 rounded ${u.banned ? 'bg-red-900 text-red-300' : 'bg-green-900 text-green-300'}`}>
+                    {u.banned ? t('admin.yes') : t('admin.no')}
+                  </span>
+                </td>
+                <td className="px-3 py-2">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => { setEditUserId(u._id); setEditUserBalance(String(u.balance)); }}
+                      className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300"
+                    >
+                      {t('admin.editBalance')}
+                    </button>
+                    <button
+                      onClick={() => handleToggleBan(u._id)}
+                      className={`text-xs ${u.banned ? 'text-green-400 hover:text-green-300' : 'text-red-600 dark:text-red-400 hover:text-red-300'}`}
+                    >
+                      {u.banned ? t('admin.unban') : t('admin.ban')}
+                    </button>
                   </div>
-                ) : (
-                  <span>${u.balance?.toLocaleString()}</span>
-                )}
-              </td>
-              <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{u.propertyCount || 0}</td>
-              <td className="px-3 py-2">
-                <span className={`text-xs px-2 py-0.5 rounded ${u.banned ? 'bg-red-900 text-red-300' : 'bg-green-900 text-green-300'}`}>
-                  {u.banned ? t('admin.yes') : t('admin.no')}
-                </span>
-              </td>
-              <td className="px-3 py-2">
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => { setEditUserId(u._id); setEditUserBalance(String(u.balance)); }}
-                    className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300"
-                  >
-                    {t('admin.editBalance')}
-                  </button>
-                  <button
-                    onClick={() => handleToggleBan(u._id)}
-                    className={`text-xs ${u.banned ? 'text-green-400 hover:text-green-300' : 'text-red-600 dark:text-red-400 hover:text-red-300'}`}
-                  >
-                    {u.banned ? t('admin.unban') : t('admin.ban')}
-                  </button>
-                </div>
-              </td>
-            </>
+                </td>
+              </>
+            )}
+          />
+          {filtered.length > USERS_PER_PAGE && (
+            <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {t('dashboard.showing', { shown: Math.min(userPage * USERS_PER_PAGE, filtered.length), total: filtered.length })}
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setUserPage(p => Math.max(1, p - 1))}
+                  disabled={userPage === 1}
+                  className="px-3 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  {t('marketplace.previous')}
+                </button>
+                <button
+                  onClick={() => setUserPage(p => p + 1)}
+                  disabled={userPage * USERS_PER_PAGE >= filtered.length}
+                  className="px-3 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  {t('marketplace.next')}
+                </button>
+              </div>
+            </div>
           )}
-        />
+          </>;
+          })()}
+        </>
       )}
 
       {tab === 'properties' && (
@@ -370,9 +434,24 @@ export default function AdminPage() {
             <button onClick={handleCreateProperty} className="mt-3 px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-gray-900 dark:text-white text-sm rounded transition-colors">{t('admin.create')}</button>
           </div>
 
+          <input
+            value={propSearch}
+            onChange={e => { setPropSearch(e.target.value); setPropPage(1); }}
+            placeholder={t('marketplace.searchPlaceholder')}
+            className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-3 py-1.5 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-emerald-500"
+          />
+
+          {(() => {
+            const filtered = propSearch
+              ? adminProperties.filter(p =>
+                  [p.name, p.cityId?.name, p.type, p.ownerId?.username]
+                    .some(v => v?.toLowerCase().includes(propSearch.toLowerCase()))
+                )
+              : adminProperties;
+            return <>
           <Table
             headers={[t('admin.name'), t('admin.type'), t('admin.city'), t('admin.price'), t('admin.rent'), t('admin.owner'), t('admin.actions')]}
-            rows={adminProperties}
+            rows={filtered.slice(0, propPage * PROPS_PER_PAGE)}
             renderRow={(p) => (
               <>
                 <td className="px-3 py-2 text-gray-900 dark:text-white">{p.name}</td>
@@ -390,6 +469,31 @@ export default function AdminPage() {
               </>
             )}
           />
+           {filtered.length > PROPS_PER_PAGE && (
+            <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {t('dashboard.showing', { shown: Math.min(propPage * PROPS_PER_PAGE, filtered.length), total: filtered.length })}
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPropPage(p => Math.max(1, p - 1))}
+                  disabled={propPage === 1}
+                  className="px-3 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  {t('marketplace.previous')}
+                </button>
+                <button
+                  onClick={() => setPropPage(p => p + 1)}
+                  disabled={propPage * PROPS_PER_PAGE >= filtered.length}
+                  className="px-3 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  {t('marketplace.next')}
+                </button>
+              </div>
+            </div>
+          )}
+          </>;
+          })()}
 
           {editPropId && (
             <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
@@ -492,9 +596,24 @@ export default function AdminPage() {
             <button onClick={handleCreateEvent} className="mt-3 px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-gray-900 dark:text-white text-sm rounded transition-colors">{t('admin.create')}</button>
           </div>
 
+          <input
+            value={eventSearch}
+            onChange={e => { setEventSearch(e.target.value); setEventPage(1); }}
+            placeholder={t('marketplace.searchPlaceholder')}
+            className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-3 py-1.5 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-emerald-500"
+          />
+
+          {(() => {
+            const filtered = eventSearch
+              ? adminEvents.filter(e =>
+                  [e.name, e.type]
+                    .some(v => v?.toLowerCase().includes(eventSearch.toLowerCase()))
+                )
+              : adminEvents;
+            return <>
           <Table
             headers={[t('admin.name'), t('admin.type'), t('admin.duration'), t('admin.remaining'), t('admin.active'), t('admin.actions')]}
-            rows={adminEvents}
+            rows={filtered.slice(0, eventPage * EVENTS_PER_PAGE)}
             renderRow={(e) => (
               <>
                 <td className="px-3 py-2 text-gray-900 dark:text-white">{e.name}</td>
@@ -512,6 +631,31 @@ export default function AdminPage() {
               </>
             )}
           />
+          {filtered.length > EVENTS_PER_PAGE && (
+            <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {t('dashboard.showing', { shown: Math.min(eventPage * EVENTS_PER_PAGE, filtered.length), total: filtered.length })}
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setEventPage(p => Math.max(1, p - 1))}
+                  disabled={eventPage === 1}
+                  className="px-3 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  {t('marketplace.previous')}
+                </button>
+                <button
+                  onClick={() => setEventPage(p => p + 1)}
+                  disabled={eventPage * EVENTS_PER_PAGE >= filtered.length}
+                  className="px-3 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  {t('marketplace.next')}
+                </button>
+              </div>
+            </div>
+          )}
+          </>;
+          })()}
         </div>
       )}
     </div>

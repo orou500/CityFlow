@@ -279,7 +279,7 @@ export default function PropertyPage() {
     );
   }
 
-  const { property, totalRentEarned } = data;
+  const { property, totalRentEarned, totalInvestment } = data;
   const isOwner = user && property.ownerId?._id === user._id;
   const isBankOwned = property?.ownerId?.username === '__system__';
   const canOffer = user && !isOwner && !isBankOwned && property?.ownerId;
@@ -415,6 +415,14 @@ export default function PropertyPage() {
                     ${totalRentEarned?.toLocaleString() || '0'}
                   </p>
                 </div>
+                {totalInvestment > 0 && (
+                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.totalInvestment')}</p>
+                    <p className="font-semibold text-blue-600 dark:text-blue-400">
+                      ${totalInvestment?.toLocaleString()}
+                    </p>
+                  </div>
+                )}
               </div>
             ) : property.ownerId ? (
               <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">

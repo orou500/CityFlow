@@ -25,8 +25,8 @@ function PropertyCard({ p, cities, propertyTypes, onBuy, t, user, navigate }) {
   const isBankOwned = p.ownerId?.username === '__system__';
 
   return (
-    <div className="bg-white dark:bg-gray-900 p-4 rounded flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-      <div className="flex-1 min-w-0">
+    <div className="bg-white dark:bg-gray-900 p-4 rounded flex flex-col gap-2 h-full">
+      <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
           <h3 className="font-semibold cursor-pointer hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors truncate" onClick={() => navigate(`/property/${p._id}`)}>
             {p.name}
@@ -43,14 +43,14 @@ function PropertyCard({ p, cities, propertyTypes, onBuy, t, user, navigate }) {
           <span>{t('city.rent')}: ${p.rent?.toLocaleString()}</span>
         </div>
       </div>
-      <div className="text-right shrink-0">
+      <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800">
         <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">${p.currentPrice?.toLocaleString()}</p>
         {user ? (
-          <button onClick={() => onBuy(p._id)} className="mt-1 bg-emerald-600 hover:bg-emerald-500 text-gray-900 dark:text-white text-sm px-4 py-1.5 rounded transition-colors">
+          <button onClick={() => onBuy(p._id)} className="bg-emerald-600 hover:bg-emerald-500 text-gray-900 dark:text-white text-sm px-4 py-1.5 rounded transition-colors">
             {t('marketplace.buy')}
           </button>
         ) : (
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('nav.login')}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">{t('nav.login')}</p>
         )}
       </div>
     </div>
@@ -294,7 +294,7 @@ export default function Marketplace() {
           {bankProperties.length > 0 && (
             <div>
               <h2 className="text-sm font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide mb-3">{t('marketplace.bankProperties', { count: bankProperties.length })}</h2>
-              <div className="grid gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 items-stretch">
                 {bankProperties.map((p) => (
                   <PropertyCard key={p._id} p={p} cities={cities} propertyTypes={propertyTypes} onBuy={handleBuy} t={t} user={user} navigate={navigate} />
                 ))}
@@ -304,7 +304,7 @@ export default function Marketplace() {
           {playerProperties.length > 0 && (
             <div>
               <h2 className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-3">{t('marketplace.playerListings', { count: playerProperties.length })}</h2>
-              <div className="grid gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 items-stretch">
                 {playerProperties.map((p) => (
                   <PropertyCard key={p._id} p={p} cities={cities} propertyTypes={propertyTypes} onBuy={handleBuy} t={t} user={user} navigate={navigate} />
                 ))}
