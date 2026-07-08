@@ -288,7 +288,12 @@ async function seed() {
           rent: Math.round(baseP * 0.004),
           volatility: 0.05 + Math.random() * 0.15,
           forSale: true,
-          ...(type === 'land' ? { size: [2000, 3000, 4000, 5000, 6000, 7500, 8000, 10000][Math.floor(Math.random() * 8)], developmentLevel: 0 } : {}),
+          ...(type === 'land'
+            ? {
+                size: [2000, 3000, 4000, 5000, 6000, 7500, 8000, 10000][Math.floor(Math.random() * 8)],
+                developmentLevel: 0,
+              }
+            : {}),
         });
       }
     }
