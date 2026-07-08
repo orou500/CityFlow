@@ -279,18 +279,11 @@ export default function PlayerDashboard() {
                     tx.type === 'upgrade' ? 'text-blue-600 dark:text-blue-400' :
                     'text-gray-500 dark:text-gray-400'
                   }`}>
-                    {tx.type === 'loan' ? 'LOAN' :
-                     tx.type === 'loan_payment' ? 'LOAN PMT' :
-                     tx.type === 'loan_repay' ? 'REPAY' :
-                     tx.type === 'penalty' ? 'PENALTY' :
-                     tx.type === 'repossess' ? 'REPOSSESS' :
-                     tx.type === 'construction' ? 'BUILD' :
-                     tx.type === 'upgrade' ? 'UPGRADE' :
-                     tx.type.toUpperCase()}
+                    {t(`transaction.type.${tx.type}`)}
                   </span>
                   {tx.propertyId && (
                     <span
-                      className="text-gray-500 dark:text-gray-400 ml-2 cursor-pointer hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                      className="text-gray-500 dark:text-gray-400 ms-2 cursor-pointer hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
                       onClick={() => navigate(`/property/${tx.propertyId._id || tx.propertyId}`)}
                     >
                       {tx.propertyId.name || 'Property'}

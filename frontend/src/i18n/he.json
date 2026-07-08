@@ -477,6 +477,20 @@
       "content": "העולם משתנה עם הזמן.\n\nמחירים נעים,\nערים צומחות,\nואירועים משפיעים על השוק."
     }
   },
+  "transaction": {
+    "type": {
+      "buy": "קנייה",
+      "sell": "מכירה",
+      "rent": "שכירות",
+      "loan": "הלוואה",
+      "loan_payment": "תשלום הלוואה",
+      "loan_repay": "החזר הלוואה",
+      "penalty": "קנס",
+      "repossess": "עיקול",
+      "construction": "בנייה",
+      "upgrade": "שדרוג"
+    }
+  },
   "landing": {
     "hero": {
       "title": "בנה אימפריית נדל\"ן עולמית",
@@ -541,7 +555,12 @@
     },
     "activity": {
       "title": "פעילות עולמית",
-      "description": "פעילות אחרונה ברחבי יקום CityFlow."
+      "description": "פעילות אחרונה ברחבי יקום CityFlow.",
+      "buy": "{{buyer}} קנה את {{property}} ב-${{amount}}",
+      "sell": "{{seller}} מכר את {{property}} ב-${{amount}}",
+      "construction": "{{buyer}} השלים בנייה ב-{{property}}",
+      "upgrade": "{{buyer}} שדרג את {{property}}",
+      "default": "{{property}} עבר עסקה ב-${{amount}}"
     },
     "cta": {
       "title": "מוכן לבנות את האימפריה שלך?",

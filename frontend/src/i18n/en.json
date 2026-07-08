@@ -477,6 +477,20 @@
       "content": "The world changes over time.\n\nPrices move,\ncities grow,\nand events affect the market."
     }
   },
+  "transaction": {
+    "type": {
+      "buy": "BUY",
+      "sell": "SELL",
+      "rent": "RENT",
+      "loan": "LOAN",
+      "loan_payment": "LOAN PMT",
+      "loan_repay": "REPAY",
+      "penalty": "PENALTY",
+      "repossess": "REPOSSESS",
+      "construction": "BUILD",
+      "upgrade": "UPGRADE"
+    }
+  },
   "landing": {
     "hero": {
       "title": "Build a Global Real Estate Empire",
@@ -541,7 +555,12 @@
     },
     "activity": {
       "title": "World Activity",
-      "description": "Recent activity across the CityFlow universe."
+      "description": "Recent activity across the CityFlow universe.",
+      "buy": "{{buyer}} bought {{property}} for ${{amount}}",
+      "sell": "{{seller}} sold {{property}} for ${{amount}}",
+      "construction": "{{buyer}} completed construction on {{property}}",
+      "upgrade": "{{buyer}} upgraded {{property}}",
+      "default": "{{property}} was transacted for ${{amount}}"
     },
     "cta": {
       "title": "Ready To Build Your Empire?",
