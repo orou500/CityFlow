@@ -73,7 +73,9 @@ export default function UserProfilePage() {
       const data = await res.json();
       if (data.error) setMsg(data.error);
       else setFriendStatus('sent');
-    } catch { setMsg('Failed to send request'); }
+    } catch {
+      setMsg('Failed to send request');
+    }
   }
 
   async function acceptFriendRequest() {
@@ -86,7 +88,9 @@ export default function UserProfilePage() {
       const data = await res.json();
       if (data.error) setMsg(data.error);
       else setFriendStatus('friends');
-    } catch { setMsg('Failed to accept'); }
+    } catch {
+      setMsg('Failed to accept');
+    }
   }
 
   async function declineFriendRequest() {
@@ -99,7 +103,9 @@ export default function UserProfilePage() {
       const data = await res.json();
       if (data.error) setMsg(data.error);
       else setFriendStatus('none');
-    } catch { setMsg('Failed to decline'); }
+    } catch {
+      setMsg('Failed to decline');
+    }
   }
 
   async function cancelFriendRequest() {
@@ -112,7 +118,9 @@ export default function UserProfilePage() {
       const data = await res.json();
       if (data.error) setMsg(data.error);
       else setFriendStatus('none');
-    } catch { setMsg('Failed to cancel'); }
+    } catch {
+      setMsg('Failed to cancel');
+    }
   }
 
   async function handleSave(e) {
@@ -135,7 +143,9 @@ export default function UserProfilePage() {
         setEditing(false);
         setMsg('Settings saved');
       }
-    } catch { setMsg('Failed to save'); }
+    } catch {
+      setMsg('Failed to save');
+    }
   }
 
   async function handlePasswordChange(e) {
@@ -158,7 +168,9 @@ export default function UserProfilePage() {
         setChangingPassword(false);
         setPwdForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
       }
-    } catch { setMsg('Failed to update password'); }
+    } catch {
+      setMsg('Failed to update password');
+    }
   }
 
   async function handleAvatarUpload(e) {
@@ -177,7 +189,9 @@ export default function UserProfilePage() {
       if (data.avatar) {
         setProfile((p) => ({ ...p, user: { ...p.user, avatar: data.avatar } }));
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     setUploading(false);
   }
 
@@ -186,7 +200,9 @@ export default function UserProfilePage() {
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">{error}</h2>
-          <Link to="/" className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-300">{t('common.goHome')}</Link>
+          <Link to="/" className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-300">
+            {t('common.goHome')}
+          </Link>
         </div>
       </div>
     );
@@ -208,7 +224,9 @@ export default function UserProfilePage() {
     <div className="flex-1 overflow-y-auto p-4 md:p-8">
       <div className="max-w-4xl mx-auto space-y-6">
         {msg && (
-          <div className={`p-3 rounded text-sm ${msg === 'Settings saved' || msg === 'Password updated' ? 'bg-emerald-900 text-emerald-300' : 'bg-red-900 text-red-300'}`}>
+          <div
+            className={`p-3 rounded text-sm ${msg === 'Settings saved' || msg === 'Password updated' ? 'bg-emerald-900 text-emerald-300' : 'bg-red-900 text-red-300'}`}
+          >
             {msg}
           </div>
         )}
@@ -232,34 +250,66 @@ export default function UserProfilePage() {
                   >
                     {uploading ? '...' : '✏'}
                   </button>
-                  <input ref={fileRef} type="file" accept=".jpg,.jpeg,.png,.webp" className="hidden" onChange={handleAvatarUpload} />
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.webp"
+                    className="hidden"
+                    onChange={handleAvatarUpload}
+                  />
                 </>
               )}
             </div>
             <div className="text-center md:text-left flex-1">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{displayName}</h1>
               <p className="text-sm text-gray-500 dark:text-gray-400">@{profileUser.username}</p>
-              {profileUser.bio && <p className="text-gray-600 dark:text-gray-300 mt-2 text-sm whitespace-pre-line">{profileUser.bio}</p>}
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">{t('profile.joined')} {joined}</p>
+              {profileUser.bio && (
+                <p className="text-gray-600 dark:text-gray-300 mt-2 text-sm whitespace-pre-line">{profileUser.bio}</p>
+              )}
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                {t('profile.joined')} {joined}
+              </p>
               {!isOwner && friendStatus && (
                 <div className="mt-3">
                   {friendStatus === 'friends' && (
-                    <span className="inline-block text-sm text-emerald-600 dark:text-emerald-400 font-medium">✅ {t('friends.friends')}</span>
+                    <span className="inline-block text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+                      ✅ {t('friends.friends')}
+                    </span>
                   )}
                   {friendStatus === 'sent' && (
                     <div className="flex gap-2">
-                      <span className="text-sm text-yellow-600 dark:text-yellow-400">⏳ {t('friends.requestSent')}</span>
-                      <button onClick={cancelFriendRequest} className="text-xs text-red-600 dark:text-red-400 hover:text-red-300">{t('friends.cancel')}</button>
+                      <span className="text-sm text-yellow-600 dark:text-yellow-400">
+                        ⏳ {t('friends.requestSent')}
+                      </span>
+                      <button
+                        onClick={cancelFriendRequest}
+                        className="text-xs text-red-600 dark:text-red-400 hover:text-red-300"
+                      >
+                        {t('friends.cancel')}
+                      </button>
                     </div>
                   )}
                   {friendStatus === 'received' && (
                     <div className="flex gap-2">
-                      <button onClick={acceptFriendRequest} className="text-sm bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded transition-colors">{t('friends.accept')}</button>
-                      <button onClick={declineFriendRequest} className="text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1 rounded transition-colors">{t('friends.decline')}</button>
+                      <button
+                        onClick={acceptFriendRequest}
+                        className="text-sm bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded transition-colors"
+                      >
+                        {t('friends.accept')}
+                      </button>
+                      <button
+                        onClick={declineFriendRequest}
+                        className="text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1 rounded transition-colors"
+                      >
+                        {t('friends.decline')}
+                      </button>
                     </div>
                   )}
                   {friendStatus === 'none' && (
-                    <button onClick={sendFriendRequest} className="text-sm bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded transition-colors">
+                    <button
+                      onClick={sendFriendRequest}
+                      className="text-sm bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded transition-colors"
+                    >
                       ➕ {t('friends.addFriend')}
                     </button>
                   )}
@@ -268,10 +318,16 @@ export default function UserProfilePage() {
             </div>
             {isOwner && (
               <div className="flex gap-2">
-                <button onClick={() => setEditing(!editing)} className="text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white px-4 py-2 rounded-lg transition-colors">
+                <button
+                  onClick={() => setEditing(!editing)}
+                  className="text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white px-4 py-2 rounded-lg transition-colors"
+                >
                   {editing ? t('common.cancel') : t('profile.editProfile')}
                 </button>
-                <button onClick={() => setChangingPassword(!changingPassword)} className="text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white px-4 py-2 rounded-lg transition-colors">
+                <button
+                  onClick={() => setChangingPassword(!changingPassword)}
+                  className="text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white px-4 py-2 rounded-lg transition-colors"
+                >
                   {changingPassword ? t('common.cancel') : t('profile.changePassword')}
                 </button>
               </div>
@@ -281,46 +337,92 @@ export default function UserProfilePage() {
           {editing && isOwner && (
             <form onSubmit={handleSave} className="mt-6 space-y-4 border-t border-gray-200 dark:border-gray-700 pt-6">
               <div>
-                <label className="block text-sm text-gray-500 dark:text-gray-400 mb-1">{t('profile.displayName')}</label>
-                <input type="text" value={form.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })}
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-3 py-2 text-gray-900 dark:text-white text-sm" maxLength={50} />
+                <label className="block text-sm text-gray-500 dark:text-gray-400 mb-1">
+                  {t('profile.displayName')}
+                </label>
+                <input
+                  type="text"
+                  value={form.displayName}
+                  onChange={(e) => setForm({ ...form, displayName: e.target.value })}
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-3 py-2 text-gray-900 dark:text-white text-sm"
+                  maxLength={50}
+                />
               </div>
               <div>
                 <label className="block text-sm text-gray-500 dark:text-gray-400 mb-1">{t('profile.bio')}</label>
-                <textarea value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })}
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-3 py-2 text-gray-900 dark:text-white text-sm h-24 resize-none" maxLength={500} />
+                <textarea
+                  value={form.bio}
+                  onChange={(e) => setForm({ ...form, bio: e.target.value })}
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-3 py-2 text-gray-900 dark:text-white text-sm h-24 resize-none"
+                  maxLength={500}
+                />
                 <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">{form.bio.length}/500</div>
               </div>
               <div className="flex items-center gap-2">
-                <input type="checkbox" id="portfolioVis" checked={form.portfolioVisible}
+                <input
+                  type="checkbox"
+                  id="portfolioVis"
+                  checked={form.portfolioVisible}
                   onChange={(e) => setForm({ ...form, portfolioVisible: e.target.checked })}
-                  className="rounded bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-600" />
-                <label htmlFor="portfolioVis" className="text-sm text-gray-600 dark:text-gray-300">{t('profile.showPortfolio')}</label>
+                  className="rounded bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-600"
+                />
+                <label htmlFor="portfolioVis" className="text-sm text-gray-600 dark:text-gray-300">
+                  {t('profile.showPortfolio')}
+                </label>
               </div>
-              <button type="submit" className="bg-emerald-600 hover:bg-emerald-500 text-white text-sm px-6 py-2 rounded-lg font-semibold transition-colors">
+              <button
+                type="submit"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white text-sm px-6 py-2 rounded-lg font-semibold transition-colors"
+              >
                 {t('common.save')}
               </button>
             </form>
           )}
 
           {changingPassword && isOwner && (
-            <form onSubmit={handlePasswordChange} className="mt-6 space-y-4 border-t border-gray-200 dark:border-gray-700 pt-6">
+            <form
+              onSubmit={handlePasswordChange}
+              className="mt-6 space-y-4 border-t border-gray-200 dark:border-gray-700 pt-6"
+            >
               <div>
-                <label className="block text-sm text-gray-500 dark:text-gray-400 mb-1">{t('profile.currentPassword')}</label>
-                <input type="password" value={pwdForm.currentPassword} onChange={(e) => setPwdForm({ ...pwdForm, currentPassword: e.target.value })}
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-3 py-2 text-gray-900 dark:text-white text-sm" required />
+                <label className="block text-sm text-gray-500 dark:text-gray-400 mb-1">
+                  {t('profile.currentPassword')}
+                </label>
+                <input
+                  type="password"
+                  value={pwdForm.currentPassword}
+                  onChange={(e) => setPwdForm({ ...pwdForm, currentPassword: e.target.value })}
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-3 py-2 text-gray-900 dark:text-white text-sm"
+                  required
+                />
               </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-1">{t('profile.newPassword')}</label>
-                <input type="password" value={pwdForm.newPassword} onChange={(e) => setPwdForm({ ...pwdForm, newPassword: e.target.value })}
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-3 py-2 text-gray-900 dark:text-white text-sm" required minLength={6} />
+                <input
+                  type="password"
+                  value={pwdForm.newPassword}
+                  onChange={(e) => setPwdForm({ ...pwdForm, newPassword: e.target.value })}
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-3 py-2 text-gray-900 dark:text-white text-sm"
+                  required
+                  minLength={6}
+                />
               </div>
               <div>
-                <label className="block text-sm text-gray-500 dark:text-gray-400 mb-1">{t('profile.confirmPassword')}</label>
-                <input type="password" value={pwdForm.confirmPassword} onChange={(e) => setPwdForm({ ...pwdForm, confirmPassword: e.target.value })}
-                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-3 py-2 text-gray-900 dark:text-white text-sm" required />
+                <label className="block text-sm text-gray-500 dark:text-gray-400 mb-1">
+                  {t('profile.confirmPassword')}
+                </label>
+                <input
+                  type="password"
+                  value={pwdForm.confirmPassword}
+                  onChange={(e) => setPwdForm({ ...pwdForm, confirmPassword: e.target.value })}
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-3 py-2 text-gray-900 dark:text-white text-sm"
+                  required
+                />
               </div>
-              <button type="submit" className="bg-emerald-600 hover:bg-emerald-500 text-white text-sm px-6 py-2 rounded-lg font-semibold transition-colors">
+              <button
+                type="submit"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white text-sm px-6 py-2 rounded-lg font-semibold transition-colors"
+              >
                 {t('common.save')}
               </button>
             </form>
@@ -328,10 +430,26 @@ export default function UserProfilePage() {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard label={t('profile.netWorth')} value={`$${(netWorth || 0).toLocaleString()}`} color="text-emerald-600 dark:text-emerald-400" />
-          <StatCard label={t('profile.cash')} value={`$${(profileUser.balance || 0).toLocaleString()}`} color="text-gray-900 dark:text-white" />
-          <StatCard label={t('profile.properties')} value={(properties || []).length.toString()} color="text-blue-600 dark:text-blue-400" />
-          <StatCard label={t('profile.rentalIncome')} value={`$${(totalRent || 0).toLocaleString()}`} color="text-yellow-600 dark:text-yellow-400" />
+          <StatCard
+            label={t('profile.netWorth')}
+            value={`$${(netWorth || 0).toLocaleString()}`}
+            color="text-emerald-600 dark:text-emerald-400"
+          />
+          <StatCard
+            label={t('profile.cash')}
+            value={`$${(profileUser.balance || 0).toLocaleString()}`}
+            color="text-gray-900 dark:text-white"
+          />
+          <StatCard
+            label={t('profile.properties')}
+            value={(properties || []).length.toString()}
+            color="text-blue-600 dark:text-blue-400"
+          />
+          <StatCard
+            label={t('profile.rentalIncome')}
+            value={`$${(totalRent || 0).toLocaleString()}`}
+            color="text-yellow-600 dark:text-yellow-400"
+          />
         </div>
 
         {profileUser.achievements?.length > 0 && (
@@ -339,7 +457,12 @@ export default function UserProfilePage() {
             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">{t('profile.achievements')}</h2>
             <div className="flex flex-wrap gap-2">
               {profileUser.achievements.map((a, i) => (
-                <span key={i} className="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-sm px-3 py-1 rounded-full">{a}</span>
+                <span
+                  key={i}
+                  className="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-sm px-3 py-1 rounded-full"
+                >
+                  {a}
+                </span>
               ))}
             </div>
           </div>
@@ -350,15 +473,21 @@ export default function UserProfilePage() {
             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">{t('profile.portfolio')}</h2>
             <div className="grid gap-3">
               {properties.map((p) => (
-                <Link key={p._id} to={`/property/${p._id}`}
+                <Link
+                  key={p._id}
+                  to={`/property/${p._id}`}
                   className="flex justify-between items-center bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-750 rounded-lg p-4 transition-colors"
                 >
                   <div>
                     <div className="text-gray-900 dark:text-white font-medium">{p.name}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">{p.cityId?.name || ''} - {p.type}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      {p.cityId?.name || ''} - {p.type}
+                    </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-emerald-600 dark:text-emerald-400 text-sm font-semibold">${p.currentPrice?.toLocaleString()}</div>
+                    <div className="text-emerald-600 dark:text-emerald-400 text-sm font-semibold">
+                      ${p.currentPrice?.toLocaleString()}
+                    </div>
                     {p.rent > 0 && <div className="text-xs text-gray-500 dark:text-gray-400">${p.rent}/period</div>}
                   </div>
                 </Link>
@@ -372,10 +501,15 @@ export default function UserProfilePage() {
             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">{t('profile.activity')}</h2>
             <div className="space-y-2">
               {profile.transactions.map((tx) => (
-                <div key={tx._id} className="flex justify-between items-center gap-3 bg-gray-50 dark:bg-gray-800 rounded-lg px-4 py-2 text-sm">
+                <div
+                  key={tx._id}
+                  className="flex justify-between items-center gap-3 bg-gray-50 dark:bg-gray-800 rounded-lg px-4 py-2 text-sm"
+                >
                   <div className="flex items-center gap-2">
                     <span className="text-gray-600 dark:text-gray-300">{tx.propertyId?.name || 'Property'}</span>
-                    <span className={`text-xs ${tx.buyerId === profileUser._id ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                    <span
+                      className={`text-xs ${tx.buyerId === profileUser._id ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}
+                    >
                       {tx.buyerId === profileUser._id ? t('profile.bought') : t('profile.sold')}
                     </span>
                   </div>
@@ -388,7 +522,9 @@ export default function UserProfilePage() {
 
         {!isOwner && (
           <div className="text-center mt-4">
-            <Link to="/" className="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-300">{t('common.goHome')}</Link>
+            <Link to="/" className="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-300">
+              {t('common.goHome')}
+            </Link>
           </div>
         )}
       </div>

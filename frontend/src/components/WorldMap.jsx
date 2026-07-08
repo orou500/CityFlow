@@ -55,9 +55,7 @@ function FitBounds({ cities }) {
   const map = useMap();
   useEffect(() => {
     if (cities.length > 0) {
-      const bounds = L.latLngBounds(
-        cities.map((c) => [c.coordinates.lat, c.coordinates.lng])
-      );
+      const bounds = L.latLngBounds(cities.map((c) => [c.coordinates.lat, c.coordinates.lng]));
       map.fitBounds(bounds, { padding: [50, 50] });
     }
   }, [cities, map]);
@@ -70,10 +68,7 @@ function CountryPopup({ country, events }) {
   return (
     <div className="min-w-[240px] max-w-[280px]">
       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-200 dark:border-gray-700">
-        <div
-          className="w-3 h-3 rounded-full shrink-0"
-          style={{ background: getColor(country.avgDemand) }}
-        />
+        <div className="w-3 h-3 rounded-full shrink-0" style={{ background: getColor(country.avgDemand) }} />
         <h3 className="font-bold text-base text-gray-900 dark:text-white">{country.name}</h3>
       </div>
 
@@ -81,16 +76,22 @@ function CountryPopup({ country, events }) {
         <span className="text-gray-500 dark:text-gray-400">{t('map.cities')}:</span>
         <span className="text-gray-800 dark:text-gray-200 font-semibold">{country.cities.length}</span>
         <span className="text-gray-500 dark:text-gray-400">{t('map.population')}:</span>
-        <span className="text-gray-800 dark:text-gray-200 font-semibold">{country.totalPopulation.toLocaleString()}</span>
+        <span className="text-gray-800 dark:text-gray-200 font-semibold">
+          {country.totalPopulation.toLocaleString()}
+        </span>
         <span className="text-gray-500 dark:text-gray-400">{t('map.demand')}:</span>
-        <span className="font-semibold" style={{ color: getColor(country.avgDemand) }}>{country.avgDemand.toFixed(2)}</span>
+        <span className="font-semibold" style={{ color: getColor(country.avgDemand) }}>
+          {country.avgDemand.toFixed(2)}
+        </span>
         <span className="text-gray-500 dark:text-gray-400">{t('map.avgPrice')}:</span>
         <span className="text-gray-800 dark:text-gray-200 font-semibold">${country.avgPrice.toLocaleString()}</span>
       </div>
 
       {events.length > 0 && (
         <div className="mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">{t('map.activeEvents')}</p>
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">
+            {t('map.activeEvents')}
+          </p>
           <div className="space-y-1">
             {events.map((evt) => {
               const impact = getEventImpactLabel(evt);
@@ -102,7 +103,8 @@ function CountryPopup({ country, events }) {
                   <span className="text-gray-700 dark:text-gray-300 truncate flex-1">{evt.name}</span>
                   {delta !== 0 && (
                     <span className={`font-semibold shrink-0 ${delta > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                      {delta > 0 ? '+' : ''}{delta}%
+                      {delta > 0 ? '+' : ''}
+                      {delta}%
                     </span>
                   )}
                 </div>
@@ -113,7 +115,9 @@ function CountryPopup({ country, events }) {
       )}
 
       <div>
-        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">{t('map.cities')}</p>
+        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">
+          {t('map.cities')}
+        </p>
         <div className="space-y-0.5 max-h-[140px] overflow-y-auto">
           {country.cities.map((city) => (
             <button
@@ -144,7 +148,9 @@ function EventPopup({ event, countryName }) {
           style={{ background: impactColor, boxShadow: `0 0 6px ${impactColor}88` }}
         />
         <div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">{t('map.activeEvent')}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">
+            {t('map.activeEvent')}
+          </p>
           <h3 className="font-bold text-base text-gray-900 dark:text-white leading-tight">{event.name}</h3>
         </div>
       </div>
@@ -157,18 +163,21 @@ function EventPopup({ event, countryName }) {
         <div className="flex items-center gap-2">
           <span className="text-gray-400 w-5 shrink-0 text-center">⚡</span>
           <span className="text-gray-500 dark:text-gray-400">{t('map.impact')}:</span>
-          <span className={`font-semibold capitalize ${
-            impact === 'positive' ? 'text-emerald-600' :
-            impact === 'negative' ? 'text-red-500' :
-            'text-amber-500'
-          }`}>{impact}</span>
+          <span
+            className={`font-semibold capitalize ${
+              impact === 'positive' ? 'text-emerald-600' : impact === 'negative' ? 'text-red-500' : 'text-amber-500'
+            }`}
+          >
+            {impact}
+          </span>
         </div>
         {delta !== 0 && (
           <div className="flex items-center gap-2">
             <span className="text-gray-400 w-5 shrink-0 text-center">📈</span>
             <span className="text-gray-500 dark:text-gray-400">{t('map.demand')}:</span>
             <span className={`font-semibold ${delta > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-              {delta > 0 ? '+' : ''}{delta}%
+              {delta > 0 ? '+' : ''}
+              {delta}%
             </span>
           </div>
         )}
@@ -250,8 +259,10 @@ export default function WorldMap({ cities, activeEvents = [] }) {
               position={[country.center.lat, country.center.lng]}
               icon={getEventIcon(event)}
             >
-              <Popup><EventPopup event={event} countryName={country.name} /></Popup>
-            </Marker>
+              <Popup>
+                <EventPopup event={event} countryName={country.name} />
+              </Popup>
+            </Marker>,
           );
         });
       } else if (event.type === 'local' && event.affectedCities?.length > 0) {
@@ -268,8 +279,10 @@ export default function WorldMap({ cities, activeEvents = [] }) {
               position={[country.center.lat, country.center.lng]}
               icon={getEventIcon(event)}
             >
-              <Popup><EventPopup event={event} countryName={country.name} /></Popup>
-            </Marker>
+              <Popup>
+                <EventPopup event={event} countryName={country.name} />
+              </Popup>
+            </Marker>,
           );
         });
       }
@@ -278,18 +291,13 @@ export default function WorldMap({ cities, activeEvents = [] }) {
   }, [activeEvents, countries]);
 
   return (
-    <MapContainer
-      center={[20, 0]}
-      zoom={2}
-      className="w-full h-full rounded-lg"
-      scrollWheelZoom={true}
-    >
+    <MapContainer center={[20, 0]} zoom={2} className="w-full h-full rounded-lg" scrollWheelZoom={true}>
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       {eventMarkers}
-          {countries.map((country) => (
+      {countries.map((country) => (
         <Marker
           key={country.name}
           position={[country.center.lat, country.center.lng]}
@@ -297,10 +305,7 @@ export default function WorldMap({ cities, activeEvents = [] }) {
           zIndexOffset={1000}
         >
           <Popup>
-              <CountryPopup
-              country={country}
-              events={eventsByCountry[country.name] || []}
-            />
+            <CountryPopup country={country} events={eventsByCountry[country.name] || []} />
           </Popup>
         </Marker>
       ))}

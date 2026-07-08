@@ -1,5 +1,4 @@
 import Property from '../models/Property.js';
-import City from '../models/City.js';
 import { getTickNumber } from '../models/GameState.js';
 
 function clamp(value, min, max) {
@@ -22,8 +21,8 @@ export async function updatePrices(activeEvents) {
     const city = property.cityId;
     if (!city) continue;
 
-    const localEvents = activeEvents.filter(e =>
-      e.affectedCities.some(id => id.toString() === city._id.toString())
+    const localEvents = activeEvents.filter((e) =>
+      e.affectedCities.some((id) => id.toString() === city._id.toString()),
     );
     let localPriceMod = 1.0;
     for (const event of localEvents) {
@@ -33,7 +32,7 @@ export async function updatePrices(activeEvents) {
     }
 
     const noise = 1 + (Math.random() - 0.5) * property.volatility * 2;
-    const supplyPenalty = city.supplyIndex > 1.5 ? (1.5 / city.supplyIndex) : 1;
+    const supplyPenalty = city.supplyIndex > 1.5 ? 1.5 / city.supplyIndex : 1;
 
     const newPrice =
       property.basePrice *
@@ -48,7 +47,7 @@ export async function updatePrices(activeEvents) {
     property.currentPrice = clamp(
       Math.round(newPrice),
       Math.round(property.basePrice * 0.2),
-      Math.round(property.basePrice * 5.0)
+      Math.round(property.basePrice * 5.0),
     );
 
     property.rent = Math.round(property.currentPrice * 0.004 * (0.5 + Math.random() * 0.5));

@@ -59,7 +59,10 @@ export default function UserSearch() {
             <Link
               key={u._id}
               to={`/profile/${u.username}`}
-              onClick={() => { setOpen(false); setQuery(''); }}
+              onClick={() => {
+                setOpen(false);
+                setQuery('');
+              }}
               className="flex items-center gap-3 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
               <div className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">

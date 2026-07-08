@@ -10,12 +10,18 @@ export default function DevelopmentPage() {
   const navigate = useNavigate();
   const { user, fetchMe } = useAuthStore();
   const {
-    myLand, fetchMyLand,
-    myProjects, fetchMyProjects,
-    myBuildings, fetchMyBuildings,
-    developmentOptions, fetchDevelopmentOptions,
-    estimateProject, startConstruction,
-    upgradeBuilding, fetchUserData,
+    myLand,
+    fetchMyLand,
+    myProjects,
+    fetchMyProjects,
+    myBuildings,
+    fetchMyBuildings,
+    developmentOptions,
+    fetchDevelopmentOptions,
+    estimateProject,
+    startConstruction,
+    upgradeBuilding,
+    fetchUserData,
   } = useGameStore();
 
   const [tab, setTab] = useState('my-land');
@@ -111,7 +117,10 @@ export default function DevelopmentPage() {
   const tabs = [
     { id: 'my-land', label: t('development.myLand') },
     { id: 'start', label: t('development.startDevelopment') },
-    { id: 'projects', label: `${t('development.activeProjects')} (${myProjects.filter(p => p.status === 'under_construction').length})` },
+    {
+      id: 'projects',
+      label: `${t('development.activeProjects')} (${myProjects.filter((p) => p.status === 'under_construction').length})`,
+    },
     { id: 'buildings', label: `${t('development.myBuildings')} (${myBuildings.length})` },
   ];
 
@@ -120,10 +129,14 @@ export default function DevelopmentPage() {
       <h1 className="text-2xl font-bold mb-6">{t('development.title')}</h1>
 
       <div className="flex gap-2 mb-6 flex-wrap">
-        {tabs.map(tabItem => (
+        {tabs.map((tabItem) => (
           <button
             key={tabItem.id}
-            onClick={() => { setTab(tabItem.id); setError(null); setSuccess(null); }}
+            onClick={() => {
+              setTab(tabItem.id);
+              setError(null);
+              setSuccess(null);
+            }}
             className={`px-4 py-2 rounded text-sm transition-colors ${
               tab === tabItem.id
                 ? 'bg-emerald-600 text-white'
@@ -138,22 +151,24 @@ export default function DevelopmentPage() {
       {error && (
         <div className="bg-red-900 text-red-300 p-3 rounded mb-4 text-sm">
           {translateError(new Error(error), t)}
-          <button onClick={() => setError(null)} className="ml-2">&times;</button>
+          <button onClick={() => setError(null)} className="ml-2">
+            &times;
+          </button>
         </div>
       )}
       {success && (
         <div className="bg-emerald-900 text-emerald-300 p-3 rounded mb-4 text-sm">
           {success}
-          <button onClick={() => setSuccess(null)} className="ml-2">&times;</button>
+          <button onClick={() => setSuccess(null)} className="ml-2">
+            &times;
+          </button>
         </div>
       )}
 
       {/* Tab: My Land */}
       {tab === 'my-land' && (
         <div>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">
-            {t('development.landDescription')}
-          </p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">{t('development.landDescription')}</p>
           {myLand.length === 0 ? (
             <div className="bg-white dark:bg-gray-900 rounded-lg p-8 text-center">
               <p className="text-gray-500 dark:text-gray-400 mb-4">{t('development.noLand')}</p>
@@ -166,13 +181,18 @@ export default function DevelopmentPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {myLand.map(land => (
+              {myLand.map((land) => (
                 <div
                   key={land._id}
                   className={`bg-white dark:bg-gray-900 rounded-lg p-4 cursor-pointer transition-colors ${
-                    selectedLand?._id === land._id ? 'ring-2 ring-emerald-500' : 'hover:bg-gray-50 dark:hover:bg-gray-850'
+                    selectedLand?._id === land._id
+                      ? 'ring-2 ring-emerald-500'
+                      : 'hover:bg-gray-50 dark:hover:bg-gray-850'
                   }`}
-                  onClick={() => { handleSelectLand(land); setTab('start'); }}
+                  onClick={() => {
+                    handleSelectLand(land);
+                    setTab('start');
+                  }}
                 >
                   <h3 className="font-semibold text-gray-900 dark:text-white">{land.name}</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -181,7 +201,9 @@ export default function DevelopmentPage() {
                   <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
                     <div>
                       <p className="text-gray-400 dark:text-gray-500">{t('development.landSize')}</p>
-                      <p className="text-gray-900 dark:text-white">{land.size ? `${land.size.toLocaleString()} ${t('development.sqft')}` : 'N/A'}</p>
+                      <p className="text-gray-900 dark:text-white">
+                        {land.size ? `${land.size.toLocaleString()} ${t('development.sqft')}` : 'N/A'}
+                      </p>
                     </div>
                     <div>
                       <p className="text-gray-400 dark:text-gray-500">{t('development.value')}</p>
@@ -209,20 +231,29 @@ export default function DevelopmentPage() {
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-3">{t('development.selectedLand')}</h3>
                   <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{selectedLand.name}</p>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {selectedLand.cityId?.name || t('development.unknown')} {selectedLand.location ? `- ${selectedLand.location}` : ''}
+                    {selectedLand.cityId?.name || t('development.unknown')}{' '}
+                    {selectedLand.location ? `- ${selectedLand.location}` : ''}
                   </p>
                   <div className="mt-3 space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-400 dark:text-gray-500">{t('development.sizeLabel')}</span>
-                      <span>{selectedLand.size ? `${selectedLand.size.toLocaleString()} ${t('development.sqft')}` : 'N/A'}</span>
+                      <span>
+                        {selectedLand.size ? `${selectedLand.size.toLocaleString()} ${t('development.sqft')}` : 'N/A'}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-400 dark:text-gray-500">{t('development.valueLabel')}</span>
-                      <span className="text-emerald-600 dark:text-emerald-400">${selectedLand.currentPrice?.toLocaleString()}</span>
+                      <span className="text-emerald-600 dark:text-emerald-400">
+                        ${selectedLand.currentPrice?.toLocaleString()}
+                      </span>
                     </div>
                   </div>
                   <button
-                    onClick={() => { setSelectedLand(null); setSelectedProject(null); setEstimate(null); }}
+                    onClick={() => {
+                      setSelectedLand(null);
+                      setSelectedProject(null);
+                      setEstimate(null);
+                    }}
                     className="mt-4 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                   >
                     &larr; {t('development.changeLand')}
@@ -233,22 +264,34 @@ export default function DevelopmentPage() {
               <div className="lg:col-span-2">
                 {!selectedProject ? (
                   <div className="space-y-4">
-                    {developmentOptions.map(cat => (
+                    {developmentOptions.map((cat) => (
                       <div key={cat.id} className="bg-white dark:bg-gray-900 rounded-lg p-4">
-                        <h3 className="font-bold text-gray-900 dark:text-white text-lg mb-1">{t(`development.cat.${cat.id}.label`, cat.label)}</h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{t(`development.cat.${cat.id}.description`, cat.description)}</p>
+                        <h3 className="font-bold text-gray-900 dark:text-white text-lg mb-1">
+                          {t(`development.cat.${cat.id}.label`, cat.label)}
+                        </h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                          {t(`development.cat.${cat.id}.description`, cat.description)}
+                        </p>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {cat.projects.map(proj => (
+                          {cat.projects.map((proj) => (
                             <div
                               key={proj.id}
                               className="bg-gray-50 dark:bg-gray-800 rounded p-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors"
                               onClick={() => handleSelectProject(proj)}
                             >
-                              <p className="font-semibold text-gray-900 dark:text-white">{t(`development.proj.${proj.id}.name`, proj.name)}</p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t(`development.proj.${proj.id}.description`, proj.description)}</p>
+                              <p className="font-semibold text-gray-900 dark:text-white">
+                                {t(`development.proj.${proj.id}.name`, proj.name)}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                {t(`development.proj.${proj.id}.description`, proj.description)}
+                              </p>
                               <div className="mt-2 flex justify-between text-sm">
-                                <span className="text-gray-400 dark:text-gray-500">{proj.constructionPeriods} {t('development.period')}</span>
-                                <span className="text-emerald-600 dark:text-emerald-400">~${proj.estimatedCost?.toLocaleString()}</span>
+                                <span className="text-gray-400 dark:text-gray-500">
+                                  {proj.constructionPeriods} {t('development.period')}
+                                </span>
+                                <span className="text-emerald-600 dark:text-emerald-400">
+                                  ~${proj.estimatedCost?.toLocaleString()}
+                                </span>
                               </div>
                             </div>
                           ))}
@@ -259,8 +302,12 @@ export default function DevelopmentPage() {
                 ) : (
                   <div className="space-y-4">
                     <div className="bg-white dark:bg-gray-900 rounded-lg p-6">
-                      <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t(`development.proj.${selectedProject.id}.name`, selectedProject.name)}</h3>
-                      <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">{t(`development.proj.${selectedProject.id}.description`, selectedProject.description)}</p>
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                        {t(`development.proj.${selectedProject.id}.name`, selectedProject.name)}
+                      </h3>
+                      <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">
+                        {t(`development.proj.${selectedProject.id}.description`, selectedProject.description)}
+                      </p>
 
                       {estimating ? (
                         <p className="text-gray-500 dark:text-gray-400">{t('development.calculating')}</p>
@@ -269,15 +316,23 @@ export default function DevelopmentPage() {
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                             <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
                               <p className="text-xs text-gray-500 dark:text-gray-400">{t('development.totalCost')}</p>
-                              <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">${estimate.totalCost?.toLocaleString()}</p>
+                              <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                                ${estimate.totalCost?.toLocaleString()}
+                              </p>
                             </div>
                             <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                              <p className="text-xs text-gray-500 dark:text-gray-400">{t('development.constructionTime')}</p>
-                              <p className="text-lg font-bold text-gray-900 dark:text-white">{estimate.constructionPeriods} {t('development.periods')}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                {t('development.constructionTime')}
+                              </p>
+                              <p className="text-lg font-bold text-gray-900 dark:text-white">
+                                {estimate.constructionPeriods} {t('development.periods')}
+                              </p>
                             </div>
                             <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
                               <p className="text-xs text-gray-500 dark:text-gray-400">{t('development.units')}</p>
-                              <p className="text-lg font-bold text-gray-900 dark:text-white">{estimate.unitsGenerated}</p>
+                              <p className="text-lg font-bold text-gray-900 dark:text-white">
+                                {estimate.unitsGenerated}
+                              </p>
                             </div>
                             <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
                               <p className="text-xs text-gray-500 dark:text-gray-400">{t('development.netIncome')}</p>
@@ -288,27 +343,43 @@ export default function DevelopmentPage() {
                           </div>
 
                           <div className="bg-gray-50 dark:bg-gray-800 rounded p-4">
-                            <h4 className="font-semibold text-gray-900 dark:text-white mb-2">{t('development.detailedBreakdown')}</h4>
+                            <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
+                              {t('development.detailedBreakdown')}
+                            </h4>
                             <div className="space-y-2 text-sm">
                               <div className="flex justify-between">
                                 <span className="text-gray-500 dark:text-gray-400">{t('development.baseCost')}</span>
                                 <span>${estimate.totalCost?.toLocaleString()}</span>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-gray-500 dark:text-gray-400">{t('development.estRentPerUnit')}</span>
+                                <span className="text-gray-500 dark:text-gray-400">
+                                  {t('development.estRentPerUnit')}
+                                </span>
                                 <span>${estimate.estimatedUnitRent?.toLocaleString()}</span>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-gray-500 dark:text-gray-400">{t('development.estGrossIncome')}</span>
-                                <span className="text-emerald-600 dark:text-emerald-400">+${estimate.estimatedIncome?.toLocaleString()}</span>
+                                <span className="text-gray-500 dark:text-gray-400">
+                                  {t('development.estGrossIncome')}
+                                </span>
+                                <span className="text-emerald-600 dark:text-emerald-400">
+                                  +${estimate.estimatedIncome?.toLocaleString()}
+                                </span>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-gray-500 dark:text-gray-400">{t('development.estMaintenance')}</span>
-                                <span className="text-red-600 dark:text-red-400">-${estimate.estimatedMaintenance?.toLocaleString()}</span>
+                                <span className="text-gray-500 dark:text-gray-400">
+                                  {t('development.estMaintenance')}
+                                </span>
+                                <span className="text-red-600 dark:text-red-400">
+                                  -${estimate.estimatedMaintenance?.toLocaleString()}
+                                </span>
                               </div>
                               <div className="border-t border-gray-200 dark:border-gray-700 pt-2 flex justify-between font-bold">
-                                <span className="text-gray-600 dark:text-gray-300">{t('development.netIncomeLabel')}</span>
-                                <span className="text-purple-600 dark:text-purple-400">${estimate.estimatedNetIncome?.toLocaleString()}</span>
+                                <span className="text-gray-600 dark:text-gray-300">
+                                  {t('development.netIncomeLabel')}
+                                </span>
+                                <span className="text-purple-600 dark:text-purple-400">
+                                  ${estimate.estimatedNetIncome?.toLocaleString()}
+                                </span>
                               </div>
                             </div>
                           </div>
@@ -319,10 +390,17 @@ export default function DevelopmentPage() {
                               disabled={starting}
                               className="bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-200 dark:disabled:bg-gray-600 text-gray-900 dark:text-white px-6 py-2 rounded text-sm font-semibold transition-colors"
                             >
-                              {starting ? t('development.starting') : t('development.startConstructionCost', { cost: estimate.totalCost?.toLocaleString() })}
+                              {starting
+                                ? t('development.starting')
+                                : t('development.startConstructionCost', {
+                                    cost: estimate.totalCost?.toLocaleString(),
+                                  })}
                             </button>
                             <button
-                              onClick={() => { setSelectedProject(null); setEstimate(null); }}
+                              onClick={() => {
+                                setSelectedProject(null);
+                                setEstimate(null);
+                              }}
                               className="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white px-4 py-2 rounded text-sm transition-colors"
                             >
                               {t('development.backToProjects')}
@@ -344,7 +422,7 @@ export default function DevelopmentPage() {
       {/* Tab: Active Projects */}
       {tab === 'projects' && (
         <div>
-          {myProjects.filter(p => p.status === 'under_construction').length === 0 ? (
+          {myProjects.filter((p) => p.status === 'under_construction').length === 0 ? (
             <div className="bg-white dark:bg-gray-900 rounded-lg p-8 text-center">
               <p className="text-gray-500 dark:text-gray-400">{t('development.noProjects')}</p>
               <button
@@ -356,54 +434,62 @@ export default function DevelopmentPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {myProjects.filter(p => p.status === 'under_construction').map(project => {
-                const progress = calculateProgress(project);
-                return (
-                  <div
-                    key={project._id}
-                    className="bg-white dark:bg-gray-900 rounded-lg p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-850 transition-colors"
-                    onClick={() => navigate(`/project/${project._id}`)}
-                  >
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-white">{project.projectName}</h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{project.landId?.name || t('development.landSize')}</p>
+              {myProjects
+                .filter((p) => p.status === 'under_construction')
+                .map((project) => {
+                  const progress = calculateProgress(project);
+                  return (
+                    <div
+                      key={project._id}
+                      className="bg-white dark:bg-gray-900 rounded-lg p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-850 transition-colors"
+                      onClick={() => navigate(`/project/${project._id}`)}
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h3 className="font-semibold text-gray-900 dark:text-white">{project.projectName}</h3>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {project.landId?.name || t('development.landSize')}
+                          </p>
+                        </div>
+                        <span className="bg-yellow-900 text-yellow-300 px-2 py-1 rounded text-xs font-semibold">
+                          {t('development.underConstruction')}
+                        </span>
                       </div>
-                      <span className="bg-yellow-900 text-yellow-300 px-2 py-1 rounded text-xs font-semibold">
-                        {t('development.underConstruction')}
-                      </span>
-                    </div>
 
-                    <div className="mb-2">
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-500 dark:text-gray-400">{t('development.progress')}</span>
-                        <span className="text-emerald-600 dark:text-emerald-400">{progress}%</span>
+                      <div className="mb-2">
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="text-gray-500 dark:text-gray-400">{t('development.progress')}</span>
+                          <span className="text-emerald-600 dark:text-emerald-400">{progress}%</span>
+                        </div>
+                        <div className="w-full bg-gray-50 dark:bg-gray-800 rounded-full h-2.5">
+                          <div
+                            className="bg-emerald-500 h-2.5 rounded-full transition-all duration-500"
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
                       </div>
-                      <div className="w-full bg-gray-50 dark:bg-gray-800 rounded-full h-2.5">
-                        <div
-                          className="bg-emerald-500 h-2.5 rounded-full transition-all duration-500"
-                          style={{ width: `${progress}%` }}
-                        />
-                      </div>
-                    </div>
 
-                    <div className="grid grid-cols-3 gap-4 text-sm mt-3">
-                      <div>
-                        <p className="text-gray-400 dark:text-gray-500">{t('development.invested')}</p>
-                        <p className="text-gray-900 dark:text-white">${project.totalCost?.toLocaleString()}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-400 dark:text-gray-500">{t('development.started')}</p>
-                        <p className="text-gray-900 dark:text-white">{t('general.period')} {project.startPeriod}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-400 dark:text-gray-500">{t('development.estimatedCompletion')}</p>
-                        <p className="text-gray-900 dark:text-white">{t('general.period')} {project.completionPeriod}</p>
+                      <div className="grid grid-cols-3 gap-4 text-sm mt-3">
+                        <div>
+                          <p className="text-gray-400 dark:text-gray-500">{t('development.invested')}</p>
+                          <p className="text-gray-900 dark:text-white">${project.totalCost?.toLocaleString()}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-400 dark:text-gray-500">{t('development.started')}</p>
+                          <p className="text-gray-900 dark:text-white">
+                            {t('general.period')} {project.startPeriod}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-gray-400 dark:text-gray-500">{t('development.estimatedCompletion')}</p>
+                          <p className="text-gray-900 dark:text-white">
+                            {t('general.period')} {project.completionPeriod}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
             </div>
           )}
         </div>
@@ -418,9 +504,9 @@ export default function DevelopmentPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {myBuildings.map(b => {
+              {myBuildings.map((b) => {
                 const unitCount = b.units?.length || 0;
-                const occupiedUnits = b.units?.filter(u => u.occupied).length || 0;
+                const occupiedUnits = b.units?.filter((u) => u.occupied).length || 0;
                 return (
                   <div
                     key={b._id}
@@ -428,7 +514,9 @@ export default function DevelopmentPage() {
                     onClick={() => navigate(`/property/${b._id}`)}
                   >
                     <h3 className="font-semibold text-gray-900 dark:text-white">{b.name}</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{b.cityId?.name || t('development.unknown')}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      {b.cityId?.name || t('development.unknown')}
+                    </p>
                     <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
                       <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
                         <p className="text-gray-400 dark:text-gray-500 text-xs">{t('development.units')}</p>
@@ -436,20 +524,29 @@ export default function DevelopmentPage() {
                       </div>
                       <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
                         <p className="text-gray-400 dark:text-gray-500 text-xs">{t('development.occupancy')}</p>
-                        <p className="text-emerald-600 dark:text-emerald-400 font-semibold">{occupiedUnits}/{unitCount}</p>
+                        <p className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                          {occupiedUnits}/{unitCount}
+                        </p>
                       </div>
                       <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
                         <p className="text-gray-400 dark:text-gray-500 text-xs">{t('development.value')}</p>
-                        <p className="text-gray-900 dark:text-white font-semibold">${b.currentPrice?.toLocaleString()}</p>
+                        <p className="text-gray-900 dark:text-white font-semibold">
+                          ${b.currentPrice?.toLocaleString()}
+                        </p>
                       </div>
                       <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
                         <p className="text-gray-400 dark:text-gray-500 text-xs">{t('development.incomePerPeriod')}</p>
-                        <p className="text-purple-600 dark:text-purple-400 font-semibold">${b.rent?.toLocaleString()}</p>
+                        <p className="text-purple-600 dark:text-purple-400 font-semibold">
+                          ${b.rent?.toLocaleString()}
+                        </p>
                       </div>
                     </div>
                     <div className="mt-3">
                       <button
-                        onClick={(e) => { e.stopPropagation(); setUpgradeModal(b._id); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setUpgradeModal(b._id);
+                        }}
                         className="text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded transition-colors"
                       >
                         {t('development.upgrades')}

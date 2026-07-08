@@ -12,8 +12,7 @@ export async function balanceMarket() {
   for (const city of cities) {
     const properties = await Property.find({ cityId: city._id });
     const total = properties.length;
-    const owned = properties.filter(p => p.ownerId).length;
-    const forSale = properties.filter(p => p.forSale).length;
+    const forSale = properties.filter((p) => p.forSale).length;
 
     if (total === 0) continue;
 

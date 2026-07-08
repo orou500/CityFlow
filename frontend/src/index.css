@@ -33,7 +33,11 @@
 }
 
 .theme-transition * {
-  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease !important;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease !important;
 }
 
 .leaflet-container {
@@ -48,20 +52,35 @@ body {
   direction: ltr;
 }
 
-body[dir="rtl"] {
+body[dir='rtl'] {
   direction: rtl;
 }
 
 @keyframes avatar-pulse {
-  0% { transform: scale(1); box-shadow: 0 0 0 0 var(--color-notification-glow); }
-  50% { transform: scale(1.08); box-shadow: 0 0 0 6px transparent; }
-  100% { transform: scale(1); box-shadow: 0 0 0 0 transparent; }
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 var(--color-notification-glow);
+  }
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 6px transparent;
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 transparent;
+  }
 }
 
 @keyframes badge-pop {
-  0% { transform: scale(0); }
-  60% { transform: scale(1.25); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(0);
+  }
+  60% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .animate-avatar-pulse {
@@ -69,13 +88,27 @@ body[dir="rtl"] {
 }
 
 @keyframes evt-glow {
-  0%, 100% { opacity: 0.55; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.18); }
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.18);
+  }
 }
 
 @keyframes evt-pulse {
-  0%, 100% { opacity: 0.6; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.25); }
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.25);
+  }
 }
 
 .animate-evt-pulse {
@@ -112,7 +145,7 @@ body[dir="rtl"] {
   font-size: 11px;
   font-weight: 700;
   color: #fff;
-  background: rgba(0,0,0,0.65);
+  background: rgba(0, 0, 0, 0.65);
   padding: 2px 8px;
   border-radius: 5px;
   white-space: nowrap;
@@ -123,8 +156,8 @@ body[dir="rtl"] {
 .country-meta {
   font-size: 9px;
   font-weight: 500;
-  color: rgba(255,255,255,0.8);
-  background: rgba(0,0,0,0.4);
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(0, 0, 0, 0.4);
   padding: 0 6px;
   border-radius: 3px;
   white-space: nowrap;

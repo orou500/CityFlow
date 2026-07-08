@@ -46,14 +46,21 @@ export default function OnboardingWrapper({ children }) {
   const tooltipRef = useRef(null);
   const isRtl = i18n.language === 'he';
 
-  const steps = useMemo(() => [
-    { target: '[data-tour="map"]', title: t('onboarding.step1.title'), content: t('onboarding.step1.content') },
-    { target: '[data-tour="marketplace"]', title: t('onboarding.step2.title'), content: t('onboarding.step2.content') },
-    { target: 'body', title: t('onboarding.step3.title'), content: t('onboarding.step3.content') },
-    { target: '[data-tour="bank"]', title: t('onboarding.step4.title'), content: t('onboarding.step4.content') },
-    { target: '[data-tour="dashboard"]', title: t('onboarding.step5.title'), content: t('onboarding.step5.content') },
-    { target: 'body', title: t('onboarding.step6.title'), content: t('onboarding.step6.content') },
-  ], [t, i18n.language]);
+  const steps = useMemo(
+    () => [
+      { target: '[data-tour="map"]', title: t('onboarding.step1.title'), content: t('onboarding.step1.content') },
+      {
+        target: '[data-tour="marketplace"]',
+        title: t('onboarding.step2.title'),
+        content: t('onboarding.step2.content'),
+      },
+      { target: 'body', title: t('onboarding.step3.title'), content: t('onboarding.step3.content') },
+      { target: '[data-tour="bank"]', title: t('onboarding.step4.title'), content: t('onboarding.step4.content') },
+      { target: '[data-tour="dashboard"]', title: t('onboarding.step5.title'), content: t('onboarding.step5.content') },
+      { target: 'body', title: t('onboarding.step6.title'), content: t('onboarding.step6.content') },
+    ],
+    [t, i18n.language],
+  );
 
   useEffect(() => {
     if (!user) {
@@ -140,7 +147,9 @@ export default function OnboardingWrapper({ children }) {
 
   useEffect(() => {
     if (!tourRunning) return;
-    function handleKey(e) { if (e.key === 'Escape') completeOnboarding(); }
+    function handleKey(e) {
+      if (e.key === 'Escape') completeOnboarding();
+    }
     function handleResize() {
       if (!tooltipRef.current) return;
       const currentStep = steps[stepIndex];
@@ -148,8 +157,12 @@ export default function OnboardingWrapper({ children }) {
       if (target && target !== document.body) {
         const rect = target.getBoundingClientRect();
         setSpotlight({
-          top: rect.top, left: rect.left, width: rect.width, height: rect.height,
-          bottom: rect.bottom, right: rect.right,
+          top: rect.top,
+          left: rect.left,
+          width: rect.width,
+          height: rect.height,
+          bottom: rect.bottom,
+          right: rect.right,
         });
       }
       const tooltip = tooltipRef.current;
@@ -183,11 +196,16 @@ export default function OnboardingWrapper({ children }) {
       {children}
 
       {showWelcome && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[9999] p-4" style={{ direction: isRtl ? 'rtl' : 'ltr' }}>
+        <div
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-[9999] p-4"
+          style={{ direction: isRtl ? 'rtl' : 'ltr' }}
+        >
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 max-w-md w-full text-center shadow-2xl">
             <div className="text-5xl mb-4">🌍</div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">{t('onboarding.welcome.title')}</h2>
-            <p className="text-gray-500 dark:text-gray-400 mb-6 leading-relaxed whitespace-pre-line">{t('onboarding.welcome.description')}</p>
+            <p className="text-gray-500 dark:text-gray-400 mb-6 leading-relaxed whitespace-pre-line">
+              {t('onboarding.welcome.description')}
+            </p>
             <div className="flex gap-3 justify-center">
               <button
                 onClick={startTour}
@@ -206,75 +224,105 @@ export default function OnboardingWrapper({ children }) {
         </div>
       )}
 
-      {tourRunning && createPortal(
-        <div className="fixed inset-0 z-[10000]" style={{ pointerEvents: 'none' }}>
-          {spotlight ? (
-            <>
-              <div className="fixed bg-black/60" style={{ top: 0, left: 0, right: 0, height: spotlight.top, pointerEvents: 'auto' }} />
-              <div className="fixed bg-black/60" style={{ top: spotlight.bottom, left: 0, right: 0, bottom: 0, pointerEvents: 'auto' }} />
-              <div className="fixed bg-black/60" style={{ top: spotlight.top, height: spotlight.height, left: 0, width: spotlight.left, pointerEvents: 'auto' }} />
-              <div className="fixed bg-black/60" style={{ top: spotlight.top, height: spotlight.height, left: spotlight.right, right: 0, pointerEvents: 'auto' }} />
-            </>
-          ) : (
-            <div className="fixed inset-0 bg-black/60" style={{ pointerEvents: 'auto' }} />
-          )}
+      {tourRunning &&
+        createPortal(
+          <div className="fixed inset-0 z-[10000]" style={{ pointerEvents: 'none' }}>
+            {spotlight ? (
+              <>
+                <div
+                  className="fixed bg-black/60"
+                  style={{ top: 0, left: 0, right: 0, height: spotlight.top, pointerEvents: 'auto' }}
+                />
+                <div
+                  className="fixed bg-black/60"
+                  style={{ top: spotlight.bottom, left: 0, right: 0, bottom: 0, pointerEvents: 'auto' }}
+                />
+                <div
+                  className="fixed bg-black/60"
+                  style={{
+                    top: spotlight.top,
+                    height: spotlight.height,
+                    left: 0,
+                    width: spotlight.left,
+                    pointerEvents: 'auto',
+                  }}
+                />
+                <div
+                  className="fixed bg-black/60"
+                  style={{
+                    top: spotlight.top,
+                    height: spotlight.height,
+                    left: spotlight.right,
+                    right: 0,
+                    pointerEvents: 'auto',
+                  }}
+                />
+              </>
+            ) : (
+              <div className="fixed inset-0 bg-black/60" style={{ pointerEvents: 'auto' }} />
+            )}
 
-          <div
-            ref={tooltipRef}
-            className="fixed bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-2xl p-5"
-            style={{
-              top: tooltipPos.top,
-              left: tooltipPos.left,
-              width: 380,
-              maxWidth: 'calc(100vw - 24px)',
-              direction: isRtl ? 'rtl' : 'ltr',
-              pointerEvents: 'auto',
-            }}
-          >
-            <div className="text-gray-400 dark:text-gray-500 text-xs mb-2 text-center">
-              {stepIndex + 1} / {steps.length}
-            </div>
-            <h3 className="text-gray-900 dark:text-white text-lg font-bold mb-2">{currentStep.title}</h3>
-            <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-line mb-5">{currentStep.content}</p>
-            <div className="flex items-center justify-between gap-2" style={{ flexDirection: isRtl ? 'row-reverse' : 'row' }}>
-              <div>
-                {stepIndex > 0 && (
-                  <button
-                    onClick={() => setStepIndex((i) => i - 1)}
-                    className="text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white text-sm px-3 py-1.5 rounded transition-colors cursor-pointer"
-                  >
-                    {t('onboarding.controls.back')}
-                  </button>
-                )}
+            <div
+              ref={tooltipRef}
+              className="fixed bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-2xl p-5"
+              style={{
+                top: tooltipPos.top,
+                left: tooltipPos.left,
+                width: 380,
+                maxWidth: 'calc(100vw - 24px)',
+                direction: isRtl ? 'rtl' : 'ltr',
+                pointerEvents: 'auto',
+              }}
+            >
+              <div className="text-gray-400 dark:text-gray-500 text-xs mb-2 text-center">
+                {stepIndex + 1} / {steps.length}
               </div>
-              <div className="flex items-center gap-2" style={{ flexDirection: isRtl ? 'row-reverse' : 'row' }}>
-                <button
-                  onClick={completeOnboarding}
-                  className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 text-sm px-3 py-1.5 rounded transition-colors cursor-pointer"
-                >
-                  {t('onboarding.controls.skip')}
-                </button>
-                {stepIndex < steps.length - 1 ? (
+              <h3 className="text-gray-900 dark:text-white text-lg font-bold mb-2">{currentStep.title}</h3>
+              <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-line mb-5">
+                {currentStep.content}
+              </p>
+              <div
+                className="flex items-center justify-between gap-2"
+                style={{ flexDirection: isRtl ? 'row-reverse' : 'row' }}
+              >
+                <div>
+                  {stepIndex > 0 && (
+                    <button
+                      onClick={() => setStepIndex((i) => i - 1)}
+                      className="text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white text-sm px-3 py-1.5 rounded transition-colors cursor-pointer"
+                    >
+                      {t('onboarding.controls.back')}
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2" style={{ flexDirection: isRtl ? 'row-reverse' : 'row' }}>
                   <button
-                    onClick={handleNext}
-                    className="bg-emerald-600 hover:bg-emerald-500 text-white text-sm px-4 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer"
+                    onClick={completeOnboarding}
+                    className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 text-sm px-3 py-1.5 rounded transition-colors cursor-pointer"
                   >
-                    {t('onboarding.controls.next')}
+                    {t('onboarding.controls.skip')}
                   </button>
-                ) : (
-                  <button
-                    onClick={handleNext}
-                    className="bg-emerald-600 hover:bg-emerald-500 text-white text-sm px-4 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer"
-                  >
-                    {t('onboarding.controls.last')}
-                  </button>
-                )}
+                  {stepIndex < steps.length - 1 ? (
+                    <button
+                      onClick={handleNext}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white text-sm px-4 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer"
+                    >
+                      {t('onboarding.controls.next')}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleNext}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white text-sm px-4 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer"
+                    >
+                      {t('onboarding.controls.last')}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        </div>,
-        document.body
-      )}
+          </div>,
+          document.body,
+        )}
     </>
   );
 }

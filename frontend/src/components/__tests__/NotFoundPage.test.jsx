@@ -7,7 +7,7 @@ function renderPage() {
   return render(
     <MemoryRouter>
       <NotFoundPage />
-    </MemoryRouter>
+    </MemoryRouter>,
   );
 }
 

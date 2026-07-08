@@ -46,7 +46,10 @@ export default function ProjectDetailsPage() {
         <p className="text-gray-500 dark:text-gray-400 mb-4">
           {isDenied ? t('projectDetail.accessDeniedMsg') : t('projectDetail.notFoundMsg')}
         </p>
-        <button onClick={() => navigate('/development')} className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-500">
+        <button
+          onClick={() => navigate('/development')}
+          className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-500"
+        >
           {t('projectDetail.backToDevelopment')}
         </button>
       </div>
@@ -56,14 +59,21 @@ export default function ProjectDetailsPage() {
   if (!project) return null;
 
   const progress = Math.min(100, Math.round(project.progress || 0));
-  const remainingPeriods = project.completionPeriod && project.constructionPeriods
-    ? Math.max(0, project.completionPeriod - project.startPeriod - Math.round(progress / 100 * project.constructionPeriods))
-    : project.completionPeriod && project.startPeriod
-    ? Math.max(0, project.completionPeriod - project.startPeriod)
-    : null;
+  const remainingPeriods =
+    project.completionPeriod && project.constructionPeriods
+      ? Math.max(
+          0,
+          project.completionPeriod - project.startPeriod - Math.round((progress / 100) * project.constructionPeriods),
+        )
+      : project.completionPeriod && project.startPeriod
+        ? Math.max(0, project.completionPeriod - project.startPeriod)
+        : null;
 
   const statusConfig = {
-    planning: { label: t('projectDetail.statusPlanned'), color: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300' },
+    planning: {
+      label: t('projectDetail.statusPlanned'),
+      color: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300',
+    },
     under_construction: { label: t('projectDetail.statusUnderConstruction'), color: 'bg-yellow-900 text-yellow-300' },
     completed: { label: t('projectDetail.statusCompleted'), color: 'bg-green-900 text-green-300' },
     cancelled: { label: t('projectDetail.statusCancelled'), color: 'bg-red-900 text-red-300' },
@@ -82,9 +92,7 @@ export default function ProjectDetailsPage() {
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{project.projectName}</h1>
-        <span className={`px-3 py-1 rounded text-sm font-semibold w-fit ${status.color}`}>
-          {status.label}
-        </span>
+        <span className={`px-3 py-1 rounded text-sm font-semibold w-fit ${status.color}`}>{status.label}</span>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -114,9 +122,7 @@ export default function ProjectDetailsPage() {
             {project.landId?.location && (
               <div className="flex justify-between">
                 <span className="text-gray-500 dark:text-gray-400 text-sm">{t('projectDetail.district')}</span>
-                <span className="text-gray-900 dark:text-white text-sm font-medium">
-                  {project.landId.location}
-                </span>
+                <span className="text-gray-900 dark:text-white text-sm font-medium">{project.landId.location}</span>
               </div>
             )}
             <div className="flex justify-between">
@@ -171,11 +177,15 @@ export default function ProjectDetailsPage() {
           <div className="space-y-3">
             <div className="flex justify-between">
               <span className="text-gray-500 dark:text-gray-400 text-sm">{t('projectDetail.developmentCost')}</span>
-              <span className="text-gray-900 dark:text-white text-sm font-medium">${project.totalCost?.toLocaleString()}</span>
+              <span className="text-gray-900 dark:text-white text-sm font-medium">
+                ${project.totalCost?.toLocaleString()}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500 dark:text-gray-400 text-sm">{t('projectDetail.investedAmount')}</span>
-              <span className="text-gray-900 dark:text-white text-sm font-medium">${(project.investedAmount || project.totalCost)?.toLocaleString()}</span>
+              <span className="text-gray-900 dark:text-white text-sm font-medium">
+                ${(project.investedAmount || project.totalCost)?.toLocaleString()}
+              </span>
             </div>
             {project.status === 'completed' && (
               <div className="pt-3 border-t border-gray-200 dark:border-gray-700 mt-3">
@@ -210,23 +220,25 @@ export default function ProjectDetailsPage() {
                   <p className="text-sm font-medium text-gray-900 dark:text-white">
                     {t('general.period')} {project.startPeriod}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {t('projectDetail.projectStarted')}
-                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{t('projectDetail.projectStarted')}</p>
                 </div>
               </div>
             )}
             {project.completionPeriod && (
               <div className="flex items-start gap-3">
                 <div className="flex flex-col items-center">
-                  <div className={`w-3 h-3 rounded-full mt-1 ${project.status === 'completed' ? 'bg-green-500' : 'bg-gray-400 dark:bg-gray-500'}`} />
+                  <div
+                    className={`w-3 h-3 rounded-full mt-1 ${project.status === 'completed' ? 'bg-green-500' : 'bg-gray-400 dark:bg-gray-500'}`}
+                  />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-900 dark:text-white">
                     {t('general.period')} {project.completionPeriod}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {project.status === 'completed' ? t('projectDetail.finished') : t('projectDetail.estimatedCompletion')}
+                    {project.status === 'completed'
+                      ? t('projectDetail.finished')
+                      : t('projectDetail.estimatedCompletion')}
                   </p>
                 </div>
               </div>

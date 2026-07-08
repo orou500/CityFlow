@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 import { authenticate, optionalAuth } from '../auth.js';
@@ -157,7 +157,7 @@ describe('optionalAuth middleware', () => {
 
 describe('requireAdmin middleware', () => {
   it('allows admin user', async () => {
-    const { user, token } = await createAuthenticatedAdmin();
+    const { token } = await createAuthenticatedAdmin();
     const app = createAuthTestApp(requireAdmin);
 
     const res = await request(app).get('/protected').set(authHeader(token));

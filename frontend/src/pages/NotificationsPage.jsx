@@ -5,13 +5,13 @@ import { useGameStore } from '../store/useGameStore';
 import { useAuthStore } from '../store/useAuthStore';
 
 const TYPE_CONFIG = {
-  property_offer:        { icon: '🤝', color: 'text-blue-500',     route: '/dashboard' },
-  offer_accepted:       { icon: '✅', color: 'text-emerald-500',  route: '/marketplace' },
-  offer_rejected:       { icon: '❌', color: 'text-red-500',     route: '/marketplace' },
-  offer_countered:      { icon: '🔄', color: 'text-amber-500',   route: '/marketplace' },
-  offer_expired:        { icon: '⏰', color: 'text-gray-500',    route: '/marketplace' },
-  construction_complete:{ icon: '🏗️', color: 'text-emerald-500', route: '/development' },
-  friend_request:       { icon: '👤', color: 'text-blue-500',     route: '/friends' },
+  property_offer: { icon: '🤝', color: 'text-blue-500', route: '/dashboard' },
+  offer_accepted: { icon: '✅', color: 'text-emerald-500', route: '/marketplace' },
+  offer_rejected: { icon: '❌', color: 'text-red-500', route: '/marketplace' },
+  offer_countered: { icon: '🔄', color: 'text-amber-500', route: '/marketplace' },
+  offer_expired: { icon: '⏰', color: 'text-gray-500', route: '/marketplace' },
+  construction_complete: { icon: '🏗️', color: 'text-emerald-500', route: '/development' },
+  friend_request: { icon: '👤', color: 'text-blue-500', route: '/friends' },
 };
 
 function timeAgo(dateStr, t) {
@@ -30,10 +30,8 @@ export default function NotificationsPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const {
-    notifications, fetchNotifications,
-    fetchUnreadCount, markNotificationRead, markAllRead, deleteNotification,
-  } = useGameStore();
+  const { notifications, fetchNotifications, fetchUnreadCount, markNotificationRead, markAllRead, deleteNotification } =
+    useGameStore();
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -43,7 +41,10 @@ export default function NotificationsPage() {
   }, [fetchNotifications, fetchUnreadCount]);
 
   useEffect(() => {
-    if (!user) { navigate('/login'); return; }
+    if (!user) {
+      navigate('/login');
+      return;
+    }
     load();
   }, [user]);
 
@@ -85,9 +86,7 @@ export default function NotificationsPage() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-16 text-muted">
-            {t('common.loading')}
-          </div>
+          <div className="flex items-center justify-center py-16 text-muted">{t('common.loading')}</div>
         ) : notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-muted">
             <span className="text-4xl mb-3">🔔</span>
@@ -111,9 +110,7 @@ export default function NotificationsPage() {
                   <span className={`text-xl shrink-0 mt-0.5 ${cfg.color}`}>{cfg.icon}</span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
-                      <p className={`text-sm font-medium ${n.read ? 'text-primary' : 'text-primary'}`}>
-                        {n.title}
-                      </p>
+                      <p className={`text-sm font-medium ${n.read ? 'text-primary' : 'text-primary'}`}>{n.title}</p>
                       <span className="text-[10px] text-muted whitespace-nowrap shrink-0 mt-0.5">
                         {timeAgo(n.createdAt, t)}
                       </span>
@@ -121,9 +118,7 @@ export default function NotificationsPage() {
                     <p className="text-xs text-secondary mt-0.5 line-clamp-2">{n.message}</p>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0 mt-1">
-                    {!n.read && (
-                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                    )}
+                    {!n.read && <span className="w-2 h-2 rounded-full bg-emerald-500" />}
                     <button
                       onClick={(e) => handleDelete(e, n._id)}
                       className="text-muted hover:text-red-500 transition-colors p-0.5"

@@ -20,11 +20,13 @@ export async function getTickNumber() {
 }
 
 export async function incrementTick() {
-  const state = await mongoose.model('GameState').findOneAndUpdate(
-    { key: 'global' },
-    { $inc: { tickNumber: 1 }, $set: { lastTickAt: new Date() } },
-    { new: true, upsert: true }
-  );
+  const state = await mongoose
+    .model('GameState')
+    .findOneAndUpdate(
+      { key: 'global' },
+      { $inc: { tickNumber: 1 }, $set: { lastTickAt: new Date() } },
+      { new: true, upsert: true },
+    );
   return state.tickNumber;
 }
 

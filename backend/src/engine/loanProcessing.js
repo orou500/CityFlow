@@ -42,9 +42,7 @@ export async function processLoans() {
           prop.forSale = true;
           await prop.save();
 
-          user.ownedProperties = user.ownedProperties.filter(
-            p => p.toString() !== prop._id.toString()
-          );
+          user.ownedProperties = user.ownedProperties.filter((p) => p.toString() !== prop._id.toString());
 
           await Transaction.create({
             propertyId: prop._id,

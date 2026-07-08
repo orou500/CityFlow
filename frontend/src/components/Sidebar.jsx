@@ -122,7 +122,9 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
         key={link.to}
         to={link.to}
         data-tour={link.tour}
-        onClick={(e) => { if (opts.disabled) e.preventDefault(); }}
+        onClick={(e) => {
+          if (opts.disabled) e.preventDefault();
+        }}
         title={collapsed ? link.label : undefined}
         className={`${linkClasses(active, opts)} relative`}
       >
@@ -135,12 +137,7 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
 
   return (
     <>
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
+      {mobileOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setMobileOpen(false)} />}
 
       <button
         onClick={() => setMobileOpen(true)}
@@ -157,8 +154,16 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
       >
         <div className="flex items-center h-14 px-4 border-b border-border shrink-0 overflow-hidden">
           <Link to="/" className={`flex items-center ${collapsed ? 'mx-auto' : ''}`}>
-            <span className={`text-xl font-bold text-emerald-600 dark:text-emerald-400 transition-all duration-300 ${collapsed ? '' : 'hidden'}`}>CF</span>
-            <span className={`text-xl font-bold text-emerald-600 dark:text-emerald-400 transition-all duration-300 ${collapsed ? 'hidden' : ''}`}>CityFlow</span>
+            <span
+              className={`text-xl font-bold text-emerald-600 dark:text-emerald-400 transition-all duration-300 ${collapsed ? '' : 'hidden'}`}
+            >
+              CF
+            </span>
+            <span
+              className={`text-xl font-bold text-emerald-600 dark:text-emerald-400 transition-all duration-300 ${collapsed ? 'hidden' : ''}`}
+            >
+              CityFlow
+            </span>
           </Link>
         </div>
 
@@ -203,7 +208,9 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
               {langLabel}
             </button>
             <button
-              onClick={() => setPreference(preference === 'light' ? 'dark' : preference === 'dark' ? 'system' : 'light')}
+              onClick={() =>
+                setPreference(preference === 'light' ? 'dark' : preference === 'dark' ? 'system' : 'light')
+              }
               className={`text-sm bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-secondary transition-colors shrink-0 ${collapsed ? 'w-8 h-8' : 'flex-1 py-1'}`}
               title={t('nav.theme')}
             >
@@ -226,7 +233,9 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
                     className={`w-7 h-7 rounded-full object-cover ${unreadCount > 0 ? 'animate-avatar-pulse' : ''}`}
                   />
                 ) : (
-                  <div className={`w-7 h-7 rounded-full bg-emerald-600 text-white text-xs flex items-center justify-center font-medium ${unreadCount > 0 ? 'animate-avatar-pulse' : ''}`}>
+                  <div
+                    className={`w-7 h-7 rounded-full bg-emerald-600 text-white text-xs flex items-center justify-center font-medium ${unreadCount > 0 ? 'animate-avatar-pulse' : ''}`}
+                  >
                     {userInitial}
                   </div>
                 )}
@@ -239,7 +248,12 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
               {!collapsed && (
                 <>
                   <span className="ms-2.5 text-sm text-primary truncate">{user.displayName || user.username}</span>
-                  <svg className={`absolute end-3 w-3 h-3 text-muted transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg
+                    className={`absolute end-3 w-3 h-3 text-muted transition-transform ${userMenuOpen ? 'rotate-180' : ''}`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </>
@@ -247,7 +261,9 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
             </button>
 
             {userMenuOpen && (
-              <div className={`absolute bottom-full inset-x-0 mb-1 bg-card border border-border rounded-lg shadow-lg py-1 z-50 ${collapsed ? 'start-1/2 -translate-x-1/2 rtl:translate-x-1/2 w-48' : ''}`}>
+              <div
+                className={`absolute bottom-full inset-x-0 mb-1 bg-card border border-border rounded-lg shadow-lg py-1 z-50 ${collapsed ? 'start-1/2 -translate-x-1/2 rtl:translate-x-1/2 w-48' : ''}`}
+              >
                 {userMenuItems.map((item, i) => {
                   if (item.separator) {
                     return <div key={`sep-${i}`} className="border-t border-border my-1" />;
@@ -256,7 +272,10 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
                     return (
                       <button
                         key="logout"
-                        onClick={() => { handleLogout(); setUserMenuOpen(false); }}
+                        onClick={() => {
+                          handleLogout();
+                          setUserMenuOpen(false);
+                        }}
                         className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors`}
                       >
                         <span className="text-base shrink-0">{item.icon}</span>
@@ -268,7 +287,10 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
                     <Link
                       key={item.to}
                       to={item.to}
-                      onClick={(e) => { if (item.disabled) e.preventDefault(); setUserMenuOpen(false); }}
+                      onClick={(e) => {
+                        if (item.disabled) e.preventDefault();
+                        setUserMenuOpen(false);
+                      }}
                       className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${item.disabled ? 'text-muted opacity-50 cursor-not-allowed' : 'text-secondary hover:text-primary hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                     >
                       <span className="text-base shrink-0">{item.icon}</span>
@@ -291,7 +313,12 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
           className="hidden lg:flex items-center justify-center border-t border-border text-muted hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shrink-0 text-xs h-8 gap-1.5"
           title={collapsed ? t('common.expandSidebar') || 'Expand' : t('common.collapseSidebar') || 'Collapse'}
         >
-          <svg className={`w-3.5 h-3.5 transition-transform ${collapsed ? '' : 'rotate-180'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg
+            className={`w-3.5 h-3.5 transition-transform ${collapsed ? '' : 'rotate-180'}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
           {!collapsed && <span className="text-xs">{t('common.collapseSidebar') || 'Collapse'}</span>}

@@ -111,9 +111,7 @@ router.post('/accept/:id', async (req, res) => {
     await buyer.save();
 
     seller.balance += price;
-    seller.ownedProperties = seller.ownedProperties.filter(
-      p => p.toString() !== property._id.toString()
-    );
+    seller.ownedProperties = seller.ownedProperties.filter((p) => p.toString() !== property._id.toString());
     await seller.save();
 
     property.ownerId = buyer._id;
@@ -260,9 +258,7 @@ router.post('/accept-counter/:id', async (req, res) => {
     await buyer.save();
 
     seller.balance += price;
-    seller.ownedProperties = seller.ownedProperties.filter(
-      p => p.toString() !== property._id.toString()
-    );
+    seller.ownedProperties = seller.ownedProperties.filter((p) => p.toString() !== property._id.toString());
     await seller.save();
 
     property.ownerId = buyer._id;

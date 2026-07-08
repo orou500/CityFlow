@@ -18,14 +18,12 @@ export async function processRent() {
       let totalPotentialRent = 0;
 
       for (const unit of property.units) {
-        const isOccupied = Math.random() < (property.occupancy / 100);
+        const isOccupied = Math.random() < property.occupancy / 100;
         totalPotentialRent += unit.rentPrice;
         if (isOccupied) tickOccupied++;
       }
 
-      const occupancyRate = property.units.length > 0
-        ? tickOccupied / property.units.length
-        : 0;
+      const occupancyRate = property.units.length > 0 ? tickOccupied / property.units.length : 0;
 
       rentIncome = Math.round(totalPotentialRent * occupancyRate);
       maintenanceCost = property.maintenanceCost || Math.round(property.currentPrice * 0.001);

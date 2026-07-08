@@ -8,7 +8,11 @@
     "seed": "node src/seed.js",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "format": "prettier --check src/",
+    "format:fix": "prettier --write src/"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -22,8 +26,13 @@
     "sharp": "^0.35.3"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@vitest/coverage-v8": "^4.1.10",
+    "eslint": "^10.6.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.7.0",
     "mongodb-memory-server": "^11.2.0",
+    "prettier": "^3.9.4",
     "supertest": "^7.2.2",
     "vitest": "^4.1.10"
   }

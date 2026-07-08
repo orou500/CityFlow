@@ -38,25 +38,28 @@ export function ThemeProvider({ children }) {
     return stored;
   });
 
-  const setPreference = useCallback((newPref) => {
-    setPreferenceState(newPref);
-    try {
-      localStorage.setItem('cityflow-theme', newPref);
-    } catch {}
-    const resolved = resolveTheme(newPref);
-    applyTheme(resolved);
+  const setPreference = useCallback(
+    (newPref) => {
+      setPreferenceState(newPref);
+      try {
+        localStorage.setItem('cityflow-theme', newPref);
+      } catch {}
+      const resolved = resolveTheme(newPref);
+      applyTheme(resolved);
 
-    if (user) {
-      fetch('/api/users/theme', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({ theme: newPref }),
-      }).catch(() => {});
-    }
-  }, [user]);
+      if (user) {
+        fetch('/api/users/theme', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+          body: JSON.stringify({ theme: newPref }),
+        }).catch(() => {});
+      }
+    },
+    [user],
+  );
 
   useEffect(() => {
     if (user?.theme) {
@@ -92,11 +95,7 @@ export function ThemeProvider({ children }) {
 
   const resolved = resolveTheme(preference);
 
-  return (
-    <ThemeContext.Provider value={{ preference, resolved, setPreference }}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={{ preference, resolved, setPreference }}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme() {

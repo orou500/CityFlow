@@ -8,7 +8,7 @@ const router = Router();
 
 router.use(authenticate);
 
-async function createFriendNotification(userId, sender, type) {
+async function createFriendNotification(userId, sender, _type) {
   await Notification.create({
     userId,
     type: 'friend_request',
@@ -130,8 +130,6 @@ router.get('/', async (req, res) => {
     const user = await User.findById(req.user._id).populate('friends', 'username displayName avatar balance createdAt');
     const friendsWithNetWorth = await Promise.all(
       (user.friends || []).map(async (f) => {
-        const UserModel = User;
-        const friendUser = await UserModel.findById(f._id);
         const Property = (await import('../models/Property.js')).default;
         const properties = await Property.find({ ownerId: f._id });
         const portfolioValue = properties.reduce((sum, p) => sum + p.currentPrice, 0);
@@ -145,7 +143,7 @@ router.get('/', async (req, res) => {
           netWorth: (f.balance || 0) + portfolioValue,
           propertiesCount: properties.length,
         };
-      })
+      }),
     );
     res.json(friendsWithNetWorth);
   } catch (err) {
@@ -156,10 +154,14 @@ router.get('/', async (req, res) => {
 router.get('/requests', async (req, res) => {
   try {
     const [incoming, sent] = await Promise.all([
-      FriendRequest.find({ receiverId: req.user._id, status: 'pending' })
-        .populate('senderId', 'username displayName avatar'),
-      FriendRequest.find({ senderId: req.user._id, status: 'pending' })
-        .populate('receiverId', 'username displayName avatar'),
+      FriendRequest.find({ receiverId: req.user._id, status: 'pending' }).populate(
+        'senderId',
+        'username displayName avatar',
+      ),
+      FriendRequest.find({ senderId: req.user._id, status: 'pending' }).populate(
+        'receiverId',
+        'username displayName avatar',
+      ),
     ]);
     res.json({ incoming, sent });
   } catch (err) {

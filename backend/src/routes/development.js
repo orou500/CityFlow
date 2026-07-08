@@ -21,7 +21,7 @@ router.get('/options', async (req, res) => {
   try {
     const categories = [];
     for (const [catKey, catValue] of Object.entries(DEVELOPMENT_PROJECTS)) {
-      const projects = catValue.projects.map(p => ({
+      const projects = catValue.projects.map((p) => ({
         ...p,
         estimatedCost: p.baseCost,
       }));
@@ -47,7 +47,7 @@ router.get('/options/city/:cityId', async (req, res) => {
 
     const categories = [];
     for (const [catKey, catValue] of Object.entries(DEVELOPMENT_PROJECTS)) {
-      const projects = catValue.projects.map(p => ({
+      const projects = catValue.projects.map((p) => ({
         ...p,
         estimatedCost: calculateProjectCost(p, city, location),
         constructionPeriods: p.constructionPeriods,
@@ -73,7 +73,7 @@ router.post('/estimate', async (req, res) => {
     if (land.type !== 'land') return res.status(400).json({ error: 'Property is not land' });
 
     const allProjects = getAllProjects();
-    const project = allProjects.find(p => p.id === projectType);
+    const project = allProjects.find((p) => p.id === projectType);
     if (!project) return res.status(400).json({ error: 'Invalid project type' });
 
     if (land.size && land.size < project.minLandSize) {
@@ -148,7 +148,7 @@ router.post('/start', async (req, res) => {
     }
 
     const allProjects = getAllProjects();
-    const project = allProjects.find(p => p.id === projectType);
+    const project = allProjects.find((p) => p.id === projectType);
     if (!project) return res.status(400).json({ error: 'Invalid project type' });
 
     if (land.size && land.size < project.minLandSize) {

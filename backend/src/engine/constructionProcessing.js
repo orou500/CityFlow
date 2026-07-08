@@ -1,14 +1,9 @@
 import ConstructionProject from '../models/ConstructionProject.js';
 import Property from '../models/Property.js';
-import City from '../models/City.js';
 import User from '../models/User.js';
 import Notification from '../models/Notification.js';
 import { getTickNumber } from '../models/GameState.js';
-import {
-  getAllProjects,
-  calculateProjectCost,
-  calculateUnitRent,
-} from '../config/developmentProjects.js';
+import { getAllProjects, calculateUnitRent } from '../config/developmentProjects.js';
 
 export async function processConstruction() {
   const tickNumber = await getTickNumber();
@@ -31,7 +26,7 @@ export async function processConstruction() {
         const land = await Property.findById(project.landId).populate('cityId');
         if (land) {
           const allProjects = getAllProjects();
-          const projectDef = allProjects.find(p => p.id === project.projectType);
+          const projectDef = allProjects.find((p) => p.id === project.projectType);
           if (projectDef) {
             const units = [];
             let totalUnitRent = 0;
@@ -51,9 +46,9 @@ export async function processConstruction() {
             const maintenanceCost = Math.round(project.totalCost * projectDef.maintenancePercent);
             const propertyType = projectDef.propertyType;
 
-            const currentOccupied = units.filter(u => u.occupied).length;
+            const currentOccupied = units.filter((u) => u.occupied).length;
             const effectiveRent = Math.round(
-              (totalUnitRent / projectDef.unitsGenerated) * currentOccupied - maintenanceCost
+              (totalUnitRent / projectDef.unitsGenerated) * currentOccupied - maintenanceCost,
             );
 
             land.type = propertyType;
@@ -82,9 +77,7 @@ export async function processConstruction() {
 
             const owner = await User.findById(project.ownerId);
             if (owner) {
-              owner.ownedProperties = owner.ownedProperties.filter(
-                p => p.toString() !== land._id.toString()
-              );
+              owner.ownedProperties = owner.ownedProperties.filter((p) => p.toString() !== land._id.toString());
               owner.ownedProperties.push(land._id);
               await owner.save();
             }

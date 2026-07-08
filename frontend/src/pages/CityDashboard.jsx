@@ -10,16 +10,16 @@ export default function CityDashboard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, fetchMe } = useAuthStore();
-  const {
-    selectedCity, cityProperties, cityEvents,
-    fetchCity, buyProperty, sellProperty, loading,
-  } = useGameStore();
+  const { selectedCity, cityProperties, cityEvents, fetchCity, buyProperty, sellProperty, loading } = useGameStore();
   const [actionMsg, setActionMsg] = useState(null);
   const [propPage, setPropPage] = useState(1);
   const PROPS_PER_PAGE = 21;
 
   useEffect(() => {
-    if (id) { fetchCity(id); setPropPage(1); }
+    if (id) {
+      fetchCity(id);
+      setPropPage(1);
+    }
   }, [id, fetchCity]);
 
   const handleBuy = async (propertyId) => {
@@ -103,7 +103,10 @@ export default function CityDashboard() {
           <h2 className="text-xl font-bold mb-3">{t('city.events')}</h2>
           <div className="space-y-2">
             {cityEvents.map((event) => (
-              <div key={event._id} className="bg-gray-50 dark:bg-gray-800 p-3 rounded flex justify-between items-center">
+              <div
+                key={event._id}
+                className="bg-gray-50 dark:bg-gray-800 p-3 rounded flex justify-between items-center"
+              >
                 <div>
                   <p className="font-semibold">{event.name}</p>
                   <p className="text-sm text-gray-500 dark:text-gray-400">{event.description}</p>
@@ -118,9 +121,13 @@ export default function CityDashboard() {
       )}
 
       {actionMsg && (
-        <div className={`p-3 rounded mb-4 text-sm ${actionMsg.type === 'success' ? 'bg-emerald-900 text-emerald-300' : 'bg-red-900 text-red-300'}`}>
+        <div
+          className={`p-3 rounded mb-4 text-sm ${actionMsg.type === 'success' ? 'bg-emerald-900 text-emerald-300' : 'bg-red-900 text-red-300'}`}
+        >
           {actionMsg.text}
-          <button onClick={() => setActionMsg(null)} className="ml-2">&times;</button>
+          <button onClick={() => setActionMsg(null)} className="ml-2">
+            &times;
+          </button>
         </div>
       )}
 
@@ -134,76 +141,80 @@ export default function CityDashboard() {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 items-stretch">
               {cityProperties.slice(0, propPage * PROPS_PER_PAGE).map((p) => {
-              const isOwner = user && p.ownerId?._id === user._id;
-              return (
-                <div key={p._id} className="bg-gray-50 dark:bg-gray-800 p-4 rounded flex flex-col gap-2 h-full">
-                  <div
-                    className="flex-1 cursor-pointer"
-                    onClick={() => navigate(`/property/${p._id}`)}
-                  >
-                    <h3 className="font-semibold hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">{p.name}</h3>
-                    <div className="flex gap-2 text-sm text-gray-500 dark:text-gray-400 mt-1 flex-wrap">
-                      <span>{propertyTypes[p.type] || p.type}</span>
-                      <span>·</span>
-                      <span>{t('city.rent')}: ${p.rent?.toLocaleString()}</span>
-                      {p.ownerId && (
-                        <>
-                          <span>·</span>
-                          <span>{t('city.owner')}: {p.ownerId.username || 'Unknown'}</span>
-                        </>
+                const isOwner = user && p.ownerId?._id === user._id;
+                return (
+                  <div key={p._id} className="bg-gray-50 dark:bg-gray-800 p-4 rounded flex flex-col gap-2 h-full">
+                    <div className="flex-1 cursor-pointer" onClick={() => navigate(`/property/${p._id}`)}>
+                      <h3 className="font-semibold hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+                        {p.name}
+                      </h3>
+                      <div className="flex gap-2 text-sm text-gray-500 dark:text-gray-400 mt-1 flex-wrap">
+                        <span>{propertyTypes[p.type] || p.type}</span>
+                        <span>·</span>
+                        <span>
+                          {t('city.rent')}: ${p.rent?.toLocaleString()}
+                        </span>
+                        {p.ownerId && (
+                          <>
+                            <span>·</span>
+                            <span>
+                              {t('city.owner')}: {p.ownerId.username || 'Unknown'}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
+                      <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                        ${p.currentPrice?.toLocaleString()}
+                      </p>
+                      {!user && <p className="text-xs text-gray-400 dark:text-gray-500">{t('city.forSale')}</p>}
+                      {user && !isOwner && p.forSale && (
+                        <button
+                          onClick={() => handleBuy(p._id)}
+                          className="bg-emerald-600 hover:bg-emerald-500 text-gray-900 dark:text-white text-sm px-4 py-1.5 rounded transition-colors"
+                        >
+                          {t('city.buy')}
+                        </button>
+                      )}
+                      {user && isOwner && (
+                        <div className="flex gap-2">
+                          <span className="text-xs bg-emerald-900 text-emerald-300 px-2 py-1 rounded">
+                            {t('city.owned')}
+                          </span>
+                          {!p.forSale && (
+                            <button
+                              onClick={() => handleSell(p._id)}
+                              className="text-xs bg-yellow-600 hover:bg-yellow-500 text-gray-900 dark:text-white px-2 py-1 rounded transition-colors"
+                            >
+                              {t('city.sell')}
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
-                    <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
-                      ${p.currentPrice?.toLocaleString()}
-                    </p>
-                    {!user && (
-                      <p className="text-xs text-gray-400 dark:text-gray-500">{t('city.forSale')}</p>
-                    )}
-                    {user && !isOwner && p.forSale && (
-                      <button
-                        onClick={() => handleBuy(p._id)}
-                        className="bg-emerald-600 hover:bg-emerald-500 text-gray-900 dark:text-white text-sm px-4 py-1.5 rounded transition-colors"
-                      >
-                        {t('city.buy')}
-                      </button>
-                    )}
-                    {user && isOwner && (
-                      <div className="flex gap-2">
-                        <span className="text-xs bg-emerald-900 text-emerald-300 px-2 py-1 rounded">
-                          {t('city.owned')}
-                        </span>
-                        {!p.forSale && (
-                          <button
-                            onClick={() => handleSell(p._id)}
-                            className="text-xs bg-yellow-600 hover:bg-yellow-500 text-gray-900 dark:text-white px-2 py-1 rounded transition-colors"
-                          >
-                            {t('city.sell')}
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
             </div>
             {cityProperties.length > PROPS_PER_PAGE && (
               <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700 mt-3">
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {t('dashboard.showing', { shown: Math.min(propPage * PROPS_PER_PAGE, cityProperties.length), total: cityProperties.length })}
+                  {t('dashboard.showing', {
+                    shown: Math.min(propPage * PROPS_PER_PAGE, cityProperties.length),
+                    total: cityProperties.length,
+                  })}
                 </p>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => setPropPage(p => Math.max(1, p - 1))}
+                    onClick={() => setPropPage((p) => Math.max(1, p - 1))}
                     disabled={propPage === 1}
                     className="px-3 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     {t('marketplace.previous')}
                   </button>
                   <button
-                    onClick={() => setPropPage(p => p + 1)}
+                    onClick={() => setPropPage((p) => p + 1)}
                     disabled={propPage * PROPS_PER_PAGE >= cityProperties.length}
                     className="px-3 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >

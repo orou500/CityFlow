@@ -9,9 +9,7 @@ router.use(authenticate);
 router.get('/', async (req, res) => {
   try {
     await cleanupOldRead();
-    const notifications = await Notification.find({ userId: req.user._id })
-      .sort({ createdAt: -1 })
-      .limit(50);
+    const notifications = await Notification.find({ userId: req.user._id }).sort({ createdAt: -1 }).limit(50);
     res.json(notifications);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -43,10 +41,7 @@ router.put('/:id/read', async (req, res) => {
 
 router.put('/read-all', async (req, res) => {
   try {
-    await Notification.updateMany(
-      { userId: req.user._id, read: false },
-      { read: true },
-    );
+    await Notification.updateMany({ userId: req.user._id, read: false }, { read: true });
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
