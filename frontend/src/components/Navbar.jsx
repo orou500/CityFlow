@@ -108,11 +108,7 @@ export default function Navbar() {
           </svg>
         </button>
 
-        <Link
-          to="/"
-          onClick={closeMobileMenu}
-          className="shrink-0 flex items-center"
-        >
+        <Link to="/" onClick={closeMobileMenu} className="shrink-0 flex items-center">
           <img src="/images/logo-text.png" alt="CityFlow" className="h-25" />
         </Link>
 

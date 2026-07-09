@@ -168,9 +168,7 @@ export default function PlayerDashboard() {
                     </p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">{p.cityId?.name || 'Unknown'}</p>
                   </div>
-                  <p className="text-blue-600 dark:text-blue-400 font-semibold">
-                    ${p.currentPrice?.toLocaleString()}
-                  </p>
+                  <p className="text-blue-600 dark:text-blue-400 font-semibold">${p.currentPrice?.toLocaleString()}</p>
                 </div>
               ))}
             </div>
@@ -191,9 +189,7 @@ export default function PlayerDashboard() {
                   <span className="text-gray-500 dark:text-gray-400">${loan.principal?.toLocaleString()}</span>
                   <span
                     className={
-                      loan.missedPayments > 0
-                        ? 'text-red-600 dark:text-red-400'
-                        : 'text-blue-600 dark:text-blue-400'
+                      loan.missedPayments > 0 ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'
                     }
                   >
                     {loan.ticksRemaining} {t('general.periods')} left

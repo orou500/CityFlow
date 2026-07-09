@@ -752,9 +752,7 @@ export default function AdminPage() {
                 )}
               </td>
               <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{c.supplyIndex ?? '-'}</td>
-              <td className="px-3 py-2 text-blue-600 dark:text-blue-400">
-                ${c.avgPrice?.toLocaleString() || '-'}
-              </td>
+              <td className="px-3 py-2 text-blue-600 dark:text-blue-400">${c.avgPrice?.toLocaleString() || '-'}</td>
               <td className="px-3 py-2 text-gray-500 dark:text-gray-400">
                 {c.growthRate != null ? `${c.growthRate}%` : '-'}
               </td>

@@ -189,9 +189,7 @@ function PriceHistoryChart({ history }) {
             </div>
             {diff !== null && (
               <>
-                <div
-                  className={`${diff >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}`}
-                >
+                <div className={`${diff >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}`}>
                   <span className="text-gray-500 dark:text-gray-400">{t('propertyDetail.chartChange')}</span>{' '}
                   {fmtDiff(diff)} ({fmtPct(diffPct)})
                 </div>

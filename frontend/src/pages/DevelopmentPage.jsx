@@ -258,8 +258,8 @@ export default function DevelopmentPage() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-400 dark:text-gray-500">{t('development.valueLabel')}</span>
-              <span className="text-orange-500 dark:text-orange-400">
-                ${selectedLand.currentPrice?.toLocaleString()}
+                      <span className="text-orange-500 dark:text-orange-400">
+                        ${selectedLand.currentPrice?.toLocaleString()}
                       </span>
                     </div>
                   </div>
@@ -304,8 +304,8 @@ export default function DevelopmentPage() {
                                 <span className="text-gray-400 dark:text-gray-500">
                                   {proj.constructionPeriods} {t('development.period')}
                                 </span>
-                              <span className="text-orange-500 dark:text-orange-400">
-                                ~${proj.estimatedCost?.toLocaleString()}
+                                <span className="text-orange-500 dark:text-orange-400">
+                                  ~${proj.estimatedCost?.toLocaleString()}
                                 </span>
                               </div>
                             </div>
@@ -376,8 +376,8 @@ export default function DevelopmentPage() {
                                 <span className="text-gray-500 dark:text-gray-400">
                                   {t('development.estGrossIncome')}
                                 </span>
-                              <span className="text-orange-500 dark:text-orange-400">
-                                +${estimate.estimatedIncome?.toLocaleString()}
+                                <span className="text-orange-500 dark:text-orange-400">
+                                  +${estimate.estimatedIncome?.toLocaleString()}
                                 </span>
                               </div>
                               <div className="flex justify-between">

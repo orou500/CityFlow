@@ -11,10 +11,7 @@ export default function NotFoundPage() {
         <h2 className="text-2xl font-bold text-primary mb-2">Page Not Found</h2>
         <p className="text-muted mb-8">The page you're looking for doesn't exist.</p>
         <div className="flex flex-wrap justify-center gap-3">
-          <Link
-            to="/"
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded transition-colors"
-          >
+          <Link to="/" className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded transition-colors">
             World Map
           </Link>
           {user ? (

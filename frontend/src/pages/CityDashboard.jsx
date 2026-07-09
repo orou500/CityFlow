@@ -179,9 +179,7 @@ export default function CityDashboard() {
                       )}
                       {user && isOwner && (
                         <div className="flex gap-2">
-                          <span className="text-xs bg-blue-900 text-blue-300 px-2 py-1 rounded">
-                            {t('city.owned')}
-                          </span>
+                          <span className="text-xs bg-blue-900 text-blue-300 px-2 py-1 rounded">{t('city.owned')}</span>
                           {!p.forSale && (
                             <button
                               onClick={() => handleSell(p._id)}

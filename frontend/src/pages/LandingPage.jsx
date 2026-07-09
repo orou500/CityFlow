@@ -69,9 +69,7 @@ function HeroGradient({ resolved }) {
     <div
       className="absolute inset-0 transition-all duration-500"
       style={{
-        backgroundImage: isDark
-          ? 'url(/images/bg-night.png)'
-          : 'url(/images/bg-day.png)',
+        backgroundImage: isDark ? 'url(/images/bg-night.png)' : 'url(/images/bg-day.png)',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }}
@@ -113,9 +111,7 @@ function CtaGradient({ resolved }) {
     <div
       className="absolute inset-0 transition-all duration-500"
       style={{
-        backgroundImage: isDark
-          ? 'url(/images/bg-night.png)'
-          : 'url(/images/bg-day.png)',
+        backgroundImage: isDark ? 'url(/images/bg-night.png)' : 'url(/images/bg-day.png)',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }}
@@ -326,9 +322,7 @@ export default function LandingPage() {
         <div
           className="absolute inset-0 transition-all duration-500"
           style={{
-            background: resolved === 'dark'
-              ? 'rgba(2,6,23,0.8)'
-              : 'rgba(255,255,255,0.8)',
+            background: resolved === 'dark' ? 'rgba(2,6,23,0.8)' : 'rgba(255,255,255,0.8)',
           }}
         />
         <div className="relative z-10 max-w-3xl mx-auto text-center">

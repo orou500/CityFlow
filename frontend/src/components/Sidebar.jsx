@@ -152,7 +152,9 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
       <aside
         className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-card border-r border-border transition-all duration-300 ${collapsed ? 'w-16' : 'w-60'} ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
-        <div className={`flex items-center h-14 px-4 border-b border-border shrink-0 overflow-hidden ${collapsed ? '' : 'justify-center'}`}>
+        <div
+          className={`flex items-center h-14 px-4 border-b border-border shrink-0 overflow-hidden ${collapsed ? '' : 'justify-center'}`}
+        >
           <Link to="/" className={`flex items-center ${collapsed ? 'mx-auto' : ''}`}>
             <img
               src="/images/favicon.png"
