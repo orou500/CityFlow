@@ -209,7 +209,7 @@ export default function OnboardingWrapper({ children }) {
             <div className="flex gap-3 justify-center">
               <button
                 onClick={startTour}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2.5 rounded-lg font-semibold transition-colors"
+                className="bg-orange-500 hover:bg-orange-400 text-white px-6 py-2.5 rounded-lg font-semibold transition-colors"
               >
                 {t('onboarding.welcome.startTour')}
               </button>
@@ -305,14 +305,14 @@ export default function OnboardingWrapper({ children }) {
                   {stepIndex < steps.length - 1 ? (
                     <button
                       onClick={handleNext}
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white text-sm px-4 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer"
+                      className="bg-orange-500 hover:bg-orange-400 text-white text-sm px-4 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer"
                     >
                       {t('onboarding.controls.next')}
                     </button>
                   ) : (
                     <button
                       onClick={handleNext}
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white text-sm px-4 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer"
+                      className="bg-orange-500 hover:bg-orange-400 text-white text-sm px-4 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer"
                     >
                       {t('onboarding.controls.last')}
                     </button>

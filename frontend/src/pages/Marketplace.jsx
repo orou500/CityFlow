@@ -17,9 +17,9 @@ async function api(path, options = {}) {
 }
 
 const SELECT_STYLE =
-  'w-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-3 py-1.5 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-emerald-500';
+  'w-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-3 py-1.5 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-blue-500';
 const INPUT_STYLE =
-  'w-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-3 py-1.5 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-emerald-500';
+  'w-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-3 py-1.5 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-blue-500';
 
 function PropertyCard({ p, cities, propertyTypes, onBuy, t, user, navigate }) {
   const cityData = typeof p.cityId === 'object' ? p.cityId : cities.find((c) => c._id === p.cityId);
@@ -31,7 +31,7 @@ function PropertyCard({ p, cities, propertyTypes, onBuy, t, user, navigate }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
           <h3
-            className="font-semibold cursor-pointer hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors truncate"
+            className="font-semibold cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate"
             onClick={() => navigate(`/property/${p._id}`)}
           >
             {p.name}
@@ -53,11 +53,11 @@ function PropertyCard({ p, cities, propertyTypes, onBuy, t, user, navigate }) {
         </div>
       </div>
       <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800">
-        <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">${p.currentPrice?.toLocaleString()}</p>
+        <p className="text-lg font-bold text-orange-500 dark:text-orange-400">${p.currentPrice?.toLocaleString()}</p>
         {user ? (
           <button
             onClick={() => onBuy(p._id)}
-            className="bg-emerald-600 hover:bg-emerald-500 text-gray-900 dark:text-white text-sm px-4 py-1.5 rounded transition-colors"
+            className="bg-orange-500 hover:bg-orange-400 text-gray-900 dark:text-white text-sm px-4 py-1.5 rounded transition-colors"
           >
             {t('marketplace.buy')}
           </button>
@@ -198,7 +198,7 @@ export default function Marketplace() {
 
       {actionMsg && (
         <div
-          className={`p-3 rounded mb-4 text-sm flex items-center justify-between ${actionMsg.type === 'success' ? 'bg-emerald-900 text-emerald-300' : 'bg-red-900 text-red-300'}`}
+          className={`p-3 rounded mb-4 text-sm flex items-center justify-between ${actionMsg.type === 'success' ? 'bg-blue-900 text-blue-300' : 'bg-red-900 text-red-300'}`}
         >
           <span>{actionMsg.text}</span>
           <button onClick={() => setActionMsg(null)} className="ml-2 text-lg leading-none">
@@ -332,7 +332,7 @@ export default function Marketplace() {
         <div className="flex gap-2 mt-4">
           <button
             onClick={applyFilters}
-            className="px-5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-gray-900 dark:text-white text-sm rounded transition-colors"
+            className="px-5 py-1.5 bg-blue-600 hover:bg-blue-500 text-gray-900 dark:text-white text-sm rounded transition-colors"
           >
             {t('marketplace.applyFilters')}
           </button>
@@ -387,7 +387,7 @@ export default function Marketplace() {
           )}
           {playerProperties.length > 0 && (
             <div>
-              <h2 className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-3">
+              <h2 className="text-sm font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide mb-3">
                 {t('marketplace.playerListings', { count: playerProperties.length })}
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 items-stretch">

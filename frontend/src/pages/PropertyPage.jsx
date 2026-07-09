@@ -55,7 +55,7 @@ function PriceHistoryChart({ history }) {
     })
     .join(' ');
 
-  const startColor = prices[0] <= prices[prices.length - 1] ? '#10b981' : '#ef4444';
+  const startColor = prices[0] <= prices[prices.length - 1] ? '#1E90FF' : '#ef4444';
 
   const active = activeIdx !== null ? history[activeIdx] : null;
   const activePt = activeIdx !== null ? getPoint(activeIdx) : null;
@@ -135,8 +135,8 @@ function PriceHistoryChart({ history }) {
                 cx={pt.x}
                 cy={pt.y}
                 r={isActive ? 5 : 3.5}
-                fill={isActive ? '#10b981' : '#6b7280'}
-                stroke={isActive ? '#065f46' : 'none'}
+                fill={isActive ? '#1E90FF' : '#6b7280'}
+                stroke={isActive ? '#0057B8' : 'none'}
                 strokeWidth={isActive ? 2 : 0}
               />
               <circle
@@ -155,7 +155,7 @@ function PriceHistoryChart({ history }) {
 
       {active && activePt && (
         <div
-          className={`absolute z-10 min-w-[140px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-xs shadow-lg ${pinned ? 'shadow-2xl ring-1 ring-emerald-500/40' : 'pointer-events-none'}`}
+          className={`absolute z-10 min-w-[140px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-xs shadow-lg ${pinned ? 'shadow-2xl ring-1 ring-blue-500/40' : 'pointer-events-none'}`}
           style={{
             left: `${(activePt.x / w) * 100}%`,
             top: isTopHalf ? `${(activePt.y / h) * 100 + 2}%` : `${(activePt.y / h) * 100}%`,
@@ -185,12 +185,12 @@ function PriceHistoryChart({ history }) {
             </div>
             <div>
               <span className="text-gray-500 dark:text-gray-400">{t('propertyDetail.chartPrice')}</span>{' '}
-              <span className="font-semibold text-emerald-600 dark:text-emerald-400">{fmt(active.price)}</span>
+              <span className="font-semibold text-blue-600 dark:text-blue-400">{fmt(active.price)}</span>
             </div>
             {diff !== null && (
               <>
                 <div
-                  className={`${diff >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}
+                  className={`${diff >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}`}
                 >
                   <span className="text-gray-500 dark:text-gray-400">{t('propertyDetail.chartChange')}</span>{' '}
                   {fmtDiff(diff)} ({fmtPct(diffPct)})
@@ -334,7 +334,7 @@ export default function PropertyPage() {
     <div className="flex-1 p-4 overflow-y-auto">
       <button
         onClick={() => navigate(-1)}
-        className="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 mb-4 inline-block"
+        className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 mb-4 inline-block"
       >
         &larr; {t('propertyDetail.backToCity')}
       </button>
@@ -346,7 +346,7 @@ export default function PropertyPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
                 <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.currentValue')}</p>
-                <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                <p className="text-lg font-bold text-orange-500 dark:text-orange-400">
                   ${property.currentPrice?.toLocaleString()}
                 </p>
               </div>
@@ -356,7 +356,7 @@ export default function PropertyPage() {
               </div>
               <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
                 <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.rentIncome')}</p>
-                <p className="text-lg font-semibold text-purple-600 dark:text-purple-400">
+                <p className="text-lg font-semibold text-orange-500 dark:text-orange-400">
                   ${property.rent?.toLocaleString()}
                 </p>
               </div>
@@ -395,7 +395,7 @@ export default function PropertyPage() {
               <div className="grid grid-cols-2 gap-2 mb-4">
                 <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
                   <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.occupancy')}</p>
-                  <p className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">{property.occupancy}%</p>
+                  <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">{property.occupancy}%</p>
                 </div>
                 <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
                   <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.maintenanceCost')}</p>
@@ -426,12 +426,12 @@ export default function PropertyPage() {
                             </span>
                           </div>
                           <div className="flex items-center gap-3">
-                            <span className="text-emerald-600 dark:text-emerald-400">
+                            <span className="text-blue-600 dark:text-blue-400">
                               ${unit.rentPrice?.toLocaleString()}
                               {t('propertyDetail.perPeriod')}
                             </span>
                             <span
-                              className={`text-xs px-2 py-0.5 rounded ${unit.occupied ? 'bg-emerald-900 text-emerald-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}
+                              className={`text-xs px-2 py-0.5 rounded ${unit.occupied ? 'bg-blue-900 text-blue-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}
                             >
                               {unit.occupied ? t('propertyDetail.occupied') : t('propertyDetail.vacant')}
                             </span>
@@ -508,7 +508,7 @@ export default function PropertyPage() {
                 {totalInvestment > 0 && (
                   <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
                     <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.totalInvestment')}</p>
-                    <p className="font-semibold text-blue-600 dark:text-blue-400">
+                    <p className="font-semibold text-orange-500 dark:text-orange-400">
                       ${totalInvestment?.toLocaleString()}
                     </p>
                   </div>
@@ -526,7 +526,7 @@ export default function PropertyPage() {
 
           {actionMsg && (
             <div
-              className={`p-3 rounded text-sm ${actionMsg.type === 'success' ? 'bg-emerald-900 text-emerald-300' : 'bg-red-900 text-red-300'}`}
+              className={`p-3 rounded text-sm ${actionMsg.type === 'success' ? 'bg-blue-900 text-blue-300' : 'bg-red-900 text-red-300'}`}
             >
               {actionMsg.text}
               <button onClick={() => setActionMsg(null)} className="ml-2">
@@ -549,7 +549,7 @@ export default function PropertyPage() {
               {user && !isOwner && property.forSale && (
                 <button
                   onClick={handleBuy}
-                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-gray-900 dark:text-white text-sm py-2 rounded transition-colors"
+                  className="w-full bg-orange-500 hover:bg-orange-400 text-gray-900 dark:text-white text-sm py-2 rounded transition-colors"
                 >
                   {t('propertyDetail.buyProperty')} — ${property.currentPrice?.toLocaleString()}
                 </button>
@@ -557,7 +557,7 @@ export default function PropertyPage() {
               {canOffer && (
                 <button
                   onClick={() => setShowOfferModal(true)}
-                  className="w-full bg-blue-600 hover:bg-blue-500 text-gray-900 dark:text-white text-sm py-2 rounded transition-colors"
+                  className="w-full bg-orange-500 hover:bg-orange-400 text-gray-900 dark:text-white text-sm py-2 rounded transition-colors"
                 >
                   {t('propertyDetail.makeOffer')}
                 </button>

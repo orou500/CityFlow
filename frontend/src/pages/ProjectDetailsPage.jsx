@@ -48,7 +48,7 @@ export default function ProjectDetailsPage() {
         </p>
         <button
           onClick={() => navigate('/development')}
-          className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-500"
+          className="text-blue-600 dark:text-blue-400 hover:text-blue-500"
         >
           {t('projectDetail.backToDevelopment')}
         </button>
@@ -85,7 +85,7 @@ export default function ProjectDetailsPage() {
     <div className="flex-1 overflow-y-auto p-4 md:p-6 max-w-4xl mx-auto w-full">
       <button
         onClick={() => navigate('/development')}
-        className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 mb-4 inline-flex items-center gap-1 text-sm"
+        className="text-blue-600 dark:text-blue-400 hover:text-blue-500 mb-4 inline-flex items-center gap-1 text-sm"
       >
         {t('projectDetail.backToDevelopment')}
       </button>
@@ -140,11 +140,11 @@ export default function ProjectDetailsPage() {
           </h2>
           <div className="flex justify-between text-sm mb-2">
             <span className="text-gray-500 dark:text-gray-400">{t('development.progress')}</span>
-            <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{progress}%</span>
+            <span className="text-blue-600 dark:text-blue-400 font-semibold">{progress}%</span>
           </div>
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 mb-4">
             <div
-              className="bg-emerald-500 h-3 rounded-full transition-all duration-500"
+              className="bg-blue-500 h-3 rounded-full transition-all duration-500"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -195,7 +195,7 @@ export default function ProjectDetailsPage() {
                 {project.landId && (
                   <Link
                     to={`/property/${project.landId._id}`}
-                    className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 text-sm font-medium"
+                    className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:text-blue-500 text-sm font-medium"
                   >
                     {t('projectDetail.viewProperty')} &rarr;
                   </Link>
@@ -213,7 +213,7 @@ export default function ProjectDetailsPage() {
             {project.startPeriod && (
               <div className="flex items-start gap-3">
                 <div className="flex flex-col items-center">
-                  <div className="w-3 h-3 rounded-full bg-emerald-500 mt-1" />
+                  <div className="w-3 h-3 rounded-full bg-blue-500 mt-1" />
                   <div className="w-0.5 h-full min-h-[2rem] bg-gray-300 dark:bg-gray-600" />
                 </div>
                 <div>

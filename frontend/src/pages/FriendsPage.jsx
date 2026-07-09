@@ -138,7 +138,7 @@ export default function FriendsPage() {
             <div className="text-gray-900 dark:text-white text-sm font-medium truncate">
               {friend.displayName || friend.username}
             </div>
-            <div className="text-xs text-emerald-600 dark:text-emerald-400">
+            <div className="text-xs text-blue-600 dark:text-blue-400">
               ${(friend.netWorth || 0).toLocaleString()}
             </div>
           </div>
@@ -164,7 +164,7 @@ export default function FriendsPage() {
 
         {loading && (
           <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-400" />
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-400" />
           </div>
         )}
 
@@ -175,7 +175,7 @@ export default function FriendsPage() {
               <button
                 key={key}
                 onClick={() => setTab(key)}
-                className={`text-sm px-4 py-2 rounded-t transition-colors ${tab === key ? 'bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white border-b-2 border-emerald-500' : 'text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                className={`text-sm px-4 py-2 rounded-t transition-colors ${tab === key ? 'bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white border-b-2 border-blue-500' : 'text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
               >
                 {t(`friends.tab.${key}`)}{' '}
                 {count > 0 && <span className="text-gray-400 dark:text-gray-500">({count})</span>}
@@ -219,7 +219,7 @@ export default function FriendsPage() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => acceptRequest(r._id)}
-                    className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded transition-colors"
+                    className="text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded transition-colors"
                   >
                     {t('friends.accept')}
                   </button>

@@ -6,11 +6,11 @@ import { useAuthStore } from '../store/useAuthStore';
 
 const TYPE_CONFIG = {
   property_offer: { icon: '🤝', color: 'text-blue-500', route: '/dashboard' },
-  offer_accepted: { icon: '✅', color: 'text-emerald-500', route: '/marketplace' },
+  offer_accepted: { icon: '✅', color: 'text-blue-500', route: '/marketplace' },
   offer_rejected: { icon: '❌', color: 'text-red-500', route: '/marketplace' },
   offer_countered: { icon: '🔄', color: 'text-amber-500', route: '/marketplace' },
   offer_expired: { icon: '⏰', color: 'text-gray-500', route: '/marketplace' },
-  construction_complete: { icon: '🏗️', color: 'text-emerald-500', route: '/development' },
+  construction_complete: { icon: '🏗️', color: 'text-blue-500', route: '/development' },
   friend_request: { icon: '👤', color: 'text-blue-500', route: '/friends' },
 };
 
@@ -78,7 +78,7 @@ export default function NotificationsPage() {
           {notifications.some((n) => !n.read) && (
             <button
               onClick={handleMarkAllRead}
-              className="text-sm text-emerald-600 hover:text-emerald-500 font-medium transition-colors"
+              className="text-sm text-blue-600 hover:text-blue-500 font-medium transition-colors"
             >
               {t('notifications.markAllRead')}
             </button>
@@ -104,7 +104,7 @@ export default function NotificationsPage() {
                   className={`w-full text-left flex items-start gap-3 p-4 rounded-lg border transition-colors ${
                     n.read
                       ? 'bg-card border-border'
-                      : 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800'
+                      : 'bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800'
                   }`}
                 >
                   <span className={`text-xl shrink-0 mt-0.5 ${cfg.color}`}>{cfg.icon}</span>
@@ -118,7 +118,7 @@ export default function NotificationsPage() {
                     <p className="text-xs text-secondary mt-0.5 line-clamp-2">{n.message}</p>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0 mt-1">
-                    {!n.read && <span className="w-2 h-2 rounded-full bg-emerald-500" />}
+                    {!n.read && <span className="w-2 h-2 rounded-full bg-blue-500" />}
                     <button
                       onClick={(e) => handleDelete(e, n._id)}
                       className="text-muted hover:text-red-500 transition-colors p-0.5"

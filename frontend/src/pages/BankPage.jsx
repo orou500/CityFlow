@@ -84,13 +84,13 @@ export default function BankPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white dark:bg-gray-900 p-4 rounded-lg">
           <p className="text-sm text-gray-500 dark:text-gray-400">{t('bank.cash')}</p>
-          <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+          <p className="text-2xl font-bold text-orange-500 dark:text-orange-400">
             ${summary?.balance?.toLocaleString() || user.balance?.toLocaleString()}
           </p>
         </div>
         <div className="bg-white dark:bg-gray-900 p-4 rounded-lg">
           <p className="text-sm text-gray-500 dark:text-gray-400">{t('bank.netWorth')}</p>
-          <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+          <p className="text-2xl font-bold text-orange-500 dark:text-orange-400">
             ${summary?.netWorth?.toLocaleString() || '0'}
           </p>
         </div>
@@ -125,7 +125,7 @@ export default function BankPage() {
                     key={`${opt.principal}-${opt.durationTicks}`}
                     className={`block p-3 rounded border cursor-pointer transition-colors ${
                       selectedOption?.principal === opt.principal && selectedOption?.durationTicks === opt.durationTicks
-                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
+                        ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20'
                         : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
                     }`}
                   >
@@ -138,7 +138,7 @@ export default function BankPage() {
                         </p>
                       </div>
                       <div className="text-right text-sm">
-                        <p className="text-emerald-600 dark:text-emerald-400">
+                        <p className="text-orange-500 dark:text-orange-400">
                           ${opt.paymentPerTick?.toLocaleString()}/{t('general.period')}
                         </p>
                         <p className="text-gray-500 dark:text-gray-400">
@@ -163,7 +163,7 @@ export default function BankPage() {
                           </span>
                           <span>
                             {t('bank.paymentPerTick')}:{' '}
-                            <span className="text-emerald-600 dark:text-emerald-400">
+                            <span className="text-orange-500 dark:text-orange-400">
                               ${opt.paymentPerTick?.toLocaleString()}
                             </span>
                           </span>
@@ -176,7 +176,7 @@ export default function BankPage() {
             <button
               onClick={handleApply}
               disabled={!selectedOption || applying}
-              className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-gray-900 dark:text-white py-2 rounded transition-colors"
+              className="w-full bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-gray-900 dark:text-white py-2 rounded transition-colors"
             >
               {applying ? t('common.loading') : t('bank.applyLoan')}
             </button>
@@ -214,7 +214,7 @@ export default function BankPage() {
                       </div>
                       <div>
                         <p className="text-gray-500 dark:text-gray-400">{t('bank.paymentPerTick')}</p>
-                        <p className="font-semibold text-emerald-600 dark:text-emerald-400">
+                        <p className="font-semibold text-orange-500 dark:text-orange-400">
                           ${loan.paymentPerTick?.toLocaleString()}
                         </p>
                       </div>
@@ -239,7 +239,7 @@ export default function BankPage() {
                       />
                       <button
                         onClick={() => handleRepay(loan._id)}
-                        className="bg-blue-600 hover:bg-blue-500 text-gray-900 dark:text-white text-sm px-3 py-1 rounded transition-colors"
+                        className="bg-orange-500 hover:bg-orange-400 text-gray-900 dark:text-white text-sm px-3 py-1 rounded transition-colors"
                       >
                         {t('bank.repay')}
                       </button>

@@ -111,9 +111,9 @@ export default function Navbar() {
         <Link
           to="/"
           onClick={closeMobileMenu}
-          className="text-xl font-bold text-emerald-600 dark:text-emerald-400 shrink-0"
+          className="shrink-0 flex items-center"
         >
-          CityFlow
+          <img src="/images/logo-text.png" alt="CityFlow" className="h-25" />
         </Link>
 
         <div className="hidden md:flex items-center gap-1">
@@ -193,7 +193,7 @@ export default function Navbar() {
               </svg>
             </button>
 
-            <span className="hidden sm:inline text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+            <span className="hidden sm:inline text-sm text-blue-600 dark:text-blue-400 font-medium">
               ${user.balance?.toLocaleString()}
             </span>
 
@@ -211,7 +211,7 @@ export default function Navbar() {
                     />
                   ) : (
                     <div
-                      className={`w-6 h-6 rounded-full bg-emerald-600 text-white text-xs flex items-center justify-center font-medium ${unreadCount > 0 ? 'animate-avatar-pulse' : ''}`}
+                      className={`w-6 h-6 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-medium ${unreadCount > 0 ? 'animate-avatar-pulse' : ''}`}
                     >
                       {userInitial}
                     </div>
@@ -306,7 +306,7 @@ export default function Navbar() {
         ) : (
           <Link
             to="/login"
-            className="text-sm bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded transition-colors"
+            className="text-sm bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded transition-colors"
           >
             {t('nav.login')}
           </Link>

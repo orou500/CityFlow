@@ -106,13 +106,13 @@ export default function PlayerDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white dark:bg-gray-900 p-4 rounded-lg">
           <p className="text-sm text-gray-500 dark:text-gray-400">{t('dashboard.balance')}</p>
-          <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+          <p className="text-2xl font-bold text-orange-500 dark:text-orange-400">
             ${data.user?.balance?.toLocaleString() || user.balance?.toLocaleString()}
           </p>
         </div>
         <div className="bg-white dark:bg-gray-900 p-4 rounded-lg">
           <p className="text-sm text-gray-500 dark:text-gray-400">{t('dashboard.totalValue')}</p>
-          <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">${totalValue.toLocaleString()}</p>
+          <p className="text-2xl font-bold text-orange-500 dark:text-orange-400">${totalValue.toLocaleString()}</p>
         </div>
         <div className="bg-white dark:bg-gray-900 p-4 rounded-lg">
           <p className="text-sm text-gray-500 dark:text-gray-400">{t('bank.netWorth')}</p>
@@ -131,7 +131,7 @@ export default function PlayerDashboard() {
       <div className="flex gap-4 mb-6 flex-wrap">
         <Link
           to="/development"
-          className="bg-emerald-600 hover:bg-emerald-500 text-gray-900 dark:text-white text-sm px-4 py-2 rounded transition-colors"
+          className="bg-orange-500 hover:bg-orange-400 text-gray-900 dark:text-white text-sm px-4 py-2 rounded transition-colors"
         >
           {t('nav.development')}
         </Link>
@@ -163,12 +163,12 @@ export default function PlayerDashboard() {
                   onClick={() => navigate(`/property/${p._id}`)}
                 >
                   <div>
-                    <p className="font-semibold hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+                    <p className="font-semibold hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
                       {p.name}
                     </p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">{p.cityId?.name || 'Unknown'}</p>
                   </div>
-                  <p className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                  <p className="text-blue-600 dark:text-blue-400 font-semibold">
                     ${p.currentPrice?.toLocaleString()}
                   </p>
                 </div>
@@ -193,7 +193,7 @@ export default function PlayerDashboard() {
                     className={
                       loan.missedPayments > 0
                         ? 'text-red-600 dark:text-red-400'
-                        : 'text-emerald-600 dark:text-emerald-400'
+                        : 'text-blue-600 dark:text-blue-400'
                     }
                   >
                     {loan.ticksRemaining} {t('general.periods')} left
@@ -203,7 +203,7 @@ export default function PlayerDashboard() {
               {loans.length > 3 && (
                 <Link
                   to="/bank"
-                  className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-300 mt-1 inline-block"
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-300 mt-1 inline-block"
                 >
                   +{loans.length - 3} more...
                 </Link>
@@ -244,7 +244,7 @@ export default function PlayerDashboard() {
                   <p className="text-gray-900 dark:text-white font-semibold">{o.propertyId?.name || 'Property'}</p>
                   <p className="text-gray-500 dark:text-gray-400">
                     {o.buyerId?.username} {t('offers.offered')}{' '}
-                    <span className="text-emerald-600 dark:text-emerald-400">
+                    <span className="text-blue-600 dark:text-blue-400">
                       ${(o.counterOffer || o.offerAmount)?.toLocaleString()}
                     </span>
                     {o.counterOffer ? t('offers.counterSuffix') : ''}
@@ -259,7 +259,7 @@ export default function PlayerDashboard() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleAccept(o._id)}
-                      className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-gray-900 dark:text-white text-xs rounded"
+                      className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-gray-900 dark:text-white text-xs rounded"
                     >
                       {t('offers.accept')}
                     </button>
@@ -296,7 +296,7 @@ export default function PlayerDashboard() {
                   <p className="text-gray-900 dark:text-white font-semibold">{o.propertyId?.name || 'Property'}</p>
                   <p className="text-gray-500 dark:text-gray-400">
                     {t('offers.to')} {o.sellerId?.username}:{' '}
-                    <span className="text-emerald-600 dark:text-emerald-400">
+                    <span className="text-blue-600 dark:text-blue-400">
                       ${(o.counterOffer || o.offerAmount)?.toLocaleString()}
                     </span>
                   </p>
@@ -309,7 +309,7 @@ export default function PlayerDashboard() {
                 {o.status === 'countered' && (
                   <button
                     onClick={() => handleAcceptCounter(o._id)}
-                    className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-gray-900 dark:text-white text-xs rounded"
+                    className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-gray-900 dark:text-white text-xs rounded"
                   >
                     {t('offers.acceptCounter')}
                   </button>
@@ -387,7 +387,7 @@ export default function PlayerDashboard() {
                     </span>
                     {tx.propertyId && (
                       <span
-                        className="text-gray-500 dark:text-gray-400 ms-2 cursor-pointer hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                        className="text-gray-500 dark:text-gray-400 ms-2 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                         onClick={() => navigate(`/property/${tx.propertyId._id || tx.propertyId}`)}
                       >
                         {tx.propertyId.name || 'Property'}

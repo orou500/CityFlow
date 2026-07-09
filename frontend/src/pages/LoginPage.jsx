@@ -74,7 +74,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded transition-colors disabled:opacity-50"
+            className="w-full bg-blue-600 hover:bg-blue-500 text-white py-2 rounded transition-colors disabled:opacity-50"
           >
             {loading ? t('common.loading') : isRegister ? t('auth.register') : t('auth.login')}
           </button>
@@ -84,7 +84,7 @@ export default function LoginPage() {
           {isRegister ? t('auth.hasAccount') : t('auth.noAccount')}{' '}
           <button
             onClick={() => setIsRegister(!isRegister)}
-            className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-500"
+            className="text-orange-500 dark:text-orange-400 hover:text-orange-500"
           >
             {isRegister ? t('auth.login') : t('auth.register')}
           </button>

@@ -46,7 +46,7 @@ function AnimatedCounter({ target, suffix = '' }) {
 
 function FeatureCard({ icon, title, description }) {
   return (
-    <div className="bg-card rounded-xl p-6 border border-border hover:border-emerald-500/30 transition-all hover:-translate-y-1">
+    <div className="bg-card rounded-xl p-6 border border-border hover:border-blue-500/30 transition-all hover:-translate-y-1">
       <div className="text-3xl mb-3">{icon}</div>
       <h3 className="text-primary font-bold mb-2">{title}</h3>
       <p className="text-secondary text-sm leading-relaxed">{description}</p>
@@ -69,9 +69,11 @@ function HeroGradient({ resolved }) {
     <div
       className="absolute inset-0 transition-all duration-500"
       style={{
-        background: isDark
-          ? 'linear-gradient(135deg, #064e3b, #020617, #020617)'
-          : 'linear-gradient(135deg, #ecfdf5, #ffffff, #f0fdf4)',
+        backgroundImage: isDark
+          ? 'url(/images/bg-night.png)'
+          : 'url(/images/bg-day.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
       }}
     />
   );
@@ -84,8 +86,8 @@ function HeroOverlay({ resolved }) {
       className="absolute inset-0 transition-all duration-500"
       style={{
         background: isDark
-          ? 'linear-gradient(to top, #020617, transparent, transparent)'
-          : 'linear-gradient(to top, #ffffff, transparent, transparent)',
+          ? 'linear-gradient(to top, rgba(2,6,23,0.85), transparent, transparent)'
+          : 'linear-gradient(to top, rgba(255,255,255,0.85), transparent, transparent)',
       }}
     />
   );
@@ -111,9 +113,11 @@ function CtaGradient({ resolved }) {
     <div
       className="absolute inset-0 transition-all duration-500"
       style={{
-        background: isDark
-          ? 'linear-gradient(135deg, #064e3b, #020617, #020617)'
-          : 'linear-gradient(135deg, #ecfdf5, #ffffff, #f0fdf4)',
+        backgroundImage: isDark
+          ? 'url(/images/bg-night.png)'
+          : 'url(/images/bg-day.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
       }}
     />
   );
@@ -175,7 +179,7 @@ export default function LandingPage() {
         <DotGrid resolved={resolved} />
         <HeroOverlay resolved={resolved} />
         <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
-          <div className="text-6xl mb-6">🌍</div>
+          <img src="/images/logo-big.png" alt="CityFlow" className="mx-auto mb-6 max-w-xs md:max-w-sm" />
           <h1 className="text-4xl md:text-6xl font-bold text-primary mb-6 leading-tight">{t('landing.hero.title')}</h1>
           <p className="text-lg md:text-xl text-secondary mb-8 max-w-2xl mx-auto leading-relaxed">
             {t('landing.hero.subtitle')}
@@ -183,7 +187,7 @@ export default function LandingPage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               to="/login"
-              className="bg-emerald-600 hover:bg-emerald-500 text-white text-lg px-8 py-3 rounded-lg font-bold transition-all hover:-translate-y-0.5 shadow-lg shadow-emerald-600/25"
+              className="bg-orange-500 hover:bg-orange-400 text-white text-lg px-8 py-3 rounded-lg font-bold transition-all hover:-translate-y-0.5 shadow-lg shadow-orange-500/25"
             >
               {t('landing.hero.cta')}
             </Link>
@@ -209,7 +213,7 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-3 gap-8">
             {[1, 2, 3].map((i) => (
               <div key={i} className="text-center">
-                <div className="w-16 h-16 rounded-full bg-emerald-600/20 border-2 border-emerald-500/40 flex items-center justify-center text-2xl font-bold text-emerald-600 dark:text-emerald-400 mx-auto mb-4">
+                <div className="w-16 h-16 rounded-full bg-orange-500/20 border-2 border-orange-500/40 flex items-center justify-center text-2xl font-bold text-orange-500 dark:text-orange-400 mx-auto mb-4">
                   {i}
                 </div>
                 <h3 className="text-lg font-bold text-primary mb-2">{t(`landing.how.step${i}.title`)}</h3>
@@ -256,7 +260,7 @@ export default function LandingPage() {
               { key: 'transactions', target: stats?.transactionsCount || 0, suffix: '' },
             ].map((s) => (
               <div key={s.key} className="text-center">
-                <div className="text-3xl md:text-4xl font-bold text-emerald-600 dark:text-emerald-400 mb-1">
+                <div className="text-3xl md:text-4xl font-bold text-orange-500 dark:text-orange-400 mb-1">
                   <AnimatedCounter target={s.target} suffix={s.suffix} />
                 </div>
                 <div className="text-sm text-secondary">{t(`landing.stats.${s.key}`)}</div>
@@ -289,7 +293,7 @@ export default function LandingPage() {
                     </div>
                     <span className="text-primary font-medium">{player.displayName || player.username}</span>
                   </div>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                  <span className="text-blue-600 dark:text-blue-400 font-semibold">
                     ${(player.netWorth || 0).toLocaleString()}
                   </span>
                 </Link>
@@ -319,12 +323,20 @@ export default function LandingPage() {
       {/* CTA */}
       <section className="py-24 px-4 relative overflow-hidden">
         <CtaGradient resolved={resolved} />
+        <div
+          className="absolute inset-0 transition-all duration-500"
+          style={{
+            background: resolved === 'dark'
+              ? 'rgba(2,6,23,0.8)'
+              : 'rgba(255,255,255,0.8)',
+          }}
+        />
         <div className="relative z-10 max-w-3xl mx-auto text-center">
           <h2 className="text-3xl md:text-5xl font-bold text-primary mb-6 leading-tight">{t('landing.cta.title')}</h2>
           <p className="text-lg text-secondary mb-8 max-w-xl mx-auto">{t('landing.cta.description')}</p>
           <Link
             to="/login"
-            className="inline-block bg-emerald-600 hover:bg-emerald-500 text-white text-xl px-10 py-4 rounded-lg font-bold transition-all hover:-translate-y-0.5 shadow-lg shadow-emerald-600/30"
+            className="inline-block bg-orange-500 hover:bg-orange-400 text-white text-xl px-10 py-4 rounded-lg font-bold transition-all hover:-translate-y-0.5 shadow-lg shadow-orange-500/30"
           >
             {t('landing.cta.button')}
           </Link>

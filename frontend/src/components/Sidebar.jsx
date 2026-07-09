@@ -108,7 +108,7 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
   function linkClasses(active, opts = {}) {
     const base = 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors';
     const state = active
-      ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 font-medium'
+      ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 font-medium'
       : opts.disabled
         ? 'text-muted opacity-50 cursor-not-allowed'
         : 'text-secondary hover:text-primary hover:bg-gray-100 dark:hover:bg-gray-800';
@@ -130,7 +130,7 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
       >
         <span className="text-lg shrink-0">{link.icon}</span>
         {!collapsed && <span>{link.label}</span>}
-        {active && !collapsed && <span className="ml-auto w-1 h-4 rounded-full bg-emerald-500 shrink-0" />}
+        {active && !collapsed && <span className="ml-auto w-1 h-4 rounded-full bg-blue-500 shrink-0" />}
       </Link>
     );
   }
@@ -152,18 +152,18 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
       <aside
         className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-card border-r border-border transition-all duration-300 ${collapsed ? 'w-16' : 'w-60'} ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
-        <div className="flex items-center h-14 px-4 border-b border-border shrink-0 overflow-hidden">
+        <div className={`flex items-center h-14 px-4 border-b border-border shrink-0 overflow-hidden ${collapsed ? '' : 'justify-center'}`}>
           <Link to="/" className={`flex items-center ${collapsed ? 'mx-auto' : ''}`}>
-            <span
-              className={`text-xl font-bold text-emerald-600 dark:text-emerald-400 transition-all duration-300 ${collapsed ? '' : 'hidden'}`}
-            >
-              CF
-            </span>
-            <span
-              className={`text-xl font-bold text-emerald-600 dark:text-emerald-400 transition-all duration-300 ${collapsed ? 'hidden' : ''}`}
-            >
-              CityFlow
-            </span>
+            <img
+              src="/images/favicon.png"
+              alt="CF"
+              className={`h-8 w-8 object-contain transition-all duration-300 ${collapsed ? '' : 'hidden'}`}
+            />
+            <img
+              src="/images/logo-text.png"
+              alt="CityFlow"
+              className={`h-25 object-contain transition-all duration-300 ${collapsed ? 'hidden' : ''}`}
+            />
           </Link>
         </div>
 
@@ -193,7 +193,7 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
             <div className="px-2 pb-1">
               <Link
                 to="/login"
-                className={`block text-center text-sm bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded transition-colors ${collapsed ? 'w-8 h-8 flex items-center justify-center mx-auto' : ''}`}
+                className={`block text-center text-sm bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded transition-colors ${collapsed ? 'w-8 h-8 flex items-center justify-center mx-auto' : ''}`}
                 title={collapsed ? t('nav.login') : undefined}
               >
                 {collapsed ? '\uD83D\uDD11' : t('nav.login')}
@@ -234,7 +234,7 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
                   />
                 ) : (
                   <div
-                    className={`w-7 h-7 rounded-full bg-emerald-600 text-white text-xs flex items-center justify-center font-medium ${unreadCount > 0 ? 'animate-avatar-pulse' : ''}`}
+                    className={`w-7 h-7 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-medium ${unreadCount > 0 ? 'animate-avatar-pulse' : ''}`}
                   >
                     {userInitial}
                   </div>

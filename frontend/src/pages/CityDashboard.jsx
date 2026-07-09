@@ -70,7 +70,7 @@ export default function CityDashboard() {
     <div className="flex-1 p-4 overflow-y-auto">
       <button
         onClick={() => navigate('/')}
-        className="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-300 mb-4 inline-block"
+        className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-300 mb-4 inline-block"
       >
         &larr; {t('map.title')}
       </button>
@@ -122,7 +122,7 @@ export default function CityDashboard() {
 
       {actionMsg && (
         <div
-          className={`p-3 rounded mb-4 text-sm ${actionMsg.type === 'success' ? 'bg-emerald-900 text-emerald-300' : 'bg-red-900 text-red-300'}`}
+          className={`p-3 rounded mb-4 text-sm ${actionMsg.type === 'success' ? 'bg-blue-900 text-blue-300' : 'bg-red-900 text-red-300'}`}
         >
           {actionMsg.text}
           <button onClick={() => setActionMsg(null)} className="ml-2">
@@ -145,7 +145,7 @@ export default function CityDashboard() {
                 return (
                   <div key={p._id} className="bg-gray-50 dark:bg-gray-800 p-4 rounded flex flex-col gap-2 h-full">
                     <div className="flex-1 cursor-pointer" onClick={() => navigate(`/property/${p._id}`)}>
-                      <h3 className="font-semibold hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+                      <h3 className="font-semibold hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
                         {p.name}
                       </h3>
                       <div className="flex gap-2 text-sm text-gray-500 dark:text-gray-400 mt-1 flex-wrap">
@@ -165,21 +165,21 @@ export default function CityDashboard() {
                       </div>
                     </div>
                     <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
-                      <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                      <p className="text-lg font-bold text-orange-500 dark:text-orange-400">
                         ${p.currentPrice?.toLocaleString()}
                       </p>
                       {!user && <p className="text-xs text-gray-400 dark:text-gray-500">{t('city.forSale')}</p>}
                       {user && !isOwner && p.forSale && (
                         <button
                           onClick={() => handleBuy(p._id)}
-                          className="bg-emerald-600 hover:bg-emerald-500 text-gray-900 dark:text-white text-sm px-4 py-1.5 rounded transition-colors"
+                          className="bg-blue-600 hover:bg-blue-500 text-gray-900 dark:text-white text-sm px-4 py-1.5 rounded transition-colors"
                         >
                           {t('city.buy')}
                         </button>
                       )}
                       {user && isOwner && (
                         <div className="flex gap-2">
-                          <span className="text-xs bg-emerald-900 text-emerald-300 px-2 py-1 rounded">
+                          <span className="text-xs bg-blue-900 text-blue-300 px-2 py-1 rounded">
                             {t('city.owned')}
                           </span>
                           {!p.forSale && (

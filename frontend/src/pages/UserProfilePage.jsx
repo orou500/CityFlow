@@ -200,7 +200,7 @@ export default function UserProfilePage() {
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">{error}</h2>
-          <Link to="/" className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-300">
+          <Link to="/" className="text-blue-600 dark:text-blue-400 hover:text-blue-300">
             {t('common.goHome')}
           </Link>
         </div>
@@ -211,7 +211,7 @@ export default function UserProfilePage() {
   if (!profile) {
     return (
       <div className="flex-1 flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-400" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400" />
       </div>
     );
   }
@@ -225,7 +225,7 @@ export default function UserProfilePage() {
       <div className="max-w-4xl mx-auto space-y-6">
         {msg && (
           <div
-            className={`p-3 rounded text-sm ${msg === 'Settings saved' || msg === 'Password updated' ? 'bg-emerald-900 text-emerald-300' : 'bg-red-900 text-red-300'}`}
+            className={`p-3 rounded text-sm ${msg === 'Settings saved' || msg === 'Password updated' ? 'bg-blue-900 text-blue-300' : 'bg-red-900 text-red-300'}`}
           >
             {msg}
           </div>
@@ -245,7 +245,7 @@ export default function UserProfilePage() {
                 <>
                   <button
                     onClick={() => fileRef.current?.click()}
-                    className="absolute bottom-0 end-0 bg-emerald-600 hover:bg-emerald-500 text-white text-xs w-7 h-7 rounded-full flex items-center justify-center"
+                    className="absolute bottom-0 end-0 bg-blue-600 hover:bg-blue-500 text-white text-xs w-7 h-7 rounded-full flex items-center justify-center"
                     disabled={uploading}
                   >
                     {uploading ? '...' : '✏'}
@@ -272,7 +272,7 @@ export default function UserProfilePage() {
               {!isOwner && friendStatus && (
                 <div className="mt-3">
                   {friendStatus === 'friends' && (
-                    <span className="inline-block text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+                    <span className="inline-block text-sm text-blue-600 dark:text-blue-400 font-medium">
                       ✅ {t('friends.friends')}
                     </span>
                   )}
@@ -293,7 +293,7 @@ export default function UserProfilePage() {
                     <div className="flex gap-2">
                       <button
                         onClick={acceptFriendRequest}
-                        className="text-sm bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded transition-colors"
+                        className="text-sm bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded transition-colors"
                       >
                         {t('friends.accept')}
                       </button>
@@ -372,7 +372,7 @@ export default function UserProfilePage() {
               </div>
               <button
                 type="submit"
-                className="bg-emerald-600 hover:bg-emerald-500 text-white text-sm px-6 py-2 rounded-lg font-semibold transition-colors"
+                className="bg-blue-600 hover:bg-blue-500 text-white text-sm px-6 py-2 rounded-lg font-semibold transition-colors"
               >
                 {t('common.save')}
               </button>
@@ -421,7 +421,7 @@ export default function UserProfilePage() {
               </div>
               <button
                 type="submit"
-                className="bg-emerald-600 hover:bg-emerald-500 text-white text-sm px-6 py-2 rounded-lg font-semibold transition-colors"
+                className="bg-blue-600 hover:bg-blue-500 text-white text-sm px-6 py-2 rounded-lg font-semibold transition-colors"
               >
                 {t('common.save')}
               </button>
@@ -433,7 +433,7 @@ export default function UserProfilePage() {
           <StatCard
             label={t('profile.netWorth')}
             value={`$${(netWorth || 0).toLocaleString()}`}
-            color="text-emerald-600 dark:text-emerald-400"
+            color="text-orange-500 dark:text-orange-400"
           />
           <StatCard
             label={t('profile.cash')}
@@ -485,7 +485,7 @@ export default function UserProfilePage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-emerald-600 dark:text-emerald-400 text-sm font-semibold">
+                    <div className="text-orange-500 dark:text-orange-400 text-sm font-semibold">
                       ${p.currentPrice?.toLocaleString()}
                     </div>
                     {p.rent > 0 && <div className="text-xs text-gray-500 dark:text-gray-400">${p.rent}/period</div>}
@@ -508,7 +508,7 @@ export default function UserProfilePage() {
                   <div className="flex items-center gap-2">
                     <span className="text-gray-600 dark:text-gray-300">{tx.propertyId?.name || 'Property'}</span>
                     <span
-                      className={`text-xs ${tx.buyerId === profileUser._id ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}
+                      className={`text-xs ${tx.buyerId === profileUser._id ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}`}
                     >
                       {tx.buyerId === profileUser._id ? t('profile.bought') : t('profile.sold')}
                     </span>
@@ -522,7 +522,7 @@ export default function UserProfilePage() {
 
         {!isOwner && (
           <div className="text-center mt-4">
-            <Link to="/" className="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-300">
+            <Link to="/" className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-300">
               {t('common.goHome')}
             </Link>
           </div>

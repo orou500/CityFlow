@@ -17,7 +17,7 @@ function TabButton({ active, onClick, children }) {
       onClick={onClick}
       className={`px-4 py-2 text-sm rounded-t-lg font-medium transition-colors ${
         active
-          ? 'bg-gray-50 dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 border-b-2 border-emerald-500'
+          ? 'bg-gray-50 dark:bg-gray-800 text-blue-600 dark:text-blue-400 border-b-2 border-blue-500'
           : 'bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
       }`}
     >
@@ -375,7 +375,7 @@ export default function AdminPage() {
               <button
                 onClick={handleRunTicks}
                 disabled={tickLoading}
-                className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-200 dark:disabled:bg-gray-600 text-gray-900 dark:text-white text-sm rounded transition-colors"
+                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-200 dark:disabled:bg-gray-600 text-gray-900 dark:text-white text-sm rounded transition-colors"
               >
                 {tickLoading ? t('admin.running') : t('admin.runPeriods')}
               </button>
@@ -398,7 +398,7 @@ export default function AdminPage() {
               setUserPage(1);
             }}
             placeholder={t('searchPlayers')}
-            className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-3 py-1.5 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-emerald-500"
+            className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-3 py-1.5 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-blue-500"
           />
 
           {(() => {
@@ -431,7 +431,7 @@ export default function AdminPage() {
                           {u.role}
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-emerald-600 dark:text-emerald-400">
+                      <td className="px-3 py-2 text-blue-600 dark:text-blue-400">
                         {editUserId === u._id ? (
                           <div className="flex items-center gap-1">
                             <input
@@ -442,7 +442,7 @@ export default function AdminPage() {
                             />
                             <button
                               onClick={() => handleSetBalance(u._id)}
-                              className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300"
+                              className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300"
                             >
                               {t('common.save')}
                             </button>
@@ -568,7 +568,7 @@ export default function AdminPage() {
             </div>
             <button
               onClick={handleCreateProperty}
-              className="mt-3 px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-gray-900 dark:text-white text-sm rounded transition-colors"
+              className="mt-3 px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-gray-900 dark:text-white text-sm rounded transition-colors"
             >
               {t('admin.create')}
             </button>
@@ -581,7 +581,7 @@ export default function AdminPage() {
               setPropPage(1);
             }}
             placeholder={t('marketplace.searchPlaceholder')}
-            className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-3 py-1.5 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-emerald-500"
+            className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-3 py-1.5 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-blue-500"
           />
 
           {(() => {
@@ -610,7 +610,7 @@ export default function AdminPage() {
                       <td className="px-3 py-2 text-gray-900 dark:text-white">{p.name}</td>
                       <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{p.type}</td>
                       <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{p.cityId?.name || t('admin.na')}</td>
-                      <td className="px-3 py-2 text-emerald-600 dark:text-emerald-400">
+                      <td className="px-3 py-2 text-blue-600 dark:text-blue-400">
                         ${p.currentPrice?.toLocaleString()}
                       </td>
                       <td className="px-3 py-2 text-gray-500 dark:text-gray-400">${p.rent?.toLocaleString()}</td>
@@ -707,7 +707,7 @@ export default function AdminPage() {
                 <div className="flex gap-2 mt-4">
                   <button
                     onClick={() => handleUpdateProperty(editPropId)}
-                    className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-gray-900 dark:text-white text-sm rounded"
+                    className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-gray-900 dark:text-white text-sm rounded"
                   >
                     {t('common.save')}
                   </button>
@@ -752,7 +752,7 @@ export default function AdminPage() {
                 )}
               </td>
               <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{c.supplyIndex ?? '-'}</td>
-              <td className="px-3 py-2 text-emerald-600 dark:text-emerald-400">
+              <td className="px-3 py-2 text-blue-600 dark:text-blue-400">
                 ${c.avgPrice?.toLocaleString() || '-'}
               </td>
               <td className="px-3 py-2 text-gray-500 dark:text-gray-400">
@@ -802,7 +802,7 @@ export default function AdminPage() {
             <div className="flex gap-2 mt-4">
               <button
                 onClick={() => handleUpdateCity(editCityId)}
-                className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-gray-900 dark:text-white text-sm rounded"
+                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-gray-900 dark:text-white text-sm rounded"
               >
                 Save
               </button>
@@ -891,7 +891,7 @@ export default function AdminPage() {
             </div>
             <button
               onClick={handleCreateEvent}
-              className="mt-3 px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-gray-900 dark:text-white text-sm rounded transition-colors"
+              className="mt-3 px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-gray-900 dark:text-white text-sm rounded transition-colors"
             >
               {t('admin.create')}
             </button>
@@ -904,7 +904,7 @@ export default function AdminPage() {
               setEventPage(1);
             }}
             placeholder={t('marketplace.searchPlaceholder')}
-            className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-3 py-1.5 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-emerald-500"
+            className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-3 py-1.5 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-blue-500"
           />
 
           {(() => {

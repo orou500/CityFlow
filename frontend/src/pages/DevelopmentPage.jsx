@@ -154,7 +154,7 @@ export default function DevelopmentPage() {
             }}
             className={`px-4 py-2 rounded text-sm transition-colors ${
               tab === tabItem.id
-                ? 'bg-emerald-600 text-white'
+                ? 'bg-blue-600 text-white'
                 : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
             }`}
           >
@@ -172,7 +172,7 @@ export default function DevelopmentPage() {
         </div>
       )}
       {success && (
-        <div className="bg-emerald-900 text-emerald-300 p-3 rounded mb-4 text-sm">
+        <div className="bg-blue-900 text-blue-300 p-3 rounded mb-4 text-sm">
           {success}
           <button onClick={() => setSuccess(null)} className="ml-2">
             &times;
@@ -189,7 +189,7 @@ export default function DevelopmentPage() {
               <p className="text-gray-500 dark:text-gray-400 mb-4">{t('development.noLand')}</p>
               <button
                 onClick={() => navigate('/marketplace?type=land')}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded text-sm"
+                className="bg-orange-500 hover:bg-orange-400 text-white px-4 py-2 rounded text-sm"
               >
                 {t('development.browseLand')}
               </button>
@@ -201,7 +201,7 @@ export default function DevelopmentPage() {
                   key={land._id}
                   className={`bg-white dark:bg-gray-900 rounded-lg p-4 cursor-pointer transition-colors ${
                     selectedLand?._id === land._id
-                      ? 'ring-2 ring-emerald-500'
+                      ? 'ring-2 ring-orange-500'
                       : 'hover:bg-gray-50 dark:hover:bg-gray-850'
                   }`}
                   onClick={() => {
@@ -222,7 +222,7 @@ export default function DevelopmentPage() {
                     </div>
                     <div>
                       <p className="text-gray-400 dark:text-gray-500">{t('development.value')}</p>
-                      <p className="text-emerald-600 dark:text-emerald-400">${land.currentPrice?.toLocaleString()}</p>
+                      <p className="text-orange-500 dark:text-orange-400">${land.currentPrice?.toLocaleString()}</p>
                     </div>
                   </div>
                 </div>
@@ -244,7 +244,7 @@ export default function DevelopmentPage() {
               <div className="lg:col-span-1">
                 <div className="bg-white dark:bg-gray-900 rounded-lg p-4">
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-3">{t('development.selectedLand')}</h3>
-                  <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{selectedLand.name}</p>
+                  <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{selectedLand.name}</p>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                     {selectedLand.cityId?.name || t('development.unknown')}{' '}
                     {selectedLand.location ? `- ${selectedLand.location}` : ''}
@@ -258,8 +258,8 @@ export default function DevelopmentPage() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-400 dark:text-gray-500">{t('development.valueLabel')}</span>
-                      <span className="text-emerald-600 dark:text-emerald-400">
-                        ${selectedLand.currentPrice?.toLocaleString()}
+              <span className="text-orange-500 dark:text-orange-400">
+                ${selectedLand.currentPrice?.toLocaleString()}
                       </span>
                     </div>
                   </div>
@@ -304,8 +304,8 @@ export default function DevelopmentPage() {
                                 <span className="text-gray-400 dark:text-gray-500">
                                   {proj.constructionPeriods} {t('development.period')}
                                 </span>
-                                <span className="text-emerald-600 dark:text-emerald-400">
-                                  ~${proj.estimatedCost?.toLocaleString()}
+                              <span className="text-orange-500 dark:text-orange-400">
+                                ~${proj.estimatedCost?.toLocaleString()}
                                 </span>
                               </div>
                             </div>
@@ -331,7 +331,7 @@ export default function DevelopmentPage() {
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                             <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
                               <p className="text-xs text-gray-500 dark:text-gray-400">{t('development.totalCost')}</p>
-                              <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                              <p className="text-lg font-bold text-orange-500 dark:text-orange-400">
                                 ${estimate.totalCost?.toLocaleString()}
                               </p>
                             </div>
@@ -376,8 +376,8 @@ export default function DevelopmentPage() {
                                 <span className="text-gray-500 dark:text-gray-400">
                                   {t('development.estGrossIncome')}
                                 </span>
-                                <span className="text-emerald-600 dark:text-emerald-400">
-                                  +${estimate.estimatedIncome?.toLocaleString()}
+                              <span className="text-orange-500 dark:text-orange-400">
+                                +${estimate.estimatedIncome?.toLocaleString()}
                                 </span>
                               </div>
                               <div className="flex justify-between">
@@ -403,7 +403,7 @@ export default function DevelopmentPage() {
                             <button
                               onClick={handleStartConstruction}
                               disabled={starting}
-                              className="bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-200 dark:disabled:bg-gray-600 text-gray-900 dark:text-white px-6 py-2 rounded text-sm font-semibold transition-colors"
+                              className="bg-orange-500 hover:bg-orange-400 disabled:bg-gray-200 dark:disabled:bg-gray-600 text-gray-900 dark:text-white px-6 py-2 rounded text-sm font-semibold transition-colors"
                             >
                               {starting
                                 ? t('development.starting')
@@ -442,7 +442,7 @@ export default function DevelopmentPage() {
               <p className="text-gray-500 dark:text-gray-400">{t('development.noProjects')}</p>
               <button
                 onClick={() => setTab('my-land')}
-                className="mt-3 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded text-sm"
+                className="mt-3 bg-orange-500 hover:bg-orange-400 text-white px-4 py-2 rounded text-sm"
               >
                 {t('development.startAQuote')}
               </button>
@@ -474,11 +474,11 @@ export default function DevelopmentPage() {
                       <div className="mb-2">
                         <div className="flex justify-between text-sm mb-1">
                           <span className="text-gray-500 dark:text-gray-400">{t('development.progress')}</span>
-                          <span className="text-emerald-600 dark:text-emerald-400">{progress}%</span>
+                          <span className="text-blue-600 dark:text-blue-400">{progress}%</span>
                         </div>
                         <div className="w-full bg-gray-50 dark:bg-gray-800 rounded-full h-2.5">
                           <div
-                            className="bg-emerald-500 h-2.5 rounded-full transition-all duration-500"
+                            className="bg-blue-500 h-2.5 rounded-full transition-all duration-500"
                             style={{ width: `${progress}%` }}
                           />
                         </div>
@@ -539,7 +539,7 @@ export default function DevelopmentPage() {
                       </div>
                       <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
                         <p className="text-gray-400 dark:text-gray-500 text-xs">{t('development.occupancy')}</p>
-                        <p className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                        <p className="text-blue-600 dark:text-blue-400 font-semibold">
                           {occupiedUnits}/{unitCount}
                         </p>
                       </div>
@@ -562,7 +562,7 @@ export default function DevelopmentPage() {
                           e.stopPropagation();
                           setUpgradeModal(b._id);
                         }}
-                        className="text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded transition-colors"
+                        className="text-xs bg-orange-500 hover:bg-orange-400 text-white px-3 py-1 rounded transition-colors"
                       >
                         {t('development.upgrades')}
                       </button>
@@ -590,7 +590,7 @@ export default function DevelopmentPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400 dark:text-gray-500">{t('development.projectedValue')}</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                  <span className="text-blue-600 dark:text-blue-400 font-medium">
                     ${confirmUpgrade.projectedValue?.toLocaleString()}
                   </span>
                 </div>
@@ -601,7 +601,7 @@ export default function DevelopmentPage() {
                 {confirmUpgrade.rentIncrease > 0 && (
                   <div className="flex justify-between">
                     <span className="text-gray-400 dark:text-gray-500">{t('development.expectedRentIncrease')}</span>
-                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                    <span className="text-blue-600 dark:text-blue-400 font-medium">
                       +${confirmUpgrade.rentIncrease?.toLocaleString()}/{t('development.period')}
                     </span>
                   </div>
@@ -623,7 +623,7 @@ export default function DevelopmentPage() {
                 <button
                   onClick={() => handleUpgrade(upgradeModal, confirmUpgrade.type)}
                   disabled={upgrading}
-                  className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white py-2 rounded text-sm transition-colors"
+                  className="flex-1 bg-orange-500 hover:bg-orange-400 disabled:bg-orange-800 text-white py-2 rounded text-sm transition-colors"
                 >
                   {upgrading ? t('development.processing') : t('development.confirm')}
                 </button>
@@ -675,12 +675,12 @@ export default function DevelopmentPage() {
                         </div>
                         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
                           {u.valueBoost > 0 && (
-                            <span className="text-emerald-600 dark:text-emerald-400">
+                            <span className="text-blue-600 dark:text-blue-400">
                               +{(u.valueBoost * 100).toFixed(0)}% {t('development.value')}
                             </span>
                           )}
                           {u.rentBoost > 0 && (
-                            <span className="text-emerald-600 dark:text-emerald-400">
+                            <span className="text-blue-600 dark:text-blue-400">
                               +{(u.rentBoost * 100).toFixed(0)}% {t('development.rent')}
                             </span>
                           )}
