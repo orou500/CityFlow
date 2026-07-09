@@ -1,3 +1,7 @@
+<img width="1536" height="1024" alt="logo-text" src="https://github.com/user-attachments/assets/590d9e0b-4b9c-44b9-84a2-353450cfb036" />
+
+<img width="2560" height="1326" alt="Screenshot 2026-07-10 012228" src="https://github.com/user-attachments/assets/e48b6b53-2ef4-42a1-bcb3-9bf3672461fa" />
+
 # CityFlow – Global Real Estate Simulation
 
 A full-stack real-time simulation game where players buy, sell, and manage properties across a dynamic global market. Built with Node.js, Express, MongoDB, and React.
