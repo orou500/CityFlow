@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { config } from '../config/index.js';
@@ -16,13 +16,11 @@ router.post('/register', async (req, res) => {
     if (!username || !email || !password) {
       return res.status(400).json({ error: 'All fields are required' });
     }
-    const normalizedUsername = username.toLowerCase().trim();
-    const normalizedEmail = email.toLowerCase().trim();
-    const existing = await User.findOne({ $or: [{ email: normalizedEmail }, { username: normalizedUsername }] });
+    const existing = await User.findOne({ $or: [{ email }, { username }] });
     if (existing) {
       return res.status(409).json({ error: 'Username or email already exists' });
     }
-    const user = await User.create({ username: normalizedUsername, email: normalizedEmail, password });
+    const user = await User.create({ username, email, password });
     const token = generateToken(user._id);
     res.status(201).json({ token, user });
   } catch (err) {
@@ -36,9 +34,8 @@ router.post('/login', async (req, res) => {
     if (!login || !password) {
       return res.status(400).json({ error: 'Username/email and password are required' });
     }
-    const normalizedLogin = login.toLowerCase().trim();
     const user = await User.findOne({
-      $or: [{ username: normalizedLogin }, { email: normalizedLogin }],
+      $or: [{ username: login }, { email: login.toLowerCase() }],
     });
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ error: 'Invalid username/email or password' });
