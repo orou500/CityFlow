@@ -119,22 +119,26 @@ docker run -d \
 
 ```
 k8s/
-├── namespace.yml            # Namespace definition
-├── kustomization.yml        # Kustomize overlay for ArgoCD
+├── namespace.yml                  # Namespace definition
+├── kustomization.yml              # Kustomize overlay for ArgoCD
 ├── config/
-│   ├── backend-configmap.yml  # Non-sensitive configuration
-│   └── backend-secrets.yml    # Secret templates (do NOT commit real values)
+│   ├── backend-configmap.yml      # Non-sensitive configuration
+│   ├── backend-secrets.yml.example # Secret template (do NOT commit real values)
+│   └── networkpolicy-deny-all.yml # Default deny all ingress
 ├── mongodb/
-│   ├── statefulset.yml       # MongoDB StatefulSet + PVC
-│   └── service.yml           # Headless service for MongoDB
+│   ├── statefulset.yml            # MongoDB StatefulSet + PVC
+│   ├── service.yml                # Headless service for MongoDB
+│   └── networkpolicy.yml          # Allow only backend → MongoDB
 ├── backend/
-│   ├── deployment.yml        # Backend Deployment (2 replicas)
-│   └── service.yml           # Backend ClusterIP Service
+│   ├── deployment.yml             # Backend Deployment (2 replicas)
+│   ├── service.yml                # Backend ClusterIP Service
+│   └── networkpolicy.yml          # Allow frontend + ingress → backend
 ├── frontend/
-│   ├── deployment.yml        # Frontend Deployment (2 replicas)
-│   └── service.yml           # Frontend ClusterIP Service
+│   ├── deployment.yml             # Frontend Deployment (2 replicas)
+│   ├── service.yml                # Frontend ClusterIP Service
+│   └── networkpolicy.yml          # Allow ingress → frontend
 └── ingress/
-    └── ingress.yml           # Ingress with TLS for cityflow.sizops.co.il
+    └── ingress.yml                # Ingress with TLS for cityflow.sizops.co.il
 ```
 
 ### Step 1 — Create the Namespace
@@ -145,14 +149,29 @@ kubectl apply -f k8s/namespace.yml
 
 ### Step 2 — Create Secrets
 
-**Never commit real secrets to Git.** Create them imperatively or from a local file:
+**Never commit real secrets to Git.** Create them imperatively:
 
 ```bash
+# Generate credentials
+MONGO_USER=cityflow
+MONGO_PASS=$(openssl rand -base64 24)
+JWT_SECRET=$(openssl rand -base64 32)
+ADMIN_PASS=$(openssl rand -base64 16)
+
+# MongoDB credentials (used by the StatefulSet)
+kubectl create secret generic mongodb-credentials \
+  --namespace=cityflow \
+  --from-literal=username="$MONGO_USER" \
+  --from-literal=password="$MONGO_PASS" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+# Backend application secrets
 kubectl create secret generic backend-secrets \
   --namespace=cityflow \
-  --from-literal=MONGODB_URI='mongodb://cityflow-mongodb-0.cityflow-mongodb:27017/cityflow?replicaSet=rs0' \
-  --from-literal=JWT_SECRET='$(openssl rand -base64 32)' \
-  --from-literal=ADMIN_PASSWORD='$(openssl rand -base64 16)'
+  --from-literal=MONGODB_URI="mongodb://${MONGO_USER}:${MONGO_PASS}@cityflow-mongodb-0.cityflow-mongodb:27017/cityflow?replicaSet=rs0&authSource=admin" \
+  --from-literal=JWT_SECRET="$JWT_SECRET" \
+  --from-literal=ADMIN_PASSWORD="$ADMIN_PASS" \
+  --dry-run=client -o yaml | kubectl apply -f -
 ```
 
 ### Step 3 — Deploy All Resources
@@ -226,6 +245,34 @@ kubectl create secret tls cityflow-tls \
 | Frontend   | `GET /healthz` (HTTP)    | `GET /healthz` (HTTP)     |
 | MongoDB    | `mongosh --eval ping`    | `mongosh --eval ping`     |
 
+### Security — Network Policies
+
+The deployment includes NetworkPolicies that act as a firewall between pods:
+
+| Policy | Effect |
+|--------|--------|
+| `deny-all-ingress` | Denies all inbound traffic to every pod by default |
+| `mongodb-allow-backend-only` | Allows inbound to MongoDB **only** from backend pods (port 27017) |
+| `backend-networkpolicy` | Allows inbound to backend from frontend and ingress controller |
+| `frontend-networkpolicy` | Allows inbound to frontend from ingress controller |
+
+**Result**: MongoDB is completely isolated — no pod, service, or external IP can reach it except the backend.
+
+> **Note**: NetworkPolicies require a CNI plugin that supports them (Calico, Cilium, Weave, etc.).
+> K3s ships with a built-in policy engine. Verify with:
+> ```bash
+> kubectl get networkpolicy -n cityflow
+> ```
+
+### Security — MongoDB Authentication
+
+MongoDB runs with root authentication enabled:
+
+- A `mongodb-credentials` Secret stores the username and password
+- The MongoDB URI in `backend-secrets` includes `authSource=admin`
+- Probes authenticate before checking health
+- No unauthenticated access is possible
+
 ### Scaling
 
 ```bash
@@ -259,10 +306,17 @@ kubectl scale deployment cityflow-frontend --replicas=3 -n cityflow
 
 Secrets are stored as Kubernetes Secrets and injected as environment variables into pods.
 
+Two secrets are required:
+
+| Secret | Contents |
+|--------|----------|
+| `mongodb-credentials` | MongoDB root username and password |
+| `backend-secrets` | `MONGODB_URI` (with credentials), `JWT_SECRET`, `ADMIN_PASSWORD` |
+
 **Rules:**
 - Never commit real secret values to Git
-- The `k8s/config/backend-secrets.yml` file is a **template** with placeholder values
-- Create actual secrets using `kubectl create secret` commands
+- The `k8s/config/backend-secrets.yml.example` file is a **template** with placeholder values
+- Create actual secrets using the `kubectl create secret` commands in Step 2
 - For production, consider using an external secrets manager (e.g., AWS Secrets Manager, HashiCorp Vault) with the External Secrets Operator
 
 ---
@@ -327,7 +381,8 @@ kubectl describe pod <pod-name> -n cityflow
 ```bash
 kubectl logs <pod-name> -n cityflow --previous
 # Common causes:
-# - MongoDB not reachable (check MONGODB_URI secret)
+# - MongoDB auth failed (check mongodb-credentials secret)
+# - MONGODB_URI has wrong credentials or authSource
 # - JWT_SECRET not set
 # - Port already in use
 ```
@@ -360,6 +415,34 @@ kubectl get svc cityflow-backend -n cityflow
 # Test connectivity from within the cluster
 kubectl run debug --rm -it --image=curlimages/curl -n cityflow \
   -- curl http://cityflow-backend:5000/health
+```
+
+### Backend can't connect to MongoDB
+
+```bash
+# Check MongoDB pod is running
+kubectl get pods -n cityflow -l app.kubernetes.io/name=mongodb
+
+# Verify credentials secret exists
+kubectl get secret mongodb-credentials -n cityflow
+
+# Test MongoDB connectivity from a backend pod
+kubectl exec -it <backend-pod> -n cityflow -- \
+  mongosh -u cityflow -p "$MONGO_PASS" --authenticationDatabase admin \
+  --host cityflow-mongodb-0.cityflow-mongodb --eval "db.adminCommand('ping')"
+```
+
+### NetworkPolicy blocking traffic
+
+```bash
+# List all policies
+kubectl get networkpolicy -n cityflow
+
+# Check if a pod has the correct labels (policies match by label)
+kubectl get pod <pod-name> -n cityflow --show-labels
+
+# Temporarily remove all policies for debugging
+kubectl delete networkpolicy --all -n cityflow
 ```
 
 ---

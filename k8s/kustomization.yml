@@ -6,11 +6,14 @@ namespace: cityflow
 resources:
   - namespace.yml
   - config/backend-configmap.yml
-  - config/backend-secrets.yml
+  - config/networkpolicy-deny-all.yml
   - mongodb/statefulset.yml
   - mongodb/service.yml
+  - mongodb/networkpolicy.yml
   - backend/deployment.yml
   - backend/service.yml
+  - backend/networkpolicy.yml
   - frontend/deployment.yml
   - frontend/service.yml
+  - frontend/networkpolicy.yml
   - ingress/ingress.yml
