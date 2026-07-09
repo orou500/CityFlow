@@ -53,7 +53,7 @@ Create a `docker-compose.yml`:
 
 ```yaml
 services:
-  backend:
+  cityflow-backend:
     image: ghcr.io/orou500/cityflow-backend:latest
     ports:
       - "5000:5000"
@@ -62,14 +62,14 @@ services:
       - JWT_SECRET=<your-secret>
       - TICK_INTERVAL_MINUTES=60
     depends_on:
-      - mongo
+      - cityflow-backend
 
-  frontend:
+  cityflow-frontend:
     image: ghcr.io/orou500/cityflow-frontend:latest
     ports:
       - "80:80"
     depends_on:
-      - backend
+      - cityflow-backend
 
   mongo:
     image: mongo:7
@@ -80,10 +80,8 @@ volumes:
   mongo-data:
 ```
 
-> **Note:** The frontend nginx proxies `/api` requests to `http://backend:5000`.
-> When using Docker Compose, the service name `backend` is resolved automatically
-> by the internal DNS. Customize `frontend/nginx.conf` if your backend runs at a
-> different address.
+> **Note:** The frontend nginx proxies `/api` requests to `http://cityflow-backend:5000`.
+> The service name `cityflow-backend` is resolved automatically by the internal DNS.
 
 ## Running Manually
 
