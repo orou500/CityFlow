@@ -44,6 +44,11 @@ Thumbs.db
 *.crt
 *.cert
 
+# === Kubernetes Secrets ===
+k8s/secrets/
+k8s/**/secrets-*.yml
+!k8s/config/backend-secrets.yml
+
 # === TypeScript ===
 *.tsbuildinfo
 

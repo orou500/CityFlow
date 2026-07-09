@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cityflow-mongodb
+  namespace: cityflow
+  labels:
+    app.kubernetes.io/name: mongodb
+    app.kubernetes.io/part-of: cityflow
+spec:
+  selector:
+    app.kubernetes.io/name: mongodb
+    app.kubernetes.io/part-of: cityflow
+  ports:
+    - port: 27017
+      targetPort: mongodb
+      name: mongodb
+  clusterIP: None
