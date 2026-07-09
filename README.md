@@ -114,10 +114,7 @@ The frontend dev server proxies `/api/*` requests to `http://localhost:5000` wit
 
 ### 5. Login
 
-| User | Password | Role |
-| ---- | -------- | ---- |
-| `admin` | `admin123` | admin |
-| `demo` | `demo123` | user |
+Credentials are set via the `ADMIN_EMAIL` and `ADMIN_PASSWORD` environment variables (see `backend/.env.example`). The seed script creates an admin user with those credentials.
 
 ## Simulation Engine
 
