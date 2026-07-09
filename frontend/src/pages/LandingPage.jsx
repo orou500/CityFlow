@@ -69,9 +69,9 @@ function HeroGradient({ resolved }) {
     <div
       className="absolute inset-0 transition-all duration-500"
       style={{
-        backgroundImage: isDark ? 'url(/images/bg-night.png)' : 'url(/images/bg-day.png)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
+        background: isDark
+          ? 'linear-gradient(135deg, #1a2744, #020617, #020617)'
+          : 'linear-gradient(135deg, #e0f2fe, #ffffff, #f0f9ff)',
       }}
     />
   );
@@ -111,9 +111,9 @@ function CtaGradient({ resolved }) {
     <div
       className="absolute inset-0 transition-all duration-500"
       style={{
-        backgroundImage: isDark ? 'url(/images/bg-night.png)' : 'url(/images/bg-day.png)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
+        background: isDark
+          ? 'linear-gradient(135deg, #1a2744, #020617, #020617)'
+          : 'linear-gradient(135deg, #e0f2fe, #ffffff, #f0f9ff)',
       }}
     />
   );
@@ -175,7 +175,7 @@ export default function LandingPage() {
         <DotGrid resolved={resolved} />
         <HeroOverlay resolved={resolved} />
         <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
-          <img src="/images/logo-big.png" alt="CityFlow" className="mx-auto mb-6 max-w-xs md:max-w-sm" />
+          <div className="text-6xl mb-6">🌍</div>
           <h1 className="text-4xl md:text-6xl font-bold text-primary mb-6 leading-tight">{t('landing.hero.title')}</h1>
           <p className="text-lg md:text-xl text-secondary mb-8 max-w-2xl mx-auto leading-relaxed">
             {t('landing.hero.subtitle')}
@@ -319,12 +319,6 @@ export default function LandingPage() {
       {/* CTA */}
       <section className="py-24 px-4 relative overflow-hidden">
         <CtaGradient resolved={resolved} />
-        <div
-          className="absolute inset-0 transition-all duration-500"
-          style={{
-            background: resolved === 'dark' ? 'rgba(2,6,23,0.8)' : 'rgba(255,255,255,0.8)',
-          }}
-        />
         <div className="relative z-10 max-w-3xl mx-auto text-center">
           <h2 className="text-3xl md:text-5xl font-bold text-primary mb-6 leading-tight">{t('landing.cta.title')}</h2>
           <p className="text-lg text-secondary mb-8 max-w-xl mx-auto">{t('landing.cta.description')}</p>
