@@ -45,6 +45,8 @@ docker pull ghcr.io/orou500/cityflow-backend:latest
 > pulls outside GitHub Actions. For actions within the same repository, the
 > auto-generated `GITHUB_TOKEN` is sufficient.
 
+---
+
 ## Running with Docker Compose
 
 Create a `docker-compose.yml`:
@@ -101,17 +103,273 @@ docker run -d \
   ghcr.io/orou500/cityflow-frontend:latest
 ```
 
-## Required Secrets
+---
 
-The CD pipeline uses the auto-generated `GITHUB_TOKEN` which has `packages: write`
-permission. No additional repository secrets are required for publishing.
+## Kubernetes Deployment
 
-For deployments, the following environment variables must be configured:
+### Prerequisites
 
-| Variable               | Description                          | Default                          |
-|------------------------|--------------------------------------|----------------------------------|
-| `MONGODB_URI`          | MongoDB connection string            | `mongodb://localhost:27017/cityflow` |
-| `JWT_SECRET`           | Secret key for JWT signing           | **Required — no default**        |
-| `TICK_INTERVAL_MINUTES`| Game tick interval in minutes        | `60`                             |
-| `ADMIN_EMAIL`          | Admin account email                  | `admin@cityflow.com`             |
-| `ADMIN_PASSWORD`       | Admin account password               | `admin123`                       |
+- Kubernetes cluster (v1.25+)
+- `kubectl` configured to connect to your cluster
+- NGINX Ingress Controller installed
+- (Optional) `cert-manager` for automatic TLS certificate management
+- (Optional) ArgoCD for GitOps deployments
+
+### Directory Structure
+
+```
+k8s/
+├── namespace.yml            # Namespace definition
+├── kustomization.yml        # Kustomize overlay for ArgoCD
+├── config/
+│   ├── backend-configmap.yml  # Non-sensitive configuration
+│   └── backend-secrets.yml    # Secret templates (do NOT commit real values)
+├── mongodb/
+│   ├── statefulset.yml       # MongoDB StatefulSet + PVC
+│   └── service.yml           # Headless service for MongoDB
+├── backend/
+│   ├── deployment.yml        # Backend Deployment (2 replicas)
+│   └── service.yml           # Backend ClusterIP Service
+├── frontend/
+│   ├── deployment.yml        # Frontend Deployment (2 replicas)
+│   └── service.yml           # Frontend ClusterIP Service
+└── ingress/
+    └── ingress.yml           # Ingress with TLS for cityflow.sizops.co.il
+```
+
+### Step 1 — Create the Namespace
+
+```bash
+kubectl apply -f k8s/namespace.yml
+```
+
+### Step 2 — Create Secrets
+
+**Never commit real secrets to Git.** Create them imperatively or from a local file:
+
+```bash
+kubectl create secret generic backend-secrets \
+  --namespace=cityflow \
+  --from-literal=MONGODB_URI='mongodb://cityflow-mongodb-0.cityflow-mongodb:27017/cityflow?replicaSet=rs0' \
+  --from-literal=JWT_SECRET='$(openssl rand -base64 32)' \
+  --from-literal=ADMIN_PASSWORD='$(openssl rand -base64 16)'
+```
+
+### Step 3 — Deploy All Resources
+
+```bash
+kubectl apply -k k8s/
+```
+
+Or apply individual manifests:
+
+```bash
+kubectl apply -f k8s/config/
+kubectl apply -f k8s/mongodb/
+kubectl apply -f k8s/backend/
+kubectl apply -f k8s/frontend/
+kubectl apply -f k8s/ingress/
+```
+
+### Step 4 — Verify Deployment
+
+```bash
+# Check all pods are running
+kubectl get pods -n cityflow
+
+# Check services
+kubectl get svc -n cityflow
+
+# Check ingress
+kubectl get ingress -n cityflow
+
+# Check backend logs
+kubectl logs -n cityflow -l app.kubernetes.io/name=backend -f
+
+# Check MongoDB logs
+kubectl logs -n cityflow -l app.kubernetes.io/name=mongodb -f
+```
+
+### Step 5 — Configure DNS
+
+Point your domain to the Ingress Controller's external IP:
+
+```
+cityflow.sizops.co.il  →  <INGRESS_EXTERNAL_IP>
+```
+
+### Step 6 — TLS Certificates
+
+#### Option A — Manual Certificate
+
+Create a TLS secret from your certificate files:
+
+```bash
+kubectl create secret tls cityflow-tls \
+  --namespace=cityflow \
+  --cert=path/to/tls.crt \
+  --key=path/to/tls.key
+```
+
+#### Option B — cert-manager (Recommended)
+
+1. Install cert-manager: https://cert-manager.io/docs/installation/
+2. Create a ClusterIssuer for Let's Encrypt
+3. Uncomment the `cert-manager.io/cluster-issuer` annotation in `k8s/ingress/ingress.yml`
+4. Apply the updated ingress — cert-manager will automatically provision certificates
+
+### Health Checks
+
+| Component  | Liveness Probe           | Readiness Probe           |
+|------------|--------------------------|---------------------------|
+| Backend    | `GET /health` (HTTP)     | `GET /ready` (HTTP, checks DB) |
+| Frontend   | `GET /healthz` (HTTP)    | `GET /healthz` (HTTP)     |
+| MongoDB    | `mongosh --eval ping`    | `mongosh --eval ping`     |
+
+### Scaling
+
+```bash
+# Scale backend
+kubectl scale deployment cityflow-backend --replicas=4 -n cityflow
+
+# Scale frontend
+kubectl scale deployment cityflow-frontend --replicas=3 -n cityflow
+```
+
+> MongoDB is deployed as a StatefulSet. Scaling to multiple replicas requires
+> configuring a replica set. For production, consider using a managed MongoDB
+> service (MongoDB Atlas, AWS DocumentDB, etc.).
+
+---
+
+## Environment Variables
+
+| Variable               | Description                          | Default                          | Source     |
+|------------------------|--------------------------------------|----------------------------------|------------|
+| `PORT`                 | Backend listen port                  | `5000`                           | ConfigMap  |
+| `MONGODB_URI`          | MongoDB connection string            | `mongodb://localhost:27017/cityflow` | Secret |
+| `JWT_SECRET`           | Secret key for JWT signing           | **Required — no default**        | Secret     |
+| `TICK_INTERVAL_MINUTES`| Game tick interval in minutes        | `60`                             | ConfigMap  |
+| `ADMIN_EMAIL`          | Admin account email                  | `admin@cityflow.com`             | ConfigMap  |
+| `ADMIN_PASSWORD`       | Admin account password               | `admin123`                       | Secret     |
+
+---
+
+## Secrets Management
+
+Secrets are stored as Kubernetes Secrets and injected as environment variables into pods.
+
+**Rules:**
+- Never commit real secret values to Git
+- The `k8s/config/backend-secrets.yml` file is a **template** with placeholder values
+- Create actual secrets using `kubectl create secret` commands
+- For production, consider using an external secrets manager (e.g., AWS Secrets Manager, HashiCorp Vault) with the External Secrets Operator
+
+---
+
+## ArgoCD Integration
+
+The Kubernetes manifests are fully compatible with ArgoCD for GitOps workflows.
+
+### Setup
+
+1. Install ArgoCD in your cluster: https://argo-cd.readthedocs.io/en/stable/getting-started/
+2. Create an ArgoCD Application pointing to the `k8s/` directory:
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cityflow
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/orou500/cityflow.git
+    targetRevision: main
+    path: k8s
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cityflow
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+```
+
+3. Apply the Application manifest:
+```bash
+kubectl apply -f argocd-application.yml
+```
+
+### How It Works
+
+- ArgoCD watches the `k8s/` directory in the Git repository
+- On every push to `main`, ArgoCD detects drift and syncs automatically
+- The `kustomization.yml` file defines all resources in the correct apply order
+- Secrets must be managed separately (ArgoCD does not sync secrets by default)
+
+---
+
+## Troubleshooting
+
+### Pods stuck in `Pending`
+
+```bash
+kubectl describe pod <pod-name> -n cityflow
+# Check events for scheduling issues (insufficient resources, node affinity, etc.)
+```
+
+### Backend pods in `CrashLoopBackOff`
+
+```bash
+kubectl logs <pod-name> -n cityflow --previous
+# Common causes:
+# - MongoDB not reachable (check MONGODB_URI secret)
+# - JWT_SECRET not set
+# - Port already in use
+```
+
+### Ingress not routing
+
+```bash
+kubectl describe ingress cityflow-ingress -n cityflow
+# Check:
+# - Ingress class matches your controller (nginx)
+# - Backend service name and port are correct
+# - TLS secret exists and is valid
+```
+
+### MongoDB persistent volume issues
+
+```bash
+kubectl get pvc -n cityflow
+# PVCs must be bound before MongoDB pods start
+# Check storage class availability:
+kubectl get storageclass
+```
+
+### Frontend can't reach backend
+
+```bash
+# Verify backend service is running
+kubectl get svc cityflow-backend -n cityflow
+
+# Test connectivity from within the cluster
+kubectl run debug --rm -it --image=curlimages/curl -n cityflow \
+  -- curl http://cityflow-backend:5000/health
+```
+
+---
+
+## Future Improvements
+
+- Horizontal Pod Autoscaler (HPA) for frontend and backend
+- Prometheus + Grafana monitoring
+- Loki log aggregation
+- cert-manager for automatic certificate renewal
+- Multi-environment deployments (development / staging / production)
+- Service Mesh (Istio)
+- External Secrets Operator for vault integration

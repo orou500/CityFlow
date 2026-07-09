@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import mongoose from 'mongoose';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { config } from './config/index.js';
@@ -47,17 +48,51 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+app.get('/ready', (req, res) => {
+  const dbReady = mongoose.connection.readyState === 1;
+  if (dbReady) {
+    res.json({ status: 'ready', timestamp: new Date().toISOString() });
+  } else {
+    res.status(503).json({ status: 'not ready', timestamp: new Date().toISOString() });
+  }
+});
+
 app.use((req, res) => {
   console.warn(`404 API Route: ${req.method} ${req.originalUrl}`);
   res.status(404).json({ success: false, error: 'Route not found' });
 });
 
+let server;
+
 async function start() {
   await connectDB();
-  app.listen(config.port, () => {
+  server = app.listen(config.port, () => {
     console.log(`CityFlow API running on port ${config.port}`);
     startScheduler();
   });
 }
+
+function shutdown(signal) {
+  console.log(`${signal} received. Shutting down gracefully...`);
+  if (server) {
+    server.close(() => {
+      console.log('HTTP server closed');
+      mongoose.connection.close(false).then(() => {
+        console.log('MongoDB connection closed');
+        process.exit(0);
+      });
+    });
+  } else {
+    process.exit(0);
+  }
+
+  setTimeout(() => {
+    console.error('Forced shutdown after timeout');
+    process.exit(1);
+  }, 10000);
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
 start();
