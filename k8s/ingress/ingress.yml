@@ -6,15 +6,10 @@ metadata:
   labels:
     app.kubernetes.io/part-of: cityflow
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /$1
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
-    nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
-    # Uncomment and set after installing cert-manager:
-    # cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.middlewares: cityflow-strip-api-prefix@kubernetescrd
+    traefik.ingress.kubernetes.io/service.sticky.cookie: "false"
 spec:
-  ingressClassName: nginx
+  ingressClassName: traefik
   tls:
     - hosts:
         - cityflow.sizops.co.il
@@ -23,15 +18,15 @@ spec:
     - host: cityflow.sizops.co.il
       http:
         paths:
-          - path: /api/(.*)
-            pathType: ImplementationSpecific
+          - path: /api
+            pathType: Prefix
             backend:
               service:
                 name: cityflow-backend
                 port:
                   number: 5000
-          - path: /uploads/(.*)
-            pathType: ImplementationSpecific
+          - path: /uploads
+            pathType: Prefix
             backend:
               service:
                 name: cityflow-backend

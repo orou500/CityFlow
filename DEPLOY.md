@@ -166,7 +166,7 @@ kubectl create secret generic mongodb-credentials \
 # Backend application secrets
 kubectl create secret generic backend-secrets \
   --namespace=cityflow \
-  --from-literal=MONGODB_URI="mongodb://${MONGO_USER}:${MONGO_PASS}@cityflow-mongodb-0.cityflow-mongodb:27017/cityflow?replicaSet=rs0&authSource=admin" \
+  --from-literal=MONGODB_URI="mongodb://${MONGO_USER}:${MONGO_PASS}@cityflow-mongodb-0.cityflow-mongodb:27017/cityflow?authSource=admin" \
   --from-literal=JWT_SECRET="$JWT_SECRET" \
   --from-literal=ADMIN_PASSWORD="$ADMIN_PASS" \
   --dry-run=client -o yaml | kubectl apply -f -

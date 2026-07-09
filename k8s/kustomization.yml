@@ -16,4 +16,5 @@ resources:
   - frontend/deployment.yml
   - frontend/service.yml
   - frontend/networkpolicy.yml
+  - ingress/middleware.yml
   - ingress/ingress.yml
