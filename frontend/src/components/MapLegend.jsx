@@ -10,7 +10,7 @@ export default function MapLegend() {
   ];
 
   return (
-    <div className="absolute bottom-6 right-6 z-[1000] bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-lg p-4 min-w-[170px] shadow-xl">
+    <div className="absolute bottom-6 right-6 z-10 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-lg p-4 min-w-[170px] shadow-xl">
       <h4 className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-3">
         {t('legend.title')}
       </h4>

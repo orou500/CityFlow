@@ -72,7 +72,7 @@ export default function WorldStatusWidget() {
 
   if (!status) {
     return (
-      <div className="absolute top-4 left-4 z-[1000] bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-lg p-4 min-w-[200px] shadow-xl">
+      <div className="absolute top-4 left-4 z-10 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-lg p-4 min-w-[200px] shadow-xl">
         <p className="text-xs text-gray-400 dark:text-gray-500">{t('worldStatus.loading')}</p>
       </div>
     );
@@ -86,7 +86,7 @@ export default function WorldStatusWidget() {
   ];
 
   return (
-    <div className="absolute top-4 left-4 z-[1000] bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-lg p-4 min-w-[220px] shadow-xl">
+    <div className="absolute top-4 left-4 z-10 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-lg p-4 min-w-[220px] shadow-xl">
       <h4 className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-3">
         {t('worldStatus.title')}
       </h4>
