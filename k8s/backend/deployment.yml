@@ -17,8 +17,6 @@ spec:
       labels:
         app.kubernetes.io/name: backend
         app.kubernetes.io/part-of: cityflow
-      annotations:
-        rollme: "752f595ce768c9402f63c81072c6b766d379690a"
     spec:
       imagePullSecrets:
         - name: ghcr-pull
