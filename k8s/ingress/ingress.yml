@@ -11,10 +11,6 @@ metadata:
     traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
 spec:
   ingressClassName: traefik
-  tls:
-    - hosts:
-        - cityflow.sizops.co.il
-      secretName: cityflow-tls
   rules:
     - host: cityflow.sizops.co.il
       http:
