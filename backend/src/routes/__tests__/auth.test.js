@@ -20,6 +20,8 @@ describe('POST /auth/register', () => {
       email: 'fresh@example.com',
       password: 'SecurePass1',
       confirmPassword: 'SecurePass1',
+      acceptedTerms: true,
+      acceptedPrivacy: true,
     });
 
     expect(res.status).toBe(201);
@@ -38,6 +40,8 @@ describe('POST /auth/register', () => {
       email: 'token@example.com',
       password: 'SecurePass1',
       confirmPassword: 'SecurePass1',
+      acceptedTerms: true,
+      acceptedPrivacy: true,
     });
 
     const decoded = jwt.verify(res.body.token, config.jwtSecret);
@@ -92,6 +96,8 @@ describe('POST /auth/register', () => {
       email: 'first@example.com',
       password: 'SecurePass1',
       confirmPassword: 'SecurePass1',
+      acceptedTerms: true,
+      acceptedPrivacy: true,
     });
 
     const res = await request(app).post('/auth/register').send({
@@ -99,6 +105,8 @@ describe('POST /auth/register', () => {
       email: 'second@example.com',
       password: 'SecurePass1',
       confirmPassword: 'SecurePass1',
+      acceptedTerms: true,
+      acceptedPrivacy: true,
     });
 
     expect(res.status).toBe(409);
@@ -111,6 +119,8 @@ describe('POST /auth/register', () => {
       email: 'duemail@example.com',
       password: 'SecurePass1',
       confirmPassword: 'SecurePass1',
+      acceptedTerms: true,
+      acceptedPrivacy: true,
     });
 
     const res = await request(app).post('/auth/register').send({
@@ -118,6 +128,8 @@ describe('POST /auth/register', () => {
       email: 'duemail@example.com',
       password: 'SecurePass1',
       confirmPassword: 'SecurePass1',
+      acceptedTerms: true,
+      acceptedPrivacy: true,
     });
 
     expect(res.status).toBe(409);
@@ -132,6 +144,8 @@ describe('POST /auth/login', () => {
       email: 'login@example.com',
       password: 'SecurePass1',
       confirmPassword: 'SecurePass1',
+      acceptedTerms: true,
+      acceptedPrivacy: true,
     });
   });
 

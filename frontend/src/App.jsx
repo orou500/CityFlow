@@ -20,6 +20,9 @@ import UserProfilePage from './pages/UserProfilePage';
 import FriendsPage from './pages/FriendsPage';
 import NotificationsPage from './pages/NotificationsPage';
 import NotFoundPage from './pages/NotFoundPage';
+import TermsPage from './pages/TermsPage';
+import PrivacyPage from './pages/PrivacyPage';
+import CookiesPage from './pages/CookiesPage';
 import { useEffect } from 'react';
 import { useAuthStore } from './store/useAuthStore';
 import './i18n/index.js';
@@ -169,6 +172,9 @@ export default function App() {
                   </ErrorBoundary>
                 }
               />
+              <Route path="/terms" element={<TermsPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/cookies" element={<CookiesPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </OnboardingWrapper>

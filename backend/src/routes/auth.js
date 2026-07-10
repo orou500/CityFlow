@@ -12,12 +12,15 @@ function generateToken(userId) {
 
 router.post('/register', async (req, res) => {
   try {
-    const { username, email, password, confirmPassword } = req.body;
+    const { username, email, password, confirmPassword, acceptedTerms, acceptedPrivacy } = req.body;
     if (!username || !email || !password) {
       return res.status(400).json({ error: 'All fields are required' });
     }
     if (password !== confirmPassword) {
       return res.status(400).json({ error: 'Passwords do not match' });
+    }
+    if (!acceptedTerms || !acceptedPrivacy) {
+      return res.status(400).json({ error: 'You must accept the Terms of Service and Privacy Policy' });
     }
     const normalizedUsername = username.toLowerCase().trim();
     const normalizedEmail = email.toLowerCase().trim();
@@ -25,7 +28,16 @@ router.post('/register', async (req, res) => {
     if (existing) {
       return res.status(409).json({ error: 'Username or email already exists' });
     }
-    const user = await User.create({ username, email, password });
+    const now = new Date();
+    const user = await User.create({
+      username,
+      email,
+      password,
+      acceptedTerms: true,
+      acceptedTermsAt: now,
+      acceptedPrivacy: true,
+      acceptedPrivacyAt: now,
+    });
     const token = generateToken(user._id);
     res.status(201).json({ token, user });
   } catch (err) {

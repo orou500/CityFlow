@@ -122,7 +122,8 @@
     "loginError": "Invalid credentials",
     "registerError": "Registration failed",
     "loginSuccess": "Welcome back!",
-    "registerSuccess": "Account created!"
+    "registerSuccess": "Account created!",
+    "agreeTo": "I agree to the"
   },
   "common": {
     "loading": "Loading...",
@@ -241,6 +242,7 @@
     "Property is already listed for sale": "Property is already listed for sale",
     "All fields are required": "All fields are required",
     "Passwords do not match": "Passwords do not match",
+    "You must accept the Terms of Service and Privacy Policy": "You must accept the Terms of Service and Privacy Policy",
     "Username or email already exists": "Username or email already exists",
     "Email and password are required": "Email and password are required",
     "Invalid credentials": "Invalid credentials",
@@ -690,6 +692,229 @@
       "minutes": "{{count}}m ago",
       "hours": "{{count}}h ago",
       "days": "{{count}}d ago"
+    }
+  },
+  "legal": {
+    "lastUpdated": "Last updated: {{date}}",
+    "termsTitle": "Terms of Service",
+    "privacyTitle": "Privacy Policy",
+    "cookiesTitle": "Cookie Policy",
+    "terms": {
+      "intro": {
+        "title": "1. Introduction",
+        "content": "Welcome to CityFlow. By accessing or using our platform, you agree to be bound by these Terms of Service. CityFlow is a simulation game platform. All gameplay, economic systems, market values, property prices, loans, and returns are fictional simulation mechanics."
+      },
+      "disclaimer": {
+        "title": "Important Disclaimer",
+        "content": "CityFlow is a simulation game. The platform does NOT provide financial advice, investment advice, real estate advice, legal advice, or tax advice. All gameplay, economic systems, market values, property prices, loans, and returns are fictional simulation mechanics and should not be interpreted as real-world guidance."
+      },
+      "account": {
+        "title": "2. Account Rules",
+        "items": [
+          "You must be at least 13 years old to create an account",
+          "You may only create one account per person",
+          "You are responsible for maintaining the security of your account credentials",
+          "You must provide accurate and complete information during registration",
+          "You are solely responsible for all activity that occurs under your account",
+          "You must notify us immediately of any unauthorized use of your account",
+          "Usernames must not impersonate others or contain offensive material"
+        ]
+      },
+      "acceptableUse": {
+        "title": "3. Acceptable Use",
+        "items": [
+          "Use the platform only for its intended purpose as a simulation game",
+          "Treat other users with respect and courtesy",
+          "Report bugs and vulnerabilities responsibly",
+          "Comply with all applicable laws and regulations",
+          "Keep your account credentials confidential"
+        ]
+      },
+      "prohibited": {
+        "title": "4. Prohibited Behavior",
+        "items": [
+          "Creating multiple accounts to gain unfair advantages",
+          "Using automated scripts, bots, or exploits",
+          "Harassing, threatening, or bullying other users",
+          "Sharing inappropriate, offensive, or illegal content",
+          "Attempting to access other users' accounts without authorization",
+          "Reverse engineering or exploiting the platform's code or systems",
+          "Selling, trading, or transferring accounts or virtual items for real money",
+          "Engaging in any activity that disrupts the platform's operations"
+        ]
+      },
+      "virtualEconomy": {
+        "title": "5. Virtual Economy Disclaimer",
+        "content": "CityFlow features a virtual economy system for entertainment purposes only. Please be aware of the following:",
+        "items": [
+          "All currencies in CityFlow are virtual and have no real-world value",
+          "All properties, assets, and items are virtual simulation elements",
+          "Property values, rental income, and investment returns are simulated and randomized",
+          "No real-world financial returns are guaranteed or implied",
+          "Virtual economy mechanics may change without notice",
+          "The platform is not responsible for any perceived loss of virtual value",
+          "Virtual items and currencies cannot be exchanged for real money through the platform"
+        ]
+      },
+      "intellectualProperty": {
+        "title": "6. Intellectual Property",
+        "content": "All content, branding, logos, artwork, source code, game mechanics, and design elements of CityFlow are the intellectual property of CityFlow. You may not copy, modify, distribute, sell, or lease any part of our platform or its content without explicit written permission. Unauthorized reproduction or redistribution is strictly prohibited."
+      },
+      "content": {
+        "title": "7. User Content",
+        "content": "You retain ownership of any content you create on the platform (such as your profile information). By using CityFlow, you grant us a limited license to use, display, and process your content as necessary to operate the platform. We reserve the right to remove any content that violates these Terms."
+      },
+      "availability": {
+        "title": "8. Platform Availability",
+        "content": "CityFlow is provided on an 'as-is' and 'as-available' basis. We do not guarantee uninterrupted or error-free operation. The platform may experience downtime for maintenance, updates, or due to circumstances beyond our control. Features may be added, modified, or removed at any time without prior notice."
+      },
+      "liability": {
+        "title": "9. Limitation of Liability",
+        "content": "To the maximum extent permitted by law, CityFlow and its operators shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including but not limited to loss of data, loss of virtual items or progress, or any other losses arising from your use of the platform. The platform is provided without warranties of any kind, either express or implied."
+      },
+      "moderation": {
+        "title": "10. Moderation & Enforcement",
+        "content": "We reserve the right to suspend, restrict, or terminate any user account at our sole discretion for violations of these Terms. This may include banning users, removing content, or restricting access to features. We may also take action against accounts that we reasonably believe pose a risk to the platform or its users."
+      },
+      "termination": {
+        "title": "11. Account Termination",
+        "content": "You may delete your account at any time by contacting us. Upon termination, your data will be handled in accordance with our Privacy Policy. We reserve the right to terminate accounts that are inactive for an extended period or that violate these Terms."
+      },
+      "changes": {
+        "title": "12. Changes to Terms",
+        "content": "We may update these Terms from time to time. When we make material changes, we will notify users through the platform or by email. Your continued use of CityFlow after changes are posted constitutes your acceptance of the updated Terms."
+      },
+      "disputes": {
+        "title": "13. Dispute Resolution",
+        "content": "Any disputes arising from these Terms or your use of CityFlow shall first be attempted to be resolved through informal negotiation. If a resolution cannot be reached, disputes shall be subject to the jurisdiction of the courts applicable to the platform operator's location."
+      },
+      "contact": {
+        "title": "14. Contact Information",
+        "content": "For any questions or concerns regarding these Terms of Service, please contact us at legal@sizops.co.il."
+      }
+    },
+    "privacy": {
+      "intro": {
+        "title": "1. Introduction",
+        "content": "This Privacy Policy explains how CityFlow collects, uses, stores, and protects your personal information. By using our platform, you consent to the practices described in this policy."
+      },
+      "dataCollected": {
+        "title": "2. Information We Collect",
+        "items": [
+          "Account information: username, email address, and encrypted password",
+          "Profile data: display name, avatar, bio, and language/theme preferences",
+          "Game activity: property ownership, transactions, construction projects, and gameplay progress",
+          "Technical data: browser type, device information, and IP address",
+          "Usage data: pages visited, features used, and interaction patterns",
+          "Legal acceptance records: timestamps of Terms of Service and Privacy Policy acceptance"
+        ]
+      },
+      "howWeUse": {
+        "title": "3. How We Use Your Information",
+        "items": [
+          "To provide, maintain, and improve the CityFlow platform",
+          "To authenticate your identity and manage your account",
+          "To enable gameplay features including multiplayer interactions",
+          "To communicate with you about updates, offers, and support",
+          "To monitor and analyze usage patterns to improve the user experience",
+          "To detect and prevent fraud, abuse, and security incidents",
+          "To comply with legal obligations"
+        ]
+      },
+      "storage": {
+        "title": "4. Data Storage & Retention",
+        "content": "Your data is stored on secure servers and is retained for as long as your account is active. When you delete your account, your personal data is removed within a reasonable timeframe. Some anonymized or aggregated data may be retained for analytical purposes after account deletion."
+      },
+      "protection": {
+        "title": "5. Data Protection",
+        "content": "We implement industry-standard security measures to protect your personal information, including encryption of passwords at rest, secure HTTPS connections, and access controls on our systems. However, no method of transmission or storage is 100% secure, and we cannot guarantee absolute security."
+      },
+      "cookies": {
+        "title": "6. Cookies",
+        "content": "CityFlow uses cookies and similar technologies for authentication, session management, and storing your preferences (such as theme and language). For detailed information about how we use cookies, please see our Cookie Policy."
+      },
+      "sharing": {
+        "title": "7. Data Sharing",
+        "content": "We do not sell or share your personal information with third parties for their marketing purposes. We may share anonymized, aggregated data that cannot be used to identify you. We may disclose information when required by law or to protect the safety and security of our platform and users."
+      },
+      "yourRights": {
+        "title": "8. Your Rights",
+        "items": [
+          "Access your personal data and request a copy",
+          "Correct inaccurate or incomplete data",
+          "Request deletion of your personal data",
+          "Export your data in a portable format",
+          "Object to processing of your data",
+          "Withdraw consent for data processing at any time"
+        ]
+      },
+      "children": {
+        "title": "9. Children's Privacy",
+        "content": "CityFlow is not intended for children under 13 years of age. We do not knowingly collect personal information from children under 13. If we become aware that a child under 13 has provided us with personal information, we will take steps to delete such information promptly."
+      },
+      "changes": {
+        "title": "10. Changes to This Policy",
+        "content": "We may update this Privacy Policy from time to time. When we make material changes, we will notify users through the platform or by email. The 'Last updated' date at the top of this page indicates when the policy was last revised."
+      },
+      "contact": {
+        "title": "11. Contact Information",
+        "content": "For any questions or concerns about this Privacy Policy or our data practices, please contact us at legal@sizops.co.il."
+      }
+    },
+    "cookiesPolicy": {
+      "intro": {
+        "title": "1. Introduction",
+        "content": "This Cookie Policy explains how CityFlow uses cookies and similar technologies when you access our platform. We are committed to being transparent about the technologies we use."
+      },
+      "whatAre": {
+        "title": "2. What Are Cookies",
+        "content": "Cookies are small text files that are stored on your device when you visit a website. They are widely used to make websites work efficiently and to provide information to website owners. Cookies can be 'persistent' (remaining on your device until deleted) or 'session-based' (deleted when you close your browser)."
+      },
+      "howWeUse": {
+        "title": "3. How We Use Cookies",
+        "items": [
+          "To keep you logged in and authenticate your sessions",
+          "To remember your theme and language preferences",
+          "To understand how you interact with the platform",
+          "To improve platform performance and user experience",
+          "To detect and prevent security threats and abuse"
+        ]
+      },
+      "types": {
+        "title": "4. Types of Cookies We Use",
+        "essential": {
+          "title": "Essential Cookies",
+          "content": "These cookies are necessary for the platform to function. They enable core features such as authentication, security, and session management. Without these cookies, the platform cannot operate properly."
+        },
+        "functional": {
+          "title": "Functional Cookies",
+          "content": "These cookies remember your preferences and settings, such as your chosen theme (light/dark), language (English/Hebrew), and other display options. They enhance your experience by providing personalized features."
+        },
+        "analytics": {
+          "title": "Analytics Cookies",
+          "content": "These cookies help us understand how users interact with the platform by collecting anonymized usage data. This information helps us improve features, fix issues, and optimize the user experience."
+        }
+      },
+      "session": {
+        "title": "5. Session Management",
+        "content": "CityFlow uses session cookies to maintain your authenticated state while you use the platform. When you log in, a session cookie is created that allows you to navigate the platform without re-authenticating on every page. Session cookies are deleted when you log out or close your browser."
+      },
+      "thirdParty": {
+        "title": "6. Third-Party Cookies",
+        "content": "CityFlow does not use third-party advertising cookies. We may use third-party analytics tools that set their own cookies to help us understand platform usage. These third parties have their own privacy policies governing their use of information."
+      },
+      "manage": {
+        "title": "7. Managing Cookies",
+        "content": "You can control and manage cookies through your browser settings. Most browsers allow you to block or delete cookies. Please note that blocking essential cookies may prevent the platform from functioning correctly. You can typically find cookie settings in your browser's preferences or settings menu."
+      },
+      "changes": {
+        "title": "8. Changes to This Policy",
+        "content": "We may update this Cookie Policy from time to time. Any changes will be reflected on this page with an updated 'Last updated' date. We encourage you to review this policy periodically."
+      },
+      "contact": {
+        "title": "9. Contact Information",
+        "content": "If you have any questions about our use of cookies, please contact us at legal@sizops.co.il."
+      }
     }
   }
 }
