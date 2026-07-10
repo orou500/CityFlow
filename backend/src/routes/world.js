@@ -2,8 +2,6 @@ import { Router } from 'express';
 import { getGameState } from '../models/GameState.js';
 import { config } from '../config/index.js';
 
-const WORLD_CREATED_AT = new Date('2026-05-01T00:00:00Z');
-
 const router = Router();
 
 router.get('/status', async (req, res) => {
@@ -18,7 +16,6 @@ router.get('/status', async (req, res) => {
       currentCycle: state.tickNumber,
       lastUpdateAt: state.lastTickAt || null,
       nextUpdateAt: nextUpdateAt.toISOString(),
-      worldCreatedAt: WORLD_CREATED_AT.toISOString(),
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

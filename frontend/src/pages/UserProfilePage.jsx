@@ -488,7 +488,11 @@ export default function UserProfilePage() {
                     <div className="text-orange-500 dark:text-orange-400 text-sm font-semibold">
                       ${p.currentPrice?.toLocaleString()}
                     </div>
-                    {p.rent > 0 && <div className="text-xs text-gray-500 dark:text-gray-400">${p.rent}/period</div>}
+                    {p.rent > 0 && (
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        ${p.rent}/{t('general.period')}
+                      </div>
+                    )}
                   </div>
                 </Link>
               ))}
