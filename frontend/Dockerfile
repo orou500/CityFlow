@@ -1,4 +1,6 @@
 FROM --platform=$BUILDPLATFORM node:20-alpine AS builder
+ARG VITE_ENABLE_LICENSE_KEY
+ENV VITE_ENABLE_LICENSE_KEY=$VITE_ENABLE_LICENSE_KEY
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm install

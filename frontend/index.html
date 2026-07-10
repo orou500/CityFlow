@@ -18,6 +18,23 @@
         } catch(e) {}
       })();
     </script>
+    <script>
+      (function() {
+        var observer = new MutationObserver(function() {
+          if (document.body) {
+            document.body.classList.remove('trigger-position-left');
+            document.body.classList.add('trigger-position-right');
+            observer.disconnect();
+          }
+        });
+        observer.observe(document.documentElement, { childList: true, subtree: true });
+      })();
+    </script>
+    <style>
+      .enable-accessibility-badge, .enable-accessibility-info, [class*="enable-license"], [class*="enable-branding"] {
+        display: none !important;
+      }
+    </style>
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
