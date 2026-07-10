@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useGameStore } from '../store/useGameStore';
 import WorldMap from '../components/WorldMap';
 import MapLegend from '../components/MapLegend';
+import WorldStatusWidget from '../components/WorldStatusWidget';
 
 export default function MapPage() {
   const { t } = useTranslation();
@@ -23,6 +24,7 @@ export default function MapPage() {
           <WorldMap cities={cities} activeEvents={activeEvents} />
         )}
         <MapLegend />
+        <WorldStatusWidget />
       </div>
     </div>
   );

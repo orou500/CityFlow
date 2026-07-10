@@ -907,5 +907,23 @@
         "content": "אם יש לכם שאלות לגבי השימוש שלנו בעוגיות, אנא צרו איתנו קשר בכתובת legal@sizops.co.il."
       }
     }
+  },
+  "worldStatus": {
+    "title": "סטטוס העולם",
+    "nextUpdate": "עדכון העולם הבא",
+    "completedCycles": "מחזורים שהושלמו",
+    "worldAge": "גיל העולם",
+    "lastUpdate": "עדכון אחרון",
+    "loading": "טוען סטטוס עולם...",
+    "days": "{{count}} יום",
+    "days_plural": "{{count}} ימים",
+    "months": "{{count}} חודש",
+    "months_plural": "{{count}} חודשים",
+    "years": "{{count}} שנה",
+    "years_plural": "{{count}} שנים",
+    "justNow": "הרגע",
+    "minutesAgo": "לפני {{count}} דק'",
+    "hoursAgo": "לפני {{count}} שע'",
+    "daysAgo": "לפני {{count}} ימים"
   }
 }
