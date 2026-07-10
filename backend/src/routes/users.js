@@ -47,9 +47,12 @@ router.get('/search', authenticate, async (req, res) => {
     const { q } = req.query;
     if (!q || q.length < 1) return res.json([]);
     const users = await User.find({
-      $or: [{ username: { $regex: q, $options: 'i' } }, { displayName: { $regex: q, $options: 'i' } }],
+      $or: [
+        { normalizedUsername: { $regex: q.toLowerCase(), $options: 'i' } },
+        { displayName: { $regex: q, $options: 'i' } },
+      ],
     })
-      .select('username displayName avatar')
+      .select('username normalizedUsername displayName avatar')
       .limit(10);
     res.json(users);
   } catch (err) {
@@ -59,7 +62,7 @@ router.get('/search', authenticate, async (req, res) => {
 
 router.get('/:username', authenticate, async (req, res) => {
   try {
-    const user = await User.findOne({ username: req.params.username });
+    const user = await User.findOne({ normalizedUsername: req.params.username.toLowerCase().trim() });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const properties = await Property.find({ ownerId: user._id }).populate('cityId');
