@@ -27,6 +27,10 @@ const userSchema = new mongoose.Schema(
       activity: { type: Boolean, default: true },
     },
     friends: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    acceptedTerms: { type: Boolean, default: false },
+    acceptedTermsAt: { type: Date, default: null },
+    acceptedPrivacy: { type: Boolean, default: false },
+    acceptedPrivacyAt: { type: Date, default: null },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } },
 );

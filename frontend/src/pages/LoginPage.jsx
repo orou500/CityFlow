@@ -9,13 +9,27 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { login, register, error, loading } = useAuthStore();
   const [isRegister, setIsRegister] = useState(false);
-  const [form, setForm] = useState({ username: '', email: '', password: '', confirmPassword: '' });
+  const [form, setForm] = useState({
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    acceptedTerms: false,
+    acceptedPrivacy: false,
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       if (isRegister) {
-        await register(form.username, form.email, form.password, form.confirmPassword);
+        await register(
+          form.username,
+          form.email,
+          form.password,
+          form.confirmPassword,
+          form.acceptedTerms,
+          form.acceptedPrivacy,
+        );
       } else {
         await login(form.email.trim(), form.password);
       }
@@ -81,6 +95,40 @@ export default function LoginPage() {
                 className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-3 py-2 text-primary"
                 required
               />
+            </div>
+          )}
+          {isRegister && (
+            <div className="space-y-2">
+              <label className="flex items-start gap-2 text-sm text-secondary">
+                <input
+                  type="checkbox"
+                  checked={form.acceptedTerms}
+                  onChange={(e) => setForm({ ...form, acceptedTerms: e.target.checked })}
+                  className="mt-1 rounded border-gray-300 dark:border-gray-600"
+                  required
+                />
+                <span>
+                  {t('auth.agreeTo')}{' '}
+                  <Link to="/terms" target="_blank" className="text-orange-500 dark:text-orange-400 hover:underline">
+                    {t('legal.termsTitle')}
+                  </Link>
+                </span>
+              </label>
+              <label className="flex items-start gap-2 text-sm text-secondary">
+                <input
+                  type="checkbox"
+                  checked={form.acceptedPrivacy}
+                  onChange={(e) => setForm({ ...form, acceptedPrivacy: e.target.checked })}
+                  className="mt-1 rounded border-gray-300 dark:border-gray-600"
+                  required
+                />
+                <span>
+                  {t('auth.agreeTo')}{' '}
+                  <Link to="/privacy" target="_blank" className="text-orange-500 dark:text-orange-400 hover:underline">
+                    {t('legal.privacyTitle')}
+                  </Link>
+                </span>
+              </label>
             </div>
           )}
           <button
