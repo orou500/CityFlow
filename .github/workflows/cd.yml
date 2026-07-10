@@ -60,6 +60,6 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            VITE_ENABLE_LICENSE_KEY=${{ secrets.ENABLE_LICENSE_KEY }}
+            VITE_ENABLE_LICENSE_KEY=${{ secrets.VITE_ENABLE_LICENSE_KEY }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
