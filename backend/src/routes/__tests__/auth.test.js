@@ -17,7 +17,7 @@ describe('POST /auth/register', () => {
   it('registers a new user successfully', async () => {
     const res = await request(app)
       .post('/auth/register')
-      .send({ username: 'freshuser', email: 'fresh@example.com', password: 'SecurePass1' });
+      .send({ username: 'freshuser', email: 'fresh@example.com', password: 'SecurePass1', confirmPassword: 'SecurePass1' });
 
     expect(res.status).toBe(201);
     expect(res.body).toHaveProperty('token');
@@ -32,7 +32,7 @@ describe('POST /auth/register', () => {
   it('returns a valid JWT token on registration', async () => {
     const res = await request(app)
       .post('/auth/register')
-      .send({ username: 'tokentest', email: 'token@example.com', password: 'SecurePass1' });
+      .send({ username: 'tokentest', email: 'token@example.com', password: 'SecurePass1', confirmPassword: 'SecurePass1' });
 
     const decoded = jwt.verify(res.body.token, config.jwtSecret);
     expect(decoded).toHaveProperty('userId');
@@ -68,14 +68,23 @@ describe('POST /auth/register', () => {
     expect(res.body.error).toBe('All fields are required');
   });
 
+  it('rejects when passwords do not match', async () => {
+    const res = await request(app)
+      .post('/auth/register')
+      .send({ username: 'nomatch', email: 'nomatch@example.com', password: 'SecurePass1', confirmPassword: 'DifferentPass1' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/do not match/i);
+  });
+
   it('rejects duplicate username', async () => {
     await request(app)
       .post('/auth/register')
-      .send({ username: 'dupeuser', email: 'first@example.com', password: 'SecurePass1' });
+      .send({ username: 'dupeuser', email: 'first@example.com', password: 'SecurePass1', confirmPassword: 'SecurePass1' });
 
     const res = await request(app)
       .post('/auth/register')
-      .send({ username: 'dupeuser', email: 'second@example.com', password: 'SecurePass1' });
+      .send({ username: 'dupeuser', email: 'second@example.com', password: 'SecurePass1', confirmPassword: 'SecurePass1' });
 
     expect(res.status).toBe(409);
     expect(res.body.error).toMatch(/already exists/i);
@@ -84,11 +93,11 @@ describe('POST /auth/register', () => {
   it('rejects duplicate email', async () => {
     await request(app)
       .post('/auth/register')
-      .send({ username: 'firstmail', email: 'duemail@example.com', password: 'SecurePass1' });
+      .send({ username: 'firstmail', email: 'duemail@example.com', password: 'SecurePass1', confirmPassword: 'SecurePass1' });
 
     const res = await request(app)
       .post('/auth/register')
-      .send({ username: 'secondmail', email: 'duemail@example.com', password: 'SecurePass1' });
+      .send({ username: 'secondmail', email: 'duemail@example.com', password: 'SecurePass1', confirmPassword: 'SecurePass1' });
 
     expect(res.status).toBe(409);
     expect(res.body.error).toMatch(/already exists/i);
@@ -99,7 +108,7 @@ describe('POST /auth/login', () => {
   beforeAll(async () => {
     await request(app)
       .post('/auth/register')
-      .send({ username: 'logintest', email: 'login@example.com', password: 'SecurePass1' });
+      .send({ username: 'logintest', email: 'login@example.com', password: 'SecurePass1', confirmPassword: 'SecurePass1' });
   });
 
   it('logs in with username', async () => {

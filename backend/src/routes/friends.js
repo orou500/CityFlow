@@ -20,7 +20,7 @@ async function createFriendNotification(userId, sender, _type) {
 
 router.post('/request/:username', async (req, res) => {
   try {
-    const target = await User.findOne({ username: req.params.username });
+    const target = await User.findOne({ normalizedUsername: req.params.username.toLowerCase().trim() });
     if (!target) return res.status(404).json({ error: 'User not found' });
     if (req.user._id.equals(target._id)) return res.status(400).json({ error: 'Cannot send request to yourself' });
     if (req.user.friends.includes(target._id)) return res.status(400).json({ error: 'Already friends' });
@@ -168,7 +168,7 @@ router.get('/requests', async (req, res) => {
 
 router.get('/status/:username', async (req, res) => {
   try {
-    const target = await User.findOne({ username: req.params.username });
+    const target = await User.findOne({ normalizedUsername: req.params.username.toLowerCase().trim() });
     if (!target) return res.status(404).json({ error: 'User not found' });
 
     if (req.user._id.equals(target._id)) return res.json({ status: 'self' });

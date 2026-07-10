@@ -3,7 +3,8 @@ import bcrypt from 'bcryptjs';
 
 const userSchema = new mongoose.Schema(
   {
-    username: { type: String, required: true, unique: true, trim: true },
+    username: { type: String, required: true, trim: true },
+    normalizedUsername: { type: String, unique: true, lowercase: true, trim: true },
     email: { type: String, required: true, unique: true, trim: true, lowercase: true },
     password: { type: String, required: true },
     balance: { type: Number, default: 100000 },
@@ -34,10 +35,10 @@ userSchema.virtual('joinedAt').get(function () {
   return this.createdAt;
 });
 
-userSchema.index({ username: 1 });
-userSchema.index({ email: 1 });
-
 userSchema.pre('save', async function (next) {
+  if (this.isModified('username')) {
+    this.normalizedUsername = this.username.toLowerCase().trim();
+  }
   if (!this.isModified('password')) return next();
   this.password = await bcrypt.hash(this.password, 12);
   next();

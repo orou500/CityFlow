@@ -38,12 +38,12 @@ export const useAuthStore = create(
         }
       },
 
-      register: async (username, email, password) => {
+      register: async (username, email, password, confirmPassword) => {
         set({ loading: true, error: null });
         try {
           const data = await api('/auth/register', {
             method: 'POST',
-            body: JSON.stringify({ username, email, password }),
+            body: JSON.stringify({ username, email, password, confirmPassword }),
           });
           localStorage.setItem('token', data.token);
           set({ user: data.user, token: data.token, loading: false });

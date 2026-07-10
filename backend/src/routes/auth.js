@@ -12,11 +12,16 @@ function generateToken(userId) {
 
 router.post('/register', async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { username, email, password, confirmPassword } = req.body;
     if (!username || !email || !password) {
       return res.status(400).json({ error: 'All fields are required' });
     }
-    const existing = await User.findOne({ $or: [{ email }, { username }] });
+    if (password !== confirmPassword) {
+      return res.status(400).json({ error: 'Passwords do not match' });
+    }
+    const normalizedUsername = username.toLowerCase().trim();
+    const normalizedEmail = email.toLowerCase().trim();
+    const existing = await User.findOne({ $or: [{ email: normalizedEmail }, { normalizedUsername }] });
     if (existing) {
       return res.status(409).json({ error: 'Username or email already exists' });
     }
@@ -34,8 +39,9 @@ router.post('/login', async (req, res) => {
     if (!login || !password) {
       return res.status(400).json({ error: 'Username/email and password are required' });
     }
+    const normalizedLogin = login.toLowerCase().trim();
     const user = await User.findOne({
-      $or: [{ username: login }, { email: login.toLowerCase() }],
+      $or: [{ normalizedUsername: normalizedLogin }, { email: normalizedLogin }],
     });
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ error: 'Invalid username/email or password' });

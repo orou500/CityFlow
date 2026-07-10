@@ -9,13 +9,13 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { login, register, error, loading } = useAuthStore();
   const [isRegister, setIsRegister] = useState(false);
-  const [form, setForm] = useState({ username: '', email: '', password: '' });
+  const [form, setForm] = useState({ username: '', email: '', password: '', confirmPassword: '' });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       if (isRegister) {
-        await register(form.username, form.email, form.password);
+        await register(form.username, form.email, form.password, form.confirmPassword);
       } else {
         await login(form.email.trim(), form.password);
       }
@@ -71,6 +71,18 @@ export default function LoginPage() {
               required
             />
           </div>
+          {isRegister && (
+            <div>
+              <label className="block text-sm text-muted mb-1">{t('auth.confirmPassword')}</label>
+              <input
+                type="password"
+                value={form.confirmPassword}
+                onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-3 py-2 text-primary"
+                required
+              />
+            </div>
+          )}
           <button
             type="submit"
             disabled={loading}
