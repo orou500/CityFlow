@@ -8,6 +8,7 @@ metadata:
   annotations:
     traefik.ingress.kubernetes.io/router.middlewares: cityflow-strip-api-prefix@kubernetescrd
     traefik.ingress.kubernetes.io/service.sticky.cookie: "false"
+    traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
 spec:
   ingressClassName: traefik
   tls:
