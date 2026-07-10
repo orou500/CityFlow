@@ -96,9 +96,7 @@ export default function WorldStatusWidget() {
             <span className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wide">{row.label}</span>
             <span
               className={`text-sm font-semibold ${
-                row.highlight
-                  ? 'text-primary font-mono tabular-nums'
-                  : 'text-gray-800 dark:text-gray-200'
+                row.highlight ? 'text-primary font-mono tabular-nums' : 'text-gray-800 dark:text-gray-200'
               }`}
             >
               {row.value}
