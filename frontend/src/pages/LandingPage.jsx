@@ -128,6 +128,7 @@ export default function LandingPage() {
   const [stats, setStats] = useState(null);
   const [leaderboard, setLeaderboard] = useState([]);
   const [activity, setActivity] = useState([]);
+  const [worldAge, setWorldAge] = useState(null);
   const isRtl = i18n.language === 'he';
 
   useEffect(() => {
@@ -144,6 +145,10 @@ export default function LandingPage() {
         setLeaderboard(data.topPlayers || []);
         setActivity(data.recentActivity || []);
       })
+      .catch(() => {});
+    fetch('/api/world/status')
+      .then((r) => r.json())
+      .then((data) => setWorldAge(data))
       .catch(() => {});
   }, []);
 
@@ -175,7 +180,7 @@ export default function LandingPage() {
         <DotGrid resolved={resolved} />
         <HeroOverlay resolved={resolved} />
         <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
-          <div className="text-6xl mb-6">🌍</div>
+          <img src="/images/logo-big.png" alt="CityFlow" className="h-20 md:h-30 lg:h-48 mx-auto mb-6" />
           <h1 className="text-4xl md:text-6xl font-bold text-primary mb-6 leading-tight">{t('landing.hero.title')}</h1>
           <p className="text-lg md:text-xl text-secondary mb-8 max-w-2xl mx-auto leading-relaxed">
             {t('landing.hero.subtitle')}
@@ -248,12 +253,13 @@ export default function LandingPage() {
       <section className="py-20 px-4 bg-surface transition-colors duration-300">
         <div className="max-w-5xl mx-auto">
           <SectionHeading title={t('landing.stats.title')} description={null} />
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
             {[
               { key: 'players', target: stats?.playersCount || 0, suffix: '' },
               { key: 'properties', target: stats?.propertiesCount || 0, suffix: '' },
               { key: 'cities', target: stats?.citiesCount || 0, suffix: '' },
               { key: 'transactions', target: stats?.transactionsCount || 0, suffix: '' },
+              { key: 'worldAge', target: worldAge?.currentCycle || 0, suffix: '' },
             ].map((s) => (
               <div key={s.key} className="text-center">
                 <div className="text-3xl md:text-4xl font-bold text-orange-500 dark:text-orange-400 mb-1">

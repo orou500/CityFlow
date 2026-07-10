@@ -22,15 +22,13 @@ function formatTimeAgo(dateStr, t) {
   return t('worldStatus.daysAgo', { count: days });
 }
 
-function formatAge(createdAt, t) {
-  if (!createdAt) return '-';
-  const diff = Date.now() - new Date(createdAt).getTime();
-  const days = Math.floor(diff / 86400000);
-  if (days < 60) return t('worldStatus.days', { count: days });
-  const months = Math.floor(days / 30);
+function formatAge(cycleCount, t) {
+  const months = cycleCount || 0;
   if (months < 12) return t('worldStatus.months', { count: months });
   const years = Math.floor(months / 12);
-  return t('worldStatus.years', { count: years });
+  const remainingMonths = months % 12;
+  if (remainingMonths === 0) return t('worldStatus.years', { count: years });
+  return t('worldStatus.years', { count: years }) + ' ' + t('worldStatus.months', { count: remainingMonths });
 }
 
 export default function WorldStatusWidget() {
@@ -81,7 +79,7 @@ export default function WorldStatusWidget() {
   const rows = [
     { label: t('worldStatus.nextUpdate'), value: countdown, highlight: true },
     { label: t('worldStatus.completedCycles'), value: status.currentCycle?.toLocaleString() },
-    { label: t('worldStatus.worldAge'), value: formatAge(status.worldCreatedAt, t) },
+    { label: t('worldStatus.worldAge'), value: formatAge(status.currentCycle, t) },
     { label: t('worldStatus.lastUpdate'), value: formatTimeAgo(status.lastUpdateAt, t) },
   ];
 
