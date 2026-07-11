@@ -180,8 +180,7 @@ function PriceHistoryChart({ history }) {
 
           <div className="space-y-0.5">
             <div>
-              <span className="text-gray-500 dark:text-gray-400">{t('propertyDetail.chartMonth')}</span>{' '}
-              {active.tick}
+              <span className="text-gray-500 dark:text-gray-400">{t('propertyDetail.chartMonth')}</span> {active.tick}
             </div>
             <div>
               <span className="text-gray-500 dark:text-gray-400">{t('propertyDetail.chartPrice')}</span>{' '}

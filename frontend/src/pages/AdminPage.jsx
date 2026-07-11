@@ -1047,7 +1047,10 @@ export default function AdminPage() {
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{t('admin.currentSeason')}</h3>
             {currentSeason ? (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <StatCard label={t('admin.seasonNumber', { number: currentSeason.number })} value={currentSeason.name || `#${currentSeason.number}`} />
+                <StatCard
+                  label={t('admin.seasonNumber', { number: currentSeason.number })}
+                  value={currentSeason.name || `#${currentSeason.number}`}
+                />
                 <StatCard label={t('admin.seasonStarted')} value={formatDate(currentSeason.startDate)} />
                 <StatCard label="Status" value={currentSeason.status} />
                 <div className="flex items-end">
@@ -1103,7 +1106,10 @@ export default function AdminPage() {
                   <StatCard label={t('admin.previewProperties')} value={seasonPreview.willReset?.properties || 0} />
                   <StatCard label={t('admin.previewTransactions')} value={seasonPreview.willReset?.transactions || 0} />
                   <StatCard label={t('admin.previewLoans')} value={seasonPreview.willReset?.activeLoans || 0} />
-                  <StatCard label={t('admin.previewConstruction')} value={seasonPreview.willReset?.activeConstruction || 0} />
+                  <StatCard
+                    label={t('admin.previewConstruction')}
+                    value={seasonPreview.willReset?.activeConstruction || 0}
+                  />
                 </div>
               </div>
             )}
@@ -1121,15 +1127,25 @@ export default function AdminPage() {
               <p className="text-sm text-gray-500 dark:text-gray-400">{t('admin.noCompletedSeasons')}</p>
             ) : (
               <Table
-                headers={[t('admin.seasonNumber', { number: '' }).trim(), t('admin.seasonStarted'), t('admin.seasonEnded'), t('admin.totalPlayers'), t('admin.totalMonths')]}
+                headers={[
+                  t('admin.seasonNumber', { number: '' }).trim(),
+                  t('admin.seasonStarted'),
+                  t('admin.seasonEnded'),
+                  t('admin.totalPlayers'),
+                  t('admin.totalMonths'),
+                ]}
                 rows={seasons}
                 renderRow={(s) => (
                   <>
                     <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">#{s.number}</td>
                     <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{formatDate(s.startDate)}</td>
-                    <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{s.endDate ? formatDate(s.endDate) : '-'}</td>
+                    <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
+                      {s.endDate ? formatDate(s.endDate) : '-'}
+                    </td>
                     <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{s.archive?.totalPlayers || 0}</td>
-                    <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{s.archive?.economicStatistics?.tickCount || 0}</td>
+                    <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
+                      {s.archive?.economicStatistics?.tickCount || 0}
+                    </td>
                   </>
                 )}
               />

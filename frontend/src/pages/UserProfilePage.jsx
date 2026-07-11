@@ -53,7 +53,9 @@ export default function UserProfilePage() {
             bio: data.user.bio || '',
             portfolioVisible: data.user.profileVisibility?.portfolio !== false,
           });
-          fetchPlayerSeasonHistory(data.user._id).then(setSeasonHistory).catch(() => {});
+          fetchPlayerSeasonHistory(data.user._id)
+            .then(setSeasonHistory)
+            .catch(() => {});
         }
       })
       .catch(() => setError('Failed to load profile'));
@@ -480,17 +482,22 @@ export default function UserProfilePage() {
                 <tbody>
                   {seasonHistory.map((s) => (
                     <tr key={s.seasonNumber} className="border-b border-gray-100 dark:border-gray-800">
-                      <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">
-                        #{s.seasonNumber}
-                      </td>
+                      <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">#{s.seasonNumber}</td>
                       <td className="px-3 py-2">
-                        <span className={`font-semibold ${
-                          s.rank === 1 ? 'text-yellow-500' : s.rank === 2 ? 'text-gray-400' : s.rank === 3 ? 'text-amber-600' : 'text-gray-600 dark:text-gray-300'
-                        }`}>
+                        <span
+                          className={`font-semibold ${
+                            s.rank === 1
+                              ? 'text-yellow-500'
+                              : s.rank === 2
+                                ? 'text-gray-400'
+                                : s.rank === 3
+                                  ? 'text-amber-600'
+                                  : 'text-gray-600 dark:text-gray-300'
+                          }`}
+                        >
                           {s.rank === 1 && '🥇 '}
                           {s.rank === 2 && '🥈 '}
-                          {s.rank === 3 && '🥉 '}
-                          #{s.rank}
+                          {s.rank === 3 && '🥉 '}#{s.rank}
                         </span>
                       </td>
                       <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">
@@ -500,7 +507,9 @@ export default function UserProfilePage() {
                         ${(s.portfolioValue || 0).toLocaleString()}
                       </td>
                       <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{s.propertiesOwned || 0}</td>
-                      <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{s.rank}/{s.totalPlayers}</td>
+                      <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
+                        {s.rank}/{s.totalPlayers}
+                      </td>
                       <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{s.monthsPlayed || 0}</td>
                     </tr>
                   ))}
