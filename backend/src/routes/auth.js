@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { config } from '../config/index.js';
 import { authenticate } from '../middleware/auth.js';
+import { isMaintenanceMode } from '../models/GameState.js';
 
 const router = Router();
 
@@ -12,6 +13,9 @@ function generateToken(userId) {
 
 router.post('/register', async (req, res) => {
   try {
+    if (await isMaintenanceMode()) {
+      return res.status(503).json({ error: 'CityFlow is currently undergoing maintenance. Registration is temporarily disabled.' });
+    }
     const { username, email, password, confirmPassword, acceptedTerms, acceptedPrivacy } = req.body;
     if (!username || !email || !password) {
       return res.status(400).json({ error: 'All fields are required' });
@@ -57,6 +61,11 @@ router.post('/login', async (req, res) => {
     });
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ error: 'Invalid username/email or password' });
+    }
+    if (await isMaintenanceMode()) {
+      if (user.role !== 'admin') {
+        return res.status(503).json({ error: 'CityFlow is currently undergoing maintenance. Please check back later.' });
+      }
     }
     user.lastLoginAt = new Date();
     await user.save();

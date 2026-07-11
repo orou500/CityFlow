@@ -519,7 +519,15 @@
     "winner": "מנצח",
     "totalPlayers": "שחקנים",
     "totalMonths": "חודשים",
-    "noCompletedSeasons": "אין עונות שהסתיימו עדיין"
+    "noCompletedSeasons": "אין עונות שהסתיימו עדיין",
+    "maintenance": "אחזקה",
+    "maintenanceTitle": "מצב אחזקה",
+    "enableMaintenance": "הפעל מצב אחזקה",
+    "disableMaintenance": "בטל מצב אחזקה",
+    "maintenanceMessage": "הודעת אחזקה",
+    "maintenanceMessagePlaceholder": "CityFlow נמצא כעת בתחזוקה...",
+    "maintenanceConfirm": "להפעיל מצב אחזקה? שחקנים יאבדו גישה זמנית לתכונות המשחק.",
+    "maintenanceBanner": "מצב אחזקה פעיל — חלק מהפונקציות זמינות באופן זמני."
   },
   "onboarding": {
     "welcome": {
@@ -1004,5 +1012,13 @@
     "summary": "סיכום",
     "champion": "אלוף העונה",
     "properties": "נכסים"
+  },
+  "maintenance": {
+    "title": "תחזוקה בתהליך",
+    "subtitle": "CityFlow אינו זמין זמנית.",
+    "checkBack": "אנא בדוק שוב מאוחר יותר.",
+    "staffLogin": "כניסת צוות",
+    "bannerTitle": "⚠️ מצב אחזקה פעיל",
+    "bannerMessage": "חלק מהפונקציות זמינות באופן זמני."
   }
 }

@@ -24,20 +24,47 @@ import TermsPage from './pages/TermsPage';
 import PrivacyPage from './pages/PrivacyPage';
 import CookiesPage from './pages/CookiesPage';
 import SeasonHistoryPage from './pages/SeasonHistoryPage';
+import MaintenancePage from './pages/MaintenancePage';
 import { useEffect } from 'react';
 import { useAuthStore } from './store/useAuthStore';
+import { useGameStore } from './store/useGameStore';
 import './i18n/index.js';
 
 export default function App() {
   const fetchMe = useAuthStore((s) => s.fetchMe);
+  const user = useAuthStore((s) => s.user);
+  const authLoading = useAuthStore((s) => s.loading);
+  const maintenance = useGameStore((s) => s.maintenance);
+  const fetchMaintenance = useGameStore((s) => s.fetchMaintenance);
 
   useEffect(() => {
+    fetchMaintenance();
     if (localStorage.getItem('token')) {
       fetchMe();
     } else {
       useAuthStore.setState({ loading: false });
     }
   }, []);
+
+  const isAdmin = user?.role === 'admin';
+
+  if (authLoading) {
+    return (
+      <ThemeProvider>
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+          <div className="text-gray-500">Loading...</div>
+        </div>
+      </ThemeProvider>
+    );
+  }
+
+  if (maintenance.enabled && !isAdmin && window.location.pathname !== '/login') {
+    return (
+      <ThemeProvider>
+        <MaintenancePage message={maintenance.message} />
+      </ThemeProvider>
+    );
+  }
 
   return (
     <ThemeProvider>
