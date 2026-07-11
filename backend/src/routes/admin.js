@@ -5,11 +5,13 @@ import City from '../models/City.js';
 import Transaction from '../models/Transaction.js';
 import Event from '../models/Event.js';
 import Loan from '../models/Loan.js';
+import Season from '../models/Season.js';
 import ConstructionProject from '../models/ConstructionProject.js';
 import { getGameState } from '../models/GameState.js';
 import { requireAdmin } from '../middleware/admin.js';
 import { executeTick } from '../engine/tick.js';
 import { DEVELOPMENT_PROJECTS } from '../config/developmentProjects.js';
+import { getCurrentSeason, endCurrentSeasonAndStartNew, createNewSeason } from '../engine/seasonReset.js';
 
 const router = Router();
 
@@ -65,14 +67,27 @@ router.get('/overview', async (req, res) => {
 router.get('/ticks', async (req, res) => {
   try {
     const gameState = await getGameState();
-    const nextTickAt = gameState.lastTickAt
-      ? new Date(gameState.lastTickAt.getTime() + parseInt(process.env.TICK_INTERVAL_MINUTES || '60') * 60000)
-      : null;
+    const now = new Date();
+    const hours = [0, 6, 12, 18];
+    let nextTickAt = null;
+    for (const h of hours) {
+      const candidate = new Date(now);
+      candidate.setHours(h, 0, 0, 0);
+      if (candidate > now) {
+        nextTickAt = candidate;
+        break;
+      }
+    }
+    if (!nextTickAt) {
+      nextTickAt = new Date(now);
+      nextTickAt.setDate(nextTickAt.getDate() + 1);
+      nextTickAt.setHours(hours[0], 0, 0, 0);
+    }
     res.json({
       tickNumber: gameState.tickNumber,
       lastTickAt: gameState.lastTickAt,
       nextTickAt,
-      tickIntervalMinutes: parseInt(process.env.TICK_INTERVAL_MINUTES || '60'),
+      tickIntervalMinutes: 360,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -370,6 +385,86 @@ router.get('/development-zones', async (req, res) => {
       })),
     );
     res.json(zones);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/seasons', async (req, res) => {
+  try {
+    const seasons = await Season.find().sort({ number: -1 });
+    res.json(seasons);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/seasons/current', async (req, res) => {
+  try {
+    const season = await getCurrentSeason();
+    if (!season) return res.json(null);
+    res.json(season);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/seasons/preview', async (req, res) => {
+  try {
+    const [totalUsers, totalProperties, totalTransactions, totalLoans, totalConstruction] = await Promise.all([
+      User.countDocuments(),
+      Property.countDocuments(),
+      Transaction.countDocuments(),
+      Loan.countDocuments({ active: true }),
+      ConstructionProject.countDocuments({ status: 'under_construction' }),
+    ]);
+
+    res.json({
+      willReset: {
+        users: totalUsers,
+        properties: totalProperties,
+        transactions: totalTransactions,
+        activeLoans: totalLoans,
+        activeConstruction: totalConstruction,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/seasons/create', async (req, res) => {
+  try {
+    const activeSeason = await getCurrentSeason();
+    if (activeSeason) {
+      return res.status(400).json({ error: 'An active season already exists' });
+    }
+    const season = await createNewSeason();
+    res.json({ message: `Season ${season.number} created`, season });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/seasons/end', async (req, res) => {
+  try {
+    const { confirm } = req.body;
+    if (confirm !== true) {
+      return res.status(400).json({ error: 'Set confirm: true to end the current season' });
+    }
+
+    const activeSeason = await getCurrentSeason();
+    if (!activeSeason) {
+      return res.status(404).json({ error: 'No active season found' });
+    }
+
+    const newSeason = await endCurrentSeasonAndStartNew();
+
+    res.json({
+      message: `Season ${activeSeason.number} ended. Season ${newSeason.number} started.`,
+      endedSeason: activeSeason.number,
+      newSeason: newSeason.number,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

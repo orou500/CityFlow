@@ -2,14 +2,13 @@ import cron from 'node-cron';
 import crypto from 'crypto';
 import { executeTick } from './tick.js';
 import { acquireTickLock, releaseTickLock } from '../models/GameState.js';
-import { config } from '../config/index.js';
 
 const ownerId = crypto.randomUUID();
 
 export function startScheduler() {
-  const expression = `*/${config.tickIntervalMinutes} * * * *`;
+  const expression = '0 0,6,12,18 * * *';
 
-  console.log(`[SCHEDULER] World tick scheduled every ${config.tickIntervalMinutes} minutes (${expression})`);
+  console.log('[SCHEDULER] World tick scheduled at 00:00, 06:00, 12:00, 18:00');
   console.log(`[SCHEDULER] Instance ID: ${ownerId}`);
 
   cron.schedule(expression, async () => {

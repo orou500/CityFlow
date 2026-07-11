@@ -219,7 +219,7 @@
     "sendOffer": "Send Offer",
     "sending": "Sending...",
     "offerSent": "Offer sent successfully!",
-    "chartPeriod": "Month:",
+    "chartMonth": "Month:",
     "chartPrice": "Price:",
     "chartChange": "Change:",
     "chartPrevious": "Previous:",
@@ -506,12 +506,34 @@
     "deactivate": "Deactivate",
     "activate": "Activate",
     "noData": "No data",
-    "propertiesShort": "Properties"
+    "propertiesShort": "Properties",
+    "seasons": "Seasons",
+    "currentSeason": "Current Season",
+    "seasonNumber": "Season #{{number}}",
+    "seasonStarted": "Started",
+    "seasonEnded": "Ended",
+    "noActiveSeason": "No active season",
+    "createSeason": "Create Season",
+    "endSeason": "End Season",
+    "endSeasonConfirm": "Are you sure you want to end the current season? This will reset all player data, properties, loans, and economic progress. A backup will be archived.",
+    "endSeasonWarning": "This action cannot be undone.",
+    "seasonEndedSuccess": "Season ended successfully!",
+    "seasonPreview": "Reset Impact Preview",
+    "previewUsers": "Users affected",
+    "previewProperties": "Properties to reset",
+    "previewTransactions": "Transactions to archive",
+    "previewLoans": "Active loans to clear",
+    "previewConstruction": "Construction projects to clear",
+    "previousSeasons": "Previous Seasons",
+    "winner": "Winner",
+    "totalPlayers": "Players",
+    "totalMonths": "Months",
+    "noCompletedSeasons": "No completed seasons yet"
   },
   "onboarding": {
     "welcome": {
       "title": "Welcome to CityFlow! 🌍",
-      "description": "Build your real estate empire,\nbuy properties around the world,\nmanage your investments,\nand grow your wealth.\n\nWould you like a quick tour?",
+      "description": "Build a global real estate empire across 18 cities worldwide.\n\nBuy and develop properties, take loans from the bank, trade with other players, and climb the leaderboard.\n\nThe world evolves every month — prices shift, events unfold, and new opportunities appear.\n\nReady to become a property tycoon?",
       "startTour": "Start Tour",
       "skip": "Skip"
     },
@@ -522,28 +544,44 @@
       "last": "Start Playing 🚀"
     },
     "step1": {
-      "title": "🌍 World Map",
-      "content": "This is the world map.\n\nHere you can explore cities,\nview property markets,\nand discover investment opportunities."
+      "title": "🗺️ World Map",
+      "content": "Your window to the world.\n\nExplore 18 cities across different countries.\nSee demand levels, average prices, and active events at a glance.\n\n🟢 Green = High demand (good time to sell)\n🟡 Yellow = Medium demand\n🔴 Red = Low demand (good time to buy)\n\nClick any city to dive into its property market."
     },
     "step2": {
-      "title": "🏠 Marketplace",
-      "content": "Here you can buy properties,\nsearch investments,\nand sell your own assets."
+      "title": "🏪 Marketplace",
+      "content": "The marketplace is where deals happen.\n\n• Search and filter by city, country, price range, or property type\n• Buy bank-owned properties at listed prices\n• Browse player listings and make offers (min 70% of value)\n• Sell your own properties to other players\n\nPro tip: Watch for low-demand cities — that's where bargains hide."
     },
     "step3": {
       "title": "🏢 Property Details",
-      "content": "Every property has its own page.\n\nYou can see:\n• Current value\n• Price history\n• Income\n• Owner information\n• Investment potential"
+      "content": "Every property has a dedicated page with:\n\n• Current market value & price history chart\n• Monthly rent income & occupancy rate\n• Building units with individual rent prices\n• Market info: demand index, supply, growth rate\n• Ownership history & transaction log\n\nYou can Buy, Sell, or Make an Offer on any property."
     },
     "step4": {
-      "title": "🏦 Bank",
-      "content": "The bank helps you grow faster.\n\nYou can:\n• Take loans\n• Manage debt\n• Finance investments"
+      "title": "📊 Your Dashboard",
+      "content": "Your command center.\n\nTrack everything in one place:\n• Net worth, cash balance, and total property value\n• Your full property portfolio\n• Incoming rent payments\n• Active loans & repayment progress\n• Offers: received from other players & sent by you\n• Full transaction history\n\nCheck back often to manage your empire."
     },
     "step5": {
-      "title": "📊 Portfolio",
-      "content": "Your dashboard.\n\nTrack:\n• Owned properties\n• Total value\n• Income\n• Profit and losses"
+      "title": "🏦 Bank",
+      "content": "Need capital to grow faster?\n\nThe bank offers loans with clear terms:\n• Choose from different loan amounts & durations\n• See monthly payments & total interest upfront\n• Max loan = 70% of your net worth\n• Repay early to save on interest\n\n⚠️ Missed payments lead to penalties and repossession!"
     },
     "step6": {
-      "title": "🌎 World Simulation",
-      "content": "The world changes over time.\n\nPrices move,\ncities grow,\nand events affect the market."
+      "title": "🏗️ Development",
+      "content": "Build your own properties from scratch.\n\n1. Buy Land from the marketplace\n2. Start Development — choose from 8 building types:\n   🏠 Residential: Apartments, Housing Complexes\n   🏢 Commercial: Offices, Shopping Centers\n   🏨 Hospitality: Hotels, Resorts\n3. Wait for construction to complete\n4. Upgrade your buildings for higher rent:\n   Renovation, Security, Luxury, or Expansion\n\nConstruction takes several months — plan ahead!"
+    },
+    "step7": {
+      "title": "🌍 World Events",
+      "content": "The world is alive and unpredictable.\n\nEvents affect city economies in real time:\n• 📈 Boom — prices and demand surge\n• 📉 Recession — demand drops, bargains appear\n• 🌪️ Disaster — markets crash temporarily\n• 📋 Policy Change — new regulations shift demand\n\nEvents can be local (one city) or global (all cities).\nAdapt your strategy to profit from every situation."
+    },
+    "step8": {
+      "title": "📅 Seasons",
+      "content": "The game runs in seasons — each lasting 720 months.\n\nWhen a season ends:\n• All data is archived with full rankings\n• The world resets to a fresh state\n• Everyone starts equal in the new season\n\nCompete to be the season champion!\nYour past rankings are shown on your profile.\n\nVisit /seasons to see the full leaderboard."
+    },
+    "step9": {
+      "title": "👥 Friends & Social",
+      "content": "CityFlow is better with friends.\n\n• Add other players from their profile page\n• Accept or decline friend requests\n• View friends' net worth and portfolios\n• Send offers and negotiate deals together\n\nBuild your network — allies can help you spot opportunities."
+    },
+    "step10": {
+      "title": "🚀 You're Ready!",
+      "content": "You now know everything you need to start.\n\nQuick strategy tips:\n• Start by buying a few cheap properties\n• Use bank loans wisely to scale faster\n• Watch city demand — buy low, sell high\n• Develop land for long-term income\n• Keep an eye on world events\n\nGood luck, tycoon! 🏆"
     }
   },
   "transaction": {
@@ -656,7 +694,11 @@
     "achievements": "Achievements",
     "activity": "Recent Activity",
     "bought": "Bought",
-    "sold": "Sold"
+    "sold": "Sold",
+    "seasonHistory": "Season History",
+    "viewLeaderboard": "View Full Leaderboard",
+    "seasonRank": "Rank",
+    "seasonPlayers": "Players"
   },
   "friends": {
     "title": "Friends",
@@ -935,5 +977,41 @@
     "minutesAgo": "{{count}}m ago",
     "hoursAgo": "{{count}}h ago",
     "daysAgo": "{{count}}d ago"
+  },
+  "seasons": {
+    "title": "Season History",
+    "activeSeason": "Current Season",
+    "seasonNumber": "Season #{{number}}",
+    "completedSeasons": "Past Seasons",
+    "noSeasons": "No season history available yet.",
+    "winner": "Winner",
+    "players": "Players",
+    "months": "Months",
+    "transactions": "Transactions",
+    "started": "Started",
+    "ended": "Ended",
+    "viewDetails": "View Details",
+    "rankings": "Final Rankings",
+    "rank": "Rank",
+    "username": "Player",
+    "netWorth": "Net Worth",
+    "balance": "Balance",
+    "portfolioValue": "Portfolio",
+    "cityStats": "City Statistics",
+    "cityName": "City",
+    "avgPrice": "Avg Price",
+    "demand": "Demand",
+    "supply": "Supply",
+    "population": "Population",
+    "marketStats": "Market Statistics",
+    "totalVolume": "Total Volume",
+    "avgPropertyPrice": "Avg Property Price",
+    "economicStats": "Economic Statistics",
+    "totalCash": "Total Cash",
+    "totalProperties": "Total Properties",
+    "activeLoans": "Active Loans",
+    "summary": "Summary",
+    "champion": "Season Champion",
+    "properties": "Properties"
   }
 }

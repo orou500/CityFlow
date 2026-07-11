@@ -14,6 +14,7 @@ import statsRoutes from '../routes/stats.js';
 import friendsRoutes from '../routes/friends.js';
 import eventRoutes from '../routes/events.js';
 import worldRoutes from '../routes/world.js';
+import seasonRoutes from '../routes/seasons.js';
 
 export function createApp() {
   const app = express();
@@ -34,6 +35,7 @@ export function createApp() {
   app.use('/friends', friendsRoutes);
   app.use('/events', eventRoutes);
   app.use('/world', worldRoutes);
+  app.use('/seasons', seasonRoutes);
 
   app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });

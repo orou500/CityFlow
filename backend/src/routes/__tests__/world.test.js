@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../../test/createApp.js';
-import mongoose from 'mongoose';
 
 const app = createApp();
 

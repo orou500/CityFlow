@@ -48,16 +48,56 @@ export default function OnboardingWrapper({ children }) {
 
   const steps = useMemo(
     () => [
-      { target: '[data-tour="map"]', title: t('onboarding.step1.title'), content: t('onboarding.step1.content') },
+      {
+        target: '[data-tour="map"]',
+        title: t('onboarding.step1.title'),
+        content: t('onboarding.step1.content'),
+      },
       {
         target: '[data-tour="marketplace"]',
         title: t('onboarding.step2.title'),
         content: t('onboarding.step2.content'),
       },
-      { target: 'body', title: t('onboarding.step3.title'), content: t('onboarding.step3.content') },
-      { target: '[data-tour="bank"]', title: t('onboarding.step4.title'), content: t('onboarding.step4.content') },
-      { target: '[data-tour="dashboard"]', title: t('onboarding.step5.title'), content: t('onboarding.step5.content') },
-      { target: 'body', title: t('onboarding.step6.title'), content: t('onboarding.step6.content') },
+      {
+        target: 'body',
+        title: t('onboarding.step3.title'),
+        content: t('onboarding.step3.content'),
+      },
+      {
+        target: '[data-tour="dashboard"]',
+        title: t('onboarding.step4.title'),
+        content: t('onboarding.step4.content'),
+      },
+      {
+        target: '[data-tour="bank"]',
+        title: t('onboarding.step5.title'),
+        content: t('onboarding.step5.content'),
+      },
+      {
+        target: '[data-tour="development"]',
+        title: t('onboarding.step6.title'),
+        content: t('onboarding.step6.content'),
+      },
+      {
+        target: 'body',
+        title: t('onboarding.step7.title'),
+        content: t('onboarding.step7.content'),
+      },
+      {
+        target: 'body',
+        title: t('onboarding.step8.title'),
+        content: t('onboarding.step8.content'),
+      },
+      {
+        target: 'body',
+        title: t('onboarding.step9.title'),
+        content: t('onboarding.step9.content'),
+      },
+      {
+        target: 'body',
+        title: t('onboarding.step10.title'),
+        content: t('onboarding.step10.content'),
+      },
     ],
     [t, i18n.language],
   );
@@ -200,10 +240,10 @@ export default function OnboardingWrapper({ children }) {
           className="fixed inset-0 bg-black/70 flex items-center justify-center z-[9999] p-4"
           style={{ direction: isRtl ? 'rtl' : 'ltr' }}
         >
-          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 max-w-md w-full text-center shadow-2xl">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 max-w-lg w-full text-center shadow-2xl">
             <div className="text-5xl mb-4">🌍</div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">{t('onboarding.welcome.title')}</h2>
-            <p className="text-gray-500 dark:text-gray-400 mb-6 leading-relaxed whitespace-pre-line">
+            <p className="text-gray-500 dark:text-gray-400 mb-6 leading-relaxed whitespace-pre-line text-sm">
               {t('onboarding.welcome.description')}
             </p>
             <div className="flex gap-3 justify-center">

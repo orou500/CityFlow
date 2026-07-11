@@ -8,6 +8,7 @@ const gameStateSchema = new mongoose.Schema({
   lastTickAt: { type: Date },
   tickLock: { type: String, default: null },
   tickLockedAt: { type: Date, default: null },
+  seasonId: { type: mongoose.Schema.Types.ObjectId, ref: 'Season', default: null },
 });
 
 export async function getGameState() {

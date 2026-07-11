@@ -82,7 +82,7 @@ export default function Navbar() {
   const navLinks = [
     { to: '/map', label: t('nav.map'), icon: '\uD83D\uDDFA\uFE0F', tour: 'map' },
     { to: '/marketplace', label: t('nav.market'), icon: '\uD83C\uDFEA', tour: 'marketplace' },
-    { to: '/development', label: t('nav.development'), icon: '\uD83C\uDFD7\uFE0F', tour: null },
+    { to: '/development', label: t('nav.development'), icon: '\uD83C\uDFD7\uFE0F', tour: 'development' },
     { to: '/bank', label: t('nav.bank'), icon: '\uD83C\uDFE6', tour: 'bank' },
     { to: '/dashboard', label: t('nav.portfolio'), icon: '\uD83D\uDCCA', tour: 'dashboard' },
   ];
