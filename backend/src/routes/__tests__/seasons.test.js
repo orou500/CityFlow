@@ -44,7 +44,12 @@ describe('Season endpoints', () => {
 
   describe('GET /admin/seasons', () => {
     it('returns seasons list for admin', async () => {
-      await Season.create({ number: 1, status: 'completed', startDate: new Date('2026-01-01'), endDate: new Date('2026-06-01') });
+      await Season.create({
+        number: 1,
+        status: 'completed',
+        startDate: new Date('2026-01-01'),
+        endDate: new Date('2026-06-01'),
+      });
       const res = await request(app).get('/admin/seasons').set('Authorization', `Bearer ${adminToken}`);
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
@@ -126,7 +131,12 @@ describe('Season endpoints', () => {
 describe('GET /seasons (public)', () => {
   it('returns active and completed seasons', async () => {
     await Season.deleteMany({});
-    await Season.create({ number: 1, status: 'completed', startDate: new Date('2026-01-01'), endDate: new Date('2026-06-01') });
+    await Season.create({
+      number: 1,
+      status: 'completed',
+      startDate: new Date('2026-01-01'),
+      endDate: new Date('2026-06-01'),
+    });
     await Season.create({ number: 2, status: 'active' });
     const res = await request(app).get('/seasons');
     expect(res.status).toBe(200);

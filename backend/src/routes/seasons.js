@@ -38,12 +38,12 @@ router.get('/player/:userId', async (req, res) => {
       'archive.playerRankings.userId': userId,
     })
       .sort({ number: -1 })
-      .select('number name startDate endDate archive.playerRankings archive.winner archive.totalPlayers archive.economicStatistics.tickCount archive.summary');
+      .select(
+        'number name startDate endDate archive.playerRankings archive.winner archive.totalPlayers archive.economicStatistics.tickCount archive.summary',
+      );
 
     const playerHistory = seasons.map((season) => {
-      const playerData = season.archive.playerRankings.find(
-        (p) => p.userId.toString() === userId.toString(),
-      );
+      const playerData = season.archive.playerRankings.find((p) => p.userId.toString() === userId.toString());
       return {
         seasonNumber: season.number,
         seasonName: season.name,
