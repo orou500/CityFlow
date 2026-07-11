@@ -45,10 +45,12 @@ export async function updatePrices(activeEvents) {
     const noise = 1 + (Math.random() - 0.5) * (property.volatility || 0.1) * 2;
     const supplyPenalty = city.supplyIndex > 1.5 ? 1.5 / city.supplyIndex : 1;
 
+    const demandPressure = (city.demandIndex - 1.0) * 0.02;
+    const growthAdjust = city.growthRate * 0.5;
+
     const newPrice =
-      (property.basePrice || 0) *
-      city.demandIndex *
-      (1 + city.growthRate) *
+      property.currentPrice *
+      (1 + demandPressure + growthAdjust) *
       noise *
       globalPriceMod *
       localPriceMod *
