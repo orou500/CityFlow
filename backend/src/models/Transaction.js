@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const transactionSchema = new mongoose.Schema(
   {
-    propertyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Property', required: true },
+    propertyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Property' },
     buyerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     price: { type: Number, required: true },
