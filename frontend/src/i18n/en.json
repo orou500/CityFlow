@@ -528,7 +528,15 @@
     "winner": "Winner",
     "totalPlayers": "Players",
     "totalMonths": "Months",
-    "noCompletedSeasons": "No completed seasons yet"
+    "noCompletedSeasons": "No completed seasons yet",
+    "maintenance": "Maintenance",
+    "maintenanceTitle": "Maintenance Mode",
+    "enableMaintenance": "Enable Maintenance Mode",
+    "disableMaintenance": "Disable Maintenance Mode",
+    "maintenanceMessage": "Maintenance Message",
+    "maintenanceMessagePlaceholder": "CityFlow is currently undergoing maintenance...",
+    "maintenanceConfirm": "Enable Maintenance Mode? Players will temporarily lose access to gameplay features.",
+    "maintenanceBanner": "Maintenance Mode Active — Some functionality is temporarily unavailable."
   },
   "onboarding": {
     "welcome": {
@@ -1013,5 +1021,13 @@
     "summary": "Summary",
     "champion": "Season Champion",
     "properties": "Properties"
+  },
+  "maintenance": {
+    "title": "Maintenance In Progress",
+    "subtitle": "CityFlow is temporarily unavailable.",
+    "checkBack": "Please check back later.",
+    "staffLogin": "Staff Login",
+    "bannerTitle": "⚠️ Maintenance Mode Active",
+    "bannerMessage": "Some functionality is temporarily unavailable."
   }
 }

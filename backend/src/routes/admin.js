@@ -12,6 +12,8 @@ import { requireAdmin } from '../middleware/admin.js';
 import { executeTick } from '../engine/tick.js';
 import { DEVELOPMENT_PROJECTS } from '../config/developmentProjects.js';
 import { getCurrentSeason, endCurrentSeasonAndStartNew, createNewSeason } from '../engine/seasonReset.js';
+import { setMaintenanceMode, getMaintenanceInfo } from '../models/GameState.js';
+import Notification from '../models/Notification.js';
 
 const router = Router();
 
@@ -465,6 +467,50 @@ router.post('/seasons/end', async (req, res) => {
       endedSeason: activeSeason.number,
       newSeason: newSeason.number,
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/maintenance', async (req, res) => {
+  try {
+    const info = await getMaintenanceInfo();
+    res.json(info);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/maintenance/enable', async (req, res) => {
+  try {
+    const { message } = req.body;
+    await setMaintenanceMode(true, message, req.user._id);
+    console.log(`[ADMIN] Maintenance Mode Enabled by ${req.user.username}`);
+    await Notification.create({
+      userId: null,
+      type: 'system',
+      title: 'Maintenance Mode Enabled',
+      message: message || 'Maintenance mode has been enabled by an administrator.',
+      global: true,
+    });
+    res.json({ enabled: true, message: message || '' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/maintenance/disable', async (req, res) => {
+  try {
+    await setMaintenanceMode(false, '', req.user._id);
+    console.log(`[ADMIN] Maintenance Mode Disabled by ${req.user.username}`);
+    await Notification.create({
+      userId: null,
+      type: 'system',
+      title: 'Maintenance Completed',
+      message: 'Maintenance completed. Gameplay is available again.',
+      global: true,
+    });
+    res.json({ enabled: false });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

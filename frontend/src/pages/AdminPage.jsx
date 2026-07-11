@@ -91,6 +91,10 @@ export default function AdminPage() {
     fetchAdminSeasonPreview,
     endCurrentSeason,
     createSeason,
+    fetchAdminMaintenance,
+    enableMaintenance,
+    disableMaintenance,
+    fetchMaintenance,
   } = useGameStore();
 
   const [tab, setTab] = useState('overview');
@@ -128,6 +132,11 @@ export default function AdminPage() {
   const [userSearch, setUserSearch] = useState('');
   const [userPage, setUserPage] = useState(1);
   const USERS_PER_PAGE = 20;
+
+  const [maintenanceInfo, setMaintenanceInfo] = useState(null);
+  const [maintenanceMessage, setMaintenanceMessage] = useState('');
+  const [maintenanceConfirming, setMaintenanceConfirming] = useState(false);
+  const [maintenanceLoading, setMaintenanceLoading] = useState(false);
   const [eventSearch, setEventSearch] = useState('');
   const [eventPage, setEventPage] = useState(1);
   const EVENTS_PER_PAGE = 20;
@@ -177,14 +186,16 @@ export default function AdminPage() {
 
   async function loadSeasonData() {
     try {
-      const [seasonsData, current, preview] = await Promise.all([
+      const [seasonsData, current, preview, maintInfo] = await Promise.all([
         fetchAdminSeasons(),
         fetchAdminCurrentSeason(),
         fetchAdminSeasonPreview(),
+        fetchAdminMaintenance(),
       ]);
       setSeasons(seasonsData);
       setCurrentSeason(current);
       setSeasonPreview(preview);
+      setMaintenanceInfo(maintInfo);
     } catch (e) {
       console.error(e);
     }
@@ -232,6 +243,34 @@ export default function AdminPage() {
       console.error(e);
     }
     setSeasonLoading(false);
+  }
+
+  async function handleEnableMaintenance() {
+    setMaintenanceLoading(true);
+    try {
+      await enableMaintenance(maintenanceMessage);
+      const info = await fetchAdminMaintenance();
+      setMaintenanceInfo(info);
+      fetchMaintenance();
+      setMaintenanceConfirming(false);
+      setMaintenanceMessage('');
+    } catch (e) {
+      console.error(e);
+    }
+    setMaintenanceLoading(false);
+  }
+
+  async function handleDisableMaintenance() {
+    setMaintenanceLoading(true);
+    try {
+      await disableMaintenance();
+      const info = await fetchAdminMaintenance();
+      setMaintenanceInfo(info);
+      fetchMaintenance();
+    } catch (e) {
+      console.error(e);
+    }
+    setMaintenanceLoading(false);
   }
 
   async function handleSetBalance(userId) {
@@ -384,6 +423,9 @@ export default function AdminPage() {
         </TabButton>
         <TabButton active={tab === 'seasons'} onClick={() => setTab('seasons')}>
           {t('admin.seasons')}
+        </TabButton>
+        <TabButton active={tab === 'maintenance'} onClick={() => setTab('maintenance')}>
+          {t('admin.maintenance')}
         </TabButton>
       </div>
 
@@ -1149,6 +1191,85 @@ export default function AdminPage() {
                   </>
                 )}
               />
+            )}
+          </div>
+        </div>
+      )}
+
+      {tab === 'maintenance' && (
+        <div className="space-y-6">
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{t('admin.maintenanceTitle')}</h3>
+
+            <div className="flex items-center gap-3 mb-4">
+              <span
+                className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                  maintenanceInfo?.enabled
+                    ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                    : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                }`}
+              >
+                {maintenanceInfo?.enabled ? '🔴 Enabled' : '🟢 Disabled'}
+              </span>
+              {maintenanceInfo?.enabledAt && (
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  Since: {new Date(maintenanceInfo.enabledAt).toLocaleString()}
+                </span>
+              )}
+            </div>
+
+            {maintenanceInfo?.enabled ? (
+              <button
+                onClick={handleDisableMaintenance}
+                disabled={maintenanceLoading}
+                className="px-4 py-2 bg-green-600 hover:bg-green-500 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white text-sm rounded transition-colors"
+              >
+                {maintenanceLoading ? t('admin.running') : t('admin.disableMaintenance')}
+              </button>
+            ) : (
+              <>
+                {!maintenanceConfirming ? (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                        {t('admin.maintenanceMessage')}
+                      </label>
+                      <input
+                        type="text"
+                        value={maintenanceMessage}
+                        onChange={(e) => setMaintenanceMessage(e.target.value)}
+                        placeholder={t('admin.maintenanceMessagePlaceholder')}
+                        className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white placeholder-gray-400"
+                      />
+                    </div>
+                    <button
+                      onClick={() => setMaintenanceConfirming(true)}
+                      className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-sm rounded transition-colors"
+                    >
+                      {t('admin.enableMaintenance')}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-sm text-red-600 dark:text-red-400">{t('admin.maintenanceConfirm')}</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleEnableMaintenance}
+                        disabled={maintenanceLoading}
+                        className="px-4 py-2 bg-red-600 hover:bg-red-500 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white text-sm rounded transition-colors"
+                      >
+                        {maintenanceLoading ? t('admin.running') : t('common.confirm')}
+                      </button>
+                      <button
+                        onClick={() => setMaintenanceConfirming(false)}
+                        className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm rounded transition-colors"
+                      >
+                        {t('common.cancel')}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

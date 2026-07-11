@@ -9,6 +9,10 @@ const gameStateSchema = new mongoose.Schema({
   tickLock: { type: String, default: null },
   tickLockedAt: { type: Date, default: null },
   seasonId: { type: mongoose.Schema.Types.ObjectId, ref: 'Season', default: null },
+  maintenanceMode: { type: Boolean, default: false },
+  maintenanceMessage: { type: String, default: '' },
+  maintenanceEnabledAt: { type: Date },
+  maintenanceEnabledBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 });
 
 export async function getGameState() {
@@ -58,6 +62,36 @@ export async function releaseTickLock(ownerId) {
   await mongoose
     .model('GameState')
     .findOneAndUpdate({ key: 'global', tickLock: ownerId }, { $set: { tickLock: null, tickLockedAt: null } });
+}
+
+export async function isMaintenanceMode() {
+  const state = await getGameState();
+  return state.maintenanceMode === true;
+}
+
+export async function getMaintenanceInfo() {
+  const state = await getGameState();
+  return {
+    enabled: state.maintenanceMode === true,
+    message: state.maintenanceMessage || '',
+    enabledAt: state.maintenanceEnabledAt,
+    enabledBy: state.maintenanceEnabledBy,
+  };
+}
+
+export async function setMaintenanceMode(enabled, message, userId) {
+  const update = {
+    maintenanceMode: enabled,
+    maintenanceMessage: enabled ? message || '' : '',
+  };
+  if (enabled) {
+    update.maintenanceEnabledAt = new Date();
+    update.maintenanceEnabledBy = userId;
+  } else {
+    update.maintenanceEnabledAt = null;
+    update.maintenanceEnabledBy = null;
+  }
+  return mongoose.model('GameState').findOneAndUpdate({ key: 'global' }, { $set: update }, { new: true, upsert: true });
 }
 
 export default mongoose.model('GameState', gameStateSchema);

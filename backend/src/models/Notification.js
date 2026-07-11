@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const notificationSchema = new mongoose.Schema(
   {
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     type: {
       type: String,
       enum: [
@@ -13,6 +13,7 @@ const notificationSchema = new mongoose.Schema(
         'offer_expired',
         'construction_complete',
         'friend_request',
+        'system',
       ],
       required: true,
     },
@@ -20,6 +21,7 @@ const notificationSchema = new mongoose.Schema(
     message: { type: String, required: true },
     relatedId: { type: mongoose.Schema.Types.ObjectId },
     read: { type: Boolean, default: false },
+    global: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

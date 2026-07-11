@@ -21,6 +21,8 @@ import friendsRoutes from './routes/friends.js';
 import eventRoutes from './routes/events.js';
 import worldRoutes from './routes/world.js';
 import seasonRoutes from './routes/seasons.js';
+import { maintenanceCheck } from './middleware/maintenance.js';
+import { getMaintenanceInfo } from './models/GameState.js';
 import { createNewSeason } from './engine/seasonReset.js';
 import Season from './models/Season.js';
 
@@ -34,22 +36,6 @@ app.use(express.json());
 
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-app.use('/auth', authRoutes);
-app.use('/cities', cityRoutes);
-app.use('/properties', propertyRoutes);
-app.use('/users', userRoutes);
-app.use('/transactions', transactionRoutes);
-app.use('/bank', bankRoutes);
-app.use('/admin', adminRoutes);
-app.use('/offers', offerRoutes);
-app.use('/notifications', notificationRoutes);
-app.use('/development', developmentRoutes);
-app.use('/stats', statsRoutes);
-app.use('/friends', friendsRoutes);
-app.use('/events', eventRoutes);
-app.use('/world', worldRoutes);
-app.use('/seasons', seasonRoutes);
-
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
@@ -62,6 +48,33 @@ app.get('/ready', (req, res) => {
     res.status(503).json({ status: 'not ready', timestamp: new Date().toISOString() });
   }
 });
+
+app.get('/api/maintenance', async (req, res) => {
+  try {
+    const info = await getMaintenanceInfo();
+    res.json(info);
+  } catch {
+    res.json({ enabled: false, message: '' });
+  }
+});
+
+app.use(maintenanceCheck);
+
+app.use('/auth', authRoutes);
+app.use('/admin', adminRoutes);
+app.use('/users', userRoutes);
+app.use('/world', worldRoutes);
+app.use('/seasons', seasonRoutes);
+app.use('/cities', cityRoutes);
+app.use('/properties', propertyRoutes);
+app.use('/transactions', transactionRoutes);
+app.use('/bank', bankRoutes);
+app.use('/offers', offerRoutes);
+app.use('/notifications', notificationRoutes);
+app.use('/development', developmentRoutes);
+app.use('/stats', statsRoutes);
+app.use('/friends', friendsRoutes);
+app.use('/events', eventRoutes);
 
 app.use((req, res) => {
   console.warn(`404 API Route: ${req.method} ${req.originalUrl}`);

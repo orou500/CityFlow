@@ -422,4 +422,28 @@ export const useGameStore = create((set, get) => ({
   fetchSeasonDetail: async (id) => {
     return await api(`/seasons/${id}`);
   },
+
+  maintenance: { enabled: false, message: '' },
+  fetchMaintenance: async () => {
+    try {
+      const res = await fetch('/api/maintenance');
+      const data = await res.json();
+      set({ maintenance: { enabled: data.enabled, message: data.message || '' } });
+      return data;
+    } catch {
+      set({ maintenance: { enabled: false, message: '' } });
+    }
+  },
+  fetchAdminMaintenance: async () => {
+    return await api('/admin/maintenance');
+  },
+  enableMaintenance: async (message) => {
+    return await api('/admin/maintenance/enable', {
+      method: 'POST',
+      body: JSON.stringify({ message }),
+    });
+  },
+  disableMaintenance: async () => {
+    return await api('/admin/maintenance/disable', { method: 'POST' });
+  },
 }));
