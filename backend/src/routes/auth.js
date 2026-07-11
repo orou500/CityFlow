@@ -14,7 +14,9 @@ function generateToken(userId) {
 router.post('/register', async (req, res) => {
   try {
     if (await isMaintenanceMode()) {
-      return res.status(503).json({ error: 'CityFlow is currently undergoing maintenance. Registration is temporarily disabled.' });
+      return res
+        .status(503)
+        .json({ error: 'CityFlow is currently undergoing maintenance. Registration is temporarily disabled.' });
     }
     const { username, email, password, confirmPassword, acceptedTerms, acceptedPrivacy } = req.body;
     if (!username || !email || !password) {
@@ -64,7 +66,9 @@ router.post('/login', async (req, res) => {
     }
     if (await isMaintenanceMode()) {
       if (user.role !== 'admin') {
-        return res.status(503).json({ error: 'CityFlow is currently undergoing maintenance. Please check back later.' });
+        return res
+          .status(503)
+          .json({ error: 'CityFlow is currently undergoing maintenance. Please check back later.' });
       }
     }
     user.lastLoginAt = new Date();
