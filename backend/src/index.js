@@ -20,6 +20,9 @@ import statsRoutes from './routes/stats.js';
 import friendsRoutes from './routes/friends.js';
 import eventRoutes from './routes/events.js';
 import worldRoutes from './routes/world.js';
+import seasonRoutes from './routes/seasons.js';
+import { createNewSeason } from './engine/seasonReset.js';
+import Season from './models/Season.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -45,6 +48,7 @@ app.use('/stats', statsRoutes);
 app.use('/friends', friendsRoutes);
 app.use('/events', eventRoutes);
 app.use('/world', worldRoutes);
+app.use('/seasons', seasonRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -68,6 +72,13 @@ let server;
 
 async function start() {
   await connectDB();
+
+  const activeSeason = await Season.findOne({ status: 'active' });
+  if (!activeSeason) {
+    console.log('[STARTUP] No active season found, creating Season 1');
+    await createNewSeason();
+  }
+
   server = app.listen(config.port, () => {
     console.log(`CityFlow API running on port ${config.port}`);
     startScheduler();

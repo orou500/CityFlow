@@ -385,4 +385,41 @@ export const useGameStore = create((set, get) => ({
   clearSelection: () => {
     set({ selectedCity: null, cityProperties: [], cityEvents: [] });
   },
+
+  fetchAdminSeasons: async () => {
+    return await api('/admin/seasons');
+  },
+
+  fetchAdminCurrentSeason: async () => {
+    return await api('/admin/seasons/current');
+  },
+
+  fetchAdminSeasonPreview: async () => {
+    return await api('/admin/seasons/preview');
+  },
+
+  endCurrentSeason: async () => {
+    return await api('/admin/seasons/end', {
+      method: 'POST',
+      body: JSON.stringify({ confirm: true }),
+    });
+  },
+
+  createSeason: async () => {
+    return await api('/admin/seasons/create', {
+      method: 'POST',
+    });
+  },
+
+  fetchSeasonHistory: async () => {
+    return await api('/seasons');
+  },
+
+  fetchPlayerSeasonHistory: async (userId) => {
+    return await api(`/seasons/player/${userId}`);
+  },
+
+  fetchSeasonDetail: async (id) => {
+    return await api(`/seasons/${id}`);
+  },
 }));

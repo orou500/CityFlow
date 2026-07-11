@@ -68,7 +68,7 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
   const mainLinks = [
     { to: '/map', icon: '\uD83D\uDDFA\uFE0F', label: t('nav.map'), tour: 'map' },
     { to: '/marketplace', icon: '\uD83C\uDFEA', label: t('nav.market'), tour: 'marketplace' },
-    { to: '/development', icon: '\uD83C\uDFD7\uFE0F', label: t('nav.development') },
+    { to: '/development', icon: '\uD83C\uDFD7\uFE0F', label: t('nav.development'), tour: 'development' },
     { to: '/bank', icon: '\uD83C\uDFE6', label: t('nav.bank'), tour: 'bank' },
     { to: '/dashboard', icon: '\uD83D\uDCCA', label: t('nav.portfolio'), tour: 'dashboard' },
   ];

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
+import { useGameStore } from '../store/useGameStore';
 
 function StatCard({ label, value, color }) {
   return (
@@ -31,9 +32,11 @@ export default function UserProfilePage() {
   const [msg, setMsg] = useState('');
   const [uploading, setUploading] = useState(false);
   const [friendStatus, setFriendStatus] = useState(null);
+  const [seasonHistory, setSeasonHistory] = useState([]);
   const fileRef = useRef(null);
 
   const targetUsername = username || currentUser?.username;
+  const { fetchPlayerSeasonHistory } = useGameStore();
 
   useEffect(() => {
     if (!targetUsername) return;
@@ -50,6 +53,9 @@ export default function UserProfilePage() {
             bio: data.user.bio || '',
             portfolioVisible: data.user.profileVisibility?.portfolio !== false,
           });
+          fetchPlayerSeasonHistory(data.user._id)
+            .then(setSeasonHistory)
+            .catch(() => {});
         }
       })
       .catch(() => setError('Failed to load profile'));
@@ -451,6 +457,67 @@ export default function UserProfilePage() {
             color="text-yellow-600 dark:text-yellow-400"
           />
         </div>
+
+        {seasonHistory.length > 0 && (
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">{t('profile.seasonHistory')}</h2>
+              <Link to="/seasons" className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
+                {t('profile.viewLeaderboard')} →
+              </Link>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
+                    <th className="text-left px-3 py-2">{t('seasons.seasonNumber', { number: '' }).trim()}</th>
+                    <th className="text-left px-3 py-2">{t('profile.seasonRank')}</th>
+                    <th className="text-left px-3 py-2">{t('seasons.netWorth')}</th>
+                    <th className="text-left px-3 py-2">{t('seasons.portfolioValue')}</th>
+                    <th className="text-left px-3 py-2">{t('seasons.properties')}</th>
+                    <th className="text-left px-3 py-2">{t('profile.seasonPlayers')}</th>
+                    <th className="text-left px-3 py-2">{t('seasons.months')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {seasonHistory.map((s) => (
+                    <tr key={s.seasonNumber} className="border-b border-gray-100 dark:border-gray-800">
+                      <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">#{s.seasonNumber}</td>
+                      <td className="px-3 py-2">
+                        <span
+                          className={`font-semibold ${
+                            s.rank === 1
+                              ? 'text-yellow-500'
+                              : s.rank === 2
+                                ? 'text-gray-400'
+                                : s.rank === 3
+                                  ? 'text-amber-600'
+                                  : 'text-gray-600 dark:text-gray-300'
+                          }`}
+                        >
+                          {s.rank === 1 && '🥇 '}
+                          {s.rank === 2 && '🥈 '}
+                          {s.rank === 3 && '🥉 '}#{s.rank}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">
+                        ${(s.netWorth || 0).toLocaleString()}
+                      </td>
+                      <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
+                        ${(s.portfolioValue || 0).toLocaleString()}
+                      </td>
+                      <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{s.propertiesOwned || 0}</td>
+                      <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
+                        {s.rank}/{s.totalPlayers}
+                      </td>
+                      <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{s.monthsPlayed || 0}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {profileUser.achievements?.length > 0 && (
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
