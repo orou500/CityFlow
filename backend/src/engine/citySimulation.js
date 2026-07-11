@@ -49,8 +49,10 @@ export async function simulateCities(activeEvents) {
 
     const occupancyRate = totalProperties > 0 ? ownedProperties / totalProperties : 0.5;
 
+    const occupancyBoost = occupancyRate > 0.1 ? (occupancyRate - 0.1) * 0.15 : 0;
+
     city.demandIndex = clamp(
-      city.demandIndex + 0.05 * (1 - city.demandIndex) + demandMod + (occupancyRate - 0.5) * 0.1,
+      city.demandIndex + 0.01 * (1 - city.demandIndex) + demandMod + occupancyBoost,
       0.3,
       3.0,
     );

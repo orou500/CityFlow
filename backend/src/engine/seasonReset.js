@@ -10,8 +10,6 @@ import Notification from '../models/Notification.js';
 import ConstructionProject from '../models/ConstructionProject.js';
 import Event from '../models/Event.js';
 
-const DEFAULT_BALANCE = 100000;
-
 const CITIES_DATA = [
   {
     name: 'New York',
@@ -357,8 +355,27 @@ export async function archiveSeason(seasonId) {
 export async function resetWorld() {
   console.log('[SEASON] Resetting world...');
 
+  const activeLoans = await Loan.find({ active: true }).lean();
+  if (activeLoans.length > 0) {
+    const loanBulkOps = [];
+    for (const loan of activeLoans) {
+      if (loan.remainingBalance > 0) {
+        loanBulkOps.push({
+          updateOne: {
+            filter: { _id: loan.userId },
+            update: { $inc: { balance: -loan.remainingBalance } },
+          },
+        });
+      }
+    }
+    if (loanBulkOps.length > 0) {
+      await User.bulkWrite(loanBulkOps);
+    }
+    console.log(`[SEASON] Deducted outstanding loan balances from ${loanBulkOps.length} users`);
+  }
+
   await Promise.all([
-    User.updateMany({}, { $set: { balance: DEFAULT_BALANCE, ownedProperties: [] } }),
+    User.updateMany({}, { $set: { ownedProperties: [] }, $inc: { balance: 100000 } }),
     Property.deleteMany({}),
     Transaction.deleteMany({}),
     Loan.deleteMany({}),
