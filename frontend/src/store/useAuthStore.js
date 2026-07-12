@@ -3,14 +3,26 @@ import { persist } from 'zustand/middleware';
 
 const API = '/api';
 
+class ApiError extends Error {
+  constructor(message, status) {
+    super(message);
+    this.status = status;
+  }
+}
+
 async function api(path, options = {}) {
   const token = localStorage.getItem('token');
   const headers = { 'Content-Type': 'application/json', ...options.headers };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
   const res = await fetch(`${API}${path}`, { ...options, headers });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Request failed');
+  let data;
+  try {
+    data = await res.json();
+  } catch {
+    throw new ApiError(`Server returned non-JSON response (${res.status})`, res.status);
+  }
+  if (!res.ok) throw new ApiError(data.error || 'Request failed', res.status);
   return data;
 }
 
@@ -57,17 +69,26 @@ export const useAuthStore = create(
       fetchMe: async () => {
         try {
           const rawToken = localStorage.getItem('token');
-          if (rawToken) set({ token: rawToken });
+          if (!rawToken) {
+            set({ loading: false });
+            return null;
+          }
+          set({ token: rawToken });
           const data = await api('/users/me');
           set({ user: data.user || data, loading: false, token: rawToken });
           return data;
-        } catch {
-          get().logout();
+        } catch (err) {
+          if (err instanceof ApiError && err.status === 401) {
+            get().logout();
+          } else {
+            set({ loading: false });
+          }
         }
       },
 
       logout: () => {
         localStorage.removeItem('token');
+        localStorage.removeItem('cityflow-auth');
         set({ user: null, token: null });
       },
     }),

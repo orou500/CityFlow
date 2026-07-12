@@ -71,8 +71,7 @@ router.post('/login', async (req, res) => {
           .json({ error: 'CityFlow is currently undergoing maintenance. Please check back later.' });
       }
     }
-    user.lastLoginAt = new Date();
-    await user.save();
+    await User.updateOne({ _id: user._id }, { $set: { lastLoginAt: new Date() } });
     const token = generateToken(user._id);
     res.json({ token, user });
   } catch (err) {
