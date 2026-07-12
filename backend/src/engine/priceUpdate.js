@@ -6,13 +6,72 @@ function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
-const PRICE_FLOOR = 0.5;
-const PRICE_CEILING = 3.0;
-const MAX_TICK_CHANGE = 0.03;
-const SMOOTHING_FACTOR = 0.2;
-const MOMENTUM_AMPLIFICATION = 1.5;
-const MOMENTUM_CAP = 0.05;
-const NOISE_RANGE = 0.01;
+function weightedRandom(options) {
+  const total = options.reduce((s, o) => s + o.weight, 0);
+  let r = Math.random() * total;
+  for (const o of options) {
+    r -= o.weight;
+    if (r <= 0) return o.value;
+  }
+  return options[options.length - 1].value;
+}
+
+const REGIMES = {
+  bull:       { bias:  0.005, volMod: 0.8 },
+  bear:       { bias: -0.005, volMod: 0.8 },
+  stable:     { bias:  0.000, volMod: 0.5 },
+  recovery:   { bias:  0.003, volMod: 1.0 },
+  correction: { bias: -0.003, volMod: 1.0 },
+  boom:       { bias:  0.008, volMod: 1.4 },
+};
+
+const REGIME_NAMES = Object.keys(REGIMES);
+
+function pickRegime(demandIndex) {
+  if (demandIndex > 1.5) {
+    return weightedRandom([
+      { value: 'bull', weight: 30 },
+      { value: 'boom', weight: 20 },
+      { value: 'stable', weight: 20 },
+      { value: 'recovery', weight: 15 },
+      { value: 'correction', weight: 10 },
+      { value: 'bear', weight: 5 },
+    ]);
+  }
+  if (demandIndex < 0.8) {
+    return weightedRandom([
+      { value: 'bear', weight: 30 },
+      { value: 'correction', weight: 25 },
+      { value: 'stable', weight: 20 },
+      { value: 'recovery', weight: 15 },
+      { value: 'bull', weight: 5 },
+      { value: 'boom', weight: 5 },
+    ]);
+  }
+  return weightedRandom([
+    { value: 'stable', weight: 30 },
+    { value: 'bull', weight: 20 },
+    { value: 'bear', weight: 20 },
+    { value: 'recovery', weight: 15 },
+    { value: 'correction', weight: 10 },
+    { value: 'boom', weight: 5 },
+  ]);
+}
+
+function calculateMomentum(priceHistory) {
+  if (!priceHistory || priceHistory.length < 3) return 0;
+  const recent = priceHistory.slice(-5);
+  let totalChange = 0;
+  let count = 0;
+  for (let i = 1; i < recent.length; i++) {
+    const prev = recent[i - 1].price;
+    if (prev > 0) {
+      totalChange += (recent[i].price - prev) / prev;
+      count++;
+    }
+  }
+  return count > 0 ? totalChange / count : 0;
+}
 
 export async function updatePrices(activeEvents) {
   const [cities, tickNumber] = await Promise.all([City.find().lean(), getTickNumber()]);
@@ -36,7 +95,6 @@ export async function updatePrices(activeEvents) {
 
   const properties = await Property.find().lean();
 
-  const updates = [];
   const bulkOps = [];
 
   for (const property of properties) {
@@ -44,38 +102,55 @@ export async function updatePrices(activeEvents) {
     if (!city) continue;
 
     const eventDemandMod = cityEventCache.get(city._id.toString()) || 0;
-
     const effectiveDemand = clamp(city.demandIndex + eventDemandMod, 0.3, 3.0);
 
-    const demandEffect = 1 + (effectiveDemand - 1.0) * 0.02;
-    const growthEffect = 1 + city.growthRate * 0.2;
-    const supplyPenalty = city.supplyIndex > 1.5 ? 1 + (1.5 - city.supplyIndex) * 0.1 : 1;
+    const demandFactor = 1 + (effectiveDemand - 1.0) * 0.15;
+    const supplyFactor = 1 / (1 + (city.supplyIndex - 1.0) * 0.1);
+    const growthFactor = 1 + city.growthRate * 0.5;
+    const fairValue = (property.basePrice || property.currentPrice) * demandFactor * supplyFactor * growthFactor;
 
-    const targetMultiplier = demandEffect * growthEffect * supplyPenalty;
-    const targetPrice = property.basePrice * targetMultiplier;
+    let regime = property.regime;
+    let regimeEndTick = property.regimeEndTick || 0;
 
-    const blendedPrice = property.currentPrice * (1 - SMOOTHING_FACTOR) + targetPrice * SMOOTHING_FACTOR;
-
-    const history = property.priceHistory || [];
-    let momentum = 0;
-    if (history.length >= 3) {
-      const prices = history.slice(-3);
-      const trend = (prices.at(-1).price - prices[0].price) / prices[0].price;
-      momentum = clamp(trend * MOMENTUM_AMPLIFICATION, -MOMENTUM_CAP, MOMENTUM_CAP);
+    if (!regime || tickNumber >= regimeEndTick) {
+      regime = pickRegime(effectiveDemand);
+      const duration = 6 + Math.floor(Math.random() * 13);
+      regimeEndTick = tickNumber + duration;
     }
 
-    const noise = 1 + (Math.random() - 0.5) * NOISE_RANGE * 2;
+    const regimeConfig = REGIMES[regime];
 
-    let newPrice = blendedPrice * (1 + momentum) * noise;
+    const regimeBias = regimeConfig.bias;
 
-    const oldPrice = property.currentPrice;
-    const maxDelta = oldPrice * MAX_TICK_CHANGE;
-    const rawDelta = newPrice - oldPrice;
-    const clampedDelta = clamp(rawDelta, -maxDelta, maxDelta);
-    newPrice = oldPrice + clampedDelta;
+    const reversionStrength = 0.025;
+    const reversion = clamp((fairValue - property.currentPrice) / property.currentPrice * reversionStrength, -0.02, 0.02);
 
-    const floor = Math.round((property.basePrice || 0) * PRICE_FLOOR);
-    const ceiling = Math.round((property.basePrice || 0) * PRICE_CEILING);
+    const momentum = calculateMomentum(property.priceHistory) * 0.2;
+
+    const propertyVol = property.volatility || 0.1;
+    const noiseBase = propertyVol * 0.012 * regimeConfig.volMod;
+    const noise = (Math.random() - 0.5) * noiseBase * 2;
+
+    let change = regimeBias + reversion + momentum + noise;
+
+    const priceRatio = property.basePrice > 0 ? property.currentPrice / property.basePrice : 1.0;
+
+    if (priceRatio > 2.5) {
+      const zone = (priceRatio - 2.5) / 0.5;
+      change -= zone * 0.008;
+    }
+    if (priceRatio < 0.6) {
+      const zone = (0.6 - priceRatio) / 0.1;
+      change += zone * 0.008;
+    }
+
+    const maxChange = property.currentPrice * 0.04;
+    change = clamp(change, -maxChange / property.currentPrice, maxChange / property.currentPrice);
+
+    let newPrice = property.currentPrice * (1 + change);
+
+    const floor = Math.round((property.basePrice || 0) * 0.5);
+    const ceiling = Math.round((property.basePrice || 0) * 3.0);
     newPrice = clamp(Math.round(newPrice), floor || 1, ceiling || Infinity);
 
     const newRent = Math.round(newPrice * 0.004 * (0.5 + Math.random() * 0.5));
@@ -87,16 +162,15 @@ export async function updatePrices(activeEvents) {
       updateOne: {
         filter: { _id: property._id },
         update: {
-          $set: { currentPrice: newPrice, rent: newRent, priceHistory: trimmedHistory },
+          $set: {
+            currentPrice: newPrice,
+            rent: newRent,
+            priceHistory: trimmedHistory,
+            regime,
+            regimeEndTick,
+          },
         },
       },
-    });
-
-    updates.push({
-      propertyId: property._id,
-      name: property.name,
-      oldPrice,
-      newPrice,
     });
   }
 
@@ -107,5 +181,8 @@ export async function updatePrices(activeEvents) {
     }
   }
 
-  return updates;
+  return bulkOps.map((op) => ({
+    propertyId: op.updateOne.filter._id,
+    newPrice: op.updateOne.update.$set.currentPrice,
+  }));
 }

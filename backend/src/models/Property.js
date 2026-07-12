@@ -47,6 +47,12 @@ const propertySchema = new mongoose.Schema(
     occupancy: { type: Number, default: 0, min: 0, max: 100 },
     maintenanceCost: { type: Number, default: 0 },
     parentBuilding: { type: mongoose.Schema.Types.ObjectId, ref: 'Property' },
+    regime: {
+      type: String,
+      enum: ['bull', 'bear', 'stable', 'recovery', 'correction', 'boom'],
+      default: 'stable',
+    },
+    regimeEndTick: { type: Number, default: 0 },
     lastUpgrade: { type: String },
     upgrades: [
       {
