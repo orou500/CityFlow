@@ -20,6 +20,7 @@ logs/
 data/
 mongodb-data/
 uploads/
+backups/
 
 # === Coverage ===
 coverage/
