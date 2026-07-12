@@ -476,7 +476,6 @@ export const useGameStore = create((set, get) => ({
     return data;
   },
   downloadBackup: (id) => {
-    const token = localStorage.getItem('token');
     const a = document.createElement('a');
     a.href = `/api/admin/backups/${id}/download`;
     a.target = '_blank';
