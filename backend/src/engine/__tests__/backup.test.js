@@ -4,7 +4,12 @@ import { gzipSync } from 'zlib';
 import { tmpdir } from 'os';
 import path from 'path';
 import fs from 'fs/promises';
-import { convertExtendedJSONValue, validateBackupGzip, findBackupByIdentifier, shouldSkipRestoreCollection } from '../backup.js';
+import {
+  convertExtendedJSONValue,
+  validateBackupGzip,
+  findBackupByIdentifier,
+  shouldSkipRestoreCollection,
+} from '../backup.js';
 
 describe('Backup Tests', () => {
   it('converts extended JSON date wrappers to Date instances', () => {
@@ -56,18 +61,18 @@ describe('Backup Tests', () => {
 
   it('converts raw buffer-like object ids to ObjectId instances', () => {
     const rawObjectId = {
-      '0': 106,
-      '1': 83,
-      '2': 97,
-      '3': 101,
-      '4': 17,
-      '5': 21,
-      '6': 160,
-      '7': 37,
-      '8': 38,
-      '9': 207,
-      '10': 235,
-      '11': 83,
+      0: 106,
+      1: 83,
+      2: 97,
+      3: 101,
+      4: 17,
+      5: 21,
+      6: 160,
+      7: 37,
+      8: 38,
+      9: 207,
+      10: 235,
+      11: 83,
     };
     const normalized = convertExtendedJSONValue({ _id: rawObjectId });
 
@@ -76,7 +81,24 @@ describe('Backup Tests', () => {
   });
 
   it('converts nested $oid object wrappers to ObjectId instances', () => {
-    const nestedOid = { _id: { $oid: { '0': '106', '1': '83', '2': '97', '3': '101', '4': '17', '5': '21', '6': '160', '7': '37', '8': '38', '9': '207', '10': '235', '11': '83' } } };
+    const nestedOid = {
+      _id: {
+        $oid: {
+          0: '106',
+          1: '83',
+          2: '97',
+          3: '101',
+          4: '17',
+          5: '21',
+          6: '160',
+          7: '37',
+          8: '38',
+          9: '207',
+          10: '235',
+          11: '83',
+        },
+      },
+    };
     const normalized = convertExtendedJSONValue(nestedOid);
 
     expect(normalized._id).toBeDefined();
@@ -94,9 +116,9 @@ describe('Backup Tests', () => {
   it('converts nested ObjectId-like objects in nested fields', () => {
     const propertyDoc = {
       _id: { $oid: '507f1f77bcf86cd799439011' },
-      cityId: { '0': 106, '1': 83, '2': 97, '3': 101, '4': 17, '5': 21, '6': 160, '7': 37, '8': 38, '9': 207, '10': 235, '11': 83 },
+      cityId: { 0: 106, 1: 83, 2: 97, 3: 101, 4: 17, 5: 21, 6: 160, 7: 37, 8: 38, 9: 207, 10: 235, 11: 83 },
       ownerId: { $oid: '507f1f77bcf86cd799439012' },
-      parentBuilding: { '0': 106, '1': 83, '2': 97, '3': 101, '4': 17, '5': 21, '6': 160, '7': 37, '8': 38, '9': 207, '10': 235, '11': 84 },
+      parentBuilding: { 0: 106, 1: 83, 2: 97, 3: 101, 4: 17, 5: 21, 6: 160, 7: 37, 8: 38, 9: 207, 10: 235, 11: 84 },
     };
     const normalized = convertExtendedJSONValue(propertyDoc);
 
@@ -112,7 +134,10 @@ describe('Backup Tests', () => {
 
   it('finds a backup by direct file path when metadata is missing', async () => {
     const tempFile = path.join(tmpdir(), `backup-fileonly-${Date.now()}.json.gz`);
-    await fs.writeFile(tempFile, gzipSync(Buffer.from(EJSON.stringify({ collection: 'users', documents: [] }) + '\n', 'utf8')));
+    await fs.writeFile(
+      tempFile,
+      gzipSync(Buffer.from(EJSON.stringify({ collection: 'users', documents: [] }) + '\n', 'utf8')),
+    );
 
     const result = await findBackupByIdentifier(tempFile);
 
@@ -128,7 +153,7 @@ describe('Backup Tests', () => {
   it('converts deeply nested ObjectId-like structures in property documents', () => {
     const complexProperty = {
       _id: { $oid: '507f1f77bcf86cd799439011' },
-      cityId: { '0': 106, '1': 83, '2': 97, '3': 101, '4': 17, '5': 21, '6': 160, '7': 37, '8': 38, '9': 207, '10': 235, '11': 83 },
+      cityId: { 0: 106, 1: 83, 2: 97, 3: 101, 4: 17, 5: 21, 6: 160, 7: 37, 8: 38, 9: 207, 10: 235, 11: 83 },
       ownerId: { $oid: '507f1f77bcf86cd799439012' },
       parentBuilding: { $oid: '507f1f77bcf86cd799439013' },
       priceHistory: [
@@ -161,4 +186,3 @@ describe('Backup Tests', () => {
     });
   });
 });
-

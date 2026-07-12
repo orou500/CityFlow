@@ -100,10 +100,7 @@ export async function tickEvents() {
     if (isExpired) {
       expired.push(event._id);
 
-      await City.updateMany(
-        { 'activeEvents.eventId': event._id },
-        { $pull: { activeEvents: { eventId: event._id } } },
-      );
+      await City.updateMany({ 'activeEvents.eventId': event._id }, { $pull: { activeEvents: { eventId: event._id } } });
     }
 
     await Event.updateOne(

@@ -75,7 +75,14 @@ router.get('/:id/logs', async (req, res) => {
     if (!backup) {
       return res.status(404).json({ error: 'Backup not found' });
     }
-    res.json({ backupId: backup._id, filename: backup.filename, status: backup.status, type: backup.type, createdAt: backup.createdAt, logs: backup.logs });
+    res.json({
+      backupId: backup._id,
+      filename: backup.filename,
+      status: backup.status,
+      type: backup.type,
+      createdAt: backup.createdAt,
+      logs: backup.logs,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

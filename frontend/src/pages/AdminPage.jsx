@@ -1596,26 +1596,38 @@ export default function AdminPage() {
       )}
 
       {backupLogs && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setBackupLogs(null)}>
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={() => setBackupLogs(null)}
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('admin.backupLogs')}</h3>
-              <button onClick={() => setBackupLogs(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl">&times;</button>
+              <button
+                onClick={() => setBackupLogs(null)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl"
+              >
+                &times;
+              </button>
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-              {backupLogs.filename} &middot; {backupLogs.type} &middot; {backupLogs.status} &middot; {new Date(backupLogs.createdAt).toLocaleString()}
+              {backupLogs.filename} &middot; {backupLogs.type} &middot; {backupLogs.status} &middot;{' '}
+              {new Date(backupLogs.createdAt).toLocaleString()}
             </div>
             {backupLogsLoading ? (
               <p className="text-sm text-gray-500">{t('common.loading')}</p>
             ) : (
               <div className="flex-1 overflow-y-auto bg-gray-900 rounded p-3 font-mono text-xs space-y-1">
-                {backupLogs.logs?.length === 0 && (
-                  <p className="text-gray-400">{t('admin.noLogs')}</p>
-                )}
+                {backupLogs.logs?.length === 0 && <p className="text-gray-400">{t('admin.noLogs')}</p>}
                 {backupLogs.logs?.map((log, i) => (
                   <div key={i} className="flex gap-2">
                     <span className="text-gray-500 shrink-0">{new Date(log.timestamp).toLocaleTimeString()}</span>
-                    <span className={`shrink-0 ${log.level === 'error' ? 'text-red-400' : log.level === 'warn' ? 'text-yellow-400' : 'text-green-400'}`}>
+                    <span
+                      className={`shrink-0 ${log.level === 'error' ? 'text-red-400' : log.level === 'warn' ? 'text-yellow-400' : 'text-green-400'}`}
+                    >
                       [{log.level}]
                     </span>
                     <span className="text-gray-300">{log.message}</span>
@@ -1624,7 +1636,12 @@ export default function AdminPage() {
               </div>
             )}
             <div className="flex justify-end mt-4">
-              <button onClick={() => setBackupLogs(null)} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm rounded">{t('common.close')}</button>
+              <button
+                onClick={() => setBackupLogs(null)}
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm rounded"
+              >
+                {t('common.close')}
+              </button>
             </div>
           </div>
         </div>

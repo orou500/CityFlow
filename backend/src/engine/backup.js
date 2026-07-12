@@ -59,7 +59,12 @@ export async function findBackupByIdentifier(backupId) {
       const directFilepath = path.isAbsolute(id) ? id : path.join(config.backupDir, id);
       try {
         await fs.access(directFilepath);
-        return { filename: path.basename(directFilepath), filepath: directFilepath, status: 'completed', __fileOnly: true };
+        return {
+          filename: path.basename(directFilepath),
+          filepath: directFilepath,
+          status: 'completed',
+          __fileOnly: true,
+        };
       } catch {
         // ignore
       }
@@ -347,7 +352,11 @@ export async function createBackup(userId, type = 'manual') {
   try {
     const db = mongoose.connection.db;
     const collections = await db.listCollections().toArray();
-    await pushLog(backup, 'info', `Found ${collections.length} collections: ${collections.map((c) => c.name).join(', ')}`);
+    await pushLog(
+      backup,
+      'info',
+      `Found ${collections.length} collections: ${collections.map((c) => c.name).join(', ')}`,
+    );
 
     const writeStream = createWriteStream(filepath);
     const gzip = createGzip();
@@ -383,9 +392,16 @@ export async function createBackup(userId, type = 'manual') {
     backup.collections = collections.length;
     backup.status = 'completed';
     await backup.save();
-    await pushLog(backup, 'info', `Backup completed: ${formatBytes(stat.size)}, ${totalDocs} documents in ${collections.length} collections, ${duration}s`);
+    await pushLog(
+      backup,
+      'info',
+      `Backup completed: ${formatBytes(stat.size)}, ${totalDocs} documents in ${collections.length} collections, ${duration}s`,
+    );
 
-    appendLog('info', `Created ${filename} (${formatBytes(stat.size)}) - ${totalDocs} docs in ${collections.length} collections, ${duration}s`);
+    appendLog(
+      'info',
+      `Created ${filename} (${formatBytes(stat.size)}) - ${totalDocs} docs in ${collections.length} collections, ${duration}s`,
+    );
     return backup;
   } catch (err) {
     backup.status = 'failed';
@@ -469,9 +485,12 @@ export async function restoreBackup(backupId, userId) {
           collName = data.collection;
           documents = Array.isArray(data.documents) ? data.documents : [];
         } catch (jsonErr) {
-          throw new Error(`Failed to parse backup collection: ${parseErr.message}; fallback failed: ${jsonErr.message}`, {
-            cause: jsonErr,
-          });
+          throw new Error(
+            `Failed to parse backup collection: ${parseErr.message}; fallback failed: ${jsonErr.message}`,
+            {
+              cause: jsonErr,
+            },
+          );
         }
       }
 
@@ -480,7 +499,7 @@ export async function restoreBackup(backupId, userId) {
         continue;
       }
 
-      documents = documents.map(doc => {
+      documents = documents.map((doc) => {
         const converted = convertExtendedJSONValue(doc);
         const normalized = normalizeAllObjectIds(converted);
 
@@ -492,7 +511,10 @@ export async function restoreBackup(backupId, userId) {
             try {
               normalized._id = new mongoose.Types.ObjectId(String(normalized._id));
             } catch {
-              appendLog('warn', `Generating new _id for document in ${collName} (was: ${JSON.stringify(normalized._id)})`);
+              appendLog(
+                'warn',
+                `Generating new _id for document in ${collName} (was: ${JSON.stringify(normalized._id)})`,
+              );
               normalized._id = new mongoose.Types.ObjectId();
             }
           }
@@ -507,16 +529,19 @@ export async function restoreBackup(backupId, userId) {
         } catch {
           // collection may not exist
         }
-        
+
         try {
           const result = await db.collection(collName).insertMany(documents, { ordered: false });
-          
+
           if (collName === 'properties' && result.insertedIds.length > 0) {
             const insertedId = result.insertedIds[0];
             const inserted = await db.collection(collName).findOne({ _id: insertedId });
-            appendLog('info', `Property inserted: _id=${inserted._id} (type: ${typeof inserted._id}), cityId type: ${typeof inserted.cityId}`);
+            appendLog(
+              'info',
+              `Property inserted: _id=${inserted._id} (type: ${typeof inserted._id}), cityId type: ${typeof inserted.cityId}`,
+            );
           }
-          
+
           collectionsRestored++;
         } catch (insertErr) {
           throw new Error(`Failed to insert documents into ${collName}: ${insertErr.message}`, { cause: insertErr });
@@ -539,7 +564,11 @@ export async function restoreBackup(backupId, userId) {
         const status = actualCount === expectedCount ? 'OK' : 'MISMATCH';
         validationResults.push({ collection: collName, expected: expectedCount, actual: actualCount, status });
         if (actualCount !== expectedCount) {
-          await logBackup(backup, 'warn', `Validation mismatch for ${collName}: expected ${expectedCount}, got ${actualCount}`);
+          await logBackup(
+            backup,
+            'warn',
+            `Validation mismatch for ${collName}: expected ${expectedCount}, got ${actualCount}`,
+          );
         }
       } catch {
         validationResults.push({ collection: collName, expected: expectedCount, actual: -1, status: 'ERROR' });
@@ -547,9 +576,17 @@ export async function restoreBackup(backupId, userId) {
     }
     const mismatches = validationResults.filter((r) => r.status !== 'OK');
     if (mismatches.length > 0) {
-      await logBackup(backup, 'warn', `Restore validation: ${mismatches.length} collection(s) have count mismatches: ${mismatches.map((m) => `${m.collection} (expected ${m.expected}, got ${m.actual})`).join(', ')}`);
+      await logBackup(
+        backup,
+        'warn',
+        `Restore validation: ${mismatches.length} collection(s) have count mismatches: ${mismatches.map((m) => `${m.collection} (expected ${m.expected}, got ${m.actual})`).join(', ')}`,
+      );
     } else {
-      await logBackup(backup, 'info', `Restore validation: all ${validationResults.length} collections match expected counts`);
+      await logBackup(
+        backup,
+        'info',
+        `Restore validation: all ${validationResults.length} collections match expected counts`,
+      );
     }
 
     await logBackup(backup, 'info', `Restore completed: ${collectionsRestored} collections restored`);

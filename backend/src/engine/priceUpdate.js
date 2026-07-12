@@ -17,12 +17,12 @@ function weightedRandom(options) {
 }
 
 const REGIMES = {
-  bull:       { bias:  0.005, volMod: 0.8 },
-  bear:       { bias: -0.005, volMod: 0.8 },
-  stable:     { bias:  0.000, volMod: 0.5 },
-  recovery:   { bias:  0.003, volMod: 1.0 },
+  bull: { bias: 0.005, volMod: 0.8 },
+  bear: { bias: -0.005, volMod: 0.8 },
+  stable: { bias: 0.0, volMod: 0.5 },
+  recovery: { bias: 0.003, volMod: 1.0 },
   correction: { bias: -0.003, volMod: 1.0 },
-  boom:       { bias:  0.008, volMod: 1.4 },
+  boom: { bias: 0.008, volMod: 1.4 },
 };
 
 const REGIME_NAMES = Object.keys(REGIMES);
@@ -123,7 +123,11 @@ export async function updatePrices(activeEvents) {
     const regimeBias = regimeConfig.bias;
 
     const reversionStrength = 0.025;
-    const reversion = clamp((fairValue - property.currentPrice) / property.currentPrice * reversionStrength, -0.02, 0.02);
+    const reversion = clamp(
+      ((fairValue - property.currentPrice) / property.currentPrice) * reversionStrength,
+      -0.02,
+      0.02,
+    );
 
     const momentum = calculateMomentum(property.priceHistory) * 0.2;
 
