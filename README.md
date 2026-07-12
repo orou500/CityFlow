@@ -12,7 +12,7 @@ A full-stack real-time multiplayer simulation game where players buy, sell, deve
 cityflow/
 ├── backend/
 │   └── src/
-│       ├── config/          # DB connection, env vars, dev project defs
+│       ├── config/          # DB connection, env vars, scheduler config, backup config
 │       ├── engine/          # Simulation logic (tick, market, season reset, property generation)
 │       ├── middleware/       # JWT auth & admin guards
 │       ├── models/          # Mongoose schemas (User, Property, City, Season, GameState, etc.)
@@ -52,9 +52,11 @@ cityflow/
 | **Legal & Compliance** | Terms of Service, Privacy Policy, Cookie Policy pages with registration acceptance |
 | **Onboarding** | 10-step guided tour for new players covering all game features |
 | **Admin Panel** | Full control over simulation, users, properties, cities, events, seasons, and manual tick execution |
+| **Backup & Restore** | Admin-only database backup/restore system with gzip-compressed exports, upload/download, auto-retention, and full-fidelity restore |
 | **i18n** | Full English and Hebrew interface with proper RTL support across all components |
 | **Dark Mode** | Dark, Light, and System theme toggle |
 | **Database-Level Tick Lock** | Prevents duplicate tick execution in multi-replica deployments using MongoDB lock documents |
+| **Code of Conduct** | Community guidelines based on the Contributor Covenant |
 
 ## Tech Stack
 
@@ -76,7 +78,7 @@ cityflow/
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 20+
 - MongoDB 6+ (or Docker)
 - npm
 
@@ -167,10 +169,28 @@ Season 1 is automatically created on server startup if no active season exists.
 
 ### Market Dynamics
 
-- **Demand Index** (0–100): fluctuates per city each tick
-- **Supply Index**: inversely related to demand
-- **Price Movement**: `currentPrice += currentPrice × volatility × (demandIndex/100 - 0.5)`
-- **Rent**: 0.4% of current price per tick
+Each property has a **market regime** that persists for 6–18 months, creating distinct behavioral patterns:
+
+| Regime | Bias | Volatility | Description |
+| ------ | ---- | ---------- | ----------- |
+| `bull` | +0.5%/month | Low | Steady upward growth |
+| `bear` | -0.5%/month | Low | Steady decline |
+| `stable` | 0 | Very Low | Sideways, minimal movement |
+| `recovery` | +0.3%/month | Medium | Recovering from downturn |
+| `correction` | -0.3%/month | Medium | Cooling after overheating |
+| `boom` | +0.8%/month | High | Rapid growth with high variance |
+
+Regime selection is weighted by city demand — high demand favors bull/boom, low demand favors bear/correction.
+
+**Price calculation per tick:**
+1. **Fair value** = basePrice × demandFactor × supplyFactor × growthFactor
+2. **Regime bias** adds directional pressure
+3. **Mean reversion** (2.5%) pulls price toward fair value
+4. **Momentum** (20% of 5-tick average trend) continues recent direction
+5. **Noise** scaled by property volatility and regime — adds unpredictability
+6. **Soft boundaries** add resistance near 2.5×/0.6× base price (hard clamp at 3.0×/0.5×)
+
+- **Rent**: 0.2%–0.4% of current price per tick (randomized)
 
 ### Property Generation
 
@@ -186,11 +206,12 @@ New properties are assigned to the bank (`ownerId: null`) at a price of `city.av
 
 Random or admin-created events affect cities with weighted probability and impact categories:
 
-| Type | Color | Weight | Effect |
-| ---- | ----- | ------ | ------ |
-| `positive` | Green | 0.35 | Demand spike, price surge |
-| `negative` | Red | 0.35 | Demand drop, price decline |
-| `neutral` | Blue | 0.30 | Sustained market shift |
+| Scope | Effect |
+| ----- | ------ |
+| `local` | Affects a single random city |
+| `global` | Affects all cities (at 50% impact strength) |
+
+**Event templates** include Interest Rate Change, Economic Boom, Recession, City Development Plan, Housing Crisis, Market Correction, Tech Hub Growth, and Natural Disaster. Events modify demand, supply, and growth indices on affected cities for their duration.
 
 Events are rendered on the world map as colored pins with popups showing name, description, city, duration, and remaining ticks.
 
@@ -235,9 +256,11 @@ All routes except `GET /` require authentication.
 | Method | Path | Description |
 | ------ | ---- | ----------- |
 | GET | `/me` | Get current user profile |
+| GET | `/search` | Search users by username |
 | GET | `/:username` | Get user profile with properties, portfolio value, season history |
 | PUT | `/settings` | Update display name, bio, portfolio visibility |
 | PUT | `/password` | Change password |
+| PUT | `/theme` | Update theme preference (light/dark/system) |
 | POST | `/avatar` | Upload profile picture |
 | PUT | `/language` | Update preferred language |
 | PUT | `/onboarding` | Mark onboarding as completed |
@@ -292,6 +315,7 @@ All routes except `GET /` require authentication.
 | GET | `/projects` | List user's construction projects |
 | GET | `/projects/:id` | Get project details |
 | GET | `/my-buildings` | List user's developed buildings |
+| GET | `/upgrades/:propertyId` | Available upgrades for a property |
 | POST | `/upgrade` | Upgrade a building |
 
 ### Friends (`/api/friends`) — requires authentication
@@ -299,6 +323,7 @@ All routes except `GET /` require authentication.
 | Method | Path | Description |
 | ------ | ---- | ----------- |
 | GET | `/` | List friends |
+| GET | `/requests` | List pending friend requests |
 | GET | `/status/:username` | Get friendship status with a user |
 | POST | `/request/:username` | Send friend request |
 | POST | `/accept/:requestId` | Accept friend request |
@@ -311,6 +336,18 @@ All routes except `GET /` require authentication.
 | Method | Path | Description |
 | ------ | ---- | ----------- |
 | GET | `/status` | Current tick number, last update, next update time |
+
+### Stats (`/api/stats`)
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| GET | `/` | Global stats (player count, property count, city count, transactions, top players, recent activity) |
+
+### Events (`/api/events`)
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| GET | `/active` | List all currently active events |
 
 ### Seasons (`/api/seasons`)
 
@@ -345,6 +382,21 @@ All routes except `GET /` require authentication.
 | POST | `/seasons/end` | End current season and start a new one (requires `confirm: true`) |
 | GET | `/construction-projects` | List all construction projects |
 | PUT | `/construction-projects/:id` | Update a construction project |
+| POST | `/construction-projects/trigger-event` | Trigger a construction event |
+| GET | `/development-zones` | List development zones |
+| GET | `/maintenance` | Get maintenance mode status |
+| POST | `/maintenance/enable` | Enable maintenance mode |
+| POST | `/maintenance/disable` | Disable maintenance mode |
+| GET | `/backups` | List all backups (newest first) |
+| POST | `/backups` | Create a new backup (async background job) |
+| GET | `/backups/settings` | Get backup settings (retention count, schedule, directory) |
+| GET | `/backups/:id` | Get backup details |
+| GET | `/backups/:id/download` | Download backup file (gzipped JSON) |
+| POST | `/backups/upload` | Upload and restore from a backup file (multipart/form-data) |
+| POST | `/backups/:id/restore` | Restore database from a backup |
+| DELETE | `/backups/:id` | Delete a backup file |
+| GET | `/backups/:id/logs` | Get backup logs |
+| POST | `/backups/retention` | Run retention cleanup now |
 
 ## Database Models
 
@@ -358,16 +410,22 @@ All routes except `GET /` require authentication.
 | `password` | String | bcrypt hash (not returned) |
 | `balance` | Number | Cash balance (default 100,000) |
 | `ownedProperties` | [ObjectId] | References to Property |
+| `friends` | [ObjectId] | References to User |
 | `role` | String | `user` or `admin` |
 | `banned` | Boolean | Whether user is banned |
+| `theme` | String | `light`, `dark`, or `system` (default `system`) |
 | `preferredLanguage` | String | `en` or `he` |
 | `avatar` | String | Profile picture URL |
 | `displayName` | String | Custom display name |
 | `bio` | String | User bio |
 | `achievements` | [String] | Earned achievements |
 | `acceptedTerms` | Boolean | Terms of Service accepted |
+| `acceptedTermsAt` | Date | When terms were accepted |
 | `acceptedPrivacy` | Boolean | Privacy Policy accepted |
+| `acceptedPrivacyAt` | Date | When privacy policy was accepted |
+| `lastLoginAt` | Date | Last login timestamp |
 | `onboarding.completed` | Boolean | Whether onboarding tour is completed |
+| `onboarding.completedAt` | Date | When onboarding was completed |
 | `profileVisibility.portfolio` | Boolean | Show portfolio on public profile |
 | `profileVisibility.activity` | Boolean | Show transaction activity on public profile |
 
@@ -384,9 +442,20 @@ All routes except `GET /` require authentication.
 | `rent` | Number | Rent per tick |
 | `condition` | Number | 0–100 condition score |
 | `forSale` | Boolean | Listed on marketplace? |
+| `lastPurchasePrice` | Number | Price when last purchased |
+| `lastPurchaseDate` | Date | When last purchased |
 | `volatility` | Number | 0–1 price volatility factor |
-| `developmentLevel` | Number | Building development level |
+| `regime` | String | Current market regime: bull, bear, stable, recovery, correction, boom |
+| `regimeEndTick` | Number | Tick when current regime expires |
+| `size` | Number | Property size |
+| `location` | String | Location description |
+| `developmentLevel` | Number | Building development level (0 = raw land) |
+| `buildingType` | String | Type of building |
 | `units` | [Object] | Rental units within the property |
+| `occupancy` | Number | 0–100 occupancy percentage |
+| `maintenanceCost` | Number | Maintenance cost per tick |
+| `parentBuilding` | ObjectId? | Reference to parent Property (for units) |
+| `lastUpgrade` | String | Name of last applied upgrade |
 | `upgrades` | [Object] | Applied upgrades |
 | `priceHistory` | [{tick, price}] | Array of historical price data points |
 
@@ -435,6 +504,10 @@ All routes except `GET /` require authentication.
 | `seasonId` | ObjectId | Reference to current active Season |
 | `tickLock` | String | Owner ID of the lock holder (prevents duplicate ticks) |
 | `tickLockedAt` | Date | When the lock was acquired (auto-expires after 5 min) |
+| `maintenanceMode` | Boolean | Whether maintenance mode is active |
+| `maintenanceMessage` | String | Custom maintenance message |
+| `maintenanceEnabledAt` | Date | When maintenance was enabled |
+| `maintenanceEnabledBy` | ObjectId | Admin who enabled maintenance |
 
 ### PropertyOffer
 
@@ -454,11 +527,12 @@ All routes except `GET /` require authentication.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | `userId` | ObjectId | Recipient |
-| `type` | String | property_offer, offer_accepted, offer_rejected, offer_countered, offer_expired, construction_complete, friend_request |
+| `type` | String | property_offer, offer_accepted, offer_rejected, offer_countered, offer_expired, construction_complete, friend_request, system |
 | `title` | String | Notification title (translated) |
 | `message` | String | Notification body |
 | `relatedId` | ObjectId? | Reference to related entity |
 | `read` | Boolean | Whether user has viewed it |
+| `global` | Boolean | Whether notification applies to all users |
 
 ### Transaction
 
@@ -466,9 +540,10 @@ All routes except `GET /` require authentication.
 | ----- | ---- | ----------- |
 | `buyerId` | ObjectId | Buyer user |
 | `sellerId` | ObjectId? | Seller user (null for bank sales) |
-| `propertyId` | ObjectId | Property involved |
-| `price` | Number | Sale price |
-| `type` | String | BUY, SELL, RENT, LOAN, LOAN PMT, REPAY, PENALTY, REPOSSESS, BUILD, UPGRADE |
+| `propertyId` | ObjectId? | Property involved (null for loan payments and penalties) |
+| `price` | Number | Transaction amount |
+| `type` | String | buy, sell, rent, loan, loan_payment, loan_repay, penalty, repossess, construction, upgrade, system |
+| `global` | Boolean | Whether this is a system-wide notification |
 | `tickNumber` | Number | Tick when transaction occurred |
 
 ### Event
@@ -477,9 +552,8 @@ All routes except `GET /` require authentication.
 | ----- | ---- | ----------- |
 | `name` | String | Event name |
 | `description` | String | Detailed description |
-| `type` | String | boom, recession, disaster, policy |
-| `scope` | String | local or global |
-| `impact` | Object | Effect on demand/price |
+| `type` | String | `global` or `local` |
+| `impact` | Object | `{ demandDelta, supplyDelta, growthDelta }` |
 | `affectedCities` | [ObjectId] | Cities this event targets |
 | `duration` | Number | Total tick duration |
 | `remainingTicks` | Number | Ticks remaining |
@@ -515,8 +589,31 @@ All routes except `GET /` require authentication.
 | `constructionPeriods` | Number | Total periods required |
 | `startPeriod` | Number | Tick when construction started |
 | `completionPeriod` | Number | Tick when construction completes |
-| `status` | String | pending, under_construction, completed |
+| `status` | String | planning, under_construction, completed, cancelled |
 | `delayTicks` | Number | Cumulative delay ticks |
+
+### Backup
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `filename` | String | Server filename |
+| `originalName` | String | Original upload filename |
+| `size` | Number | File size in bytes |
+| `type` | String | `manual`, `scheduled`, or `upload` |
+| `status` | String | `pending`, `in_progress`, `completed`, or `failed` |
+| `createdBy` | ObjectId | Admin who created the backup |
+| `error` | String? | Error message if failed |
+| `collections` | Number | Number of collections backed up |
+| `duration` | Number? | Backup duration in ms |
+| `logs` | [{timestamp, level, message}] | Backup log entries |
+
+### FriendRequest
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `senderId` | ObjectId | User who sent the request |
+| `receiverId` | ObjectId | User who received the request |
+| `status` | String | `pending`, `accepted`, `declined` |
 
 ## Frontend Routes
 
@@ -552,11 +649,13 @@ All routes except `GET /` require authentication.
 | `npm run dev` | Start backend server (port 5000) |
 | `npm run seed` | Seed/refresh database with cities and users |
 | `npm start` | Start backend in production mode |
-| `npm test` | Run all tests (59 tests across 5 test files) |
+| `npm test` | Run all tests (68 tests across 6 test files) |
 | `npm run test:watch` | Run tests in watch mode |
 | `npm run test:coverage` | Run tests with coverage report |
 | `npm run lint` | Run ESLint |
+| `npm run lint:fix` | Run ESLint with auto-fix |
 | `npm run format` | Check code formatting with Prettier |
+| `npm run format:fix` | Fix code formatting with Prettier |
 
 ### Frontend (cd frontend/)
 
@@ -565,6 +664,13 @@ All routes except `GET /` require authentication.
 | `npm run dev` | Start Vite dev server (port 3000) |
 | `npm run build` | Build frontend for production |
 | `npm run preview` | Preview production build |
+| `npm test` | Run frontend tests |
+| `npm run test:watch` | Run frontend tests in watch mode |
+| `npm run test:coverage` | Run frontend tests with coverage |
+| `npm run lint` | Run ESLint |
+| `npm run lint:fix` | Run ESLint with auto-fix |
+| `npm run format` | Check code formatting with Prettier |
+| `npm run format:fix` | Fix code formatting with Prettier |
 
 ## Deployment
 
@@ -582,14 +688,48 @@ All routes except `GET /` require authentication.
 | MongoDB | StatefulSet with persistent storage |
 | Backend | 2-replica Deployment with database-level tick lock |
 | Frontend | 2-replica Deployment with nginx serving static files |
+| Backup PVC | 5Gi PersistentVolumeClaim (`local-path` StorageClass) for backup storage |
 | Ingress | Traefik with Let's Encrypt TLS (TLS-ALPN challenge) |
 | SSL | Auto-renewed Let's Encrypt certificate for `cityflow.sizops.co.il` |
+
+### Backup & Restore
+
+Backups are managed entirely from the **Admin Panel** (Database tab). The system uses the native MongoDB driver with gzip compression — no CLI tools required.
+
+**How it works:**
+- Backups export every collection as EJSON lines (one document per line), preserving all ObjectIds, dates, and types
+- Backup files are stored on a PersistentVolumeClaim (`cityflow-backups`, 5Gi)
+- Automatic retention keeps the last **5** backups
+- Logs are stored per-backup in the `Backup` collection and visible in the admin panel
+
+**Restore process:**
+1. Drops each collection and re-inserts documents with proper ObjectId conversion
+2. Restores the `users` collection (including balances, portfolios, settings)
+3. Preserves the performing admin user to prevent lockout
+4. Validates document counts after restore
+5. Frontend clears auth state and redirects to login
+
+**Admin endpoints:**
+
+| Action | Method | Endpoint |
+| ------ | ------ | -------- |
+| Create backup | POST | `/api/admin/backups` |
+| List backups | GET | `/api/admin/backups` |
+| Download backup | GET | `/api/admin/backups/:id/download` |
+| Upload & restore | POST | `/api/admin/backups/upload` |
+| Restore from backup | POST | `/api/admin/backups/:id/restore` |
+| Delete backup | DELETE | `/api/admin/backups/:id` |
+| View logs | GET | `/api/admin/backups/:id/logs` |
 
 ### Docker
 
 Both backend and frontend use multi-stage Docker builds:
 - **Builder stage**: Installs dependencies and builds assets using `--platform=$BUILDPLATFORM` for fast cross-compilation
 - **Production stage**: Minimal image with only runtime dependencies, non-root user, tini init process (backend)
+
+## Community
+
+This project is governed by the [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code.
 
 ## License
 

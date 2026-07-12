@@ -17,9 +17,11 @@ Tags are generated automatically by the CD pipeline:
 
 | Trigger               | Tags                                      |
 |-----------------------|-------------------------------------------|
-| Push to `main`        | `latest`, `main`, `sha-<commit>`          |
-| Release `v1.2.3`      | `1.2.3`, `1.2`, `sha-<commit>`            |
-| Manual (`workflow_dispatch`) | `main`, `sha-<commit>`              |
+| Push to `main`        | `latest`, `main`, `sha-<full-commit>`     |
+| Release `v1.2.3`      | `1.2.3`, `1.2`, `sha-<full-commit>`      |
+| Manual (`workflow_dispatch`) | `main`, `sha-<full-commit>`        |
+
+> **Note:** The full commit SHA is used (not truncated) to ensure unique image tags and avoid ArgoCD sync issues.
 
 ## Pipeline
 
@@ -29,6 +31,8 @@ The CD workflow (`.github/workflows/cd.yml`):
 2. **Runs CI** (reuses the CI workflow) to verify lint, format, tests, and build
 3. **Builds & pushes** both `cityflow-frontend` and `cityflow-backend` images to GHCR
 4. Images are **cached** via GitHub Actions cache for faster subsequent builds
+5. **Updates Kubernetes manifests** in the `k8s/` directory with the new image tag
+6. **Pushes** the updated manifests to trigger ArgoCD sync (with retry loop for push races)
 
 ## Pulling Images
 
@@ -53,16 +57,23 @@ Create a `docker-compose.yml`:
 
 ```yaml
 services:
+  cityflow-mongo:
+    image: mongo:7
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "27017:27017"
+
   cityflow-backend:
     image: ghcr.io/orou500/cityflow-backend:latest
     ports:
       - "5000:5000"
     environment:
-      - MONGODB_URI=mongodb://mongo:27017/cityflow
+      - MONGODB_URI=mongodb://cityflow-mongo:27017/cityflow
       - JWT_SECRET=<your-secret>
       - TICK_INTERVAL_MINUTES=60
     depends_on:
-      - cityflow-backend
+      - cityflow-mongo
 
   cityflow-frontend:
     image: ghcr.io/orou500/cityflow-frontend:latest
@@ -70,11 +81,6 @@ services:
       - "80:80"
     depends_on:
       - cityflow-backend
-
-  mongo:
-    image: mongo:7
-    volumes:
-      - mongo-data:/data/db
 
 volumes:
   mongo-data:
@@ -107,10 +113,10 @@ docker run -d \
 
 ### Prerequisites
 
-- Kubernetes cluster (v1.25+)
+- Kubernetes cluster (v1.25+) — tested on K3s (ARM64)
 - `kubectl` configured to connect to your cluster
-- NGINX Ingress Controller installed
-- (Optional) `cert-manager` for automatic TLS certificate management
+- **Traefik** Ingress Controller (K3s ships with Traefik by default)
+- Docker registry secret (`ghcr-pull`) for pulling GHCR images
 - (Optional) ArgoCD for GitOps deployments
 
 ### Directory Structure
@@ -130,13 +136,16 @@ k8s/
 ├── backend/
 │   ├── deployment.yml             # Backend Deployment (2 replicas)
 │   ├── service.yml                # Backend ClusterIP Service
+│   ├── backup-pvc.yml             # PersistentVolumeClaim for backups (5Gi)
 │   └── networkpolicy.yml          # Allow frontend + ingress → backend
 ├── frontend/
 │   ├── deployment.yml             # Frontend Deployment (2 replicas)
 │   ├── service.yml                # Frontend ClusterIP Service
 │   └── networkpolicy.yml          # Allow ingress → frontend
-└── ingress/
-    └── ingress.yml                # Ingress with TLS for cityflow.sizops.co.il
+├── ingress/
+│   └── ingress.yml                # Traefik Ingress with Let's Encrypt TLS
+└── traefik/
+    └── traefik-config.yml         # Traefik HelmChart CRD for ACME config
 ```
 
 ### Step 1 — Create the Namespace
@@ -170,9 +179,23 @@ kubectl create secret generic backend-secrets \
   --from-literal=JWT_SECRET="$JWT_SECRET" \
   --from-literal=ADMIN_PASSWORD="$ADMIN_PASS" \
   --dry-run=client -o yaml | kubectl apply -f -
+
+# GHCR pull secret (for pulling images from GitHub Container Registry)
+kubectl create secret docker-registry ghcr-pull \
+  --namespace=cityflow \
+  --docker-server=ghcr.io \
+  --docker-username=<github-username> \
+  --docker-password=<github-pat> \
+  --dry-run=client -o yaml | kubectl apply -f -
 ```
 
-### Step 3 — Deploy All Resources
+### Step 3 — Create the Backup PVC
+
+```bash
+kubectl apply -f k8s/backend/backup-pvc.yml
+```
+
+### Step 4 — Deploy All Resources
 
 ```bash
 kubectl apply -k k8s/
@@ -188,7 +211,7 @@ kubectl apply -f k8s/frontend/
 kubectl apply -f k8s/ingress/
 ```
 
-### Step 4 — Verify Deployment
+### Step 5 — Verify Deployment
 
 ```bash
 # Check all pods are running
@@ -207,7 +230,7 @@ kubectl logs -n cityflow -l app.kubernetes.io/name=backend -f
 kubectl logs -n cityflow -l app.kubernetes.io/name=mongodb -f
 ```
 
-### Step 5 — Configure DNS
+### Step 6 — Configure DNS
 
 Point your domain to the Ingress Controller's external IP:
 
@@ -215,9 +238,20 @@ Point your domain to the Ingress Controller's external IP:
 cityflow.sizops.co.il  →  <INGRESS_EXTERNAL_IP>
 ```
 
-### Step 6 — TLS Certificates
+### Step 7 — TLS Certificates
 
-#### Option A — Manual Certificate
+#### Option A — Traefik ACME (What We Use)
+
+Traefik handles TLS termination automatically via Let's Encrypt ACME:
+
+- The `k8s/traefik/traefik-config.yml` HelmChart CRD configures ACME with TLS-ALPN challenge
+- The ingress resource uses `certresolver: letsencrypt` annotation
+- Certificates are auto-renewed before expiry
+- No manual certificate management needed
+
+> **Note:** HTTP challenge was tested but returned 404 (Traefik ACME challenge router wasn't intercepting `.well-known/acme-challenge/` on port 80). TLS-ALPN challenge works on port 443.
+
+#### Option B — Manual Certificate
 
 Create a TLS secret from your certificate files:
 
@@ -228,11 +262,11 @@ kubectl create secret tls cityflow-tls \
   --key=path/to/tls.key
 ```
 
-#### Option B — cert-manager (Recommended)
+#### Option C — cert-manager
 
 1. Install cert-manager: https://cert-manager.io/docs/installation/
 2. Create a ClusterIssuer for Let's Encrypt
-3. Uncomment the `cert-manager.io/cluster-issuer` annotation in `k8s/ingress/ingress.yml`
+3. Add `cert-manager.io/cluster-issuer` annotation to the ingress
 4. Apply the updated ingress — cert-manager will automatically provision certificates
 
 ### Health Checks
@@ -304,12 +338,13 @@ kubectl scale deployment cityflow-frontend --replicas=3 -n cityflow
 
 Secrets are stored as Kubernetes Secrets and injected as environment variables into pods.
 
-Two secrets are required:
+Three secrets are required:
 
 | Secret | Contents |
 |--------|----------|
 | `mongodb-credentials` | MongoDB root username and password |
 | `backend-secrets` | `MONGODB_URI` (with credentials), `JWT_SECRET`, `ADMIN_PASSWORD` |
+| `ghcr-pull` | Docker registry credentials for pulling GHCR images |
 
 **Rules:**
 - Never commit real secret values to Git
@@ -359,9 +394,68 @@ kubectl apply -f argocd-application.yml
 ### How It Works
 
 - ArgoCD watches the `k8s/` directory in the Git repository
+- The CD pipeline updates image tags in deployment manifests with the full `$GITHUB_SHA`
 - On every push to `main`, ArgoCD detects drift and syncs automatically
 - The `kustomization.yml` file defines all resources in the correct apply order
 - Secrets must be managed separately (ArgoCD does not sync secrets by default)
+
+---
+
+## Backup & Restore
+
+Backups are managed from the **Admin Panel** (Database tab) or via API endpoints.
+
+### How It Works
+
+- Backups use the native MongoDB driver (no CLI tools like `mongodump`)
+- Data is exported as EJSON lines (one document per line) and gzip-compressed
+- Backup files are stored on a PersistentVolumeClaim (`cityflow-backups`, 5Gi)
+- Automatic retention keeps a configurable number of backups (default: 5)
+- Logs are stored per-backup and visible in the admin panel
+
+### Restore Process
+
+1. Drops each collection and re-inserts documents with proper ObjectId conversion
+2. Restores the `users` collection (including balances, portfolios, settings)
+3. Preserves the performing admin user to prevent lockout
+4. Validates document counts after restore
+5. Frontend clears auth state and redirects to login
+
+### Admin Endpoints
+
+| Action | Method | Endpoint |
+| ------ | ------ | -------- |
+| Create backup | POST | `/api/admin/backups` |
+| List backups | GET | `/api/admin/backups` |
+| Get settings | GET | `/api/admin/backups/settings` |
+| Download backup | GET | `/api/admin/backups/:id/download` |
+| Upload & restore | POST | `/api/admin/backups/upload` |
+| Restore from backup | POST | `/api/admin/backups/:id/restore` |
+| Delete backup | DELETE | `/api/admin/backups/:id` |
+| View logs | GET | `/api/admin/backups/:id/logs` |
+| Run retention | POST | `/api/admin/backups/retention` |
+
+---
+
+## Maintenance Mode
+
+Admins can enable maintenance mode to block non-admin access during deployments or emergencies.
+
+### How It Works
+
+- Toggled from the Admin Panel (Maintenance tab) or via API
+- Stored in the `GameState` document (persists across restarts)
+- Backend middleware returns HTTP 503 for all non-auth routes
+- Admin users can still access the app and login
+- Frontend shows a full-page maintenance block for guests and a yellow banner for logged-in non-admin users
+
+### Admin Endpoints
+
+| Action | Method | Endpoint |
+| ------ | ------ | -------- |
+| Get status | GET | `/api/admin/maintenance` |
+| Enable | POST | `/api/admin/maintenance/enable` |
+| Disable | POST | `/api/admin/maintenance/disable` |
 
 ---
 
@@ -383,6 +477,7 @@ kubectl logs <pod-name> -n cityflow --previous
 # - MONGODB_URI has wrong credentials or authSource
 # - JWT_SECRET not set
 # - Port already in use
+# - Backup PVC not found (ensure k8s/backend/backup-pvc.yml is applied)
 ```
 
 ### Ingress not routing
@@ -390,9 +485,10 @@ kubectl logs <pod-name> -n cityflow --previous
 ```bash
 kubectl describe ingress cityflow-ingress -n cityflow
 # Check:
-# - Ingress class matches your controller (nginx)
+# - Ingress class is `traefik` (K3s default)
 # - Backend service name and port are correct
-# - TLS secret exists and is valid
+# - TLS is handled by certresolver: letsencrypt (no manual tls section needed)
+# - Traefik is running: kubectl get pods -n kube-system -l app.kubernetes.io/name=traefik
 ```
 
 ### MongoDB persistent volume issues
@@ -402,6 +498,7 @@ kubectl get pvc -n cityflow
 # PVCs must be bound before MongoDB pods start
 # Check storage class availability:
 kubectl get storageclass
+# For K3s, use `local-path` StorageClass
 ```
 
 ### Frontend can't reach backend
@@ -430,6 +527,16 @@ kubectl exec -it <backend-pod> -n cityflow -- \
   --host cityflow-mongodb-0.cityflow-mongodb --eval "db.adminCommand('ping')"
 ```
 
+### Backup PVC not found
+
+```bash
+# The backend pod requires a PVC for backup storage
+kubectl get pvc cityflow-backups -n cityflow
+
+# If missing, apply it:
+kubectl apply -f k8s/backend/backup-pvc.yml
+```
+
 ### NetworkPolicy blocking traffic
 
 ```bash
@@ -443,6 +550,15 @@ kubectl get pod <pod-name> -n cityflow --show-labels
 kubectl delete networkpolicy --all -n cityflow
 ```
 
+### CD pipeline push race condition
+
+The CD pipeline uses a retry loop to handle concurrent pushes from the frontend/backend matrix jobs:
+
+```bash
+# If you see push failures in CI, this is expected — the retry loop handles it
+# The pipeline retries up to 3 times with 2-second delays
+```
+
 ---
 
 ## Future Improvements
@@ -450,7 +566,6 @@ kubectl delete networkpolicy --all -n cityflow
 - Horizontal Pod Autoscaler (HPA) for frontend and backend
 - Prometheus + Grafana monitoring
 - Loki log aggregation
-- cert-manager for automatic certificate renewal
 - Multi-environment deployments (development / staging / production)
 - Service Mesh (Istio)
 - External Secrets Operator for vault integration
