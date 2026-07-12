@@ -446,4 +446,50 @@ export const useGameStore = create((set, get) => ({
   disableMaintenance: async () => {
     return await api('/admin/maintenance/disable', { method: 'POST' });
   },
+
+  fetchAdminBackups: async () => {
+    return await api('/admin/backups');
+  },
+  fetchBackupLogs: async (id) => {
+    return await api(`/admin/backups/${id}/logs`);
+  },
+  createBackup: async () => {
+    return await api('/admin/backups', { method: 'POST' });
+  },
+  restoreBackup: async (id) => {
+    return await api(`/admin/backups/${id}/restore`, { method: 'POST' });
+  },
+  deleteBackup: async (id) => {
+    return await api(`/admin/backups/${id}`, { method: 'DELETE' });
+  },
+  uploadBackupFile: async (file) => {
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    formData.append('backup', file);
+    const res = await fetch('/api/admin/backups/upload', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Upload failed');
+    return data;
+  },
+  downloadBackup: (id) => {
+    const token = localStorage.getItem('token');
+    const a = document.createElement('a');
+    a.href = `/api/admin/backups/${id}/download`;
+    a.target = '_blank';
+    a.download = '';
+    const authFrame = document.createElement('iframe');
+    authFrame.style.display = 'none';
+    document.body.appendChild(authFrame);
+    const form = authFrame.contentDocument.createElement('form');
+    form.method = 'GET';
+    form.action = `/api/admin/backups/${id}/download`;
+    authFrame.contentDocument.body.appendChild(form);
+    a.click();
+    window.open(`/api/admin/backups/${id}/download`, '_blank');
+    document.body.removeChild(authFrame);
+  },
 }));

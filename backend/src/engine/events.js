@@ -81,13 +81,10 @@ export async function generateEvents() {
     active: true,
   });
 
-  for (const cityId of affectedCities) {
-    const city = await City.findById(cityId);
-    if (city) {
-      city.activeEvents.push({ eventId: event._id, remainingTicks: template.duration });
-      await city.save();
-    }
-  }
+  await City.updateMany(
+    { _id: { $in: affectedCities } },
+    { $push: { activeEvents: { eventId: event._id, remainingTicks: template.duration } } },
+  );
 
   return [event];
 }
@@ -97,18 +94,22 @@ export async function tickEvents() {
   const expired = [];
 
   for (const event of events) {
-    event.remainingTicks -= 1;
-    if (event.remainingTicks <= 0) {
-      event.active = false;
+    const newRemaining = event.remainingTicks - 1;
+    const isExpired = newRemaining <= 0;
+
+    if (isExpired) {
       expired.push(event._id);
 
-      const cities = await City.find({ 'activeEvents.eventId': event._id });
-      for (const city of cities) {
-        city.activeEvents = city.activeEvents.filter((e) => e.eventId.toString() !== event._id.toString());
-        await city.save();
-      }
+      await City.updateMany(
+        { 'activeEvents.eventId': event._id },
+        { $pull: { activeEvents: { eventId: event._id } } },
+      );
     }
-    await event.save();
+
+    await Event.updateOne(
+      { _id: event._id },
+      { $set: { remainingTicks: Math.max(0, newRemaining), active: !isExpired } },
+    );
   }
 
   return expired;

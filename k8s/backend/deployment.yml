@@ -61,3 +61,10 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 5
             failureThreshold: 12
+          volumeMounts:
+            - name: backups
+              mountPath: /app/backups
+      volumes:
+        - name: backups
+          persistentVolumeClaim:
+            claimName: cityflow-backups
