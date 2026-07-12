@@ -78,6 +78,7 @@ describe('useAuthStore', () => {
 
     global.fetch = vi.fn().mockResolvedValue({
       ok: false,
+      status: 401,
       json: async () => ({ error: 'Unauthorized' }),
     });
 

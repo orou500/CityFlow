@@ -25,8 +25,6 @@ const REGIMES = {
   boom: { bias: 0.008, volMod: 1.4 },
 };
 
-const REGIME_NAMES = Object.keys(REGIMES);
-
 function pickRegime(demandIndex) {
   if (demandIndex > 1.5) {
     return weightedRandom([
