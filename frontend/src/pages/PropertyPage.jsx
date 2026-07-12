@@ -279,7 +279,7 @@ export default function PropertyPage() {
         method: 'POST',
         body: JSON.stringify({ propertyId: id }),
       });
-      const price = res.balance || res.property?.currentPrice || 0;
+      const price = res.property?.currentPrice || 0;
       setActionMsg({ type: 'success', text: t('errors.propertySold', { price: price.toLocaleString() }) });
       load();
       fetchMe();

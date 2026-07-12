@@ -21,18 +21,18 @@ const upload = multer({
   dest: path.join(config.backupDir, '.tmp'),
   limits: { fileSize: 2 * 1024 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowed = ['.gz', '.zip', '.gzip', '.archive', '.bson', '.json.gz'];
+    const allowed = ['.gz', '.gzip'];
     const ext = path.extname(file.originalname).toLowerCase();
     const fullExt = path.extname(path.basename(file.originalname, '.gz')).toLowerCase() + '.gz';
     if (
       allowed.includes(ext) ||
-      allowed.includes(fullExt) ||
+      fullExt === '.json.gz' ||
       file.mimetype === 'application/gzip' ||
       file.mimetype === 'application/x-gzip'
     ) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file format. Allowed: .gz, .zip, .gzip, .archive'));
+      cb(new Error('Invalid file format. Allowed: .gz, .gzip, .json.gz'));
     }
   },
 });
