@@ -95,6 +95,12 @@ export default function AdminPage() {
     enableMaintenance,
     disableMaintenance,
     fetchMaintenance,
+    fetchAdminBackups,
+    fetchBackupLogs,
+    createBackup,
+    restoreBackup,
+    deleteBackup,
+    uploadBackupFile,
   } = useGameStore();
 
   const [tab, setTab] = useState('overview');
@@ -137,6 +143,17 @@ export default function AdminPage() {
   const [maintenanceMessage, setMaintenanceMessage] = useState('');
   const [maintenanceConfirming, setMaintenanceConfirming] = useState(false);
   const [maintenanceLoading, setMaintenanceLoading] = useState(false);
+
+  const [backups, setBackups] = useState([]);
+  const [backupStats, setBackupStats] = useState(null);
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [backupResult, setBackupResult] = useState(null);
+  const [backupConfirmId, setBackupConfirmId] = useState(null);
+  const [restoreConfirmId, setRestoreConfirmId] = useState(null);
+  const [restoreText, setRestoreText] = useState('');
+  const [backupFile, setBackupFile] = useState(null);
+  const [backupLogs, setBackupLogs] = useState(null);
+  const [backupLogsLoading, setBackupLogsLoading] = useState(false);
   const [eventSearch, setEventSearch] = useState('');
   const [eventPage, setEventPage] = useState(1);
   const EVENTS_PER_PAGE = 20;
@@ -178,6 +195,7 @@ export default function AdminPage() {
       const info = await fetchAdminTicks();
       setTickInfo(info);
       loadSeasonData();
+      loadBackupData();
     } catch (e) {
       console.error(e);
     }
@@ -199,6 +217,105 @@ export default function AdminPage() {
     } catch (e) {
       console.error(e);
     }
+  }
+
+  async function loadBackupData() {
+    try {
+      const data = await fetchAdminBackups();
+      setBackups(data.backups || []);
+      setBackupStats(data.stats || null);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function handleCreateBackup() {
+    setBackupLoading(true);
+    setBackupResult(null);
+    try {
+      const res = await createBackup();
+      setBackupResult(res);
+      await loadBackupData();
+    } catch (e) {
+      setBackupResult({ error: e.message });
+    }
+    setBackupLoading(false);
+  }
+
+  async function handleDeleteBackup(id) {
+    setBackupLoading(true);
+    try {
+      await deleteBackup(id);
+      setBackupConfirmId(null);
+      await loadBackupData();
+    } catch (e) {
+      setBackupResult({ error: e.message });
+    }
+    setBackupLoading(false);
+  }
+
+  async function handleRestoreBackup() {
+    if (restoreText !== 'RESTORE') return;
+    setBackupLoading(true);
+    setBackupResult(null);
+    try {
+      const res = await restoreBackup(restoreConfirmId);
+      setBackupResult(res);
+      setRestoreConfirmId(null);
+      setRestoreText('');
+      localStorage.removeItem('token');
+      localStorage.removeItem('cityflow-auth');
+      window.location.href = '/login';
+    } catch (e) {
+      setBackupResult({ error: e.message });
+    }
+    setBackupLoading(false);
+  }
+
+  async function handleUploadBackup() {
+    if (!backupFile) return;
+    setBackupLoading(true);
+    setBackupResult(null);
+    try {
+      const res = await uploadBackupFile(backupFile);
+      setBackupResult(res);
+      setBackupFile(null);
+      await loadBackupData();
+    } catch (e) {
+      setBackupResult({ error: e.message });
+    }
+    setBackupLoading(false);
+  }
+
+  function handleDownloadBackup(id) {
+    const token = localStorage.getItem('token');
+    fetch(`/api/admin/backups/${id}/download`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error('Download failed');
+        return res.blob();
+      })
+      .then((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '';
+        a.click();
+        URL.revokeObjectURL(url);
+      })
+      .catch((e) => setBackupResult({ error: e.message }));
+  }
+
+  async function handleViewBackupLogs(id) {
+    setBackupLogsLoading(true);
+    try {
+      const data = await fetchBackupLogs(id);
+      setBackupLogs(data);
+    } catch (e) {
+      setBackupResult({ error: e.message });
+    }
+    setBackupLogsLoading(false);
   }
 
   async function handleRunTicks() {
@@ -426,6 +543,9 @@ export default function AdminPage() {
         </TabButton>
         <TabButton active={tab === 'maintenance'} onClick={() => setTab('maintenance')}>
           {t('admin.maintenance')}
+        </TabButton>
+        <TabButton active={tab === 'database'} onClick={() => setTab('database')}>
+          {t('admin.database')}
         </TabButton>
       </div>
 
@@ -1271,6 +1391,258 @@ export default function AdminPage() {
                 )}
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {tab === 'database' && (
+        <div className="space-y-6">
+          {backupResult && (
+            <div
+              className={`rounded p-3 text-sm ${
+                backupResult.error
+                  ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300'
+                  : 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300'
+              }`}
+            >
+              {backupResult.error || backupResult.message}
+            </div>
+          )}
+
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{t('admin.databaseOverview')}</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+              <StatCard label={t('admin.totalBackups')} value={backupStats?.totalBackups || 0} />
+              <StatCard label={t('admin.storageUsed')} value={backupStats?.totalSizeFormatted || '0 B'} />
+              <StatCard
+                label={t('admin.lastBackup')}
+                value={
+                  backupStats?.lastBackup
+                    ? new Date(backupStats.lastBackup.createdAt).toLocaleString()
+                    : t('admin.never')
+                }
+              />
+            </div>
+            <button
+              onClick={handleCreateBackup}
+              disabled={backupLoading}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white text-sm rounded transition-colors"
+            >
+              {backupLoading ? t('admin.running') : t('admin.createBackup')}
+            </button>
+          </div>
+
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{t('admin.uploadBackup')}</h3>
+            <div className="flex items-center gap-3">
+              <input
+                type="file"
+                accept=".gz,.zip,.gzip,.archive,.bson"
+                onChange={(e) => setBackupFile(e.target.files[0])}
+                className="text-sm text-gray-600 dark:text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:bg-blue-50 file:text-blue-700 dark:file:bg-blue-900/30 dark:file:text-blue-300 hover:file:bg-blue-100"
+              />
+              <button
+                onClick={handleUploadBackup}
+                disabled={!backupFile || backupLoading}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white text-sm rounded transition-colors"
+              >
+                {backupLoading ? t('admin.running') : t('admin.upload')}
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{t('admin.backupHistory')}</h3>
+            {backups.length === 0 ? (
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('admin.noBackups')}</p>
+            ) : (
+              <div className="space-y-3">
+                {backups.map((b) => (
+                  <div
+                    key={b._id}
+                    className="flex items-center justify-between p-3 bg-white dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                            b.status === 'completed'
+                              ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                              : b.status === 'creating' || b.status === 'restoring'
+                                ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
+                                : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                          }`}
+                        >
+                          {b.status}
+                        </span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">{b.type}</span>
+                      </div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white mt-1">
+                        {new Date(b.createdAt).toLocaleString()}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {(b.size / 1024 / 1024).toFixed(1)} MB
+                        {b.duration ? ` · ${b.duration}s` : ''}
+                        {b.createdBy?.username ? ` · ${b.createdBy.username}` : ''}
+                      </p>
+                    </div>
+                    <div className="flex gap-2 ml-4">
+                      <button
+                        onClick={() => handleViewBackupLogs(b._id)}
+                        className="px-3 py-1.5 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded transition-colors"
+                      >
+                        {t('admin.logs')}
+                      </button>
+                      {b.status === 'completed' && (
+                        <>
+                          <button
+                            onClick={() => handleDownloadBackup(b._id)}
+                            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded transition-colors"
+                          >
+                            {t('admin.download')}
+                          </button>
+                          <button
+                            onClick={() => {
+                              setRestoreConfirmId(b._id);
+                              setRestoreText('');
+                            }}
+                            className="px-3 py-1.5 bg-orange-600 hover:bg-orange-500 text-white text-xs rounded transition-colors"
+                          >
+                            {t('admin.restore')}
+                          </button>
+                          <button
+                            onClick={() => setBackupConfirmId(b._id)}
+                            className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white text-xs rounded transition-colors"
+                          >
+                            {t('admin.delete')}
+                          </button>
+                        </>
+                      )}
+                    </div>
+
+                    {backupConfirmId === b._id && (
+                      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-sm w-full mx-4">
+                          <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">
+                            {t('admin.confirmDeleteBackup')}
+                          </p>
+                          <div className="flex gap-2 justify-end">
+                            <button
+                              onClick={() => handleDeleteBackup(b._id)}
+                              disabled={backupLoading}
+                              className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-sm rounded"
+                            >
+                              {backupLoading ? t('admin.running') : t('common.confirm')}
+                            </button>
+                            <button
+                              onClick={() => setBackupConfirmId(null)}
+                              className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm rounded"
+                            >
+                              {t('common.cancel')}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {restoreConfirmId === b._id && (
+                      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-sm w-full mx-4">
+                          <p className="text-sm font-semibold text-red-600 dark:text-red-400 mb-2">
+                            {t('admin.restoreWarning')}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                            {new Date(b.createdAt).toLocaleString()} — {(b.size / 1024 / 1024).toFixed(1)} MB
+                          </p>
+                          <div className="mb-4">
+                            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                              Type <strong>RESTORE</strong> to confirm:
+                            </label>
+                            <input
+                              type="text"
+                              value={restoreText}
+                              onChange={(e) => setRestoreText(e.target.value)}
+                              className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white"
+                              placeholder="RESTORE"
+                            />
+                          </div>
+                          <div className="flex gap-2 justify-end">
+                            <button
+                              onClick={handleRestoreBackup}
+                              disabled={restoreText !== 'RESTORE' || backupLoading}
+                              className="px-4 py-2 bg-orange-600 hover:bg-orange-500 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white text-sm rounded"
+                            >
+                              {backupLoading ? t('admin.running') : t('admin.restore')}
+                            </button>
+                            <button
+                              onClick={() => {
+                                setRestoreConfirmId(null);
+                                setRestoreText('');
+                              }}
+                              className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm rounded"
+                            >
+                              {t('common.cancel')}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {backupLogs && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={() => setBackupLogs(null)}
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('admin.backupLogs')}</h3>
+              <button
+                onClick={() => setBackupLogs(null)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+              {backupLogs.filename} &middot; {backupLogs.type} &middot; {backupLogs.status} &middot;{' '}
+              {new Date(backupLogs.createdAt).toLocaleString()}
+            </div>
+            {backupLogsLoading ? (
+              <p className="text-sm text-gray-500">{t('common.loading')}</p>
+            ) : (
+              <div className="flex-1 overflow-y-auto bg-gray-900 rounded p-3 font-mono text-xs space-y-1">
+                {backupLogs.logs?.length === 0 && <p className="text-gray-400">{t('admin.noLogs')}</p>}
+                {backupLogs.logs?.map((log, i) => (
+                  <div key={i} className="flex gap-2">
+                    <span className="text-gray-500 shrink-0">{new Date(log.timestamp).toLocaleTimeString()}</span>
+                    <span
+                      className={`shrink-0 ${log.level === 'error' ? 'text-red-400' : log.level === 'warn' ? 'text-yellow-400' : 'text-green-400'}`}
+                    >
+                      [{log.level}]
+                    </span>
+                    <span className="text-gray-300">{log.message}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex justify-end mt-4">
+              <button
+                onClick={() => setBackupLogs(null)}
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm rounded"
+              >
+                {t('common.close')}
+              </button>
+            </div>
           </div>
         </div>
       )}

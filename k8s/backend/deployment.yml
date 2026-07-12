@@ -22,7 +22,7 @@ spec:
         - name: ghcr-pull
       containers:
         - name: backend
-          image: ghcr.io/orou500/cityflow-backend:34f518692841ff6cfe321a8c6a8005417f4fe8de
+          image: ghcr.io/orou500/cityflow-backend:b89decfaa1124bab1c0c908854413ab83bdc7281
           ports:
             - containerPort: 5000
               name: http
@@ -61,3 +61,10 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 5
             failureThreshold: 12
+          volumeMounts:
+            - name: backups
+              mountPath: /app/backups
+      volumes:
+        - name: backups
+          persistentVolumeClaim:
+            claimName: cityflow-backups

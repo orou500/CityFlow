@@ -47,6 +47,12 @@ const propertySchema = new mongoose.Schema(
     occupancy: { type: Number, default: 0, min: 0, max: 100 },
     maintenanceCost: { type: Number, default: 0 },
     parentBuilding: { type: mongoose.Schema.Types.ObjectId, ref: 'Property' },
+    regime: {
+      type: String,
+      enum: ['bull', 'bear', 'stable', 'recovery', 'correction', 'boom'],
+      default: 'stable',
+    },
+    regimeEndTick: { type: Number, default: 0 },
     lastUpgrade: { type: String },
     upgrades: [
       {
@@ -65,5 +71,36 @@ propertySchema.index({ type: 1 });
 propertySchema.index({ forSale: 1 });
 propertySchema.index({ name: 1 });
 propertySchema.index({ createdAt: -1 });
+
+propertySchema.set('toJSON', {
+  virtuals: true,
+  transform(doc, ret) {
+    if (ret._id && typeof ret._id === 'object') {
+      ret._id = ret._id.toString();
+    }
+    if (ret.cityId && typeof ret.cityId === 'object' && ret.cityId._id) {
+      ret.cityId = {
+        _id: ret.cityId._id.toString(),
+        name: ret.cityId.name,
+        demandIndex: ret.cityId.demandIndex,
+        supplyIndex: ret.cityId.supplyIndex,
+        growthRate: ret.cityId.growthRate,
+        population: ret.cityId.population,
+        avgPrice: ret.cityId.avgPrice,
+      };
+    } else if (ret.cityId && typeof ret.cityId === 'object' && ret.cityId.toString) {
+      ret.cityId = ret.cityId.toString();
+    }
+    if (ret.ownerId && typeof ret.ownerId === 'object' && ret.ownerId._id) {
+      ret.ownerId = { _id: ret.ownerId._id.toString(), username: ret.ownerId.username };
+    } else if (ret.ownerId && typeof ret.ownerId === 'object' && ret.ownerId.toString) {
+      ret.ownerId = ret.ownerId.toString();
+    }
+    if (ret.parentBuilding && typeof ret.parentBuilding === 'object' && ret.parentBuilding.toString) {
+      ret.parentBuilding = ret.parentBuilding.toString();
+    }
+    return ret;
+  },
+});
 
 export default mongoose.model('Property', propertySchema);

@@ -21,10 +21,12 @@ import friendsRoutes from './routes/friends.js';
 import eventRoutes from './routes/events.js';
 import worldRoutes from './routes/world.js';
 import seasonRoutes from './routes/seasons.js';
+import backupRoutes from './routes/backup.js';
 import { maintenanceCheck } from './middleware/maintenance.js';
 import { getMaintenanceInfo } from './models/GameState.js';
 import { createNewSeason } from './engine/seasonReset.js';
 import Season from './models/Season.js';
+import { ensureBackupDir, enforceRetention } from './engine/backup.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -49,7 +51,7 @@ app.get('/ready', (req, res) => {
   }
 });
 
-app.get('/api/maintenance', async (req, res) => {
+app.get('/maintenance', async (req, res) => {
   try {
     const info = await getMaintenanceInfo();
     res.json(info);
@@ -75,6 +77,7 @@ app.use('/development', developmentRoutes);
 app.use('/stats', statsRoutes);
 app.use('/friends', friendsRoutes);
 app.use('/events', eventRoutes);
+app.use('/admin/backups', backupRoutes);
 
 app.use((req, res) => {
   console.warn(`404 API Route: ${req.method} ${req.originalUrl}`);
@@ -91,6 +94,9 @@ async function start() {
     console.log('[STARTUP] No active season found, creating Season 1');
     await createNewSeason();
   }
+
+  await ensureBackupDir();
+  await enforceRetention().catch(() => {});
 
   server = app.listen(config.port, () => {
     console.log(`CityFlow API running on port ${config.port}`);
