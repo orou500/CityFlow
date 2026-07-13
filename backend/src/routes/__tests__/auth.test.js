@@ -148,10 +148,7 @@ describe('POST /auth/login', () => {
       acceptedTerms: true,
       acceptedPrivacy: true,
     });
-    await User.findOneAndUpdate(
-      { email: 'login@example.com' },
-      { emailVerified: true, emailVerifiedAt: new Date() },
-    );
+    await User.findOneAndUpdate({ email: 'login@example.com' }, { emailVerified: true, emailVerifiedAt: new Date() });
   });
 
   it('logs in with username', async () => {
