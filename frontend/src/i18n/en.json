@@ -1048,7 +1048,8 @@
     "checkBack": "Please check back later.",
     "staffLogin": "Staff Login",
     "bannerTitle": "⚠️ Maintenance Mode Active",
-    "bannerMessage": "Some functionality is temporarily unavailable."
+    "bannerMessage": "Some functionality is temporarily unavailable.",
+    "backToHome": "Back to Home"
   },
   "contributors": {
     "title": "Contributors",

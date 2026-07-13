@@ -59,7 +59,10 @@ export default function App() {
     );
   }
 
-  if (maintenance.enabled && !isAdmin && window.location.pathname !== '/login') {
+  const allowedPaths = ['/', '/login'];
+  const isAllowedPath = allowedPaths.includes(window.location.pathname);
+
+  if (maintenance.enabled && !isAdmin && !isAllowedPath) {
     return (
       <ThemeProvider>
         <MaintenancePage message={maintenance.message} />

@@ -1039,7 +1039,8 @@
     "checkBack": "אנא בדוק שוב מאוחר יותר.",
     "staffLogin": "כניסת צוות",
     "bannerTitle": "⚠️ מצב אחזקה פעיל",
-    "bannerMessage": "חלק מהפונקציות זמינות באופן זמני."
+    "bannerMessage": "חלק מהפונקציות זמינות באופן זמני.",
+    "backToHome": "חזרה לדף הבית"
   },
   "contributors": {
     "title": "תורמים",
