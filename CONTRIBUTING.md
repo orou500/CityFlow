@@ -190,7 +190,7 @@ Open a discussion or issue, or reach out to the maintainers directly.
 
 Once your pull request is approved and merged, you can add yourself to the contributors list:
 
-1. Open `contributors.json` in the repository root
+1. Open `frontend/public/contributors.json` in the repository
 2. Add your entry to the array:
 
 ```json
