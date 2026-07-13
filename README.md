@@ -729,8 +729,10 @@ Both backend and frontend use multi-stage Docker builds:
 
 ## Community
 
-This project is governed by the [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code.
+This project is governed by the [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please read our [Contributing Guidelines](CONTRIBUTING.md) before submitting a pull request. For security vulnerabilities, please see our [Security Policy](SECURITY.md).
 
 ## License
 
-MIT
+This project is licensed under the Apache License 2.0. See [LICENSE](LICENSE) for details.
+
+By contributing to this project, you agree that your contributions will be licensed under the same license.
