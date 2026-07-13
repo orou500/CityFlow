@@ -168,7 +168,12 @@ export default function FriendsPage() {
 
         <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700 pb-2">
           {['friends', 'incoming', 'sent'].map((key) => {
-            const count = key === 'friends' ? friends.length : key === 'incoming' ? incoming.length : sent.length;
+            const count =
+              key === 'friends'
+                ? friends.length
+                : key === 'incoming'
+                  ? incoming.filter((r) => r.senderId).length
+                  : sent.filter((r) => r.receiverId).length;
             return (
               <button
                 key={key}
@@ -198,38 +203,40 @@ export default function FriendsPage() {
             {incoming.length === 0 && (
               <p className="text-gray-400 dark:text-gray-500 text-sm text-center py-8">{t('friends.noIncoming')}</p>
             )}
-            {incoming.map((r) => (
-              <div
-                key={r._id}
-                className="bg-gray-50/50 dark:bg-gray-800/50 rounded-lg border border-gray-200/50 dark:border-gray-700/50 p-4 flex items-center justify-between"
-              >
-                <Link to={`/profile/${r.senderId.username}`} className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
-                    {(r.senderId.displayName || r.senderId.username).charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <div className="text-gray-900 dark:text-white text-sm font-medium">
-                      {r.senderId.displayName || r.senderId.username}
+            {incoming
+              .filter((r) => r.senderId)
+              .map((r) => (
+                <div
+                  key={r._id}
+                  className="bg-gray-50/50 dark:bg-gray-800/50 rounded-lg border border-gray-200/50 dark:border-gray-700/50 p-4 flex items-center justify-between"
+                >
+                  <Link to={`/profile/${r.senderId.username}`} className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+                      {(r.senderId.displayName || r.senderId.username).charAt(0).toUpperCase()}
                     </div>
-                    <div className="text-xs text-gray-400 dark:text-gray-500">{t('friends.sentYouRequest')}</div>
+                    <div>
+                      <div className="text-gray-900 dark:text-white text-sm font-medium">
+                        {r.senderId.displayName || r.senderId.username}
+                      </div>
+                      <div className="text-xs text-gray-400 dark:text-gray-500">{t('friends.sentYouRequest')}</div>
+                    </div>
+                  </Link>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => acceptRequest(r._id)}
+                      className="text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded transition-colors"
+                    >
+                      {t('friends.accept')}
+                    </button>
+                    <button
+                      onClick={() => declineRequest(r._id)}
+                      className="text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded transition-colors"
+                    >
+                      {t('friends.decline')}
+                    </button>
                   </div>
-                </Link>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => acceptRequest(r._id)}
-                    className="text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded transition-colors"
-                  >
-                    {t('friends.accept')}
-                  </button>
-                  <button
-                    onClick={() => declineRequest(r._id)}
-                    className="text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded transition-colors"
-                  >
-                    {t('friends.decline')}
-                  </button>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         )}
 
@@ -238,30 +245,32 @@ export default function FriendsPage() {
             {sent.length === 0 && (
               <p className="text-gray-400 dark:text-gray-500 text-sm text-center py-8">{t('friends.noSent')}</p>
             )}
-            {sent.map((r) => (
-              <div
-                key={r._id}
-                className="bg-gray-50/50 dark:bg-gray-800/50 rounded-lg border border-gray-200/50 dark:border-gray-700/50 p-4 flex items-center justify-between"
-              >
-                <Link to={`/profile/${r.receiverId.username}`} className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
-                    {(r.receiverId.displayName || r.receiverId.username).charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <div className="text-gray-900 dark:text-white text-sm font-medium">
-                      {r.receiverId.displayName || r.receiverId.username}
-                    </div>
-                    <div className="text-xs text-gray-400 dark:text-gray-500">{t('friends.pending')}</div>
-                  </div>
-                </Link>
-                <button
-                  onClick={() => cancelRequest(r._id)}
-                  className="text-xs text-red-600 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300"
+            {sent
+              .filter((r) => r.receiverId)
+              .map((r) => (
+                <div
+                  key={r._id}
+                  className="bg-gray-50/50 dark:bg-gray-800/50 rounded-lg border border-gray-200/50 dark:border-gray-700/50 p-4 flex items-center justify-between"
                 >
-                  {t('friends.cancel')}
-                </button>
-              </div>
-            ))}
+                  <Link to={`/profile/${r.receiverId.username}`} className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+                      {(r.receiverId.displayName || r.receiverId.username).charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="text-gray-900 dark:text-white text-sm font-medium">
+                        {r.receiverId.displayName || r.receiverId.username}
+                      </div>
+                      <div className="text-xs text-gray-400 dark:text-gray-500">{t('friends.pending')}</div>
+                    </div>
+                  </Link>
+                  <button
+                    onClick={() => cancelRequest(r._id)}
+                    className="text-xs text-red-600 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300"
+                  >
+                    {t('friends.cancel')}
+                  </button>
+                </div>
+              ))}
           </div>
         )}
       </div>

@@ -94,7 +94,12 @@ export async function processRent() {
       userBulkOps.push({
         updateOne: {
           filter: { _id: userIdStr },
-          update: { $inc: { balance: totalAmount } },
+          update: {
+            $inc: {
+              balance: totalAmount,
+              'lifetimeStats.totalMoneyEarned': Math.max(0, totalAmount),
+            },
+          },
         },
       });
     }

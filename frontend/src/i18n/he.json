@@ -755,7 +755,16 @@
     "seasonHistory": "היסטוריית עונות",
     "viewLeaderboard": "צפה בטבלה המלאה",
     "seasonRank": "דירוג",
-    "seasonPlayers": "שחקנים"
+    "seasonPlayers": "שחקנים",
+    "transactions": "עסקאות",
+    "propertiesOwned": "נכסים בבעלות",
+    "earned": "כסף שהרוויח",
+    "spent": "כסף שהוציא",
+    "loans": "הלוואות",
+    "friendsAdded": "חברים",
+    "upgrades": "שדרוגים",
+    "construction": "בנייה",
+    "seasons": "עונות שהשתתף"
   },
   "friends": {
     "title": "חברים",

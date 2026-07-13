@@ -20,7 +20,6 @@ export default function PlayerDashboard() {
     rejectOffer,
     counterOffer,
     acceptCounterOffer,
-    markAllRead,
     fetchUnreadCount,
   } = useGameStore();
   const [offersTab, setOffersTab] = useState('received');
@@ -34,12 +33,7 @@ export default function PlayerDashboard() {
     fetchUserData();
     fetchSentOffers();
     fetchReceivedOffers();
-    (async () => {
-      try {
-        await markAllRead();
-      } catch {}
-      fetchUnreadCount();
-    })();
+    fetchUnreadCount();
   }, []);
 
   async function handleAccept(offerId) {

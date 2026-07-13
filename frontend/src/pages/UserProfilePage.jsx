@@ -435,6 +435,52 @@ export default function UserProfilePage() {
           )}
         </div>
 
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">Lv.{profileUser.level || 1}</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                {(profileUser.xp || 0).toLocaleString()} / {(profileUser.xpToNextLevel || 100).toLocaleString()} XP
+              </span>
+            </div>
+            <span className="text-xs text-gray-400 dark:text-gray-500">
+              {Math.round(((profileUser.xp || 0) / (profileUser.xpToNextLevel || 100)) * 100)}%
+            </span>
+          </div>
+          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
+            <div
+              className="bg-gradient-to-r from-blue-500 to-blue-600 h-full rounded-full transition-all duration-500"
+              style={{ width: `${Math.min(((profileUser.xp || 0) / (profileUser.xpToNextLevel || 100)) * 100, 100)}%` }}
+            />
+          </div>
+          {profileUser.lifetimeStats && (
+            <div className="grid grid-cols-3 md:grid-cols-5 gap-3 mt-4">
+              {[
+                { label: t('profile.transactions'), value: profileUser.lifetimeStats.totalTransactions || 0 },
+                { label: t('profile.propertiesOwned'), value: profileUser.lifetimeStats.totalPropertiesOwned || 0 },
+                {
+                  label: t('profile.earned'),
+                  value: `$${(profileUser.lifetimeStats.totalMoneyEarned || 0).toLocaleString()}`,
+                },
+                {
+                  label: t('profile.spent'),
+                  value: `$${(profileUser.lifetimeStats.totalMoneySpent || 0).toLocaleString()}`,
+                },
+                { label: t('profile.loans'), value: profileUser.lifetimeStats.totalLoansTaken || 0 },
+                { label: t('profile.friendsAdded'), value: profileUser.lifetimeStats.totalFriendsAdded || 0 },
+                { label: t('profile.upgrades'), value: profileUser.lifetimeStats.totalUpgrades || 0 },
+                { label: t('profile.construction'), value: profileUser.lifetimeStats.totalConstructionStarted || 0 },
+                { label: t('profile.seasons'), value: profileUser.lifetimeStats.totalSeasonsCompleted || 0 },
+              ].map((s) => (
+                <div key={s.label} className="text-center">
+                  <div className="text-sm font-semibold text-gray-900 dark:text-white">{s.value}</div>
+                  <div className="text-[11px] text-gray-500 dark:text-gray-400">{s.label}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard
             label={t('profile.netWorth')}

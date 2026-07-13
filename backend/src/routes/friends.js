@@ -3,17 +3,24 @@ import User from '../models/User.js';
 import FriendRequest from '../models/FriendRequest.js';
 import Notification from '../models/Notification.js';
 import { authenticate } from '../middleware/auth.js';
+import { awardXp } from '../utils/leveling.js';
 
 const router = Router();
 
 router.use(authenticate);
 
-async function createFriendNotification(userId, sender, _type) {
+async function createFriendNotification(userId, sender, type) {
+  const title = type === 'friend_accepted' ? 'Friend Request Accepted' : 'Friend Request';
+  const message =
+    type === 'friend_accepted'
+      ? `${sender.displayName || sender.username} accepted your friend request.`
+      : `${sender.displayName || sender.username} sent you a friend request.`;
+
   await Notification.create({
     userId,
     type: 'friend_request',
-    title: 'Friend Request',
-    message: `${sender.displayName || sender.username} sent you a friend request.`,
+    title,
+    message,
     relatedId: sender._id,
   });
 }
@@ -59,6 +66,22 @@ router.post('/accept/:requestId', async (req, res) => {
 
     await User.findByIdAndUpdate(req.user._id, { $addToSet: { friends: request.senderId } });
     await User.findByIdAndUpdate(request.senderId, { $addToSet: { friends: req.user._id } });
+
+    const alreadyFriends = await FriendRequest.findOne({
+      $or: [
+        { senderId: req.user._id, receiverId: request.senderId, status: 'accepted' },
+        { senderId: request.senderId, receiverId: req.user._id, status: 'accepted' },
+      ],
+    });
+
+    if (!alreadyFriends) {
+      const user = await User.findById(req.user._id);
+      await awardXp(user, 5, 'friend_add');
+      user.lifetimeStats.totalFriendsAdded += 1;
+      await user.save();
+    }
+
+    await createFriendNotification(request.senderId, req.user, 'friend_accepted');
 
     res.json(request);
   } catch (err) {

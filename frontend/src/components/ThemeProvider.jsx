@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { useAuthStore } from '../store/useAuthStore';
 
 const ThemeContext = createContext();
@@ -95,7 +95,9 @@ export function ThemeProvider({ children }) {
 
   const resolved = resolveTheme(preference);
 
-  return <ThemeContext.Provider value={{ preference, resolved, setPreference }}>{children}</ThemeContext.Provider>;
+  const value = useMemo(() => ({ preference, resolved, setPreference }), [preference, resolved, setPreference]);
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme() {
