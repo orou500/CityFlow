@@ -77,9 +77,7 @@ export async function sendEmail({ to, subject, html, text, from, replyTo, attach
 }
 
 export async function sendBulkEmail(recipients, { subject, html, text, from }) {
-  const results = await Promise.allSettled(
-    recipients.map((to) => sendEmail({ to, subject, html, text, from })),
-  );
+  const results = await Promise.allSettled(recipients.map((to) => sendEmail({ to, subject, html, text, from })));
 
   const sent = results.filter((r) => r.status === 'fulfilled' && r.value.sent).length;
   const failed = results.length - sent;
