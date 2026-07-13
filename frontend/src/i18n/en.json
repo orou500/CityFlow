@@ -1049,5 +1049,12 @@
     "staffLogin": "Staff Login",
     "bannerTitle": "⚠️ Maintenance Mode Active",
     "bannerMessage": "Some functionality is temporarily unavailable."
+  },
+  "contributors": {
+    "title": "Contributors",
+    "subtitle": "People who have helped build CityFlow.",
+    "noContributors": "No contributors yet.",
+    "beFirst": "Be the first to contribute!",
+    "backToHome": "Back to Home"
   }
 }

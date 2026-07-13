@@ -24,6 +24,7 @@ import TermsPage from './pages/TermsPage';
 import PrivacyPage from './pages/PrivacyPage';
 import CookiesPage from './pages/CookiesPage';
 import SeasonHistoryPage from './pages/SeasonHistoryPage';
+import ContributorsPage from './pages/ContributorsPage';
 import MaintenancePage from './pages/MaintenancePage';
 import { useEffect } from 'react';
 import { useAuthStore } from './store/useAuthStore';
@@ -204,6 +205,7 @@ export default function App() {
               <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/cookies" element={<CookiesPage />} />
               <Route path="/seasons" element={<SeasonHistoryPage />} />
+              <Route path="/contributors" element={<ContributorsPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </OnboardingWrapper>

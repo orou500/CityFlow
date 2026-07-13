@@ -185,3 +185,25 @@ This project follows the [Code of Conduct](CODE_OF_CONDUCT.md). By participating
 ## Questions?
 
 Open a discussion or issue, or reach out to the maintainers directly.
+
+## Contributor Recognition
+
+Once your pull request is approved and merged, you can add yourself to the contributors list:
+
+1. Open `contributors.json` in the repository root
+2. Add your entry to the array:
+
+```json
+[
+  {
+    "name": "Your Name",
+    "github": "your-username",
+    "role": "Contributor",
+    "joinedAt": "2026-07-13"
+  }
+]
+```
+
+3. Submit a pull request with this change
+
+Your entry will appear on the [Contributors](/contributors) page after the PR is merged. Only approved and merged contributions qualify for recognition.

@@ -1040,5 +1040,12 @@
     "staffLogin": "כניסת צוות",
     "bannerTitle": "⚠️ מצב אחזקה פעיל",
     "bannerMessage": "חלק מהפונקציות זמינות באופן זמני."
+  },
+  "contributors": {
+    "title": "תורמים",
+    "subtitle": "אנשים שעזרו לבנות את CityFlow.",
+    "noContributors": "אין עדיין תורמים.",
+    "beFirst": "היה הראשון לתרום!",
+    "backToHome": "חזרה לדף הבית"
   }
 }
