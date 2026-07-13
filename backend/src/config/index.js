@@ -15,4 +15,12 @@ export const config = {
   backupDir: process.env.BACKUP_DIR || path.join(__dirname, '../../backups'),
   backupRetentionCount: parseInt(process.env.BACKUP_RETENTION_COUNT) || 10,
   backupSchedule: process.env.BACKUP_SCHEDULE || null,
+  smtp: {
+    host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
+    port: parseInt(process.env.SMTP_PORT) || 587,
+    secure: process.env.SMTP_SECURE === 'true',
+    user: process.env.SMTP_USER || process.env.SMTP_LOGIN || '',
+    pass: process.env.SMTP_PASS || '',
+  },
+  emailFrom: process.env.EMAIL_FROM || 'noreply@sizops.co.il',
 };

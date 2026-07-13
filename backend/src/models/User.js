@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 
 const userSchema = new mongoose.Schema(
   {
@@ -31,6 +32,12 @@ const userSchema = new mongoose.Schema(
     acceptedTermsAt: { type: Date, default: null },
     acceptedPrivacy: { type: Boolean, default: false },
     acceptedPrivacyAt: { type: Date, default: null },
+    emailVerified: { type: Boolean, default: false },
+    emailVerifiedAt: { type: Date, default: null },
+    verificationToken: { type: String, default: null },
+    verificationExpires: { type: Date, default: null },
+    passwordResetToken: { type: String, default: null },
+    passwordResetExpires: { type: Date, default: null },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } },
 );
@@ -52,9 +59,27 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
+userSchema.methods.createVerificationToken = function () {
+  const token = crypto.randomBytes(32).toString('hex');
+  this.verificationToken = crypto.createHash('sha256').update(token).digest('hex');
+  this.verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  return token;
+};
+
+userSchema.methods.createPasswordResetToken = function () {
+  const token = crypto.randomBytes(32).toString('hex');
+  this.passwordResetToken = crypto.createHash('sha256').update(token).digest('hex');
+  this.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000);
+  return token;
+};
+
 userSchema.methods.toJSON = function () {
   const obj = this.toObject();
   delete obj.password;
+  delete obj.verificationToken;
+  delete obj.verificationExpires;
+  delete obj.passwordResetToken;
+  delete obj.passwordResetExpires;
   return obj;
 };
 

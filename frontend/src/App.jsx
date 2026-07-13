@@ -26,6 +26,9 @@ import CookiesPage from './pages/CookiesPage';
 import SeasonHistoryPage from './pages/SeasonHistoryPage';
 import ContributorsPage from './pages/ContributorsPage';
 import MaintenancePage from './pages/MaintenancePage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import VerifyEmailPage from './pages/VerifyEmailPage';
 import { useEffect } from 'react';
 import { useAuthStore } from './store/useAuthStore';
 import { useGameStore } from './store/useGameStore';
@@ -209,6 +212,9 @@ export default function App() {
               <Route path="/cookies" element={<CookiesPage />} />
               <Route path="/seasons" element={<SeasonHistoryPage />} />
               <Route path="/contributors" element={<ContributorsPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
+              <Route path="/verify-email" element={<VerifyEmailPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </OnboardingWrapper>

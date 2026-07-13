@@ -23,6 +23,7 @@
     "mongoose": "^8.6.0",
     "multer": "^2.2.0",
     "node-cron": "^3.0.3",
+    "nodemailer": "^9.0.3",
     "sharp": "^0.35.3"
   },
   "devDependencies": {
