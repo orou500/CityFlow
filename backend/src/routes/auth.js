@@ -9,6 +9,7 @@ import { sendEmail } from '../services/email.js';
 import emailTemplates from '../services/emailTemplates.js';
 import { rateLimit } from '../middleware/rateLimit.js';
 import { validatePassword } from '../utils/validatePassword.js';
+import { awardXp } from '../utils/leveling.js';
 
 const router = Router();
 
@@ -158,6 +159,8 @@ router.get('/verify-email', async (req, res) => {
     user.verificationToken = null;
     user.verificationExpires = null;
     await user.save({ validateBeforeSave: false });
+
+    await awardXp(user, 10, 'email_verified');
 
     const template = emailTemplates.accountActivated({ username: user.username });
     sendEmail({ to: user.email, ...template }).catch((err) => {

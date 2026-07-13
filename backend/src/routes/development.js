@@ -6,6 +6,7 @@ import ConstructionProject from '../models/ConstructionProject.js';
 import Transaction from '../models/Transaction.js';
 import { authenticate } from '../middleware/auth.js';
 import { getGameState } from '../models/GameState.js';
+import { awardXp } from '../utils/leveling.js';
 import {
   DEVELOPMENT_PROJECTS,
   calculateProjectCost,
@@ -201,6 +202,10 @@ router.post('/start', async (req, res) => {
     land.forSale = false;
     await land.save();
 
+    await awardXp(user, 15, 'construction_start');
+    user.lifetimeStats.totalConstructionStarted += 1;
+    await user.save();
+
     res.status(201).json({
       project: constructionProject,
       balance: user.balance,
@@ -379,6 +384,10 @@ router.post('/upgrade', async (req, res) => {
       price: cost,
       type: 'upgrade',
     });
+
+    await awardXp(user, 10, 'upgrade');
+    user.lifetimeStats.totalUpgrades += 1;
+    await user.save();
 
     res.json({ property, balance: user.balance });
   } catch (err) {

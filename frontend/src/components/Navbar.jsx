@@ -1,9 +1,10 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { useTheme } from './ThemeProvider';
+import { useToast } from './Toast';
 import UserSearch from './UserSearch';
 
 export default function Navbar() {
@@ -12,11 +13,29 @@ export default function Navbar() {
   const navigate = useNavigate();
   const unreadCount = useGameStore((s) => s.unreadCount);
   const fetchUnreadCount = useGameStore((s) => s.fetchUnreadCount);
+  const fetchNotifications = useGameStore((s) => s.fetchNotifications);
   const { preference, setPreference } = useTheme();
+  const { checkForNewNotifications } = useToast();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
+
+  const hasUnread = unreadCount > 0;
+  const bellClassName = useMemo(
+    () =>
+      `relative transition-colors ${hasUnread ? 'text-red-500 dark:text-red-400 animate-bell-ring' : 'text-muted hover:text-primary'}`,
+    [hasUnread],
+  );
+  const avatarClassName = useMemo(
+    () => `w-6 h-6 rounded-full object-cover ${hasUnread ? 'animate-avatar-pulse' : ''}`,
+    [hasUnread],
+  );
+  const avatarFallbackClassName = useMemo(
+    () =>
+      `w-6 h-6 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-medium ${hasUnread ? 'animate-avatar-pulse' : ''}`,
+    [hasUnread],
+  );
 
   const handleLogout = () => {
     logout();
@@ -26,7 +45,14 @@ export default function Navbar() {
   useEffect(() => {
     if (user) {
       fetchUnreadCount();
-      const interval = setInterval(fetchUnreadCount, 30000);
+      const poll = async () => {
+        const count = await fetchUnreadCount();
+        const notifications = await fetchNotifications();
+        const latest = notifications?.length > 0 ? notifications[0] : null;
+        checkForNewNotifications(count, latest);
+      };
+      poll();
+      const interval = setInterval(poll, 30000);
       return () => clearInterval(interval);
     }
   }, [user]);
@@ -158,11 +184,7 @@ export default function Navbar() {
 
         {user ? (
           <>
-            <Link
-              to="/notifications"
-              className="relative text-muted hover:text-primary transition-colors"
-              title={t('nav.notifications')}
-            >
+            <Link to="/notifications" className={bellClassName} title={t('nav.notifications')}>
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
                   strokeLinecap="round"
@@ -172,7 +194,7 @@ export default function Navbar() {
                 />
               </svg>
               {unreadCount > 0 && (
-                <span className="absolute -top-1.5 -end-1.5 bg-red-500 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
+                <span className="absolute -top-1.5 -end-1.5 bg-red-500 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold animate-badge-pop">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
@@ -193,6 +215,12 @@ export default function Navbar() {
               ${user.balance?.toLocaleString()}
             </span>
 
+            {user?.level > 0 && (
+              <span className="hidden sm:inline text-xs bg-blue-600/15 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full font-semibold">
+                Lv.{user.level}
+              </span>
+            )}
+
             <div className="relative" ref={userMenuRef}>
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
@@ -200,20 +228,12 @@ export default function Navbar() {
               >
                 <div className="relative shrink-0">
                   {avatarUrl ? (
-                    <img
-                      src={avatarUrl}
-                      alt=""
-                      className={`w-6 h-6 rounded-full object-cover ${unreadCount > 0 ? 'animate-avatar-pulse' : ''}`}
-                    />
+                    <img src={avatarUrl} alt="" className={avatarClassName} />
                   ) : (
-                    <div
-                      className={`w-6 h-6 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-medium ${unreadCount > 0 ? 'animate-avatar-pulse' : ''}`}
-                    >
-                      {userInitial}
-                    </div>
+                    <div className={avatarFallbackClassName}>{userInitial}</div>
                   )}
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1.5 -end-1.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-card leading-none">
+                    <span className="absolute -top-1.5 -end-1.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-card leading-none animate-badge-glow">
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                   )}

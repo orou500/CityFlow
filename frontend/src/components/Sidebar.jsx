@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
@@ -18,6 +18,17 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
+
+  const hasUnread = unreadCount > 0;
+  const avatarClassName = useMemo(
+    () => `w-7 h-7 rounded-full object-cover ${hasUnread ? 'animate-avatar-pulse' : ''}`,
+    [hasUnread],
+  );
+  const avatarFallbackClassName = useMemo(
+    () =>
+      `w-7 h-7 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-medium ${hasUnread ? 'animate-avatar-pulse' : ''}`,
+    [hasUnread],
+  );
 
   const handleLogout = () => {
     logout();
@@ -229,17 +240,9 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
             >
               <div className="relative shrink-0">
                 {avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt=""
-                    className={`w-7 h-7 rounded-full object-cover ${unreadCount > 0 ? 'animate-avatar-pulse' : ''}`}
-                  />
+                  <img src={avatarUrl} alt="" className={avatarClassName} />
                 ) : (
-                  <div
-                    className={`w-7 h-7 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-medium ${unreadCount > 0 ? 'animate-avatar-pulse' : ''}`}
-                  >
-                    {userInitial}
-                  </div>
+                  <div className={avatarFallbackClassName}>{userInitial}</div>
                 )}
                 {unreadCount > 0 && (
                   <span className="absolute -top-1.5 -end-1.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-card leading-none">
@@ -298,7 +301,7 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
                       <span className="text-base shrink-0">{item.icon}</span>
                       <span>{item.label}</span>
                       {item.badge > 0 && (
-                        <span className="ml-auto bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                        <span className="ml-auto bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold animate-badge-glow">
                           {item.badge > 9 ? '9+' : item.badge}
                         </span>
                       )}

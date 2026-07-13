@@ -4,6 +4,7 @@ import User from '../models/User.js';
 import City from '../models/City.js';
 import Transaction from '../models/Transaction.js';
 import { authenticate } from '../middleware/auth.js';
+import { awardXp } from '../utils/leveling.js';
 
 const router = Router();
 
@@ -204,6 +205,12 @@ router.post('/buy', authenticate, async (req, res) => {
       type: 'buy',
     });
 
+    await awardXp(buyer, 10, 'property_buy');
+    buyer.lifetimeStats.totalTransactions += 1;
+    buyer.lifetimeStats.totalPropertiesOwned += 1;
+    buyer.lifetimeStats.totalMoneySpent += price;
+    await buyer.save();
+
     res.json({ property, balance: buyer.balance });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -245,6 +252,11 @@ router.post('/sell', authenticate, async (req, res) => {
       price: salePrice,
       type: 'sell',
     });
+
+    await awardXp(seller, 5, 'property_sell');
+    seller.lifetimeStats.totalTransactions += 1;
+    seller.lifetimeStats.totalMoneyEarned += salePrice;
+    await seller.save();
 
     res.json({ property, balance: seller.balance });
   } catch (err) {

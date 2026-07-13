@@ -4,6 +4,7 @@ import User from '../models/User.js';
 import Property from '../models/Property.js';
 import Transaction from '../models/Transaction.js';
 import { authenticate } from '../middleware/auth.js';
+import { awardXp } from '../utils/leveling.js';
 
 const router = Router();
 
@@ -95,6 +96,10 @@ router.post('/apply', authenticate, async (req, res) => {
       type: 'loan',
     });
 
+    await awardXp(user, 5, 'loan_apply');
+    user.lifetimeStats.totalLoansTaken += 1;
+    await user.save();
+
     const loans = await Loan.find({ userId: user._id, active: true });
 
     res.json({ loan, balance: user.balance, loans });
@@ -133,6 +138,8 @@ router.post('/repay', authenticate, async (req, res) => {
       price: repayAmount,
       type: 'loan_repay',
     });
+
+    await awardXp(user, 3, 'loan_repay');
 
     res.json({ loan, balance: user.balance });
   } catch (err) {

@@ -764,7 +764,16 @@
     "seasonHistory": "Season History",
     "viewLeaderboard": "View Full Leaderboard",
     "seasonRank": "Rank",
-    "seasonPlayers": "Players"
+    "seasonPlayers": "Players",
+    "transactions": "Transactions",
+    "propertiesOwned": "Properties Owned",
+    "earned": "Money Earned",
+    "spent": "Money Spent",
+    "loans": "Loans",
+    "friendsAdded": "Friends",
+    "upgrades": "Upgrades",
+    "construction": "Construction",
+    "seasons": "Seasons Played"
   },
   "friends": {
     "title": "Friends",

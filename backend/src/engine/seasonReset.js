@@ -374,13 +374,15 @@ export async function resetWorld() {
     console.log(`[SEASON] Deducted outstanding loan balances from ${loanBulkOps.length} users`);
   }
 
+  await User.updateMany({}, { $inc: { balance: 100000, 'lifetimeStats.totalSeasonsCompleted': 1 } });
+
   await Promise.all([
-    User.updateMany({}, { $set: { ownedProperties: [] }, $inc: { balance: 100000 } }),
+    User.updateMany({}, { $set: { ownedProperties: [] } }),
     Property.deleteMany({}),
     Transaction.deleteMany({}),
     Loan.deleteMany({}),
     PropertyOffer.deleteMany({}),
-    Notification.deleteMany({}),
+    Notification.deleteMany({ type: { $ne: 'system' } }),
     ConstructionProject.deleteMany({}),
     Event.deleteMany({}),
     City.deleteMany({}),
