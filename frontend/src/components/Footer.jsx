@@ -21,6 +21,9 @@ export default function Footer() {
           <Link to="/cookies" className="hover:text-primary transition-colors">
             {t('legal.cookiesTitle')}
           </Link>
+          <Link to="/contributors" className="hover:text-primary transition-colors">
+            {t('contributors.title')}
+          </Link>
         </div>
         <div className="text-muted text-xs">&copy; {new Date().getFullYear()} CityFlow. All rights reserved.</div>
       </div>
