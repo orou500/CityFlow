@@ -103,9 +103,36 @@ ${button(verifyUrl, 'Verify Email')}
   };
 }
 
-export function accountActivated({ username }) {
+export function welcome({ username }) {
   const content = `
 <h2 style="margin:0 0 8px;font-size:22px;color:${BRAND.textColor};">Welcome to ${BRAND.name}!</h2>
+<p style="margin:0 0 16px;color:${BRAND.mutedColor};font-size:15px;">Hi ${username},</p>
+<p style="margin:0 0 16px;font-size:15px;line-height:1.6;">
+  Thanks for signing up! Please verify your email address to get started.
+</p>
+<p style="margin:0 0 16px;font-size:15px;line-height:1.6;">
+  Once verified, you'll be ready to start building your real estate empire!
+</p>
+<p style="margin:16px 0 0;font-size:13px;color:${BRAND.mutedColor};line-height:1.5;">
+  Here's what you can look forward to:
+</p>
+<ul style="font-size:14px;line-height:1.8;color:${BRAND.mutedColor};margin:8px 0;padding-left:24px;">
+  <li>Browse the Marketplace for your first property</li>
+  <li>Check the Dashboard for your portfolio overview</li>
+  <li>Visit the Bank for investment loans</li>
+  <li>Watch market trends in the Map view</li>
+</ul>`;
+
+  return {
+    subject: `Welcome to ${BRAND.name}!`,
+    html: baseLayout('Welcome to CityFlow', content),
+    text: `Hi ${username},\n\nWelcome to CityFlow! Please verify your email to get started: ${BRAND.url}`,
+  };
+}
+
+export function accountActivated({ username }) {
+  const content = `
+<h2 style="margin:0 0 8px;font-size:22px;color:${BRAND.textColor};">Account Verified!</h2>
 <p style="margin:0 0 16px;color:${BRAND.mutedColor};font-size:15px;">Hi ${username},</p>
 <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">
   Your account has been verified and activated. You're ready to start building your real estate empire!
@@ -122,8 +149,8 @@ ${button(BRAND.url, 'Start Playing')}
 </ul>`;
 
   return {
-    subject: `Welcome to ${BRAND.name}!`,
-    html: baseLayout('Welcome to CityFlow', content),
+    subject: `Your ${BRAND.name} account is verified!`,
+    html: baseLayout('Account Verified', content),
     text: `Hi ${username},\n\nYour account is verified! Start playing: ${BRAND.url}`,
   };
 }
@@ -204,6 +231,7 @@ export function testEmail({ timestamp }) {
 export default {
   passwordReset,
   verification,
+  welcome,
   accountActivated,
   systemNotification,
   friendRequest,

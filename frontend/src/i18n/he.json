@@ -149,7 +149,10 @@
     "enterEmailToResend": "הזן את האימייל שלך לשליחה מחדש:",
     "resendVerification": "שלח שוב",
     "verificationResent": "אימייל אימות נשלח! בדוק את תיבת הדואר שלך.",
-    "cooldownSeconds": "המתן {{seconds}}ש לפני ניסיון נוסף."
+    "cooldownSeconds": "המתן {{seconds}}ש לפני ניסיון נוסף.",
+    "checkYourEmail": "בדוק את האימייל שלך",
+    "verificationEmailSentTo": "שלחנו קישור אימות אל",
+    "checkSpamFolder": "לא קיבלת? בדוק את תיקיית הספאם או נסה שוב."
   },
   "common": {
     "loading": "טוען...",

@@ -53,13 +53,12 @@ export const useAuthStore = create(
       register: async (username, email, password, confirmPassword, acceptedTerms, acceptedPrivacy) => {
         set({ loading: true, error: null });
         try {
-          const data = await api('/auth/register', {
+          await api('/auth/register', {
             method: 'POST',
             body: JSON.stringify({ username, email, password, confirmPassword, acceptedTerms, acceptedPrivacy }),
           });
-          localStorage.setItem('token', data.token);
-          set({ user: data.user, token: data.token, loading: false });
-          return data;
+          set({ loading: false });
+          return { registered: true };
         } catch (err) {
           set({ error: err.message, loading: false });
           throw err;

@@ -92,13 +92,12 @@ router.post('/register', registerLimiter, async (req, res) => {
       console.error(`[AUTH] Failed to send verification email to ${user.email}: ${err.message}`);
     });
 
-    const welcomeTemplate = emailTemplates.accountActivated({ username: user.username });
+    const welcomeTemplate = emailTemplates.welcome({ username: user.username });
     sendEmail({ to: user.email, ...welcomeTemplate }).catch((err) => {
       console.error(`[AUTH] Failed to send welcome email to ${user.email}: ${err.message}`);
     });
 
-    const token = generateToken(user._id);
-    res.status(201).json({ token, user });
+    res.status(201).json({ message: 'Account created. Please verify your email before logging in.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

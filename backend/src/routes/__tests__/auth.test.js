@@ -26,16 +26,15 @@ describe('POST /auth/register', () => {
     });
 
     expect(res.status).toBe(201);
-    expect(res.body).toHaveProperty('token');
-    expect(res.body.user).toHaveProperty('_id');
-    expect(res.body.user.username).toBe('freshuser');
-    expect(res.body.user.email).toBe('fresh@example.com');
-    expect(res.body.user).not.toHaveProperty('password');
-    expect(res.body.user.balance).toBe(100000);
-    expect(res.body.user.role).toBe('user');
+    expect(res.body.message).toMatch(/verify your email/i);
+
+    const user = await User.findOne({ email: 'fresh@example.com' });
+    expect(user).toBeTruthy();
+    expect(user.username).toBe('freshuser');
+    expect(user.emailVerified).toBe(false);
   });
 
-  it('returns a valid JWT token on registration', async () => {
+  it('does not return a token on registration', async () => {
     const res = await request(app).post('/auth/register').send({
       username: 'tokentest',
       email: 'token@example.com',
@@ -45,10 +44,9 @@ describe('POST /auth/register', () => {
       acceptedPrivacy: true,
     });
 
-    const decoded = jwt.verify(res.body.token, config.jwtSecret);
-    expect(decoded).toHaveProperty('userId');
-    expect(decoded).toHaveProperty('exp');
-    expect(decoded).toHaveProperty('iat');
+    expect(res.status).toBe(201);
+    expect(res.body).not.toHaveProperty('token');
+    expect(res.body).not.toHaveProperty('user');
   });
 
   it('rejects when username is missing', async () => {

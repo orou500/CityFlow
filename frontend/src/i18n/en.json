@@ -149,7 +149,10 @@
     "enterEmailToResend": "Enter your email to resend the verification link:",
     "resendVerification": "Resend",
     "verificationResent": "Verification email sent! Check your inbox.",
-    "cooldownSeconds": "Wait {{seconds}}s before trying again."
+    "cooldownSeconds": "Wait {{seconds}}s before trying again.",
+    "checkYourEmail": "Check Your Email",
+    "verificationEmailSentTo": "We sent a verification link to",
+    "checkSpamFolder": "Didn't receive it? Check your spam folder or try again."
   },
   "common": {
     "loading": "Loading...",
