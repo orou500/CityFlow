@@ -14,6 +14,8 @@ import { DEVELOPMENT_PROJECTS } from '../config/developmentProjects.js';
 import { getCurrentSeason, endCurrentSeasonAndStartNew, createNewSeason } from '../engine/seasonReset.js';
 import { setMaintenanceMode, getMaintenanceInfo } from '../models/GameState.js';
 import Notification from '../models/Notification.js';
+import { sendEmail, verifyConnection } from '../services/email.js';
+import emailTemplates from '../services/emailTemplates.js';
 
 const router = Router();
 
@@ -511,6 +513,53 @@ router.post('/maintenance/disable', async (req, res) => {
       global: true,
     });
     res.json({ enabled: false });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/email/test', async (req, res) => {
+  try {
+    const { to } = req.body;
+    if (!to) return res.status(400).json({ error: 'Email address is required' });
+
+    await verifyConnection();
+
+    const template = emailTemplates.testEmail({ timestamp: new Date().toISOString() });
+    const result = await sendEmail({ to, ...template });
+
+    if (result.sent) {
+      res.json({ success: true, messageId: result.messageId });
+    } else {
+      res.status(500).json({ success: false, error: result.error });
+    }
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.get('/email/status', async (req, res) => {
+  try {
+    const { config } = await import('../config/index.js');
+    const configured = !!(config.smtp.user && config.smtp.pass);
+    let connected = false;
+
+    if (configured) {
+      try {
+        await verifyConnection();
+        connected = true;
+      } catch {
+        connected = false;
+      }
+    }
+
+    res.json({
+      configured,
+      connected,
+      host: config.smtp.host,
+      port: config.smtp.port,
+      from: config.emailFrom,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

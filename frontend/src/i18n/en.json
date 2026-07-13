@@ -123,7 +123,25 @@
     "registerError": "Registration failed",
     "loginSuccess": "Welcome back!",
     "registerSuccess": "Account created!",
-    "agreeTo": "I agree to the"
+    "agreeTo": "I agree to the",
+    "forgotPassword": "Forgot your password?",
+    "forgotPasswordDesc": "Enter your email address and we'll send you a link to reset your password.",
+    "sendResetLink": "Send Reset Link",
+    "resetEmailSent": "If an account with that email exists, we've sent a password reset link.",
+    "backToLogin": "Back to Login",
+    "resetPassword": "Reset Password",
+    "newPassword": "New Password",
+    "passwordResetSuccess": "Your password has been reset successfully.",
+    "invalidLink": "Invalid Link",
+    "invalidResetLink": "This password reset link is invalid or has expired.",
+    "requestNewReset": "Request a new reset link",
+    "invalidVerifyLink": "This email verification link is invalid or has expired.",
+    "emailVerified": "Email Verified!",
+    "emailVerifiedDesc": "Your email has been verified. You can now log in and start playing.",
+    "verificationFailed": "Verification Failed",
+    "invalidOrExpiredToken": "This verification link is invalid or has expired.",
+    "passwordsDoNotMatch": "Passwords do not match",
+    "passwordTooShort": "Password must be at least 6 characters"
   },
   "common": {
     "loading": "Loading...",
@@ -1048,7 +1066,8 @@
     "checkBack": "Please check back later.",
     "staffLogin": "Staff Login",
     "bannerTitle": "⚠️ Maintenance Mode Active",
-    "bannerMessage": "Some functionality is temporarily unavailable."
+    "bannerMessage": "Some functionality is temporarily unavailable.",
+    "backToHome": "Back to Home"
   },
   "contributors": {
     "title": "Contributors",

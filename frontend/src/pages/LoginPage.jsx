@@ -140,6 +140,14 @@ export default function LoginPage() {
           </button>
         </form>
 
+        {!isRegister && (
+          <p className="mt-3 text-sm text-center">
+            <Link to="/forgot-password" className="text-blue-600 hover:text-blue-500 underline">
+              {t('auth.forgotPassword')}
+            </Link>
+          </p>
+        )}
+
         <p className="mt-4 text-sm text-center text-muted">
           {isRegister ? t('auth.hasAccount') : t('auth.noAccount')}{' '}
           <button

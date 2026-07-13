@@ -331,6 +331,12 @@ kubectl scale deployment cityflow-frontend --replicas=3 -n cityflow
 | `TICK_INTERVAL_MINUTES`| Game tick interval in minutes        | `60`                             | ConfigMap  |
 | `ADMIN_EMAIL`          | Admin account email                  | `admin@cityflow.com`             | ConfigMap  |
 | `ADMIN_PASSWORD`       | Admin account password               | `admin123`                       | Secret     |
+| `SMTP_HOST`            | SMTP relay host                      | `smtp-relay.brevo.com`           | Secret     |
+| `SMTP_PORT`            | SMTP relay port                      | `587`                            | Secret     |
+| `SMTP_SECURE`          | Use TLS (true/false)                 | `false`                          | Secret     |
+| `SMTP_USER`            | SMTP authentication login            | **Required**                     | Secret     |
+| `SMTP_PASS`            | SMTP authentication key              | **Required**                     | Secret     |
+| `EMAIL_FROM`           | Default sender address               | `noreply@sizops.co.il`           | Secret     |
 
 ---
 
@@ -343,7 +349,7 @@ Three secrets are required:
 | Secret | Contents |
 |--------|----------|
 | `mongodb-credentials` | MongoDB root username and password |
-| `backend-secrets` | `MONGODB_URI` (with credentials), `JWT_SECRET`, `ADMIN_PASSWORD` |
+| `backend-secrets` | `MONGODB_URI` (with credentials), `JWT_SECRET`, `ADMIN_PASSWORD`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM` |
 | `ghcr-pull` | Docker registry credentials for pulling GHCR images |
 
 **Rules:**
@@ -456,6 +462,92 @@ Admins can enable maintenance mode to block non-admin access during deployments 
 | Get status | GET | `/api/admin/maintenance` |
 | Enable | POST | `/api/admin/maintenance/enable` |
 | Disable | POST | `/api/admin/maintenance/disable` |
+
+---
+
+## Email Infrastructure
+
+Emails are sent via **Brevo SMTP** using the `sizops.co.il` domain. The email service is a reusable module that any part of the backend can call.
+
+### Sender Addresses
+
+| Address | Purpose |
+|---------|---------|
+| `noreply@sizops.co.il` | Default sender for automated emails |
+| `support@sizops.co.il` | Support-related replies |
+| `admin@sizops.co.il` | Admin alerts and system notifications |
+| `notifications@sizops.co.il` | User notifications |
+
+### Email Templates
+
+| Template | Use Case |
+|----------|----------|
+| `passwordReset` | Password reset link (1-hour expiry) |
+| `verification` | Email verification (24-hour expiry) |
+| `accountActivated` | Welcome after verification |
+| `systemNotification` | System announcements and alerts |
+| `friendRequest` | Friend request notification |
+| `adminAlert` | Admin system alerts |
+| `testEmail` | SMTP connectivity test |
+
+### How It Works
+
+- The `email.js` service uses a connection pool for performance
+- Failed sends are retried up to 3 times with exponential backoff
+- All sends are logged (success, failure, messageId)
+- HTML emails include a plain-text fallback
+- If SMTP is not configured, emails are skipped gracefully (no crash)
+
+### DNS Configuration
+
+For email authentication on `sizops.co.il`, configure these DNS records at your registrar:
+
+```
+# SPF (allows Brevo to send on your behalf)
+Type: TXT
+Name: @
+Value: "v=spf1 include:sendinblue.com ~all"
+
+# DKIM (provided by Brevo after domain verification)
+Type: TXT
+Name: s1._domainkey
+Value: (obtained from Brevo dashboard)
+
+# DMARC (email policy)
+Type: TXT
+Name: _dmarc
+Value: "v=DMARC1; p=quarantine; rua=mailto:admin@sizops.co.il"
+```
+
+### Brevo Setup Steps
+
+1. Create a Brevo account at https://app.brevo.com
+2. Go to **Settings > SMTP & API > SMTP**
+3. Generate SMTP credentials (login + key)
+4. Go to **Settings > Senders & IP > Domains**
+5. Add `sizops.co.il` and verify DNS records
+6. Copy SMTP credentials to Kubernetes secrets
+
+### Admin Endpoints
+
+| Action | Method | Endpoint |
+| ------ | ------ | -------- |
+| Send test email | POST | `/api/admin/email/test` |
+| Check SMTP status | GET | `/api/admin/email/status` |
+
+### Usage from Code
+
+```javascript
+import { sendEmail } from './services/email.js';
+import emailTemplates from './services/emailTemplates.js';
+
+const template = emailTemplates.passwordReset({
+  username: 'player1',
+  resetUrl: 'https://cityflow.sizops.co.il/reset-token123',
+});
+
+await sendEmail({ to: 'player1@example.com', ...template });
+```
 
 ---
 
