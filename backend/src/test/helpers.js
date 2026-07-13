@@ -22,6 +22,8 @@ export async function createTestUser(overrides = {}) {
     username: `testuser_${Date.now()}`,
     email: `test_${Date.now()}@example.com`,
     password: 'Password123',
+    emailVerified: true,
+    emailVerifiedAt: new Date(),
     ...overrides,
   };
   const user = await User.create(data);

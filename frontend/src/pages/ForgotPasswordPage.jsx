@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
@@ -8,6 +8,15 @@ export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
+  const [cooldown, setCooldown] = useState(0);
+  const cooldownRef = useRef(null);
+
+  useEffect(() => {
+    if (cooldown > 0) {
+      cooldownRef.current = setTimeout(() => setCooldown((c) => c - 1), 1000);
+      return () => clearTimeout(cooldownRef.current);
+    }
+  }, [cooldown]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,6 +29,11 @@ export default function ForgotPasswordPage() {
         body: JSON.stringify({ email: email.trim() }),
       });
       const data = await res.json();
+      if (res.status === 429) {
+        setCooldown(data.retryAfter || 60);
+        setError(t('auth.cooldownSeconds', { seconds: data.retryAfter || 60 }));
+        return;
+      }
       if (!res.ok) throw new Error(data.error);
       setSubmitted(true);
     } catch (err) {
@@ -65,19 +79,25 @@ export default function ForgotPasswordPage() {
             </div>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || cooldown > 0}
               className="w-full bg-blue-600 hover:bg-blue-500 text-white py-2 rounded transition-colors disabled:opacity-50"
             >
-              {loading ? t('common.loading') : t('auth.sendResetLink')}
+              {cooldown > 0
+                ? t('auth.cooldownSeconds', { seconds: cooldown })
+                : loading
+                  ? t('common.loading')
+                  : t('auth.sendResetLink')}
             </button>
           </form>
         )}
 
-        <p className="mt-4 text-sm text-center text-muted">
-          <Link to="/login" className="text-blue-600 hover:text-blue-500 underline">
-            {t('auth.backToLogin')}
-          </Link>
-        </p>
+        {!submitted && (
+          <p className="mt-4 text-sm text-center text-muted">
+            <Link to="/login" className="text-blue-600 hover:text-blue-500 underline">
+              {t('auth.backToLogin')}
+            </Link>
+          </p>
+        )}
       </div>
     </div>
   );

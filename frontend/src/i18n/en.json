@@ -141,7 +141,15 @@
     "verificationFailed": "Verification Failed",
     "invalidOrExpiredToken": "This verification link is invalid or has expired.",
     "passwordsDoNotMatch": "Passwords do not match",
-    "passwordTooShort": "Password must be at least 6 characters"
+    "passwordTooShort": "Password must be at least 8 characters",
+    "passwordNoUppercase": "Password must contain at least one uppercase letter",
+    "passwordNoLowercase": "Password must contain at least one lowercase letter",
+    "passwordNoNumber": "Password must contain at least one number",
+    "passwordRequirements": "At least 8 characters with uppercase, lowercase, and a number",
+    "enterEmailToResend": "Enter your email to resend the verification link:",
+    "resendVerification": "Resend",
+    "verificationResent": "Verification email sent! Check your inbox.",
+    "cooldownSeconds": "Wait {{seconds}}s before trying again."
   },
   "common": {
     "loading": "Loading...",
@@ -294,7 +302,16 @@
     "minimumCounterOffer": "Minimum counter offer is ${{amount}}",
     "offerAlready": "Offer is already {{status}}",
     "maxLoanAmount": "Maximum loan amount is 70% of net worth (${{maxLoan}}). Your net worth: ${{netWorth}}",
-    "cityOwnershipLimit": "City ownership limit reached. You can own at most {{maxAllowed}} properties in {{cityName}}"
+    "cityOwnershipLimit": "City ownership limit reached. You can own at most {{maxAllowed}} properties in {{cityName}}",
+    "Too many requests. Please try again later.": "Too many requests. Please try again later.",
+    "Too many login attempts. Please try again in 15 minutes.": "Too many login attempts. Please try again in 15 minutes.",
+    "Too many registration attempts. Please try again in an hour.": "Too many registration attempts. Please try again in an hour.",
+    "Too many verification emails requested. Please try again in 15 minutes.": "Too many verification emails requested. Please try again in 15 minutes.",
+    "Too many password reset requests. Please try again in 15 minutes.": "Too many password reset requests. Please try again in 15 minutes.",
+    "Password must be at least 8 characters": "Password must be at least 8 characters",
+    "Password must contain at least one uppercase letter": "Password must contain at least one uppercase letter",
+    "Password must contain at least one lowercase letter": "Password must contain at least one lowercase letter",
+    "Password must contain at least one number": "Password must contain at least one number"
   },
   "development": {
     "title": "Property Development",

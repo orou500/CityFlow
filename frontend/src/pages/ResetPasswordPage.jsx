@@ -33,8 +33,20 @@ export default function ResetPasswordPage() {
       setError(t('auth.passwordsDoNotMatch'));
       return;
     }
-    if (password.length < 6) {
+    if (password.length < 8) {
       setError(t('auth.passwordTooShort'));
+      return;
+    }
+    if (!/[A-Z]/.test(password)) {
+      setError(t('auth.passwordNoUppercase'));
+      return;
+    }
+    if (!/[a-z]/.test(password)) {
+      setError(t('auth.passwordNoLowercase'));
+      return;
+    }
+    if (!/[0-9]/.test(password)) {
+      setError(t('auth.passwordNoNumber'));
       return;
     }
     setLoading(true);
@@ -86,7 +98,7 @@ export default function ResetPasswordPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-3 py-2 text-primary"
                 required
-                minLength={6}
+                minLength={8}
               />
             </div>
             <div>

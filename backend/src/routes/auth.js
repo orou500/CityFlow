@@ -7,14 +7,44 @@ import { authenticate } from '../middleware/auth.js';
 import { isMaintenanceMode } from '../models/GameState.js';
 import { sendEmail } from '../services/email.js';
 import emailTemplates from '../services/emailTemplates.js';
+import { rateLimit } from '../middleware/rateLimit.js';
+import { validatePassword } from '../utils/validatePassword.js';
 
 const router = Router();
+
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  keyPrefix: 'rl:reg',
+  message: 'Too many registration attempts. Please try again in an hour.',
+});
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  keyPrefix: 'rl:login',
+  message: 'Too many login attempts. Please try again in 15 minutes.',
+});
+
+const resendVerifyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  keyPrefix: 'rl:rv',
+  message: 'Too many verification emails requested. Please try again in 15 minutes.',
+});
+
+const forgotPwLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  keyPrefix: 'rl:fp',
+  message: 'Too many password reset requests. Please try again in 15 minutes.',
+});
 
 function generateToken(userId) {
   return jwt.sign({ userId }, config.jwtSecret, { expiresIn: '7d' });
 }
 
-router.post('/register', async (req, res) => {
+router.post('/register', registerLimiter, async (req, res) => {
   try {
     if (await isMaintenanceMode()) {
       return res
@@ -27,6 +57,10 @@ router.post('/register', async (req, res) => {
     }
     if (password !== confirmPassword) {
       return res.status(400).json({ error: 'Passwords do not match' });
+    }
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      return res.status(400).json({ error: passwordError });
     }
     if (!acceptedTerms || !acceptedPrivacy) {
       return res.status(400).json({ error: 'You must accept the Terms of Service and Privacy Policy' });
@@ -58,6 +92,11 @@ router.post('/register', async (req, res) => {
       console.error(`[AUTH] Failed to send verification email to ${user.email}: ${err.message}`);
     });
 
+    const welcomeTemplate = emailTemplates.accountActivated({ username: user.username });
+    sendEmail({ to: user.email, ...welcomeTemplate }).catch((err) => {
+      console.error(`[AUTH] Failed to send welcome email to ${user.email}: ${err.message}`);
+    });
+
     const token = generateToken(user._id);
     res.status(201).json({ token, user });
   } catch (err) {
@@ -65,7 +104,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   try {
     const { login, password } = req.body;
     if (!login || !password) {
@@ -77,6 +116,9 @@ router.post('/login', async (req, res) => {
     });
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ error: 'Invalid username/email or password' });
+    }
+    if (!user.emailVerified && user.role !== 'admin') {
+      return res.status(403).json({ error: 'Please verify your email before logging in' });
     }
     if (await isMaintenanceMode()) {
       if (user.role !== 'admin') {
@@ -129,7 +171,33 @@ router.get('/verify-email', async (req, res) => {
   }
 });
 
-router.post('/forgot-password', async (req, res) => {
+router.post('/resend-verification', resendVerifyLimiter, async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user || user.emailVerified) {
+      return res.json({ success: true, message: 'If an unverified account exists, a new link has been sent.' });
+    }
+
+    const verificationToken = user.createVerificationToken();
+    await user.save({ validateBeforeSave: false });
+
+    const verifyUrl = `${config.emailFrom?.includes('http') ? config.emailFrom : 'https://cityflow.sizops.co.il'}/verify-email?token=${verificationToken}`;
+    const template = emailTemplates.verification({ username: user.username, verifyUrl });
+
+    sendEmail({ to: user.email, ...template }).catch((err) => {
+      console.error(`[AUTH] Failed to resend verification email to ${user.email}: ${err.message}`);
+    });
+
+    res.json({ success: true, message: 'If an unverified account exists, a new link has been sent.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/forgot-password', forgotPwLimiter, async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email is required' });
@@ -169,6 +237,11 @@ router.post('/reset-password', async (req, res) => {
     });
 
     if (!user) return res.status(400).json({ error: 'Invalid or expired reset token' });
+
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      return res.status(400).json({ error: passwordError });
+    }
 
     user.password = password;
     user.passwordResetToken = null;

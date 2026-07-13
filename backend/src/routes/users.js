@@ -9,6 +9,7 @@ import Property from '../models/Property.js';
 import Loan from '../models/Loan.js';
 import Transaction from '../models/Transaction.js';
 import { authenticate } from '../middleware/auth.js';
+import { validatePassword } from '../utils/validatePassword.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -119,8 +120,9 @@ router.put('/password', authenticate, async (req, res) => {
     if (!currentPassword || !newPassword) {
       return res.status(400).json({ error: 'Current password and new password are required' });
     }
-    if (newPassword.length < 6) {
-      return res.status(400).json({ error: 'New password must be at least 6 characters' });
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+      return res.status(400).json({ error: passwordError });
     }
     const isMatch = await req.user.comparePassword(currentPassword);
     if (!isMatch) {

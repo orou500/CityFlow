@@ -141,7 +141,15 @@
     "verificationFailed": "אימות נכשל",
     "invalidOrExpiredToken": "קישור האימות הזה לא חוקי או פג תוקפו.",
     "passwordsDoNotMatch": "הסיסמאות אינן תואמות",
-    "passwordTooShort": "הסיסמה חייבת להכיל לפחות 6 תווים"
+    "passwordTooShort": "הסיסמה חייבת להכיל לפחות 8 תווים",
+    "passwordNoUppercase": "הסיסמה חייבת להכיל לפחות אות גדולה אחת",
+    "passwordNoLowercase": "הסיסמה חייבת להכיל לפחות אות קטנה אחת",
+    "passwordNoNumber": "הסיסמה חייבת להכיל לפחות ספרה אחת",
+    "passwordRequirements": "לפחות 8 תווים עם אות גדולה, אות קטנה וספרה",
+    "enterEmailToResend": "הזן את האימייל שלך לשליחה מחדש:",
+    "resendVerification": "שלח שוב",
+    "verificationResent": "אימייל אימות נשלח! בדוק את תיבת הדואר שלך.",
+    "cooldownSeconds": "המתן {{seconds}}ש לפני ניסיון נוסף."
   },
   "common": {
     "loading": "טוען...",
@@ -294,7 +302,16 @@
     "minimumCounterOffer": "הצעת נגד מינימלית היא ${{amount}}",
     "offerAlready": "ההצעה כבר {{status}}",
     "maxLoanAmount": "סכום ההלוואה המקסימלי הוא 70% מהשווי הנקי (${{maxLoan}}). השווי הנקי שלך: ${{netWorth}}",
-    "cityOwnershipLimit": "הגעת למגבלת הבעלות בעיר. ניתן להחזיק עד {{maxAllowed}} נכסים ב{{cityName}}"
+    "cityOwnershipLimit": "הגעת למגבלת הבעלות בעיר. ניתן להחזיק עד {{maxAllowed}} נכסים ב{{cityName}}",
+    "Too many requests. Please try again later.": "יותר מדי בקשות. אנא נסה שוב מאוחר יותר.",
+    "Too many login attempts. Please try again in 15 minutes.": "יותר מדי ניסיונות התחברות. אנא נסה שוב בעוד 15 דקות.",
+    "Too many registration attempts. Please try again in an hour.": "יותר מדי ניסיונות הרשמה. אנא נסה שוב בעוד שעה.",
+    "Too many verification emails requested. Please try again in 15 minutes.": "יותר מדי בקשות לאימייל אימות. אנא נסה שוב בעוד 15 דקות.",
+    "Too many password reset requests. Please try again in 15 minutes.": "יותר מדי בקשות לאיפוס סיסמה. אנא נסה שוב בעוד 15 דקות.",
+    "Password must be at least 8 characters": "הסיסמה חייבת להכיל לפחות 8 תווים",
+    "Password must contain at least one uppercase letter": "הסיסמה חייבת להכיל לפחות אות גדולה אחת",
+    "Password must contain at least one lowercase letter": "הסיסמה חייבת להכיל לפחות אות קטנה אחת",
+    "Password must contain at least one number": "הסיסמה חייבת להכיל לפחות ספרה אחת"
   },
   "development": {
     "title": "פיתוח נכסים",

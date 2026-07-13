@@ -10,6 +10,7 @@ import {
   authHeader,
 } from '../../test/helpers.js';
 import { config } from '../../config/index.js';
+import User from '../../models/User.js';
 
 const app = createApp();
 
@@ -147,6 +148,10 @@ describe('POST /auth/login', () => {
       acceptedTerms: true,
       acceptedPrivacy: true,
     });
+    await User.findOneAndUpdate(
+      { email: 'login@example.com' },
+      { emailVerified: true, emailVerifiedAt: new Date() },
+    );
   });
 
   it('logs in with username', async () => {
