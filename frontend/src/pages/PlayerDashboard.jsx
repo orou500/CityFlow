@@ -147,7 +147,12 @@ export default function PlayerDashboard() {
       </div>
 
       <div className="mb-6">
-        <PeriodBonusWidget onClaimed={() => { fetchMe(); fetchUserData(); }} />
+        <PeriodBonusWidget
+          onClaimed={() => {
+            fetchMe();
+            fetchUserData();
+          }}
+        />
       </div>
 
       <div className="bg-white dark:bg-gray-900 rounded-lg p-6 mb-6">
