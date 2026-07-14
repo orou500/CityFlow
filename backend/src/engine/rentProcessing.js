@@ -3,8 +3,17 @@ import User from '../models/User.js';
 import Transaction from '../models/Transaction.js';
 
 export async function processRent() {
-  const properties = await Property.find({ ownerId: { $ne: null } }).lean();
+  const properties = await Property.find({ ownerId: { $ne: null } })
+    .populate('cityId')
+    .lean();
   if (properties.length === 0) return [];
+
+  const cityMap = new Map();
+  for (const prop of properties) {
+    if (prop.cityId && typeof prop.cityId === 'object' && !cityMap.has(prop.cityId._id?.toString())) {
+      cityMap.set(prop.cityId._id.toString(), prop.cityId);
+    }
+  }
 
   const ownerIds = [...new Set(properties.map((p) => p.ownerId?.toString()).filter(Boolean))];
   const users = await User.find({ _id: { $in: ownerIds } }).lean();
@@ -22,6 +31,11 @@ export async function processRent() {
     let rentIncome = property.rent || 0;
     let maintenanceCost = Math.round((property.currentPrice || 0) * 0.001);
 
+    const city = cityMap.get(property.cityId?._id?.toString() || property.cityId?.toString());
+    const demandIndex = city?.demandIndex || 1.0;
+    const supplyIndex = city?.supplyIndex || 1.0;
+    const rentModifier = Math.min(1.4, Math.max(0.6, 0.7 + 0.3 * (demandIndex / supplyIndex)));
+
     if (property.units && property.units.length > 0) {
       let tickOccupied = 0;
       let totalPotentialRent = 0;
@@ -33,7 +47,7 @@ export async function processRent() {
       }
 
       const occupancyRate = property.units.length > 0 ? tickOccupied / property.units.length : 0;
-      rentIncome = Math.round(totalPotentialRent * occupancyRate);
+      rentIncome = Math.round(totalPotentialRent * occupancyRate * rentModifier);
       maintenanceCost = property.maintenanceCost || Math.round((property.currentPrice || 0) * 0.001);
 
       const newOccupancy = Math.round(occupancyRate * 100);
@@ -52,8 +66,10 @@ export async function processRent() {
       }
 
       if (rentIncome === 0 && totalPotentialRent > 0) {
-        rentIncome = Math.round(totalPotentialRent * 0.3);
+        rentIncome = Math.round(totalPotentialRent * 0.3 * rentModifier);
       }
+    } else {
+      rentIncome = Math.round(rentIncome * rentModifier);
     }
 
     const netIncome = rentIncome - maintenanceCost;

@@ -118,7 +118,7 @@ export async function generateProperties() {
         name: `${PROPERTY_NAMES[nameIndex]} - ${city.name}`,
         basePrice: price,
         currentPrice: price,
-        rent: Math.round(price * 0.004),
+        rent: Math.round(price * 0.0055),
         volatility: 0.05 + Math.random() * 0.15,
         forSale: true,
         location,
