@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, Link } from 'react-router-dom';
 import { useGameStore } from '../store/useGameStore';
 import { useAuthStore } from '../store/useAuthStore';
+import PeriodBonusWidget from '../components/PeriodBonusWidget';
 
 export default function PlayerDashboard() {
   const { t } = useTranslation();
@@ -27,6 +28,8 @@ export default function PlayerDashboard() {
   const [counterAmount, setCounterAmount] = useState('');
   const [txPage, setTxPage] = useState(1);
   const TX_PER_PAGE = 5;
+  const [propPage, setPropPage] = useState(1);
+  const PROP_PER_PAGE = 8;
 
   useEffect(() => {
     fetchMe();
@@ -143,17 +146,26 @@ export default function PlayerDashboard() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <div className="bg-white dark:bg-gray-900 rounded-lg p-6">
-          <h2 className="text-xl font-bold mb-4">{t('dashboard.properties')}</h2>
-          {data.properties?.length === 0 ? (
-            <p className="text-gray-500 dark:text-gray-400">{t('dashboard.noProperties')}</p>
-          ) : (
-            <div className="space-y-3">
-              {data.properties?.map((p) => (
+      <div className="mb-6">
+        <PeriodBonusWidget
+          onClaimed={() => {
+            fetchMe();
+            fetchUserData();
+          }}
+        />
+      </div>
+
+      <div className="bg-white dark:bg-gray-900 rounded-lg p-6 mb-6">
+        <h2 className="text-xl font-bold mb-4">{t('dashboard.properties')}</h2>
+        {data.properties?.length === 0 ? (
+          <p className="text-gray-500 dark:text-gray-400">{t('dashboard.noProperties')}</p>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {data.properties?.slice(0, propPage * PROP_PER_PAGE).map((p) => (
                 <div
                   key={p._id}
-                  className="bg-gray-50 dark:bg-gray-800 p-3 rounded flex justify-between items-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-750"
+                  className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg flex flex-col justify-between cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors min-h-[100px]"
                   onClick={() => navigate(`/property/${p._id}`)}
                 >
                   <div>
@@ -162,45 +174,80 @@ export default function PlayerDashboard() {
                     </p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">{p.cityId?.name || 'Unknown'}</p>
                   </div>
-                  <p className="text-blue-600 dark:text-blue-400 font-semibold">${p.currentPrice?.toLocaleString()}</p>
+                  <div className="mt-2">
+                    <p className="text-blue-600 dark:text-blue-400 font-semibold">
+                      ${p.currentPrice?.toLocaleString()}
+                    </p>
+                    {p.rent > 0 && (
+                      <p className="text-xs text-green-600 dark:text-green-400">
+                        {t('city.rent')}: ${p.rent?.toLocaleString()}
+                      </p>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
-          )}
-        </div>
-
-        <div className="bg-white dark:bg-gray-900 rounded-lg p-6">
-          <h2 className="text-xl font-bold mb-4">{t('dashboard.income')}</h2>
-          <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">${totalIncome.toLocaleString()}</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('dashboard.totalRent')}</p>
-          {loans && loans.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                {t('bank.activeLoans')} ({loans.length})
-              </p>
-              {loans.slice(0, 3).map((loan) => (
-                <div key={loan._id} className="flex justify-between text-sm">
-                  <span className="text-gray-500 dark:text-gray-400">${loan.principal?.toLocaleString()}</span>
-                  <span
-                    className={
-                      loan.missedPayments > 0 ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'
-                    }
+            {data.properties.length > PROP_PER_PAGE && (
+              <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {t('dashboard.showing', {
+                    shown: Math.min(propPage * PROP_PER_PAGE, data.properties.length),
+                    total: data.properties.length,
+                  })}
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPropPage((p) => Math.max(1, p - 1))}
+                    disabled={propPage === 1}
+                    className="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-800 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                   >
-                    {loan.ticksRemaining} {t('general.periods')} left
-                  </span>
+                    {t('common.previous')}
+                  </button>
+                  <button
+                    onClick={() => setPropPage((p) => p + 1)}
+                    disabled={propPage * PROP_PER_PAGE >= data.properties.length}
+                    className="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-800 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    {t('common.next')}
+                  </button>
                 </div>
-              ))}
-              {loans.length > 3 && (
-                <Link
-                  to="/bank"
-                  className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-300 mt-1 inline-block"
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      <div className="bg-white dark:bg-gray-900 rounded-lg p-6 mb-6">
+        <h2 className="text-xl font-bold mb-4">{t('dashboard.income')}</h2>
+        <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">${totalIncome.toLocaleString()}</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('dashboard.totalRent')}</p>
+        {loans && loans.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+              {t('bank.activeLoans')} ({loans.length})
+            </p>
+            {loans.slice(0, 3).map((loan) => (
+              <div key={loan._id} className="flex justify-between text-sm">
+                <span className="text-gray-500 dark:text-gray-400">${loan.principal?.toLocaleString()}</span>
+                <span
+                  className={
+                    loan.missedPayments > 0 ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'
+                  }
                 >
-                  +{loans.length - 3} more...
-                </Link>
-              )}
-            </div>
-          )}
-        </div>
+                  {loan.ticksRemaining} {t('general.periods')} left
+                </span>
+              </div>
+            ))}
+            {loans.length > 3 && (
+              <Link
+                to="/bank"
+                className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-300 mt-1 inline-block"
+              >
+                +{loans.length - 3} more...
+              </Link>
+            )}
+          </div>
+        )}
       </div>
 
       {(sentOffers.length > 0 || receivedOffers.length > 0) && (

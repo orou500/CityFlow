@@ -253,6 +253,9 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
               {!collapsed && (
                 <>
                   <span className="ms-2.5 text-sm text-primary truncate">{user.displayName || user.username}</span>
+                  <span className="text-xs text-green-600 dark:text-green-400 font-semibold bg-green-50 dark:bg-green-900/30 px-1.5 py-0.5 rounded ms-1">
+                    ${user.balance?.toLocaleString()}
+                  </span>
                   <svg
                     className={`absolute end-3 w-3 h-3 text-muted transition-transform ${userMenuOpen ? 'rotate-180' : ''}`}
                     fill="none"

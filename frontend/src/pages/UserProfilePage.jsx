@@ -617,22 +617,35 @@ export default function UserProfilePage() {
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">{t('profile.activity')}</h2>
             <div className="space-y-2">
-              {profile.transactions.map((tx) => (
-                <div
-                  key={tx._id}
-                  className="flex justify-between items-center gap-3 bg-gray-50 dark:bg-gray-800 rounded-lg px-4 py-2 text-sm"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-600 dark:text-gray-300">{tx.propertyId?.name || 'Property'}</span>
-                    <span
-                      className={`text-xs ${tx.buyerId === profileUser._id ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}`}
-                    >
-                      {tx.buyerId === profileUser._id ? t('profile.bought') : t('profile.sold')}
-                    </span>
+              {profile.transactions.map((tx) => {
+                const typeMap = {
+                  buy: { label: t('profile.bought'), color: 'text-blue-600 dark:text-blue-400' },
+                  sell: { label: t('profile.sold'), color: 'text-red-600 dark:text-red-400' },
+                  rent: { label: t('profile.receivedRent'), color: 'text-green-600 dark:text-green-400' },
+                  loan: { label: t('profile.loanTaken'), color: 'text-blue-600 dark:text-blue-400' },
+                  loan_payment: { label: t('profile.loanPayment'), color: 'text-amber-600 dark:text-amber-400' },
+                  loan_repay: { label: t('profile.loanRepaid'), color: 'text-green-600 dark:text-green-400' },
+                  penalty: { label: t('profile.penalty'), color: 'text-red-600 dark:text-red-400' },
+                  repossess: { label: t('profile.repossessed'), color: 'text-red-600 dark:text-red-400' },
+                  construction: { label: t('profile.construction'), color: 'text-blue-600 dark:text-blue-400' },
+                  upgrade: { label: t('profile.upgrade'), color: 'text-purple-600 dark:text-purple-400' },
+                };
+                const info = typeMap[tx.type] || { label: tx.type, color: 'text-gray-500' };
+                return (
+                  <div
+                    key={tx._id}
+                    className="flex justify-between items-center gap-3 bg-gray-50 dark:bg-gray-800 rounded-lg px-4 py-2 text-sm"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-600 dark:text-gray-300">{tx.propertyId?.name || '—'}</span>
+                      <span className={`text-xs font-medium ${info.color}`}>{info.label}</span>
+                    </div>
+                    <div className="text-gray-500 dark:text-gray-400 text-xs shrink-0">
+                      ${tx.price?.toLocaleString()}
+                    </div>
                   </div>
-                  <div className="text-gray-500 dark:text-gray-400 text-xs shrink-0">${tx.price?.toLocaleString()}</div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
