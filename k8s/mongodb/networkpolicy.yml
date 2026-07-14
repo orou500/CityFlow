@@ -16,6 +16,9 @@ spec:
         - podSelector:
             matchLabels:
               app.kubernetes.io/name: backend
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: discord-bot
       ports:
         - port: 27017
           protocol: TCP
