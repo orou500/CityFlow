@@ -5,12 +5,13 @@ import he from './he.json';
 
 i18n.use(initReactI18next).init({
   resources: { en: { translation: en }, he: { translation: he } },
-  lng: 'en',
+  lng: localStorage.getItem('i18n_language') || 'en',
   fallbackLng: 'en',
   interpolation: { escapeValue: false },
 });
 
 i18n.on('languageChanged', (lng) => {
+  localStorage.setItem('i18n_language', lng);
   document.body.dir = lng === 'he' ? 'rtl' : 'ltr';
 });
 document.body.dir = i18n.language === 'he' ? 'rtl' : 'ltr';

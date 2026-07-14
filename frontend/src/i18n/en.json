@@ -163,7 +163,15 @@
     "cooldownSeconds": "Wait {{seconds}}s before trying again.",
     "checkYourEmail": "Check Your Email",
     "verificationEmailSentTo": "We sent a verification link to",
-    "checkSpamFolder": "Didn't receive it? Check your spam folder or try again."
+    "checkSpamFolder": "Didn't receive it? Check your spam folder or try again.",
+    "orContinueWith": "or continue with",
+    "signInWithGoogle": "Sign in with Google",
+    "signInWithDiscord": "Sign in with Discord",
+    "welcomeToCityFlow": "Welcome to CityFlow",
+    "acceptTermsPrompt": "Before you start, please review and accept our Terms of Service and Privacy Policy.",
+    "readFullDocs": "Read the full",
+    "and": "and",
+    "acceptAndContinue": "Accept & Continue"
   },
   "common": {
     "loading": "Loading...",
@@ -792,7 +800,12 @@
     "friendsAdded": "Friends",
     "upgrades": "Upgrades",
     "construction": "Construction",
-    "seasons": "Seasons Played"
+    "seasons": "Seasons Played",
+    "connectedAccounts": "Connected Accounts",
+    "linked": "Linked",
+    "link": "Link",
+    "unlink": "Unlink",
+    "noPasswordWarning": "Your account has no password set. Link a password to ensure you can always access your account."
   },
   "friends": {
     "title": "Friends",

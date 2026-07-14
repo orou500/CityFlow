@@ -7,7 +7,13 @@ const userSchema = new mongoose.Schema(
     username: { type: String, required: true, trim: true },
     normalizedUsername: { type: String, unique: true, lowercase: true, trim: true },
     email: { type: String, required: true, unique: true, trim: true, lowercase: true },
-    password: { type: String, required: true },
+    password: { type: String, default: null },
+    oauthProviders: [
+      {
+        provider: { type: String, enum: ['google', 'github', 'discord'] },
+        providerId: { type: String },
+      },
+    ],
     balance: { type: Number, default: 100000 },
     ownedProperties: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Property' }],
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
@@ -65,12 +71,13 @@ userSchema.pre('save', async function (next) {
   if (this.isModified('username')) {
     this.normalizedUsername = this.username.toLowerCase().trim();
   }
-  if (!this.isModified('password')) return next();
+  if (!this.isModified('password') || !this.password) return next();
   this.password = await bcrypt.hash(this.password, 12);
   next();
 });
 
 userSchema.methods.comparePassword = async function (candidatePassword) {
+  if (!this.password) return false;
   return bcrypt.compare(candidatePassword, this.password);
 };
 
@@ -95,6 +102,10 @@ userSchema.methods.toJSON = function () {
   delete obj.verificationExpires;
   delete obj.passwordResetToken;
   delete obj.passwordResetExpires;
+  if (obj.oauthProviders) {
+    obj.oauthProviders = obj.oauthProviders.map((p) => ({ provider: p.provider }));
+  }
+  obj.hasPassword = !!this.password;
   return obj;
 };
 

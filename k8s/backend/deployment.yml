@@ -31,6 +31,9 @@ spec:
                 name: backend-config
             - secretRef:
                 name: backend-secrets
+            - secretRef:
+                name: oauth-secrets
+                optional: true
           resources:
             requests:
               cpu: 250m
