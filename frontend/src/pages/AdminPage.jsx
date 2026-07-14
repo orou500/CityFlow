@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useGameStore } from '../store/useGameStore';
+import { formatMoney } from '../utils/format';
 
 function StatCard({ label, value }) {
   return (
@@ -26,7 +27,7 @@ function TabButton({ active, onClick, children }) {
   );
 }
 
-function Table({ headers, rows, renderRow }) {
+function Table({ headers, rows, renderRow, sortKey, sortDir, onSort }) {
   const { t } = useTranslation();
   return (
     <div className="overflow-x-auto">
@@ -34,8 +35,17 @@ function Table({ headers, rows, renderRow }) {
         <thead>
           <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
             {headers.map((h, i) => (
-              <th key={i} className="px-3 py-2 font-medium">
-                {h}
+              <th
+                key={i}
+                className={`px-3 py-2 font-medium ${onSort ? 'cursor-pointer select-none hover:text-blue-500 dark:hover:text-blue-400' : ''}`}
+                onClick={onSort ? () => onSort(h.key) : undefined}
+              >
+                <span className="inline-flex items-center gap-1">
+                  {h.label || h}
+                  {sortKey === h.key && (
+                    <span className="text-blue-500 dark:text-blue-400">{sortDir === 'asc' ? '\u25B2' : '\u25BC'}</span>
+                  )}
+                </span>
               </th>
             ))}
           </tr>
@@ -136,6 +146,8 @@ export default function AdminPage() {
   const [editUserBalance, setEditUserBalance] = useState('');
   const [propSearch, setPropSearch] = useState('');
   const [userSearch, setUserSearch] = useState('');
+  const [userSortKey, setUserSortKey] = useState(null);
+  const [userSortDir, setUserSortDir] = useState('asc');
   const [userPage, setUserPage] = useState(1);
   const USERS_PER_PAGE = 20;
 
@@ -557,10 +569,7 @@ export default function AdminPage() {
           <StatCard label={t('admin.transactions')} value={overview.totalTransactions?.toLocaleString() || 0} />
           <StatCard label={t('admin.activeEvents')} value={overview.activeEvents || 0} />
           <StatCard label={t('admin.activeLoans')} value={overview.activeLoans || 0} />
-          <StatCard
-            label={t('admin.moneyInCirculation')}
-            value={`$${(overview.totalMoneyInCirculation || 0).toLocaleString()}`}
-          />
+          <StatCard label={t('admin.moneyInCirculation')} value={formatMoney(overview.totalMoneyInCirculation || 0)} />
           <StatCard label={t('admin.periodNumber')} value={overview.tickNumber || 0} />
         </div>
       )}
@@ -626,24 +635,68 @@ export default function AdminPage() {
           />
 
           {(() => {
-            const filtered = userSearch
+            const searched = userSearch
               ? adminUsers.filter((u) =>
                   [u.username, u.email, u.role].some((v) => v?.toLowerCase().includes(userSearch.toLowerCase())),
                 )
               : adminUsers;
+
+            const sorted = [...searched];
+            if (userSortKey) {
+              sorted.sort((a, b) => {
+                let aVal, bVal;
+                switch (userSortKey) {
+                  case 'username':
+                    aVal = a.username || '';
+                    bVal = b.username || '';
+                    return userSortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+                  case 'email':
+                    aVal = a.email || '';
+                    bVal = b.email || '';
+                    return userSortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+                  case 'role':
+                    aVal = a.role || '';
+                    bVal = b.role || '';
+                    return userSortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+                  case 'balance':
+                    aVal = a.balance || 0;
+                    bVal = b.balance || 0;
+                    return userSortDir === 'asc' ? aVal - bVal : bVal - aVal;
+                  case 'properties':
+                    aVal = a.propertyCount || 0;
+                    bVal = b.propertyCount || 0;
+                    return userSortDir === 'asc' ? aVal - bVal : bVal - aVal;
+                  case 'banned':
+                    aVal = a.banned ? 1 : 0;
+                    bVal = b.banned ? 1 : 0;
+                    return userSortDir === 'asc' ? aVal - bVal : bVal - aVal;
+                  default:
+                    return 0;
+                }
+              });
+            }
+
+            const filtered = sorted;
             return (
               <>
                 <Table
                   headers={[
-                    t('admin.username'),
-                    t('admin.email'),
-                    t('admin.role'),
-                    t('admin.balance'),
-                    t('admin.propertiesShort'),
-                    t('admin.banned'),
+                    { key: 'username', label: t('admin.username') },
+                    { key: 'email', label: t('admin.email') },
+                    { key: 'role', label: t('admin.role') },
+                    { key: 'balance', label: t('admin.balance') },
+                    { key: 'properties', label: t('admin.propertiesShort') },
+                    { key: 'banned', label: t('admin.banned') },
                     t('admin.actions'),
                   ]}
                   rows={filtered.slice(0, userPage * USERS_PER_PAGE)}
+                  sortKey={userSortKey}
+                  sortDir={userSortDir}
+                  onSort={(key) => {
+                    if (!key) return;
+                    setUserSortKey((prev) => (prev === key ? null : key));
+                    setUserSortDir((prev) => (userSortKey === key && prev === 'asc' ? 'desc' : 'asc'));
+                  }}
                   renderRow={(u) => (
                     <>
                       <td className="px-3 py-2 text-gray-900 dark:text-white">{u.username}</td>
@@ -678,7 +731,7 @@ export default function AdminPage() {
                             </button>
                           </div>
                         ) : (
-                          <span>${u.balance?.toLocaleString()}</span>
+                          <span>{formatMoney(u.balance || 0)}</span>
                         )}
                       </td>
                       <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{u.propertyCount || 0}</td>
@@ -834,10 +887,8 @@ export default function AdminPage() {
                       <td className="px-3 py-2 text-gray-900 dark:text-white">{p.name}</td>
                       <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{p.type}</td>
                       <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{p.cityId?.name || t('admin.na')}</td>
-                      <td className="px-3 py-2 text-blue-600 dark:text-blue-400">
-                        ${p.currentPrice?.toLocaleString()}
-                      </td>
-                      <td className="px-3 py-2 text-gray-500 dark:text-gray-400">${p.rent?.toLocaleString()}</td>
+                      <td className="px-3 py-2 text-blue-600 dark:text-blue-400">{formatMoney(p.currentPrice || 0)}</td>
+                      <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{formatMoney(p.rent || 0)}</td>
                       <td className="px-3 py-2 text-gray-500 dark:text-gray-400">
                         {p.ownerId?.username || t('admin.unowned')}
                       </td>
@@ -976,7 +1027,9 @@ export default function AdminPage() {
                 )}
               </td>
               <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{c.supplyIndex ?? '-'}</td>
-              <td className="px-3 py-2 text-blue-600 dark:text-blue-400">${c.avgPrice?.toLocaleString() || '-'}</td>
+              <td className="px-3 py-2 text-blue-600 dark:text-blue-400">
+                {c.avgPrice ? formatMoney(c.avgPrice) : '-'}
+              </td>
               <td className="px-3 py-2 text-gray-500 dark:text-gray-400">
                 {c.growthRate != null ? `${c.growthRate}%` : '-'}
               </td>

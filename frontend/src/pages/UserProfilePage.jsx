@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
 import { useGameStore } from '../store/useGameStore';
+import { formatMoney } from '../utils/format';
 
 function StatCard({ label, value, color }) {
   return (
@@ -575,11 +576,11 @@ export default function UserProfilePage() {
                 { label: t('profile.propertiesOwned'), value: profileUser.lifetimeStats.totalPropertiesOwned || 0 },
                 {
                   label: t('profile.earned'),
-                  value: `$${(profileUser.lifetimeStats.totalMoneyEarned || 0).toLocaleString()}`,
+                  value: formatMoney(profileUser.lifetimeStats.totalMoneyEarned || 0),
                 },
                 {
                   label: t('profile.spent'),
-                  value: `$${(profileUser.lifetimeStats.totalMoneySpent || 0).toLocaleString()}`,
+                  value: formatMoney(profileUser.lifetimeStats.totalMoneySpent || 0),
                 },
                 { label: t('profile.loans'), value: profileUser.lifetimeStats.totalLoansTaken || 0 },
                 { label: t('profile.friendsAdded'), value: profileUser.lifetimeStats.totalFriendsAdded || 0 },
@@ -599,12 +600,12 @@ export default function UserProfilePage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard
             label={t('profile.netWorth')}
-            value={`$${(netWorth || 0).toLocaleString()}`}
+            value={formatMoney(netWorth || 0)}
             color="text-orange-500 dark:text-orange-400"
           />
           <StatCard
             label={t('profile.cash')}
-            value={`$${(profileUser.balance || 0).toLocaleString()}`}
+            value={formatMoney(profileUser.balance || 0)}
             color="text-gray-900 dark:text-white"
           />
           <StatCard
@@ -614,7 +615,7 @@ export default function UserProfilePage() {
           />
           <StatCard
             label={t('profile.rentalIncome')}
-            value={`$${(totalRent || 0).toLocaleString()}`}
+            value={formatMoney(totalRent || 0)}
             color="text-yellow-600 dark:text-yellow-400"
           />
         </div>
@@ -662,10 +663,10 @@ export default function UserProfilePage() {
                         </span>
                       </td>
                       <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">
-                        ${(s.netWorth || 0).toLocaleString()}
+                        {formatMoney(s.netWorth || 0)}
                       </td>
                       <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
-                        ${(s.portfolioValue || 0).toLocaleString()}
+                        {formatMoney(s.portfolioValue || 0)}
                       </td>
                       <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{s.propertiesOwned || 0}</td>
                       <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
