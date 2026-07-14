@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [frontend, backend]
+        service: [frontend, backend, discord-bot]
 
     steps:
       - uses: actions/checkout@v4

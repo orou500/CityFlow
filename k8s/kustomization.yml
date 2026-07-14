@@ -6,6 +6,7 @@ namespace: cityflow
 resources:
   - namespace.yml
   - config/backend-configmap.yml
+  - config/discord-bot-configmap.yml
   - config/networkpolicy-deny-all.yml
   - mongodb/statefulset.yml
   - mongodb/service.yml
@@ -16,5 +17,7 @@ resources:
   - frontend/deployment.yml
   - frontend/service.yml
   - frontend/networkpolicy.yml
+  - discord-bot/deployment.yml
+  - discord-bot/networkpolicy.yml
   - ingress/middleware.yml
   - ingress/ingress.yml
