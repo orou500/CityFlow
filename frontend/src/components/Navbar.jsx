@@ -211,7 +211,7 @@ export default function Navbar() {
               </svg>
             </button>
 
-            <span className="hidden sm:inline text-sm text-blue-600 dark:text-blue-400 font-medium">
+            <span className="text-sm text-green-600 dark:text-green-400 font-semibold bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded">
               ${user.balance?.toLocaleString()}
             </span>
 

@@ -38,6 +38,7 @@ const userSchema = new mongoose.Schema(
     verificationExpires: { type: Date, default: null },
     passwordResetToken: { type: String, default: null },
     passwordResetExpires: { type: Date, default: null },
+    lastPeriodBonusClaim: { type: Date, default: null },
     level: { type: Number, default: 1 },
     xp: { type: Number, default: 0 },
     xpToNextLevel: { type: Number, default: 100 },
