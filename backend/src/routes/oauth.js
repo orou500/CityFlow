@@ -54,7 +54,9 @@ function getDiscordCallbackUrl(req) {
 
 async function handleOAuthCallback({ provider, providerId, email, name, avatar }) {
   if (await isMaintenanceMode()) {
-    return { redirect: `${config.frontendUrl}/auth/callback?error=${encodeURIComponent('CityFlow is currently undergoing maintenance')}` };
+    return {
+      redirect: `${config.frontendUrl}/auth/callback?error=${encodeURIComponent('CityFlow is currently undergoing maintenance')}`,
+    };
   }
 
   let user = await User.findOne({

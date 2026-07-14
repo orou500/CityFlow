@@ -8,10 +8,12 @@ const userSchema = new mongoose.Schema(
     normalizedUsername: { type: String, unique: true, lowercase: true, trim: true },
     email: { type: String, required: true, unique: true, trim: true, lowercase: true },
     password: { type: String, default: null },
-    oauthProviders: [{
-      provider: { type: String, enum: ['google', 'github', 'discord'] },
-      providerId: { type: String },
-    }],
+    oauthProviders: [
+      {
+        provider: { type: String, enum: ['google', 'github', 'discord'] },
+        providerId: { type: String },
+      },
+    ],
     balance: { type: Number, default: 100000 },
     ownedProperties: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Property' }],
     role: { type: String, enum: ['user', 'admin'], default: 'user' },

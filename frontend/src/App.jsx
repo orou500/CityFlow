@@ -39,13 +39,26 @@ import './i18n/index.js';
 
 const TERMS_PATH = '/auth/accept-terms';
 
-const PUBLIC_PATHS = ['/', '/login', '/terms', '/privacy', '/cookies', '/forgot-password', '/reset-password', '/verify-email', '/auth/callback'];
+const PUBLIC_PATHS = [
+  '/',
+  '/login',
+  '/terms',
+  '/privacy',
+  '/cookies',
+  '/forgot-password',
+  '/reset-password',
+  '/verify-email',
+  '/auth/callback',
+];
 
 function AppRoutes() {
   const location = useLocation();
   const user = useAuthStore((s) => s.user);
   const needsTerms = user && (!user.acceptedTerms || !user.acceptedPrivacy);
-  const isPublicPath = PUBLIC_PATHS.includes(location.pathname) || location.pathname.startsWith('/seasons') || location.pathname.startsWith('/contributors');
+  const isPublicPath =
+    PUBLIC_PATHS.includes(location.pathname) ||
+    location.pathname.startsWith('/seasons') ||
+    location.pathname.startsWith('/contributors');
 
   if (needsTerms && location.pathname !== TERMS_PATH) {
     return <Navigate to={TERMS_PATH} replace />;

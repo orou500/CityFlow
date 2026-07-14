@@ -203,9 +203,7 @@ export default function OAuthAcceptTermsPage() {
             <button
               onClick={() => setActiveTab('terms')}
               className={`flex-1 py-2 text-sm font-medium transition-colors ${
-                activeTab === 'terms'
-                  ? 'text-orange-500 border-b-2 border-orange-500'
-                  : 'text-muted hover:text-primary'
+                activeTab === 'terms' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-muted hover:text-primary'
               }`}
             >
               {t('legal.termsTitle')}
@@ -227,9 +225,7 @@ export default function OAuthAcceptTermsPage() {
           </div>
         </div>
 
-        {error && (
-          <p className="text-red-500 text-sm mb-4">{error}</p>
-        )}
+        {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
         <div className="space-y-3 mb-6">
           <label className="flex items-start gap-3 text-sm text-secondary cursor-pointer">
@@ -240,8 +236,7 @@ export default function OAuthAcceptTermsPage() {
               className="mt-1 rounded border-gray-300 dark:border-gray-600"
             />
             <span>
-              {t('auth.agreeTo')}{' '}
-              <span className="text-orange-500 dark:text-orange-400">{t('legal.termsTitle')}</span>
+              {t('auth.agreeTo')} <span className="text-orange-500 dark:text-orange-400">{t('legal.termsTitle')}</span>
             </span>
           </label>
           <label className="flex items-start gap-3 text-sm text-secondary cursor-pointer">
