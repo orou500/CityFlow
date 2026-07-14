@@ -163,7 +163,9 @@
     "cooldownSeconds": "המתן {{seconds}}ש לפני ניסיון נוסף.",
     "checkYourEmail": "בדוק את האימייל שלך",
     "verificationEmailSentTo": "שלחנו קישור אימות אל",
-    "checkSpamFolder": "לא קיבלת? בדוק את תיקיית הספאם או נסה שוב."
+    "checkSpamFolder": "לא קיבלת? בדוק את תיקיית הספאם או נסה שוב.",
+    "orContinueWith": "או המשך עם",
+    "signInWithGoogle": "התחבר עם Google"
   },
   "common": {
     "loading": "טוען...",
@@ -783,7 +785,12 @@
     "friendsAdded": "חברים",
     "upgrades": "שדרוגים",
     "construction": "בנייה",
-    "seasons": "עונות שהשתתף"
+    "seasons": "עונות שהשתתף",
+    "connectedAccounts": "חשבונות מחוברים",
+    "linked": "מחובר",
+    "link": "חבר",
+    "unlink": "נתק",
+    "noPasswordWarning": "לחשבון שלך אין סיסמה. חבר סיסמה כדי להבטיח שתוכל לגשת לחשבון שלך תמיד."
   },
   "friends": {
     "title": "חברים",

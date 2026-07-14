@@ -23,4 +23,15 @@ export const config = {
     pass: process.env.SMTP_PASS || '',
   },
   emailFrom: process.env.EMAIL_FROM || 'noreply@sizops.co.il',
+  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+  oauth: {
+    google: {
+      clientId: process.env.OAUTH_GOOGLE_CLIENT_ID || '',
+      clientSecret: process.env.OAUTH_GOOGLE_CLIENT_SECRET || '',
+      redirectUri: process.env.OAUTH_GOOGLE_REDIRECT_URI || '',
+      get enabled() {
+        return !!(this.clientId && this.clientSecret);
+      },
+    },
+  },
 };
