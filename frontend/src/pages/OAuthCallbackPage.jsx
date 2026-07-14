@@ -13,10 +13,14 @@ export default function OAuthCallbackPage() {
     if (token) {
       localStorage.setItem('token', token);
       fetchMe().then(() => {
-        navigate('/dashboard', { replace: true });
+        if (searchParams.get('new_user') === '1') {
+          navigate('/auth/accept-terms', { replace: true });
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
       });
     }
-  }, [token, fetchMe, navigate]);
+  }, [token, fetchMe, navigate, searchParams]);
 
   return (
     <div className="min-h-full flex items-center justify-center bg-surface px-4 py-8">

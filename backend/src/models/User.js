@@ -8,10 +8,10 @@ const userSchema = new mongoose.Schema(
     normalizedUsername: { type: String, unique: true, lowercase: true, trim: true },
     email: { type: String, required: true, unique: true, trim: true, lowercase: true },
     password: { type: String, default: null },
-    oauth: {
-      provider: { type: String, enum: ['google', 'github', 'discord', null], default: null },
-      providerId: { type: String, default: null },
-    },
+    oauthProviders: [{
+      provider: { type: String, enum: ['google', 'github', 'discord'] },
+      providerId: { type: String },
+    }],
     balance: { type: Number, default: 100000 },
     ownedProperties: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Property' }],
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
@@ -100,8 +100,8 @@ userSchema.methods.toJSON = function () {
   delete obj.verificationExpires;
   delete obj.passwordResetToken;
   delete obj.passwordResetExpires;
-  if (obj.oauth) {
-    delete obj.oauth.providerId;
+  if (obj.oauthProviders) {
+    obj.oauthProviders = obj.oauthProviders.map((p) => ({ provider: p.provider }));
   }
   obj.hasPassword = !!this.password;
   return obj;

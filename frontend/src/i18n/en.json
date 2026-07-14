@@ -165,7 +165,13 @@
     "verificationEmailSentTo": "We sent a verification link to",
     "checkSpamFolder": "Didn't receive it? Check your spam folder or try again.",
     "orContinueWith": "or continue with",
-    "signInWithGoogle": "Sign in with Google"
+    "signInWithGoogle": "Sign in with Google",
+    "signInWithDiscord": "Sign in with Discord",
+    "welcomeToCityFlow": "Welcome to CityFlow",
+    "acceptTermsPrompt": "Before you start, please review and accept our Terms of Service and Privacy Policy.",
+    "readFullDocs": "Read the full",
+    "and": "and",
+    "acceptAndContinue": "Accept & Continue"
   },
   "common": {
     "loading": "Loading...",

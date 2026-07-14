@@ -128,6 +128,7 @@ k8s/
 ├── config/
 │   ├── backend-configmap.yml      # Non-sensitive configuration
 │   ├── backend-secrets.yml.example # Secret template (do NOT commit real values)
+│   ├── oauth-secrets.yml.example   # OAuth secret template (Google/Discord)
 │   └── networkpolicy-deny-all.yml # Default deny all ingress
 ├── mongodb/
 │   ├── statefulset.yml            # MongoDB StatefulSet + PVC
@@ -178,6 +179,19 @@ kubectl create secret generic backend-secrets \
   --from-literal=MONGODB_URI="mongodb://${MONGO_USER}:${MONGO_PASS}@cityflow-mongodb-0.cityflow-mongodb:27017/cityflow?authSource=admin" \
   --from-literal=JWT_SECRET="$JWT_SECRET" \
   --from-literal=ADMIN_PASSWORD="$ADMIN_PASS" \
+  --from-literal=FRONTEND_URL="https://cityflow.sizops.co.il" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+# OAuth secrets (create after setting up Google/Discord OAuth apps)
+# Replace <your-*> with values from Google Cloud Console / Discord Developer Portal
+kubectl create secret generic oauth-secrets \
+  --namespace=cityflow \
+  --from-literal=OAUTH_GOOGLE_CLIENT_ID="<your-google-client-id>" \
+  --from-literal=OAUTH_GOOGLE_CLIENT_SECRET="<your-google-client-secret>" \
+  --from-literal=OAUTH_GOOGLE_REDIRECT_URI="https://cityflow.sizops.co.il/api/auth/google/callback" \
+  --from-literal=OAUTH_DISCORD_CLIENT_ID="<your-discord-client-id>" \
+  --from-literal=OAUTH_DISCORD_CLIENT_SECRET="<your-discord-client-secret>" \
+  --from-literal=OAUTH_DISCORD_REDIRECT_URI="https://cityflow.sizops.co.il/api/auth/discord/callback" \
   --dry-run=client -o yaml | kubectl apply -f -
 
 # GHCR pull secret (for pulling images from GitHub Container Registry)
@@ -337,6 +351,13 @@ kubectl scale deployment cityflow-frontend --replicas=3 -n cityflow
 | `SMTP_USER`            | SMTP authentication login            | **Required**                     | Secret     |
 | `SMTP_PASS`            | SMTP authentication key              | **Required**                     | Secret     |
 | `EMAIL_FROM`           | Default sender address               | `noreply@sizops.co.il`           | Secret     |
+| `FRONTEND_URL`         | Frontend URL for OAuth redirects     | `http://localhost:5173`           | ConfigMap  |
+| `OAUTH_GOOGLE_CLIENT_ID`     | Google OAuth client ID         | **Empty (disabled)**             | Secret     |
+| `OAUTH_GOOGLE_CLIENT_SECRET` | Google OAuth client secret     | **Empty (disabled)**             | Secret     |
+| `OAUTH_GOOGLE_REDIRECT_URI`  | Google OAuth redirect URI      | Auto-detected                    | Secret     |
+| `OAUTH_DISCORD_CLIENT_ID`    | Discord OAuth client ID        | **Empty (disabled)**             | Secret     |
+| `OAUTH_DISCORD_CLIENT_SECRET`| Discord OAuth client secret    | **Empty (disabled)**             | Secret     |
+| `OAUTH_DISCORD_REDIRECT_URI` | Discord OAuth redirect URI     | Auto-detected                    | Secret     |
 
 ---
 
@@ -344,12 +365,12 @@ kubectl scale deployment cityflow-frontend --replicas=3 -n cityflow
 
 Secrets are stored as Kubernetes Secrets and injected as environment variables into pods.
 
-Three secrets are required:
+Three core secrets are required, plus optional OAuth secrets:
 
 | Secret | Contents |
 |--------|----------|
 | `mongodb-credentials` | MongoDB root username and password |
-| `backend-secrets` | `MONGODB_URI` (with credentials), `JWT_SECRET`, `ADMIN_PASSWORD`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM` |
+| `backend-secrets` | `MONGODB_URI` (with credentials), `JWT_SECRET`, `ADMIN_PASSWORD`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`, `OAUTH_GOOGLE_CLIENT_ID`, `OAUTH_GOOGLE_CLIENT_SECRET`, `OAUTH_DISCORD_CLIENT_ID`, `OAUTH_DISCORD_CLIENT_SECRET`, `OAUTH_GOOGLE_REDIRECT_URI`, `OAUTH_DISCORD_REDIRECT_URI`, `FRONTEND_URL` |
 | `ghcr-pull` | Docker registry credentials for pulling GHCR images |
 
 **Rules:**
@@ -551,6 +572,80 @@ await sendEmail({ to: 'player1@example.com', ...template });
 
 ---
 
+## OAuth (Social Login)
+
+OAuth is **optional**. If the `OAUTH_GOOGLE_CLIENT_ID` / `OAUTH_DISCORD_CLIENT_ID` env vars are empty, the login page hides the social buttons. Users can always log in with username/password.
+
+### How It Works
+
+- **Authorization code flow** (no Passport.js — direct API calls to Google/Discord)
+- CSRF protection via random `state` tokens (10 min expiry, in-memory)
+- Users can link multiple providers to one account (Google + Discord via same email)
+- OAuth-only users (no password) must set a password before unlinking all OAuth providers
+- The redirect URI is auto-detected: `localhost` = direct, production = `/api/auth/<provider>/callback`
+
+### Provider Setup — Google
+
+1. Go to [Google Cloud Console > APIs & Services > Credentials](https://console.cloud.google.com/apis/credentials)
+2. Create an **OAuth 2.0 Client ID** (Web application type)
+3. Add **Authorized redirect URIs**:
+   - `http://localhost:5000/api/auth/google/callback` (dev)
+   - `https://cityflow.sizops.co.il/api/auth/google/callback` (prod)
+4. Copy the **Client ID** and **Client Secret**
+
+### Provider Setup — Discord
+
+1. Go to [Discord Developer Portal > Applications](https://discord.com/developers/applications)
+2. Create a new application, go to **OAuth2**
+3. Set the **Redirect URI** to:
+   - `http://localhost:5000/api/auth/discord/callback` (dev)
+   - `https://cityflow.sizops.co.il/api/auth/discord/callback` (prod)
+4. Copy the **Client ID** and **Client Secret**
+
+### Kubernetes Setup
+
+```bash
+# Create the OAuth secret (see Step 2 above)
+kubectl create secret generic oauth-secrets \
+  --namespace=cityflow \
+  --from-literal=OAUTH_GOOGLE_CLIENT_ID="<google-client-id>" \
+  --from-literal=OAUTH_GOOGLE_CLIENT_SECRET="<google-client-secret>" \
+  --from-literal=OAUTH_GOOGLE_REDIRECT_URI="https://cityflow.sizops.co.il/api/auth/google/callback" \
+  --from-literal=OAUTH_DISCORD_CLIENT_ID="<discord-client-id>" \
+  --from-literal=OAUTH_DISCORD_CLIENT_SECRET="<discord-client-secret>" \
+  --from-literal=OAUTH_DISCORD_REDIRECT_URI="https://cityflow.sizops.co.il/api/auth/discord/callback" \
+  --dry-run=client -o yaml | kubectl apply -f -
+```
+
+### Updating OAuth Secrets
+
+To rotate or add an OAuth secret, update the Kubernetes secret and restart the backend:
+
+```bash
+kubectl create secret generic oauth-secrets \
+  --namespace=cityflow \
+  --from-literal=OAUTH_GOOGLE_CLIENT_ID="new-value" \
+  ... \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+kubectl rollout restart deployment/cityflow-backend -n cityflow
+```
+
+### Disabling OAuth
+
+To disable a provider, simply leave its `OAUTH_*` env vars empty. The login page will not show that button.
+
+### Troubleshooting OAuth
+
+| Issue | Fix |
+|-------|-----|
+| "OAuth not configured" | Ensure `OAUTH_GOOGLE_CLIENT_ID` / `OAUTH_DISCORD_CLIENT_ID` are set in the `oauth-secrets` secret |
+| Redirect URI mismatch | The redirect URI in the provider console must **exactly** match the env var value |
+| "Invalid state parameter" | CSRF state expired (10 min) — user must try again |
+| Account linking fails (email mismatch) | The email on the OAuth provider must match an existing CityFlow account |
+
+---
+
 ## Troubleshooting
 
 ### Pods stuck in `Pending`
@@ -570,6 +665,23 @@ kubectl logs <pod-name> -n cityflow --previous
 # - JWT_SECRET not set
 # - Port already in use
 # - Backup PVC not found (ensure k8s/backend/backup-pvc.yml is applied)
+```
+
+### OAuth not working / "OAuth not configured"
+
+```bash
+# Check oauth-secrets exists and has values
+kubectl get secret oauth-secrets -n cityflow -o yaml
+
+# Verify env vars are injected into backend pod
+kubectl exec -it <backend-pod> -n cityflow -- env | grep OAUTH
+
+# Check redirect URI matches exactly (no trailing slash, correct domain)
+# Google: https://cityflow.sizops.co.il/api/auth/google/callback
+# Discord: https://cityflow.sizops.co.il/api/auth/discord/callback
+
+# Restart backend if you just created/updated the secret
+kubectl rollout restart deployment/cityflow-backend -n cityflow
 ```
 
 ### Ingress not routing

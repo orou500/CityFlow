@@ -165,7 +165,13 @@
     "verificationEmailSentTo": "שלחנו קישור אימות אל",
     "checkSpamFolder": "לא קיבלת? בדוק את תיקיית הספאם או נסה שוב.",
     "orContinueWith": "או המשך עם",
-    "signInWithGoogle": "התחבר עם Google"
+    "signInWithGoogle": "התחבר עם Google",
+    "signInWithDiscord": "התחבר עם Discord",
+    "welcomeToCityFlow": "ברוך הבא ל-CityFlow",
+    "acceptTermsPrompt": "לפני שמתחילים, אנא סקור וקבל את תנאי השירות ומדיניות הפרטיות שלנו.",
+    "readFullDocs": "קרא את",
+    "and": "ו",
+    "acceptAndContinue": "קבל והמשך"
   },
   "common": {
     "loading": "טוען...",

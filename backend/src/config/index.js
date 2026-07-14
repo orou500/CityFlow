@@ -33,5 +33,13 @@ export const config = {
         return !!(this.clientId && this.clientSecret);
       },
     },
+    discord: {
+      clientId: process.env.OAUTH_DISCORD_CLIENT_ID || '',
+      clientSecret: process.env.OAUTH_DISCORD_CLIENT_SECRET || '',
+      redirectUri: process.env.OAUTH_DISCORD_REDIRECT_URI || '',
+      get enabled() {
+        return !!(this.clientId && this.clientSecret);
+      },
+    },
   },
 };
