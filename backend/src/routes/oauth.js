@@ -18,15 +18,17 @@ const DISCORD_AUTH_URL = 'https://discord.com/api/oauth2/authorize';
 const DISCORD_TOKEN_URL = 'https://discord.com/api/oauth2/token';
 const DISCORD_USERINFO_URL = 'https://discord.com/api/users/@me';
 
-const oauthStates = new Map();
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, value] of oauthStates) {
-    if (now - value.createdAt > 10 * 60 * 1000) {
-      oauthStates.delete(key);
-    }
+function signState(payload) {
+  return jwt.sign(payload, config.jwtSecret, { expiresIn: '10m' });
+}
+
+function verifyState(token) {
+  try {
+    return jwt.verify(token, config.jwtSecret);
+  } catch {
+    return null;
   }
-}, 60 * 1000);
+}
 
 function generateToken(userId) {
   return jwt.sign({ userId }, config.jwtSecret, { expiresIn: '7d' });
@@ -130,8 +132,7 @@ router.get('/google', (req, res) => {
   const callbackUrl = getGoogleCallbackUrl(req);
   console.log('[OAUTH] Google redirect_uri:', callbackUrl);
 
-  const state = crypto.randomBytes(32).toString('hex');
-  oauthStates.set(state, { createdAt: Date.now() });
+  const state = signState({ provider: 'google' });
 
   const params = new URLSearchParams({
     client_id: config.oauth.google.clientId,
@@ -156,10 +157,10 @@ router.get('/google/callback', async (req, res) => {
     return res.redirect(`${config.frontendUrl}/auth/callback?error=missing_parameters`);
   }
 
-  if (!oauthStates.has(state)) {
+  const verified = verifyState(state);
+  if (!verified || verified.provider !== 'google') {
     return res.redirect(`${config.frontendUrl}/auth/callback?error=invalid_state`);
   }
-  oauthStates.delete(state);
 
   try {
     const tokenResponse = await fetch(GOOGLE_TOKEN_URL, {
@@ -215,8 +216,7 @@ router.get('/discord', (req, res) => {
   const callbackUrl = getDiscordCallbackUrl(req);
   console.log('[OAUTH] Discord redirect_uri:', callbackUrl);
 
-  const state = crypto.randomBytes(32).toString('hex');
-  oauthStates.set(state, { createdAt: Date.now() });
+  const state = signState({ provider: 'discord' });
 
   const params = new URLSearchParams({
     client_id: config.oauth.discord.clientId,
@@ -240,10 +240,10 @@ router.get('/discord/callback', async (req, res) => {
     return res.redirect(`${config.frontendUrl}/auth/callback?error=missing_parameters`);
   }
 
-  if (!oauthStates.has(state)) {
+  const verified = verifyState(state);
+  if (!verified || verified.provider !== 'discord') {
     return res.redirect(`${config.frontendUrl}/auth/callback?error=invalid_state`);
   }
-  oauthStates.delete(state);
 
   try {
     const tokenResponse = await fetch(DISCORD_TOKEN_URL, {
