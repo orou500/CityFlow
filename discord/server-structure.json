@@ -1,0 +1,909 @@
+{
+  "server": {
+    "name": "CityFlow",
+    "icon": "images/favicon.png",
+    "banner": "images/logo-text.png",
+    "splash": "",
+    "description": "The official CityFlow community server. Buy, build, and compete in the ultimate real estate simulation game.",
+    "verification_level": "MEDIUM",
+    "default_notifications": "ONLY_MENTIONS",
+    "explicit_content_filter": "ALL_MEMBERS",
+    "afk_timeout": 300,
+    "system_channel_flags": {
+      "SUPPRESS_JOIN_NOTIFICATIONS": true,
+      "SUPPRESS_PREMIUM_SUBSCRIPTIONS": true
+    }
+  },
+  "roles": [
+    {
+      "name": "@everyone",
+      "color": null,
+      "hoist": false,
+      "mentionable": false,
+      "permissions": "104189505",
+      "position": 0,
+      "description": "Default role - very limited access"
+    },
+    {
+      "name": "Verified Player",
+      "color": "#5865F2",
+      "hoist": false,
+      "mentionable": false,
+      "permissions": "104327745",
+      "position": 1,
+      "description": "Granted after verification - access to community channels",
+      "unicode_emoji": null
+    },
+    {
+      "name": "Early Tester",
+      "color": "#FEE75C",
+      "hoist": false,
+      "mentionable": false,
+      "permissions": "104327745",
+      "position": 2,
+      "description": "Early community members who helped test the game",
+      "unicode_emoji": null
+    },
+    {
+      "name": "Beta Tester",
+      "color": "#EB459E",
+      "hoist": false,
+      "mentionable": false,
+      "permissions": "104327745",
+      "position": 3,
+      "description": "Active testers during beta phase",
+      "unicode_emoji": null
+    },
+    {
+      "name": "Content Creator",
+      "color": "#ED4245",
+      "hoist": false,
+      "mentionable": true,
+      "permissions": "104327745",
+      "position": 4,
+      "description": "Streamers and content creators covering CityFlow",
+      "unicode_emoji": null
+    },
+    {
+      "name": "VIP",
+      "color": "#F47FFF",
+      "hoist": true,
+      "mentionable": false,
+      "permissions": "104327745",
+      "position": 5,
+      "description": "Premium and community supporters",
+      "unicode_emoji": null
+    },
+    {
+      "name": "Helper",
+      "color": "#57F287",
+      "hoist": true,
+      "mentionable": true,
+      "permissions": "1073745153",
+      "position": 6,
+      "description": "Community helpers who assist players",
+      "unicode_emoji": null
+    },
+    {
+      "name": "Moderator",
+      "color": "#FEE75C",
+      "hoist": true,
+      "mentionable": true,
+      "permissions": "1073745841",
+      "position": 7,
+      "description": "Server moderators",
+      "unicode_emoji": null
+    },
+    {
+      "name": "Senior Moderator",
+      "color": "#FEE75C",
+      "hoist": true,
+      "mentionable": true,
+      "permissions": "1073745849",
+      "position": 8,
+      "description": "Senior moderators with additional permissions",
+      "unicode_emoji": null
+    },
+    {
+      "name": "Community Manager",
+      "color": "#5865F2",
+      "hoist": true,
+      "mentionable": true,
+      "permissions": "1073745913",
+      "position": 9,
+      "description": "Manages community activities and events",
+      "unicode_emoji": null
+    },
+    {
+      "name": "Developer",
+      "color": "#5865F2",
+      "hoist": true,
+      "mentionable": true,
+      "permissions": "1073745913",
+      "position": 10,
+      "description": "CityFlow development team",
+      "unicode_emoji": null
+    },
+    {
+      "name": "Administrator",
+      "color": "#E74C3C",
+      "hoist": true,
+      "mentionable": false,
+      "permissions": "8",
+      "position": 11,
+      "description": "Server administrators with full access",
+      "unicode_emoji": null
+    },
+    {
+      "name": "Owner",
+      "color": "#E74C3C",
+      "hoist": true,
+      "mentionable": false,
+      "permissions": "8",
+      "position": 12,
+      "description": "Server owner - full control",
+      "unicode_emoji": null
+    },
+    {
+      "name": "Bot",
+      "color": "#5865F2",
+      "hoist": false,
+      "mentionable": false,
+      "permissions": "8",
+      "position": 13,
+      "description": "Bot role - full permissions for bot accounts",
+      "unicode_emoji": null
+    },
+    {
+      "name": "Muted",
+      "color": "#99AAB5",
+      "hoist": false,
+      "mentionable": false,
+      "permissions": "0",
+      "position": 14,
+      "description": "Muted members - cannot send messages or speak",
+      "unicode_emoji": null
+    },
+    {
+      "name": "Pinged",
+      "color": "#57F287",
+      "hoist": false,
+      "mentionable": true,
+      "permissions": "0",
+      "position": 15,
+      "description": "Temporary ping role for events",
+      "unicode_emoji": null
+    }
+  ],
+  "categories": [
+    {
+      "name": "INFORMATION",
+      "position": 0,
+      "channels": [
+        {
+          "name": "announcements",
+          "type": "text",
+          "topic": "Official CityFlow announcements. Only staff may post.",
+          "permissions": {
+            "role_overrides": [
+              {
+                "role": "everyone",
+                "allow": "1024",
+                "deny": "2048"
+              },
+              {
+                "role": "Verified Player",
+                "allow": "1024",
+                "deny": "2048"
+              }
+            ]
+          }
+        },
+        {
+          "name": "rules",
+          "type": "text",
+          "topic": "Server rules. Read before participating.",
+          "permissions": {
+            "role_overrides": [
+              {
+                "role": "everyone",
+                "allow": "1024",
+                "deny": "2048"
+              },
+              {
+                "role": "Verified Player",
+                "allow": "1024",
+                "deny": "2048"
+              }
+            ]
+          }
+        },
+        {
+          "name": "server-guide",
+          "type": "text",
+          "topic": "How to use the CityFlow Discord server.",
+          "permissions": {
+            "role_overrides": [
+              {
+                "role": "everyone",
+                "allow": "1024",
+                "deny": "2048"
+              },
+              {
+                "role": "Verified Player",
+                "allow": "1024",
+                "deny": "2048"
+              }
+            ]
+          }
+        },
+        {
+          "name": "getting-started",
+          "type": "text",
+          "topic": "New to CityFlow? Start here! Registration, gameplay, and helpful links.",
+          "permissions": {
+            "role_overrides": [
+              {
+                "role": "everyone",
+                "allow": "1024",
+                "deny": "2048"
+              },
+              {
+                "role": "Verified Player",
+                "allow": "1024",
+                "deny": "2048"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "COMMUNITY",
+      "position": 1,
+      "channels": [
+        {
+          "name": "general-chat",
+          "type": "text",
+          "topic": "General community discussion. Be respectful!",
+          "permissions": {
+            "role_overrides": [
+              {
+                "role": "everyone",
+                "allow": "1024",
+                "deny": "2048"
+              },
+              {
+                "role": "Verified Player",
+                "allow": "104327745",
+                "deny": "0"
+              }
+            ]
+          }
+        },
+        {
+          "name": "cityflow-discussion",
+          "type": "text",
+          "topic": "Discuss CityFlow strategies, investments, developments, and market conditions.",
+          "permissions": {
+            "role_overrides": [
+              {
+                "role": "everyone",
+                "allow": "1024",
+                "deny": "2048"
+              },
+              {
+                "role": "Verified Player",
+                "allow": "104327745",
+                "deny": "0"
+              }
+            ]
+          }
+        },
+        {
+          "name": "screenshots",
+          "type": "text",
+          "topic": "Share screenshots of your CityFlow empire!",
+          "permissions": {
+            "role_overrides": [
+              {
+                "role": "everyone",
+                "allow": "1024",
+                "deny": "2048"
+              },
+              {
+                "role": "Verified Player",
+                "allow": "104327745",
+                "deny": "0"
+              }
+            ]
+          }
+        },
+        {
+          "name": "achievements",
+          "type": "text",
+          "topic": "Celebrate milestones - portfolio value, acquisitions, developments!",
+          "permissions": {
+            "role_overrides": [
+              {
+                "role": "everyone",
+                "allow": "1024",
+                "deny": "2048"
+              },
+              {
+                "role": "Verified Player",
+                "allow": "104327745",
+                "deny": "0"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "SUPPORT",
+      "position": 2,
+      "channels": [
+        {
+          "name": "help",
+          "type": "text",
+          "topic": "Need help with CityFlow? Ask here!",
+          "permissions": {
+            "role_overrides": [
+              {
+                "role": "everyone",
+                "allow": "1024",
+                "deny": "2048"
+              },
+              {
+                "role": "Verified Player",
+                "allow": "104327745",
+                "deny": "0"
+              }
+            ]
+          }
+        },
+        {
+          "name": "bug-reports",
+          "type": "text",
+          "topic": "Found a bug? Report it here using the format below.",
+          "permissions": {
+            "role_overrides": [
+              {
+                "role": "everyone",
+                "allow": "1024",
+                "deny": "2048"
+              },
+              {
+                "role": "Verified Player",
+                "allow": "104327745",
+                "deny": "0"
+              }
+            ]
+          },
+          "thread_auto_archive": "ALWAYS"
+        },
+        {
+          "name": "suggestions",
+          "type": "text",
+          "topic": "Share your ideas for CityFlow features and improvements.",
+          "permissions": {
+            "role_overrides": [
+              {
+                "role": "everyone",
+                "allow": "1024",
+                "deny": "2048"
+              },
+              {
+                "role": "Verified Player",
+                "allow": "104327745",
+                "deny": "0"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "EVENTS",
+      "position": 3,
+      "channels": [
+        {
+          "name": "events",
+          "type": "text",
+          "topic": "Official CityFlow events and competitions.",
+          "permissions": {
+            "role_overrides": [
+              {
+                "role": "everyone",
+                "allow": "1024",
+                "deny": "2048"
+              },
+              {
+                "role": "Verified Player",
+                "allow": "1024",
+                "deny": "2048"
+              },
+              {
+                "role": "Community Manager",
+                "allow": "104327745",
+                "deny": "0"
+              }
+            ]
+          }
+        },
+        {
+          "name": "competitions",
+          "type": "text",
+          "topic": "Community competitions and challenges.",
+          "permissions": {
+            "role_overrides": [
+              {
+                "role": "everyone",
+                "allow": "1024",
+                "deny": "2048"
+              },
+              {
+                "role": "Verified Player",
+                "allow": "1024",
+                "deny": "2048"
+              },
+              {
+                "role": "Community Manager",
+                "allow": "104327745",
+                "deny": "0"
+              }
+            ]
+          }
+        },
+        {
+          "name": "event-chat",
+          "type": "text",
+          "topic": "Chat during live events.",
+          "permissions": {
+            "role_overrides": [
+              {
+                "role": "everyone",
+                "allow": "1024",
+                "deny": "2048"
+              },
+              {
+                "role": "Verified Player",
+                "allow": "104327745",
+                "deny": "0"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "DEVELOPMENT",
+      "position": 4,
+      "channels": [
+        {
+          "name": "development-updates",
+          "type": "text",
+          "topic": "Latest development progress and news from the team.",
+          "permissions": {
+            "role_overrides": [
+              {
+                "role": "everyone",
+                "allow": "1024",
+                "deny": "2048"
+              },
+              {
+                "role": "Verified Player",
+                "allow": "1024",
+                "deny": "2048"
+              },
+              {
+                "role": "Developer",
+                "allow": "104327745",
+                "deny": "0"
+              }
+            ]
+          }
+        },
+        {
+          "name": "changelog",
+          "type": "text",
+          "topic": "Release notes and version history.",
+          "permissions": {
+            "role_overrides": [
+              {
+                "role": "everyone",
+                "allow": "1024",
+                "deny": "2048"
+              },
+              {
+                "role": "Verified Player",
+                "allow": "1024",
+                "deny": "2048"
+              },
+              {
+                "role": "Developer",
+                "allow": "104327745",
+                "deny": "0"
+              }
+            ]
+          }
+        },
+        {
+          "name": "testing-feedback",
+          "type": "text",
+          "topic": "Discuss testing and provide feedback.",
+          "permissions": {
+            "role_overrides": [
+              {
+                "role": "everyone",
+                "allow": "1024",
+                "deny": "2048"
+              },
+              {
+                "role": "Verified Player",
+                "allow": "1024",
+                "deny": "2048"
+              },
+              {
+                "role": "Beta Tester",
+                "allow": "104327745",
+                "deny": "0"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "VOICE",
+      "position": 5,
+      "channels": [
+        {
+          "name": "General Voice",
+          "type": "voice",
+          "permissions": {
+            "role_overrides": [
+              {
+                "role": "everyone",
+                "allow": "0",
+                "deny": "0"
+              },
+              {
+                "role": "Verified Player",
+                "allow": "1048576",
+                "deny": "0"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Community Voice",
+          "type": "voice",
+          "permissions": {
+            "role_overrides": [
+              {
+                "role": "everyone",
+                "allow": "0",
+                "deny": "0"
+              },
+              {
+                "role": "Verified Player",
+                "allow": "1048576",
+                "deny": "0"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Development Voice",
+          "type": "voice",
+          "permissions": {
+            "role_overrides": [
+              {
+                "role": "everyone",
+                "allow": "0",
+                "deny": "0"
+              },
+              {
+                "role": "Developer",
+                "allow": "1048576",
+                "deny": "0"
+              },
+              {
+                "role": "Beta Tester",
+                "allow": "1048576",
+                "deny": "0"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Event Voice",
+          "type": "voice",
+          "permissions": {
+            "role_overrides": [
+              {
+                "role": "everyone",
+                "allow": "0",
+                "deny": "0"
+              },
+              {
+                "role": "Verified Player",
+                "allow": "1048576",
+                "deny": "0"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "STAFF",
+      "position": 6,
+      "channels": [
+        {
+          "name": "staff-chat",
+          "type": "text",
+          "topic": "Private staff communication.",
+          "permissions": {
+            "role_overrides": [
+              {
+                "role": "everyone",
+                "allow": "0",
+                "deny": "1024"
+              },
+              {
+                "role": "Helper",
+                "allow": "104327745",
+                "deny": "0"
+              },
+              {
+                "role": "Moderator",
+                "allow": "104327745",
+                "deny": "0"
+              },
+              {
+                "role": "Senior Moderator",
+                "allow": "104327745",
+                "deny": "0"
+              },
+              {
+                "role": "Community Manager",
+                "allow": "104327745",
+                "deny": "0"
+              },
+              {
+                "role": "Developer",
+                "allow": "104327745",
+                "deny": "0"
+              },
+              {
+                "role": "Administrator",
+                "allow": "104327745",
+                "deny": "0"
+              }
+            ]
+          }
+        },
+        {
+          "name": "moderation-log",
+          "type": "text",
+          "topic": "Moderation discussions and actions.",
+          "permissions": {
+            "role_overrides": [
+              {
+                "role": "everyone",
+                "allow": "0",
+                "deny": "1024"
+              },
+              {
+                "role": "Moderator",
+                "allow": "104327745",
+                "deny": "0"
+              },
+              {
+                "role": "Senior Moderator",
+                "allow": "104327745",
+                "deny": "0"
+              },
+              {
+                "role": "Community Manager",
+                "allow": "104327745",
+                "deny": "0"
+              },
+              {
+                "role": "Developer",
+                "allow": "104327745",
+                "deny": "0"
+              },
+              {
+                "role": "Administrator",
+                "allow": "104327745",
+                "deny": "0"
+              }
+            ]
+          }
+        },
+        {
+          "name": "staff-applications",
+          "type": "text",
+          "topic": "Staff application reviews and discussions.",
+          "permissions": {
+            "role_overrides": [
+              {
+                "role": "everyone",
+                "allow": "0",
+                "deny": "1024"
+              },
+              {
+                "role": "Senior Moderator",
+                "allow": "104327745",
+                "deny": "0"
+              },
+              {
+                "role": "Community Manager",
+                "allow": "104327745",
+                "deny": "0"
+              },
+              {
+                "role": "Administrator",
+                "allow": "104327745",
+                "deny": "0"
+              }
+            ]
+          }
+        },
+        {
+          "name": "community-management",
+          "type": "text",
+          "topic": "Community planning and strategy.",
+          "permissions": {
+            "role_overrides": [
+              {
+                "role": "everyone",
+                "allow": "0",
+                "deny": "1024"
+              },
+              {
+                "role": "Community Manager",
+                "allow": "104327745",
+                "deny": "0"
+              },
+              {
+                "role": "Developer",
+                "allow": "104327745",
+                "deny": "0"
+              },
+              {
+                "role": "Administrator",
+                "allow": "104327745",
+                "deny": "0"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "ADMINISTRATION",
+      "position": 7,
+      "channels": [
+        {
+          "name": "audit-logs",
+          "type": "text",
+          "topic": "Administrative activity logs.",
+          "permissions": {
+            "role_overrides": [
+              {
+                "role": "everyone",
+                "allow": "0",
+                "deny": "1024"
+              },
+              {
+                "role": "Administrator",
+                "allow": "104327745",
+                "deny": "0"
+              },
+              {
+                "role": "Owner",
+                "allow": "104327745",
+                "deny": "0"
+              }
+            ]
+          }
+        },
+        {
+          "name": "bot-logs",
+          "type": "text",
+          "topic": "Bot activity and automated logs.",
+          "permissions": {
+            "role_overrides": [
+              {
+                "role": "everyone",
+                "allow": "0",
+                "deny": "1024"
+              },
+              {
+                "role": "Administrator",
+                "allow": "104327745",
+                "deny": "0"
+              },
+              {
+                "role": "Owner",
+                "allow": "104327745",
+                "deny": "0"
+              }
+            ]
+          }
+        },
+        {
+          "name": "moderation-actions",
+          "type": "text",
+          "topic": "Bans, mutes, warnings, and moderation actions.",
+          "permissions": {
+            "role_overrides": [
+              {
+                "role": "everyone",
+                "allow": "0",
+                "deny": "1024"
+              },
+              {
+                "role": "Administrator",
+                "allow": "104327745",
+                "deny": "0"
+              },
+              {
+                "role": "Owner",
+                "allow": "104327745",
+                "deny": "0"
+              }
+            ]
+          }
+        },
+        {
+          "name": "server-management",
+          "type": "text",
+          "topic": "Server administration and configuration.",
+          "permissions": {
+            "role_overrides": [
+              {
+                "role": "everyone",
+                "allow": "0",
+                "deny": "1024"
+              },
+              {
+                "role": "Administrator",
+                "allow": "104327745",
+                "deny": "0"
+              },
+              {
+                "role": "Owner",
+                "allow": "104327745",
+                "deny": "0"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "channel": "verify",
+    "role": "Verified Player",
+    "method": "reaction",
+    "instructions": "React with the checkmark to verify and gain access to the server."
+  },
+  "rules": [
+    "1. Be respectful to all members. No harassment, bullying, or hate speech.",
+    "2. No spamming, flooding, or self-promotion without permission.",
+    "3. Keep discussions in the appropriate channels.",
+    "4. No NSFW, explicit, or disturbing content.",
+    "5. Follow Discord's Terms of Service and Community Guidelines.",
+    "6. No exploiting bugs or glitches. Report them in #bug-reports.",
+    "7. Do not share personal information of other members.",
+    "8. Listen to staff decisions. DM staff for disputes.",
+    "9. No alt accounts for evading bans or mutes.",
+    "10. Have fun and enjoy the CityFlow community!"
+  ]
+}

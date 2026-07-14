@@ -48,7 +48,8 @@ Thumbs.db
 # === Kubernetes Secrets ===
 k8s/secrets/
 k8s/**/secrets-*.yml
-!k8s/config/backend-secrets.yml
+!k8s/config/backend-secrets.yml.example
+!k8s/config/discord-bot-secrets.yml.example
 
 # === TypeScript ===
 *.tsbuildinfo

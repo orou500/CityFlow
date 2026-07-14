@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cityflow-discord-bot
+  namespace: cityflow
+  labels:
+    app.kubernetes.io/name: discord-bot
+    app.kubernetes.io/part-of: cityflow
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: discord-bot
+      app.kubernetes.io/part-of: cityflow
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: discord-bot
+        app.kubernetes.io/part-of: cityflow
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull
+      containers:
+        - name: discord-bot
+          image: ghcr.io/orou500/cityflow-discord-bot:latest
+          envFrom:
+            - secretRef:
+                name: discord-bot-secrets
+            - configMapRef:
+                name: discord-bot-config
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          livenessProbe:
+            exec:
+              command:
+                - node
+                - -e
+                - "process.exit(0)"
+            initialDelaySeconds: 30
+            periodSeconds: 60
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: logs
+              mountPath: /app/logs
+      volumes:
+        - name: logs
+          emptyDir: {}

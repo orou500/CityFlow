@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: discord-bot-config
+  namespace: cityflow
+  labels:
+    app.kubernetes.io/name: discord-bot
+    app.kubernetes.io/part-of: cityflow
+data:
+  CITYFLOW_API_URL: "http://cityflow-backend:5000/api"
+  LOG_LEVEL: "info"
