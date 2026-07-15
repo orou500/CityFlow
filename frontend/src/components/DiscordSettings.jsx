@@ -145,9 +145,7 @@ export default function DiscordSettings() {
             <span className="text-green-500 text-lg">✓</span>
             <div className="flex-1">
               <span className="text-sm text-green-600 dark:text-green-400 font-medium">{t('discord.linked')}</span>
-              <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
-                ID: {linkStatus.discordId}
-              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">ID: {linkStatus.discordId}</span>
             </div>
             <button
               onClick={unlink}
@@ -213,7 +211,10 @@ export default function DiscordSettings() {
               { key: 'achievements', label: t('discord.achievements'), emoji: '🏆' },
               { key: 'systemAlerts', label: t('discord.systemAlerts'), emoji: '🚨' },
             ].map((item) => (
-              <div key={item.key} className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-lg px-4 py-3">
+              <div
+                key={item.key}
+                className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-lg px-4 py-3"
+              >
                 <div className="flex items-center gap-2">
                   <span>{item.emoji}</span>
                   <span className="text-sm text-gray-900 dark:text-white">{item.label}</span>

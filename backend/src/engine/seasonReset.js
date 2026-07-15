@@ -475,9 +475,7 @@ export async function endCurrentSeasonAndStartNew() {
     type: 'announcements',
     title: `Season ${activeSeason?.number || '?'} Ended`,
     description: `Season ${newSeason.number} has begun! The world has been reset.`,
-    fields: [
-      { name: 'New Season', value: String(newSeason.number), inline: true },
-    ],
+    fields: [{ name: 'New Season', value: String(newSeason.number), inline: true }],
   }).catch(() => {});
 
   return newSeason;

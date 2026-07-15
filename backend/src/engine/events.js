@@ -95,7 +95,13 @@ export async function generateEvents() {
       { name: 'Scope', value: template.type === 'global' ? 'Global' : 'Local', inline: true },
       { name: 'Duration', value: `${template.duration} ticks`, inline: true },
       ...(template.impact.demandDelta
-        ? [{ name: 'Demand Impact', value: `${template.impact.demandDelta > 0 ? '+' : ''}${(template.impact.demandDelta * 100).toFixed(1)}%`, inline: true }]
+        ? [
+            {
+              name: 'Demand Impact',
+              value: `${template.impact.demandDelta > 0 ? '+' : ''}${(template.impact.demandDelta * 100).toFixed(1)}%`,
+              inline: true,
+            },
+          ]
         : []),
     ],
   }).catch(() => {});

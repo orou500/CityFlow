@@ -17,17 +17,14 @@ describe('Discord Routes', () => {
   describe('POST /discord/link/generate', () => {
     it('generates a link code for authenticated user', async () => {
       const { token } = await createAuthenticatedUser();
-      const res = await request(app)
-        .post('/discord/link/generate')
-        .set(authHeader(token));
+      const res = await request(app).post('/discord/link/generate').set(authHeader(token));
 
       expect(res.status).toBe(200);
       expect(res.body.code).toBe('123456');
     });
 
     it('rejects unauthenticated requests', async () => {
-      const res = await request(app)
-        .post('/discord/link/generate');
+      const res = await request(app).post('/discord/link/generate');
 
       expect(res.status).toBe(401);
     });
@@ -36,10 +33,7 @@ describe('Discord Routes', () => {
   describe('POST /discord/link/verify', () => {
     it('verifies a link code and stores discordId', async () => {
       const { user, token } = await createAuthenticatedUser();
-      const res = await request(app)
-        .post('/discord/link/verify')
-        .set(authHeader(token))
-        .send({ code: '123456' });
+      const res = await request(app).post('/discord/link/verify').set(authHeader(token)).send({ code: '123456' });
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -51,10 +45,7 @@ describe('Discord Routes', () => {
 
     it('rejects missing code', async () => {
       const { token } = await createAuthenticatedUser();
-      const res = await request(app)
-        .post('/discord/link/verify')
-        .set(authHeader(token))
-        .send({});
+      const res = await request(app).post('/discord/link/verify').set(authHeader(token)).send({});
 
       expect(res.status).toBe(400);
     });
@@ -63,9 +54,7 @@ describe('Discord Routes', () => {
   describe('DELETE /discord/link', () => {
     it('unlinks discord account', async () => {
       const { user, token } = await createAuthenticatedUser({ discordId: 'discord-user-123' });
-      const res = await request(app)
-        .delete('/discord/link')
-        .set(authHeader(token));
+      const res = await request(app).delete('/discord/link').set(authHeader(token));
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -78,9 +67,7 @@ describe('Discord Routes', () => {
   describe('GET /discord/link/status', () => {
     it('returns linked status', async () => {
       const { token } = await createAuthenticatedUser({ discordId: 'discord-user-123' });
-      const res = await request(app)
-        .get('/discord/link/status')
-        .set(authHeader(token));
+      const res = await request(app).get('/discord/link/status').set(authHeader(token));
 
       expect(res.status).toBe(200);
       expect(res.body.linked).toBe(true);
@@ -89,9 +76,7 @@ describe('Discord Routes', () => {
 
     it('returns unlinked status', async () => {
       const { token } = await createAuthenticatedUser();
-      const res = await request(app)
-        .get('/discord/link/status')
-        .set(authHeader(token));
+      const res = await request(app).get('/discord/link/status').set(authHeader(token));
 
       expect(res.status).toBe(200);
       expect(res.body.linked).toBe(false);
@@ -101,9 +86,7 @@ describe('Discord Routes', () => {
   describe('GET /discord/notifications/settings', () => {
     it('returns default settings for new user', async () => {
       const { token } = await createAuthenticatedUser();
-      const res = await request(app)
-        .get('/discord/notifications/settings')
-        .set(authHeader(token));
+      const res = await request(app).get('/discord/notifications/settings').set(authHeader(token));
 
       expect(res.status).toBe(200);
       expect(res.body.enabled).toBe(true);
