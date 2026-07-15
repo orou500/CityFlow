@@ -333,7 +333,7 @@ export default function LandingPage() {
           <h2 className="text-3xl md:text-4xl font-bold text-primary mb-4">{t('landing.community.title')}</h2>
           <p className="text-secondary max-w-xl mx-auto mb-8">{t('landing.community.description')}</p>
           <a
-            href={import.meta.env.VITE_DISCORD_INVITE_URL || 'https://discord.gg/ejMrbF536'}
+            href={import.meta.env.VITE_DISCORD_INVITE_URL || 'https://discord.gg/vTav6WYQdQ'}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 bg-[#5865F2] hover:bg-[#4752C4] text-white text-lg px-8 py-3 rounded-lg font-bold transition-all hover:-translate-y-0.5 shadow-lg shadow-[#5865F2]/25"
