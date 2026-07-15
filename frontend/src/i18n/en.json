@@ -759,6 +759,11 @@
       "title": "Ready To Build Your Empire?",
       "description": "Join thousands of investors competing in the world's largest property market.",
       "button": "Create Free Account"
+    },
+    "community": {
+      "title": "Join the CityFlow Community",
+      "description": "Connect with other players, get updates, share feedback, and follow development progress.",
+      "button": "Join Discord"
     }
   },
   "profile": {
