@@ -29,6 +29,7 @@ export default {
 
       return interaction.editReply({ embeds: [e] });
     } catch (error) {
+      console.error(`[STATS] Error: ${error.message}`);
       return interaction.editReply({ embeds: [errorEmbed('Error', 'Failed to fetch stats.')] });
     }
   },
