@@ -24,7 +24,7 @@ spec:
         - name: ghcr-pull
       containers:
         - name: discord-bot
-          image: ghcr.io/orou500/cityflow-discord-bot:b08a53fb2a1520af9133d36357fb65a44bdec9d8
+          image: ghcr.io/orou500/cityflow-discord-bot:5917181844e64e0993286639ada30e92c8ac970a
           envFrom:
             - secretRef:
                 name: discord-bot-secrets
