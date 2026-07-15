@@ -24,6 +24,20 @@ spec:
         - port: 5000
           protocol: TCP
   egress:
+    # Allow DNS resolution
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Allow backend to reach MongoDB
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: mongodb
+      ports:
+        - protocol: TCP
+          port: 27017
     # Allow backend to call Discord bot API
     - to:
         - podSelector:
