@@ -7,6 +7,6 @@ metadata:
     app.kubernetes.io/name: discord-bot
     app.kubernetes.io/part-of: cityflow
 data:
-  CITYFLOW_API_URL: "http://cityflow-backend:5000/api"
+  CITYFLOW_API_URL: "http://cityflow-backend:5000"
   BOT_API_PORT: "5001"
   LOG_LEVEL: "info"
