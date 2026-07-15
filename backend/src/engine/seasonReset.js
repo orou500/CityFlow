@@ -375,6 +375,7 @@ export async function resetWorld() {
   }
 
   await User.updateMany({}, { $inc: { balance: 100000, 'lifetimeStats.totalSeasonsCompleted': 1 } });
+  await User.updateMany({ uncollectedRent: { $gt: 0 } }, { $set: { uncollectedRent: 0, rentStorageStartedAt: null } });
 
   await Promise.all([
     User.updateMany({}, { $set: { ownedProperties: [] } }),

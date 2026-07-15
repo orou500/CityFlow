@@ -1,6 +1,6 @@
 import { simulateCities } from './citySimulation.js';
 import { updatePrices } from './priceUpdate.js';
-import { processRent } from './rentProcessing.js';
+import { processRent, expireUncollectedRent, sendRentExpiryWarnings } from './rentProcessing.js';
 import { processLoans } from './loanProcessing.js';
 import { balanceMarket } from './marketBalancing.js';
 import { generateProperties } from './propertyGeneration.js';
@@ -47,6 +47,12 @@ export async function executeTick() {
     console.log('[TICK] Generating new events...');
     const newEvents = await generateEvents();
 
+    console.log('[TICK] Expiring uncollected rent...');
+    const expiredRentCount = await expireUncollectedRent();
+
+    console.log('[TICK] Sending rent expiry warnings...');
+    const rentWarningsCount = await sendRentExpiryWarnings();
+
     const duration = Date.now() - startTime;
     console.log(`[TICK] World tick #${tickNumber} completed in ${duration}ms`);
     console.log(`[TICK] Cities simulated: ${cityResults.length}`);
@@ -57,6 +63,8 @@ export async function executeTick() {
     console.log(`[TICK] Construction processed: ${constructionResults.length}`);
     console.log(`[TICK] New events: ${newEvents.length}`);
     console.log(`[TICK] Expired events: ${expiredEvents.length}`);
+    console.log(`[TICK] Expired uncollected rent: ${expiredRentCount} users`);
+    console.log(`[TICK] Rent expiry warnings sent: ${rentWarningsCount} users`);
 
     if (tickNumber >= 720) {
       console.log(`[TICK] Tick #${tickNumber} reached 720 — ending season`);
@@ -75,6 +83,8 @@ export async function executeTick() {
       newProperties: propertyGeneration,
       newEvents,
       expiredEvents,
+      expiredRentCount,
+      rentWarningsCount,
     };
   } catch (err) {
     console.error('[TICK] Error during tick:', err);

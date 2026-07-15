@@ -80,6 +80,17 @@
     "levelUp": "Level Up!",
     "error": "Failed to claim bonus. Please try again."
   },
+  "rentCollect": {
+    "title": "Rent Ready to Collect",
+    "readyToCollect": "ready to collect",
+    "collect": "Collect Rent",
+    "collecting": "Collecting...",
+    "collected": "Rent Collected!",
+    "expiresIn": "Expires in",
+    "expired": "Rent has expired",
+    "noRent": "No rent to collect",
+    "error": "Failed to collect rent. Please try again."
+  },
   "marketplace": {
     "title": "Marketplace",
     "buy": "Buy Now",
@@ -642,31 +653,39 @@
     },
     "step4": {
       "title": "📊 Your Dashboard",
-      "content": "Your command center.\n\nTrack everything in one place:\n• Net worth, cash balance, and total property value\n• Your full property portfolio\n• Incoming rent payments\n• Active loans & repayment progress\n• Offers: received from other players & sent by you\n• Full transaction history\n\nCheck back often to manage your empire."
+      "content": "Your command center.\n\nTrack everything in one place:\n• Net worth, cash balance, and total property value\n• Your full property portfolio with rent per property\n• Rent collection pool — see uncollected rent and claim it\n• Period bonus — free cash & XP every 6 hours\n• Active loans & repayment progress\n• Offers: received from other players & sent by you\n• Full transaction history\n\nCheck back often to manage your empire."
     },
     "step5": {
       "title": "🏦 Bank",
       "content": "Need capital to grow faster?\n\nThe bank offers loans with clear terms:\n• Choose from different loan amounts & durations\n• See monthly payments & total interest upfront\n• Max loan = 70% of your net worth\n• Repay early to save on interest\n\n⚠️ Missed payments lead to penalties and repossession!"
     },
     "step6": {
+      "title": "💰 Rent Collection",
+      "content": "Your properties earn rent every month — but you need to collect it!\n\n• Rent is deposited into your collection pool each month\n• Click \"Collect Rent\" on your dashboard to claim it\n• ⏰ You have 24 hours to collect before rent expires!\n• Expired rent is permanently lost\n• Warning notifications are sent when rent is about to expire\n\nDon't forget to check your dashboard regularly!"
+    },
+    "step7": {
       "title": "🏗️ Development",
       "content": "Build your own properties from scratch.\n\n1. Buy Land from the marketplace\n2. Start Development — choose from 8 building types:\n   🏠 Residential: Apartments, Housing Complexes\n   🏢 Commercial: Offices, Shopping Centers\n   🏨 Hospitality: Hotels, Resorts\n3. Wait for construction to complete\n4. Upgrade your buildings for higher rent:\n   Renovation, Security, Luxury, or Expansion\n\nConstruction takes several months — plan ahead!"
     },
-    "step7": {
+    "step8": {
+      "title": "⭐ Leveling & XP",
+      "content": "Earn experience points (XP) as you play and level up!\n\nXP is earned by:\n• Buying properties (+10 XP)\n• Selling properties (+5 XP)\n• Taking or repaying loans (+5/+3 XP)\n• Starting construction (+15 XP)\n• Upgrading buildings (+10 XP)\n• Adding friends (+5 XP)\n• Claiming your period bonus (+10–50 XP)\n\nHigher levels unlock achievements and show your experience on your profile."
+    },
+    "step9": {
       "title": "🌍 World Events",
       "content": "The world is alive and unpredictable.\n\nEvents affect city economies in real time:\n• 📈 Boom — prices and demand surge\n• 📉 Recession — demand drops, bargains appear\n• 🌪️ Disaster — markets crash temporarily\n• 📋 Policy Change — new regulations shift demand\n\nEvents can be local (one city) or global (all cities).\nAdapt your strategy to profit from every situation."
     },
-    "step8": {
+    "step10": {
       "title": "📅 Seasons",
       "content": "The game runs in seasons — each lasting 720 months.\n\nWhen a season ends:\n• All data is archived with full rankings\n• The world resets to a fresh state\n• Everyone starts equal in the new season\n\nCompete to be the season champion!\nYour past rankings are shown on your profile.\n\nVisit /seasons to see the full leaderboard."
     },
-    "step9": {
+    "step11": {
       "title": "👥 Friends & Social",
       "content": "CityFlow is better with friends.\n\n• Add other players from their profile page\n• Accept or decline friend requests\n• View friends' net worth and portfolios\n• Send offers and negotiate deals together\n\nBuild your network — allies can help you spot opportunities."
     },
-    "step10": {
+    "step12": {
       "title": "🚀 You're Ready!",
-      "content": "You now know everything you need to start.\n\nQuick strategy tips:\n• Start by buying a few cheap properties\n• Use bank loans wisely to scale faster\n• Watch city demand — buy low, sell high\n• Develop land for long-term income\n• Keep an eye on world events\n\nGood luck, tycoon! 🏆"
+      "content": "You now know everything you need to start.\n\nQuick strategy tips:\n• Start by buying a few cheap properties\n• Collect your rent regularly — it expires in 24h!\n• Claim your period bonus every 6 hours for free cash & XP\n• Use bank loans wisely to scale faster\n• Watch city demand — buy low, sell high\n• Develop land for long-term income\n• Keep an eye on world events\n\nGood luck, tycoon! 🏆"
     }
   },
   "transaction": {

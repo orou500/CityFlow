@@ -74,12 +74,12 @@ export default function OnboardingWrapper({ children }) {
         content: t('onboarding.step5.content'),
       },
       {
-        target: '[data-tour="development"]',
+        target: 'body',
         title: t('onboarding.step6.title'),
         content: t('onboarding.step6.content'),
       },
       {
-        target: 'body',
+        target: '[data-tour="development"]',
         title: t('onboarding.step7.title'),
         content: t('onboarding.step7.content'),
       },
@@ -97,6 +97,16 @@ export default function OnboardingWrapper({ children }) {
         target: 'body',
         title: t('onboarding.step10.title'),
         content: t('onboarding.step10.content'),
+      },
+      {
+        target: 'body',
+        title: t('onboarding.step11.title'),
+        content: t('onboarding.step11.content'),
+      },
+      {
+        target: 'body',
+        title: t('onboarding.step12.title'),
+        content: t('onboarding.step12.content'),
       },
     ],
     [t, i18n.language],

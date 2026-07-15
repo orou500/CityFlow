@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useGameStore } from '../store/useGameStore';
 import { useAuthStore } from '../store/useAuthStore';
 import PeriodBonusWidget from '../components/PeriodBonusWidget';
+import RentCollectionWidget from '../components/RentCollectionWidget';
 
 export default function PlayerDashboard() {
   const { t } = useTranslation();
@@ -149,6 +150,15 @@ export default function PlayerDashboard() {
       <div className="mb-6">
         <PeriodBonusWidget
           onClaimed={() => {
+            fetchMe();
+            fetchUserData();
+          }}
+        />
+      </div>
+
+      <div className="mb-6">
+        <RentCollectionWidget
+          onCollected={() => {
             fetchMe();
             fetchUserData();
           }}
