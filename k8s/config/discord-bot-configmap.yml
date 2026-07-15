@@ -8,4 +8,5 @@ metadata:
     app.kubernetes.io/part-of: cityflow
 data:
   CITYFLOW_API_URL: "http://cityflow-backend:5000/api"
+  BOT_API_PORT: "5001"
   LOG_LEVEL: "info"

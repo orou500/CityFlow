@@ -25,6 +25,10 @@ spec:
       containers:
         - name: discord-bot
           image: ghcr.io/orou500/cityflow-discord-bot:6eb44828c4b2b957b2131ebc30655701166846cc
+          ports:
+            - name: api
+              containerPort: 5001
+              protocol: TCP
           envFrom:
             - secretRef:
                 name: discord-bot-secrets

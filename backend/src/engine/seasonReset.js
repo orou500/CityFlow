@@ -9,6 +9,7 @@ import PropertyOffer from '../models/PropertyOffer.js';
 import Notification from '../models/Notification.js';
 import ConstructionProject from '../models/ConstructionProject.js';
 import Event from '../models/Event.js';
+import { sendDiscordNotification } from '../services/discordBot.js';
 
 const CITIES_DATA = [
   {
@@ -469,6 +470,13 @@ export async function endCurrentSeasonAndStartNew() {
   const newSeason = await createNewSeason();
 
   console.log(`[SEASON] Season ${newSeason.number} started`);
+
+  sendDiscordNotification({
+    type: 'announcements',
+    title: `Season ${activeSeason?.number || '?'} Ended`,
+    description: `Season ${newSeason.number} has begun! The world has been reset.`,
+    fields: [{ name: 'New Season', value: String(newSeason.number), inline: true }],
+  }).catch(() => {});
 
   return newSeason;
 }

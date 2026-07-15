@@ -57,6 +57,12 @@ const guildConfigSchema = new mongoose.Schema({
   cityflow: {
     enabled: { type: Boolean, default: false },
     gameApiUrl: String,
+    notificationChannels: {
+      announcements: String,
+      worldEvents: String,
+      achievements: String,
+      systemAlerts: String,
+    },
   },
 }, { timestamps: true });
 

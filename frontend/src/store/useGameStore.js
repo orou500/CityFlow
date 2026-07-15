@@ -491,4 +491,34 @@ export const useGameStore = create((set, get) => ({
     window.open(`/api/admin/backups/${id}/download`, '_blank');
     document.body.removeChild(authFrame);
   },
+
+  generateDiscordLinkCode: async () => {
+    return await api('/discord/link/generate', { method: 'POST' });
+  },
+
+  verifyDiscordLink: async (code) => {
+    return await api('/discord/link/verify', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    });
+  },
+
+  unlinkDiscord: async () => {
+    return await api('/discord/link', { method: 'DELETE' });
+  },
+
+  getDiscordLinkStatus: async () => {
+    return await api('/discord/link/status');
+  },
+
+  getDiscordNotificationSettings: async () => {
+    return await api('/discord/notifications/settings');
+  },
+
+  updateDiscordNotificationSettings: async (settings) => {
+    return await api('/discord/notifications/settings', {
+      method: 'PUT',
+      body: JSON.stringify(settings),
+    });
+  },
 }));

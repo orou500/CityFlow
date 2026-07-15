@@ -1160,5 +1160,26 @@
     "noContributors": "No contributors yet.",
     "beFirst": "Be the first to contribute!",
     "backToHome": "Back to Home"
+  },
+  "discord": {
+    "linkTitle": "Discord Integration",
+    "linkDescription": "Link your Discord account to receive game notifications and use Discord bot commands.",
+    "linked": "Discord Account Linked",
+    "unlink": "Unlink",
+    "linkDiscordAccount": "Link Discord Account",
+    "enterCodeInCityflow": "Enter this 6-digit code in the field below to verify your Discord account:",
+    "enterYourCode": "Enter your 6-digit code",
+    "verify": "Verify",
+    "linkSuccess": "Discord account linked successfully!",
+    "unlinkSuccess": "Discord account unlinked.",
+    "confirmUnlink": "Are you sure you want to unlink your Discord account?",
+    "failedToGenerateCode": "Failed to generate linking code.",
+    "failedToVerify": "Failed to verify code.",
+    "failedToUnlink": "Failed to unlink account.",
+    "notifications": "Notification Preferences",
+    "gameEvents": "Game Events",
+    "worldEvents": "World Events",
+    "achievements": "Achievements",
+    "systemAlerts": "System Alerts"
   }
 }

@@ -1,5 +1,6 @@
 import Event from '../models/Event.js';
 import City from '../models/City.js';
+import { sendDiscordNotification } from '../services/discordBot.js';
 
 const EVENT_TEMPLATES = [
   {
@@ -85,6 +86,25 @@ export async function generateEvents() {
     { _id: { $in: affectedCities } },
     { $push: { activeEvents: { eventId: event._id, remainingTicks: template.duration } } },
   );
+
+  sendDiscordNotification({
+    type: 'worldEvents',
+    title: template.name,
+    description: template.description,
+    fields: [
+      { name: 'Scope', value: template.type === 'global' ? 'Global' : 'Local', inline: true },
+      { name: 'Duration', value: `${template.duration} ticks`, inline: true },
+      ...(template.impact.demandDelta
+        ? [
+            {
+              name: 'Demand Impact',
+              value: `${template.impact.demandDelta > 0 ? '+' : ''}${(template.impact.demandDelta * 100).toFixed(1)}%`,
+              inline: true,
+            },
+          ]
+        : []),
+    ],
+  }).catch(() => {});
 
   return [event];
 }

@@ -16,6 +16,7 @@ import { setMaintenanceMode, getMaintenanceInfo } from '../models/GameState.js';
 import Notification from '../models/Notification.js';
 import { sendEmail, verifyConnection } from '../services/email.js';
 import emailTemplates from '../services/emailTemplates.js';
+import { sendDiscordNotification } from '../services/discordBot.js';
 
 const router = Router();
 
@@ -495,6 +496,11 @@ router.post('/maintenance/enable', async (req, res) => {
       message: message || 'Maintenance mode has been enabled by an administrator.',
       global: true,
     });
+    sendDiscordNotification({
+      type: 'systemAlerts',
+      title: 'Maintenance Mode Enabled',
+      description: message || 'Maintenance mode has been enabled by an administrator.',
+    }).catch(() => {});
     res.json({ enabled: true, message: message || '' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -512,6 +518,11 @@ router.post('/maintenance/disable', async (req, res) => {
       message: 'Maintenance completed. Gameplay is available again.',
       global: true,
     });
+    sendDiscordNotification({
+      type: 'systemAlerts',
+      title: 'Maintenance Completed',
+      description: 'Maintenance completed. Gameplay is available again.',
+    }).catch(() => {});
     res.json({ enabled: false });
   } catch (err) {
     res.status(500).json({ error: err.message });

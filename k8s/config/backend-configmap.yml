@@ -10,3 +10,4 @@ data:
   PORT: "5000"
   TICK_INTERVAL_MINUTES: "360"
   ADMIN_EMAIL: "admin@sizops.co.il"
+  DISCORD_BOT_API_URL: "http://cityflow-discord-bot:5001"
