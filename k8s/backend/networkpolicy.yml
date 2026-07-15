@@ -11,6 +11,7 @@ spec:
       app.kubernetes.io/name: backend
   policyTypes:
     - Ingress
+    - Egress
   ingress:
     - from:
         - podSelector:
@@ -22,3 +23,12 @@ spec:
     - ports:
         - port: 5000
           protocol: TCP
+  egress:
+    # Allow backend to call Discord bot API
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: discord-bot
+      ports:
+        - protocol: TCP
+          port: 5001

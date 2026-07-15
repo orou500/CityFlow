@@ -9,6 +9,7 @@ import { processConstruction } from './constructionProcessing.js';
 import Event from '../models/Event.js';
 import { incrementTick } from '../models/GameState.js';
 import { endCurrentSeasonAndStartNew } from './seasonReset.js';
+import { sendDiscordNotification } from '../services/discordBot.js';
 
 export async function executeTick() {
   const startTime = Date.now();
@@ -46,6 +47,24 @@ export async function executeTick() {
 
     console.log('[TICK] Generating new events...');
     const newEvents = await generateEvents();
+
+    if (newEvents.length > 0 || constructionResults.some((r) => r.status === 'completed')) {
+      const fields = [];
+      if (newEvents.length > 0) {
+        fields.push({ name: 'New Events', value: String(newEvents.length), inline: true });
+      }
+      const completedConstruction = constructionResults.filter((r) => r.status === 'completed').length;
+      if (completedConstruction > 0) {
+        fields.push({ name: 'Construction Complete', value: String(completedConstruction), inline: true });
+      }
+
+      sendDiscordNotification({
+        type: 'systemAlerts',
+        title: `Tick #${tickNumber} Summary`,
+        description: 'World simulation cycle completed.',
+        fields,
+      }).catch(() => {});
+    }
 
     console.log('[TICK] Expiring uncollected rent...');
     const expiredRentCount = await expireUncollectedRent();

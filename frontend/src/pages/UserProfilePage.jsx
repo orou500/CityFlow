@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
 import { useGameStore } from '../store/useGameStore';
 import { formatMoney } from '../utils/format';
+import DiscordSettings from '../components/DiscordSettings';
 
 function StatCard({ label, value, color }) {
   return (
@@ -547,6 +548,12 @@ export default function UserProfilePage() {
               {!oauthStatus.hasPassword && (
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">{t('profile.noPasswordWarning')}</p>
               )}
+            </div>
+          )}
+
+          {isOwner && (
+            <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
+              <DiscordSettings />
             </div>
           )}
         </div>

@@ -47,6 +47,7 @@ const userSchema = new mongoose.Schema(
     lastPeriodBonusClaim: { type: Date, default: null },
     uncollectedRent: { type: Number, default: 0 },
     rentStorageStartedAt: { type: Date, default: null },
+    discordId: { type: String, default: null, sparse: true },
     level: { type: Number, default: 1 },
     xp: { type: Number, default: 0 },
     xpToNextLevel: { type: Number, default: 100 },

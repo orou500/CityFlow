@@ -1154,5 +1154,25 @@
     "noContributors": "אין עדיין תורמים.",
     "beFirst": "היה הראשון לתרום!",
     "backToHome": "חזרה לדף הבית"
+  },
+  "discord": {
+    "linkTitle": "אינטגרציית Discord",
+    "linkDescription": "קשר את חשבון ה-Discord שלך כדי לקבל התראות משחק ולהשתמש בפקודות הבוט.",
+    "linked": "חשבון Discord מקושר",
+    "unlink": "נתק",
+    "linkDiscordAccount": "קשר חשבון Discord",
+    "enterCodeInCityflow": "הזן קוד בן 6 ספרות בשדה למטה כדי לאשר את חשבון ה-Discord שלך:",
+    "enterYourCode": "הזן את הקוד בן 6 הספרות",
+    "verify": "אמת",
+    "linkSuccess": "חשבון Discord קישר בהצלחה!",
+    "unlinkSuccess": "חשבון Discord נותק.",
+    "confirmUnlink": "האם אתה בטוח שברצוננתק את חשבון ה-Discord?",
+    "failedToGenerateCode": "יצירת קוד קישור נכשלה.",
+    "failedToVerify": "אימות הקוד נכשל.",
+    "failedToUnlink": "ניתוק החשבון נכשל.",
+    "notifications": "העדפות התראות",
+    "gameEvents": "אירועי משחק",
+    "worldEvents": "אירועי עולם",
+    "achievements": "הישגים",
+    "systemAlerts": "התראות מערכת"
   }
-}

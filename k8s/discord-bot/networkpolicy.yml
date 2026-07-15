@@ -11,7 +11,17 @@ spec:
     matchLabels:
       app.kubernetes.io/name: discord-bot
   policyTypes:
+    - Ingress
     - Egress
+  ingress:
+    # Allow backend to access bot API
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: backend
+      ports:
+        - protocol: TCP
+          port: 5001
   egress:
     # Allow DNS resolution
     - to:

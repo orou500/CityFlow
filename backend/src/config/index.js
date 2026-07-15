@@ -24,6 +24,8 @@ export const config = {
   },
   emailFrom: process.env.EMAIL_FROM || 'noreply@sizops.co.il',
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+  discordBotApiUrl: process.env.DISCORD_BOT_API_URL || 'http://cityflow-discord-bot:5001',
+  discordBotApiKey: process.env.DISCORD_BOT_API_KEY || '',
   oauth: {
     google: {
       clientId: process.env.OAUTH_GOOGLE_CLIENT_ID || '',

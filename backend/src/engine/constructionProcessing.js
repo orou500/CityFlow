@@ -4,6 +4,7 @@ import User from '../models/User.js';
 import Notification from '../models/Notification.js';
 import { getTickNumber } from '../models/GameState.js';
 import { getAllProjects, calculateUnitRent } from '../config/developmentProjects.js';
+import { sendDiscordNotification } from '../services/discordBot.js';
 
 export async function processConstruction() {
   const tickNumber = await getTickNumber();
@@ -66,6 +67,17 @@ export async function processConstruction() {
             land.currentPrice = Math.round(project.totalCost * (0.9 + Math.random() * 0.2) * cityMultiplier);
 
             await land.save();
+
+            sendDiscordNotification({
+              type: 'achievements',
+              title: 'Construction Complete',
+              description: `${project.projectName} has been completed in ${land.cityId?.name || 'unknown city'}.`,
+              fields: [
+                { name: 'Project', value: project.projectName, inline: true },
+                { name: 'City', value: land.cityId?.name || 'Unknown', inline: true },
+                { name: 'Value', value: `$${land.currentPrice?.toLocaleString() || 0}`, inline: true },
+              ],
+            }).catch(() => {});
 
             await Notification.create({
               userId: project.ownerId,
