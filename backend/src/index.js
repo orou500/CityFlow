@@ -23,6 +23,7 @@ import worldRoutes from './routes/world.js';
 import seasonRoutes from './routes/seasons.js';
 import backupRoutes from './routes/backup.js';
 import bonusRoutes from './routes/bonus.js';
+import rentRoutes from './routes/rent.js';
 import oauthRoutes from './routes/oauth.js';
 import { maintenanceCheck } from './middleware/maintenance.js';
 import { getMaintenanceInfo } from './models/GameState.js';
@@ -81,6 +82,7 @@ app.use('/friends', friendsRoutes);
 app.use('/events', eventRoutes);
 app.use('/admin/backups', backupRoutes);
 app.use('/bonus', bonusRoutes);
+app.use('/rent', rentRoutes);
 app.use('/auth', oauthRoutes);
 
 app.use((req, res) => {

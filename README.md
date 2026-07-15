@@ -6,6 +6,8 @@
 
 A full-stack real-time multiplayer simulation game where players buy, sell, develop, and manage properties across a dynamic global market. Built with Node.js, Express, MongoDB, and React. Deployed on Kubernetes with ArgoCD, Let's Encrypt SSL, and automated CI/CD.
 
+**[See CityFlow on itch.io](https://orou500.itch.io/cityflow)**
+
 ## Architecture
 
 ```
@@ -14,19 +16,29 @@ cityflow/
 │   └── src/
 │       ├── config/          # DB connection, env vars, scheduler config, backup config
 │       ├── engine/          # Simulation logic (tick, market, season reset, property generation)
-│       ├── middleware/       # JWT auth & admin guards
+│       ├── middleware/       # JWT auth, admin guards, rate limiter, maintenance
 │       ├── models/          # Mongoose schemas (User, Property, City, Season, GameState, etc.)
 │       ├── routes/          # REST API endpoints
+│       ├── services/        # Email service (Brevo SMTP) and HTML templates
 │       ├── test/            # Test setup, helpers, and MongoDB Memory Server config
+│       ├── utils/           # Validation, leveling (XP/XP), and utility functions
 │       ├── seed.js          # Database initializer
 │       └── index.js         # Express app entry point
 ├── frontend/
 │   └── src/
-│       ├── components/      # Reusable UI (Navbar, WorldMap, OnboardingWrapper, WorldStatusWidget)
+│       ├── components/      # Reusable UI (Navbar, WorldMap, OnboardingWrapper, WorldStatusWidget, RentCollectionWidget, PeriodBonusWidget, Toast)
 │       ├── i18n/            # Internationalization (en, he)
 │       ├── pages/           # Route-level page components
-│       └── store/           # Zustand state management
+│       ├── store/           # Zustand state management
+│       └── utils/           # Utility functions (formatCompact, formatMoney)
+├── discord-bot/             # CityFlow Discord bot (Node.js, Discord.js 14, MongoDB)
+│   └── src/
+│       ├── commands/        # Slash commands (moderation, staff, game)
+│       ├── events/          # Discord event handlers
+│       ├── models/          # Mongoose schemas (GuildConfig, Warning, Ticket, Suggestion)
+│       └── utils/           # Command/event loaders, helpers, logger
 ├── k8s/                     # Kubernetes manifests (namespace, deployments, ingress, etc.)
+├── discord/                 # Discord server setup guides, role permissions, bot configs
 ├── .github/workflows/       # CI/CD pipelines (build, test, deploy)
 └── .env                     # Environment variables (not tracked)
 ```
@@ -35,9 +47,10 @@ cityflow/
 
 | Feature | Description |
 | ------- | ----------- |
-| **Dynamic Market** | City demand/supply indices fluctuate each month, driving property price changes |
+| **Dynamic Market** | City demand/supply indices fluctuate each month, driving property price changes with 6 market regimes (bull, bear, stable, recovery, correction, boom) |
 | **Property Generation** | New properties are automatically created each month based on population, development rate, and demand |
 | **Anti-Monopoly** | No player can own more than 5% of a city's total properties |
+| **Rent Collection Pool** | Rent is deposited into a collectible pool with a 24-hour timer; players must manually collect or forfeit |
 | **Bank System** | Players can take loans with interest; missed payments lead to penalties and repossession |
 | **Player-to-Player Offers** | Negotiate property purchases via offers, counter-offers, accept/reject (min 70% of market value) |
 | **Construction & Development** | Buy land, build from 8 project types (residential, commercial, hospitality), upgrade buildings with 4 upgrade types |
@@ -46,13 +59,22 @@ cityflow/
 | **Seasons** | Game runs in 720-month seasons with automatic resets, full archive of rankings, and fresh starts |
 | **Season Leaderboards** | View past season champions, top-20 player rankings, city statistics, and economic data |
 | **Player Season History** | Each profile shows the player's rank and stats across all completed seasons |
-| **Notifications** | Real-time alerts for offers, trades, construction, and friend requests; auto-cleanup after 24h |
-| **Friends** | Add, accept, decline, and remove friends; view friends' net worth and portfolios |
-| **User Profiles** | Customizable avatars, display names, bio, portfolio visibility, season history, achievements |
+| **Player Leveling** | XP-based progression system with lifetime stats; earn XP for buying, selling, loans, construction, and more |
+| **Period Login Bonus** | Claim $250–$1,000 cash + 10–50 XP every 6 hours from the dashboard |
+| **Notifications** | Real-time alerts for offers, trades, construction, and friend requests; toast popups and bell animations; auto-cleanup after 24h |
+| **Friends** | Add, accept, decline, and remove friends; view friends' net worth and portfolios; bidirectional notifications |
+| **User Profiles** | Customizable avatars, display names, bio, portfolio visibility, season history, level badge, and achievements |
+| **Email Verification** | Required before login; verification emails sent on registration; password reset via email |
+| **OAuth Login** | Sign in with Google or Discord (JWT-signed state for multi-replica compatibility) |
+| **Rate Limiting** | Per-IP rate limiting on registration, login, and email-sending endpoints |
+| **Strong Password Policy** | Enforced 8+ characters with uppercase, lowercase, and number requirements |
 | **Legal & Compliance** | Terms of Service, Privacy Policy, Cookie Policy pages with registration acceptance |
-| **Onboarding** | 10-step guided tour for new players covering all game features |
-| **Admin Panel** | Full control over simulation, users, properties, cities, events, seasons, and manual tick execution |
+| **Onboarding** | 12-step guided tour for new players covering all game features |
+| **Admin Panel** | Full control over simulation, users, properties, cities, events, seasons, email testing, and manual tick execution; sortable user tables |
 | **Backup & Restore** | Admin-only database backup/restore system with gzip-compressed exports, upload/download, auto-retention, and full-fidelity restore |
+| **Maintenance Mode** | Admin-toggleable maintenance mode with custom message, 503 backend protection, logged-in user banner |
+| **Discord Bot** | 26-slash-command CityFlow bot with moderation, verification, tickets, suggestions, game integration, and anti-spam |
+| **Discord Community** | Official CityFlow Discord server with roles, channels, and bot integration |
 | **i18n** | Full English and Hebrew interface with proper RTL support across all components |
 | **Dark Mode** | Dark, Light, and System theme toggle |
 | **Database-Level Tick Lock** | Prevents duplicate tick execution in multi-replica deployments using MongoDB lock documents |
@@ -146,12 +168,14 @@ The simulation advances in discrete **ticks** (displayed to players as **months*
 1. Updates city demand/supply indices
 2. Adjusts property prices based on market forces
 3. Generates new properties in cities below capacity
-4. Collects rent for property owners
+4. Deposits rent into owner's collectible pool (24h expiry)
 5. Processes loan repayments
 6. Advances construction projects
 7. Balances market supply
 8. Advances/deactivates events
 9. Generates new properties and events
+10. Expires uncollected rent pools older than 24 hours
+11. Sends rent expiry warnings to users with <1 hour remaining
 
 Ticks run automatically at fixed times: **00:00, 06:00, 12:00, 18:00** (every 6 hours). Manual tick execution from the admin panel does not shift the schedule. A database-level lock prevents duplicate execution across multiple backend replicas.
 
@@ -190,7 +214,7 @@ Regime selection is weighted by city demand — high demand favors bull/boom, lo
 5. **Noise** scaled by property volatility and regime — adds unpredictability
 6. **Soft boundaries** add resistance near 2.5×/0.6× base price (hard clamp at 3.0×/0.5×)
 
-- **Rent**: 0.2%–0.4% of current price per tick (randomized)
+- **Rent**: 0.2%–0.4% of current price per tick (randomized), deposited into player's collectible pool with 24-hour expiry
 
 ### Property Generation
 
@@ -228,9 +252,17 @@ Events are rendered on the world map as colored pins with popups showing name, d
 
 | Method | Path | Description |
 | ------ | ---- | ----------- |
-| POST | `/register` | Create new user (requires `confirmPassword`, `acceptedTerms`, `acceptedPrivacy`) |
-| POST | `/login` | Login with username or email, receive JWT |
+| POST | `/register` | Create new user (requires `confirmPassword`, `acceptedTerms`, `acceptedPrivacy`); returns message only (no token) |
+| POST | `/login` | Login with username or email, receive JWT; requires email verification first |
 | GET | `/me` | Get current user profile |
+| GET | `/verify-email` | Verify email address via token (query param `?token=...`) |
+| POST | `/resend-verification` | Resend verification email |
+| POST | `/forgot-password` | Request password reset email (always returns success to prevent enumeration) |
+| POST | `/reset-password` | Reset password with token |
+| GET | `/google` | Initiate Google OAuth login |
+| GET | `/google/callback` | Google OAuth callback |
+| GET | `/discord` | Initiate Discord OAuth login |
+| GET | `/discord/callback` | Discord OAuth callback |
 
 ### Cities (`/api/cities`)
 
@@ -349,6 +381,20 @@ All routes except `GET /` require authentication.
 | ------ | ---- | ----------- |
 | GET | `/active` | List all currently active events |
 
+### Period Bonus (`/api/bonus`) — requires authentication
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| GET | `/status` | Check if bonus is available and time until next claim |
+| POST | `/claim` | Claim $250–$1,000 cash + 10–50 XP (once per 6-hour period) |
+
+### Rent Collection (`/api/rent`) — requires authentication
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| GET | `/status` | Get uncollected rent amount, expiry timer, and balance |
+| POST | `/collect` | Collect all uncollected rent into balance (24-hour expiry) |
+
 ### Seasons (`/api/seasons`)
 
 | Method | Path | Description |
@@ -397,6 +443,8 @@ All routes except `GET /` require authentication.
 | DELETE | `/backups/:id` | Delete a backup file |
 | GET | `/backups/:id/logs` | Get backup logs |
 | POST | `/backups/retention` | Run retention cleanup now |
+| GET | `/email/status` | Get SMTP connection status |
+| POST | `/email/test` | Send a test email to verify SMTP configuration |
 
 ## Database Models
 
@@ -408,6 +456,7 @@ All routes except `GET /` require authentication.
 | `normalizedUsername` | String | Lowercase username (unique index, case-insensitive lookups) |
 | `email` | String | Unique email |
 | `password` | String | bcrypt hash (not returned) |
+| `oauthProviders` | [{provider, providerId}] | Linked OAuth accounts (google, discord) |
 | `balance` | Number | Cash balance (default 100,000) |
 | `ownedProperties` | [ObjectId] | References to Property |
 | `friends` | [ObjectId] | References to User |
@@ -423,7 +472,28 @@ All routes except `GET /` require authentication.
 | `acceptedTermsAt` | Date | When terms were accepted |
 | `acceptedPrivacy` | Boolean | Privacy Policy accepted |
 | `acceptedPrivacyAt` | Date | When privacy policy was accepted |
+| `emailVerified` | Boolean | Whether email has been verified (required before login) |
+| `emailVerifiedAt` | Date | When email was verified |
+| `verificationToken` | String | Email verification token hash (not returned) |
+| `verificationExpires` | Date | Email verification token expiry (not returned) |
+| `passwordResetToken` | String | Password reset token hash (not returned) |
+| `passwordResetExpires` | Date | Password reset token expiry (not returned) |
 | `lastLoginAt` | Date | Last login timestamp |
+| `lastPeriodBonusClaim` | Date | When last period bonus was claimed |
+| `uncollectedRent` | Number | Rent waiting to be collected (default 0) |
+| `rentStorageStartedAt` | Date | When current rent pool started accumulating (24h expiry) |
+| `level` | Number | Player level (default 1) |
+| `xp` | Number | Experience points (default 0) |
+| `xpToNextLevel` | Number | XP needed for next level (default 100) |
+| `lifetimeStats.totalTransactions` | Number | Total transactions made |
+| `lifetimeStats.totalPropertiesOwned` | Number | Total properties ever owned |
+| `lifetimeStats.totalMoneyEarned` | Number | Total money earned (rent + sales) |
+| `lifetimeStats.totalMoneySpent` | Number | Total money spent |
+| `lifetimeStats.totalLoansTaken` | Number | Total loans taken |
+| `lifetimeStats.totalFriendsAdded` | Number | Total friends added |
+| `lifetimeStats.totalUpgrades` | Number | Total property upgrades |
+| `lifetimeStats.totalConstructionStarted` | Number | Total construction projects started |
+| `lifetimeStats.totalSeasonsCompleted` | Number | Total seasons completed |
 | `onboarding.completed` | Boolean | Whether onboarding tour is completed |
 | `onboarding.completedAt` | Date | When onboarding was completed |
 | `profileVisibility.portfolio` | Boolean | Show portfolio on public profile |
@@ -636,6 +706,12 @@ All routes except `GET /` require authentication.
 | `/terms` | TermsPage | No |
 | `/privacy` | PrivacyPage | No |
 | `/cookies` | CookiesPage | No |
+| `/forgot-password` | ForgotPasswordPage | Guest only |
+| `/reset-password` | ResetPasswordPage | Guest only |
+| `/verify-email` | VerifyEmailPage | No |
+| `/contributors` | ContributorsPage | No |
+| `/oauth/accept-terms` | OAuthAcceptTermsPage | No |
+| `/auth/callback` | OAuthCallbackPage | No |
 | `/admin` | AdminPage | Admin only |
 | `/login` | LoginPage | Guest only |
 | `*` | NotFoundPage | No |
@@ -649,7 +725,7 @@ All routes except `GET /` require authentication.
 | `npm run dev` | Start backend server (port 5000) |
 | `npm run seed` | Seed/refresh database with cities and users |
 | `npm start` | Start backend in production mode |
-| `npm test` | Run all tests (68 tests across 6 test files) |
+| `npm test` | Run all tests (77 tests across 7 test files) |
 | `npm run test:watch` | Run tests in watch mode |
 | `npm run test:coverage` | Run tests with coverage report |
 | `npm run lint` | Run ESLint |
@@ -677,7 +753,7 @@ All routes except `GET /` require authentication.
 ### CI/CD Pipeline
 
 - **CI**: GitHub Actions runs tests on every push
-- **CD**: GitHub Actions builds Docker images, pushes to GHCR, updates Kubernetes manifests with commit SHA, and pushes to trigger ArgoCD sync
+- **CD**: GitHub Actions builds Docker images for backend, frontend, and Discord bot; pushes to GHCR; updates Kubernetes manifests with commit SHA; pushes to trigger ArgoCD sync (with retry loop for race conditions)
 - **ArgoCD**: Monitors the `k8s/` directory in the Git repo and auto-deploys when manifests change
 
 ### Kubernetes (K3s)
@@ -688,9 +764,24 @@ All routes except `GET /` require authentication.
 | MongoDB | StatefulSet with persistent storage |
 | Backend | 2-replica Deployment with database-level tick lock |
 | Frontend | 2-replica Deployment with nginx serving static files |
+| Discord Bot | Single-replica Deployment with NetworkPolicy (egress only) |
 | Backup PVC | 5Gi PersistentVolumeClaim (`local-path` StorageClass) for backup storage |
 | Ingress | Traefik with Let's Encrypt TLS (TLS-ALPN challenge) |
 | SSL | Auto-renewed Let's Encrypt certificate for `cityflow.sizops.co.il` |
+
+### Email Infrastructure
+
+Email is sent via **Brevo SMTP** (`smtp-relay.brevo.com:587`) from the `sizops.co.il` domain:
+
+- **Registration**: Verification email + welcome email sent on signup
+- **Email Verification**: Required before login; verification link with 24h token expiry
+- **Password Reset**: Reset link sent via email (1h token expiry)
+- **System Notifications**: Rent expiry warnings, friend requests, construction alerts
+- **Admin**: Test email endpoint and SMTP status check in admin panel
+- **Templates**: 8 HTML email templates (password reset, verification, welcome, account activated, system notification, friend request, admin alert, test email)
+- **Rate Limiting**: In-memory per-IP rate limiter on registration (5/hr), login (10/15min), resend verification (3/15min), forgot password (3/15min)
+
+**Required DNS records**: SPF, DKIM (`s1._domainkey`), DMARC (`v=DMARC1; p=quarantine`)
 
 ### Backup & Restore
 
@@ -723,11 +814,26 @@ Backups are managed entirely from the **Admin Panel** (Database tab). The system
 
 ### Docker
 
-Both backend and frontend use multi-stage Docker builds:
+All services use multi-stage Docker builds:
 - **Builder stage**: Installs dependencies and builds assets using `--platform=$BUILDPLATFORM` for fast cross-compilation
-- **Production stage**: Minimal image with only runtime dependencies, non-root user, tini init process (backend)
+- **Production stage**: Minimal image with only runtime dependencies, non-root user, tini init process (backend & Discord bot)
+- **Discord bot**: `node:20-alpine` with tini, single-replica deployment
 
 ## Community
+
+### Discord
+
+Join the official CityFlow Discord server for community discussions, game updates, and support:
+**[Join CityFlow Discord](https://discord.gg/cityflow)**
+
+The server includes:
+- **Verification system** with role assignment
+- **Ticket system** for support, bug reports, and partnerships
+- **Suggestions board** with community voting
+- **Moderation tools** (warnings, mutes, kicks, bans, auto-spam detection)
+- **Game integration** — view profiles, leaderboards, and stats from Discord
+
+### Contributing
 
 This project is governed by the [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please read our [Contributing Guidelines](CONTRIBUTING.md) before submitting a pull request. For security vulnerabilities, please see our [Security Policy](SECURITY.md).
 
