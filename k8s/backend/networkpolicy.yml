@@ -46,3 +46,7 @@ spec:
       ports:
         - protocol: TCP
           port: 5001
+    # Allow outbound HTTPS to external services (Google OAuth, etc.)
+    - ports:
+        - protocol: TCP
+          port: 443
