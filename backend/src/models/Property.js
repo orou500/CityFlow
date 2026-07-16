@@ -53,6 +53,15 @@ const propertySchema = new mongoose.Schema(
       default: 'stable',
     },
     regimeEndTick: { type: Number, default: 0 },
+    grade: { type: Number, default: 1, min: 1, max: 5 },
+    gradeHistory: [
+      {
+        grade: { type: Number },
+        upgradedAt: { type: Date },
+        cost: { type: Number },
+      },
+    ],
+    lastGradeUpgradeAt: { type: Date, default: null },
     lastUpgrade: { type: String },
     upgrades: [
       {

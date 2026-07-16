@@ -291,7 +291,21 @@
     "unitNumber": "Unit #{{number}}",
     "perPeriod": "/month",
     "occupied": "Occupied",
-    "vacant": "Vacant"
+    "vacant": "Vacant",
+    "propertyGrade": "Property Grade",
+    "grade": "Grade",
+    "nextUpgrade": "Next Upgrade",
+    "upgradeCost": "Upgrade Cost",
+    "gradeValueBonus": "Value Bonus",
+    "gradeRentBonus": "Rent Bonus",
+    "upgradeGrade": "Upgrade Property",
+    "gradeUpgraded": "Property upgraded to Grade {{grade}}!",
+    "alreadyMaxGrade": "Maximum Grade",
+    "confirmGradeUpgrade": "Upgrade to Grade {{grade}}?",
+    "gradeBenefits": "Benefits",
+    "upgradeLocked": "Upgrade Locked",
+    "nextAvailableAt": "Available {{date}} at {{time}}",
+    "cooldownActive": "Upgrade cooldown active"
   },
   "errors": {
     "Property not found": "Property not found",
@@ -344,7 +358,9 @@
     "Password must be at least 8 characters": "Password must be at least 8 characters",
     "Password must contain at least one uppercase letter": "Password must contain at least one uppercase letter",
     "Password must contain at least one lowercase letter": "Password must contain at least one lowercase letter",
-    "Password must contain at least one number": "Password must contain at least one number"
+    "Password must contain at least one number": "Password must contain at least one number",
+    "Property is already at maximum grade": "Property is already at maximum grade",
+    "upgradeCooldown": "Upgrade on cooldown. Try again in {{hours}} hour(s)."
   },
   "development": {
     "title": "Property Development",
@@ -1160,6 +1176,9 @@
     "noContributors": "No contributors yet.",
     "beFirst": "Be the first to contribute!",
     "backToHome": "Back to Home"
+  },
+  "settings": {
+    "title": "Settings"
   },
   "discord": {
     "linkTitle": "Discord Integration",

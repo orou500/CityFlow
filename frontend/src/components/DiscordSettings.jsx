@@ -221,13 +221,13 @@ export default function DiscordSettings() {
                 </div>
                 <button
                   onClick={() => updateNotifPref(item.key, !notifSettings.preferences[item.key])}
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                  className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${
                     notifSettings.preferences[item.key] ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
                   }`}
                 >
                   <span
-                    className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                      notifSettings.preferences[item.key] ? 'translate-x-5' : 'translate-x-1'
+                    className={`absolute h-3 w-3 rounded-full bg-white transition-all ${
+                      notifSettings.preferences[item.key] ? 'start-5' : 'start-1'
                     }`}
                   />
                 </button>

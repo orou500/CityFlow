@@ -88,7 +88,7 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
     { to: '/profile', icon: '\uD83D\uDC64', label: t('nav.myProfile') },
     { to: '/friends', icon: '\uD83D\uDC65', label: t('nav.friends') },
     { to: '/notifications', icon: '\uD83D\uDD14', label: t('nav.notifications'), badge: unreadCount },
-    { to: '/settings', icon: '\u2699\uFE0F', label: t('nav.settings'), disabled: true },
+    { to: '/settings', icon: '\u2699\uFE0F', label: t('nav.settings') },
     { separator: true },
     { action: 'logout', icon: '\uD83D\uDEAA', label: t('nav.logout'), danger: true },
   ];
