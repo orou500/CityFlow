@@ -12,7 +12,7 @@ export default {
     try {
       const [eventsRes, statsRes] = await Promise.all([
         fetch(`${config.apiUrl}/events/active`),
-        fetch(`${config.apiUrl}/stats/overview`),
+        fetch(`${config.apiUrl}/stats`),
       ]);
 
       if (!eventsRes.ok || !statsRes.ok) {
@@ -27,14 +27,9 @@ export default {
         .setColor(0x1e90ff)
         .setTimestamp()
         .addFields(
-          { name: 'Total Players', value: String(stats.totalPlayers || 0), inline: true },
-          { name: 'Total Properties', value: String(stats.totalProperties || 0), inline: true },
-          {
-            name: 'Money in Circulation',
-            value: `$${(stats.moneyInCirculation || 0).toLocaleString()}`,
-            inline: true,
-          },
-          { name: 'Total Transactions', value: String(stats.totalTransactions || 0), inline: true },
+          { name: 'Total Players', value: String(stats.playersCount || 0), inline: true },
+          { name: 'Total Properties', value: String(stats.propertiesCount || 0), inline: true },
+          { name: 'Total Transactions', value: String(stats.transactionsCount || 0), inline: true },
         );
 
       if (events.length > 0) {
