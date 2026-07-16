@@ -284,14 +284,11 @@ export default function Navbar() {
                   </Link>
                   <Link
                     to="/settings"
-                    onClick={(e) => {
-                      e.preventDefault();
-                    }}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted cursor-not-allowed transition-colors"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                   >
                     <span className="text-base">{'\u2699\uFE0F'}</span>
                     <span>{t('nav.settings')}</span>
-                    <span className="ms-auto text-[10px] text-muted">{t('common.soon')}</span>
                   </Link>
                   <Link
                     to="/help"

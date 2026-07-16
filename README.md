@@ -6,7 +6,7 @@
 
 A full-stack real-time multiplayer simulation game where players buy, sell, develop, and manage properties across a dynamic global market. Built with Node.js, Express, MongoDB, and React. Deployed on Kubernetes with ArgoCD, Let's Encrypt SSL, and automated CI/CD.
 
-**[See CityFlow on itch.io](https://orou500.itch.io/cityflow)**
+**[See CityFlow on itch.io](https://orou500.itch.io/cityflow)** · **[Join CityFlow Discord](https://discord.gg/vTav6WYQdQ)**
 
 ## Architecture
 

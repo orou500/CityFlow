@@ -31,6 +31,7 @@ import ResetPasswordPage from './pages/ResetPasswordPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import OAuthCallbackPage from './pages/OAuthCallbackPage';
 import OAuthAcceptTermsPage from './pages/OAuthAcceptTermsPage';
+import SettingsPage from './pages/SettingsPage';
 import { useEffect } from 'react';
 import { useAuthStore } from './store/useAuthStore';
 import { useGameStore } from './store/useGameStore';
@@ -190,6 +191,16 @@ function AppRoutes() {
           <ErrorBoundary>
             <ProtectedRoute>
               <NotificationsPage />
+            </ProtectedRoute>
+          </ErrorBoundary>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ErrorBoundary>
+            <ProtectedRoute>
+              <SettingsPage />
             </ProtectedRoute>
           </ErrorBoundary>
         }

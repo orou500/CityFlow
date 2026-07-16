@@ -238,6 +238,9 @@ export default function PropertyPage() {
   const [offerAmount, setOfferAmount] = useState('');
   const [offerLoading, setOfferLoading] = useState(false);
   const [unitsPage, setUnitsPage] = useState(0);
+  const [gradeData, setGradeData] = useState(null);
+  const [showGradeModal, setShowGradeModal] = useState(false);
+  const [gradeLoading, setGradeLoading] = useState(false);
   const UNITS_PER_PAGE = 5;
 
   const load = async () => {
@@ -245,6 +248,14 @@ export default function PropertyPage() {
     try {
       const res = await api(`/properties/${id}/detail`);
       setData(res);
+      if (res.property?.ownerId?._id === user?._id) {
+        try {
+          const gradeRes = await api(`/properties/${id}/grade`);
+          setGradeData(gradeRes);
+        } catch {
+          /* not owner or error */
+        }
+      }
     } catch (err) {
       setError(err.message);
     }
@@ -304,6 +315,24 @@ export default function PropertyPage() {
     setOfferLoading(false);
   };
 
+  const handleGradeUpgrade = async () => {
+    setGradeLoading(true);
+    try {
+      const res = await api('/properties/grade/upgrade', {
+        method: 'POST',
+        body: JSON.stringify({ propertyId: id }),
+      });
+      setActionMsg({ type: 'success', text: t('propertyDetail.gradeUpgraded', { grade: res.grade }) });
+      setShowGradeModal(false);
+      await load();
+      await fetchMe();
+      await fetchUserData();
+    } catch (err) {
+      setActionMsg({ type: 'error', text: translateError(err, t) });
+    }
+    setGradeLoading(false);
+  };
+
   if (loading && !data) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -340,7 +369,7 @@ export default function PropertyPage() {
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white dark:bg-gray-900 rounded-lg p-6">
             <h1 className="text-2xl font-bold mb-4">{property.name}</h1>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
                 <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.currentValue')}</p>
                 <p className="text-lg font-bold text-orange-500 dark:text-orange-400">
@@ -360,6 +389,15 @@ export default function PropertyPage() {
               <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
                 <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.condition')}</p>
                 <p className="text-lg font-semibold">{property.condition}%</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.propertyGrade')}</p>
+                <div className="flex items-center gap-1">
+                  <span className="text-yellow-500 text-sm leading-none">{'★'.repeat(property.grade || 1)}</span>
+                  <span className="text-sm font-semibold text-yellow-600 dark:text-yellow-400">
+                    {property.grade || 1}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -567,6 +605,33 @@ export default function PropertyPage() {
                   {t('propertyDetail.sellProperty')} — ${property.currentPrice?.toLocaleString()}
                 </button>
               )}
+              {user && isOwner && gradeData && gradeData.upgradeCost && gradeData.cooldownRemaining === 0 && (
+                <button
+                  onClick={() => setShowGradeModal(true)}
+                  className="w-full bg-purple-600 hover:bg-purple-500 text-white text-sm py-2 rounded transition-colors"
+                >
+                  {t('propertyDetail.upgradeGrade')} — ${gradeData.upgradeCost.toLocaleString()}
+                </button>
+              )}
+              {user && isOwner && gradeData && gradeData.upgradeCost && gradeData.cooldownRemaining > 0 && (
+                <div className="w-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-sm py-2 rounded text-center space-y-0.5">
+                  <div className="font-medium">🔒 {t('propertyDetail.upgradeLocked')}</div>
+                  <div className="text-xs">
+                    {t('propertyDetail.nextAvailableAt', {
+                      time: new Date(gradeData.nextAvailableAt).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      }),
+                      date: new Date(gradeData.nextAvailableAt).toLocaleDateString(),
+                    })}
+                  </div>
+                </div>
+              )}
+              {user && isOwner && gradeData && !gradeData.upgradeCost && (
+                <div className="w-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-sm py-2 rounded text-center">
+                  ⭐ {t('propertyDetail.alreadyMaxGrade')}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -598,6 +663,59 @@ export default function PropertyPage() {
               </button>
               <button
                 onClick={() => setShowOfferModal(false)}
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-900 dark:text-white text-sm rounded transition-colors"
+              >
+                {t('common.cancel')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showGradeModal && gradeData && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 w-full max-w-sm">
+            <h3 className="text-gray-900 dark:text-white font-semibold mb-4">
+              {t('propertyDetail.confirmGradeUpgrade', { grade: gradeData.nextGradeName })}
+            </h3>
+            <div className="space-y-3 mb-4">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500 dark:text-gray-400">{t('propertyDetail.grade')}</span>
+                <span className="text-gray-900 dark:text-white font-medium">
+                  {gradeData.gradeName} → {gradeData.nextGradeName}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500 dark:text-gray-400">{t('propertyDetail.gradeValueBonus')}</span>
+                <span className="text-green-600 dark:text-green-400">
+                  +{((gradeData.nextValueBonus - gradeData.valueBonus) * 100).toFixed(0)}%
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500 dark:text-gray-400">{t('propertyDetail.gradeRentBonus')}</span>
+                <span className="text-green-600 dark:text-green-400">
+                  +{((gradeData.nextRentBonus - gradeData.rentBonus) * 100).toFixed(0)}%
+                </span>
+              </div>
+              <div className="border-t border-gray-200 dark:border-gray-600 pt-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500 dark:text-gray-400">{t('propertyDetail.upgradeCost')}</span>
+                  <span className="text-red-600 dark:text-red-400 font-semibold">
+                    ${gradeData.upgradeCost?.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleGradeUpgrade}
+                disabled={gradeLoading}
+                className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-gray-200 dark:disabled:bg-gray-600 text-white text-sm rounded transition-colors"
+              >
+                {gradeLoading ? t('development.processing') : t('propertyDetail.upgradeGrade')}
+              </button>
+              <button
+                onClick={() => setShowGradeModal(false)}
                 className="px-4 py-2 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-900 dark:text-white text-sm rounded transition-colors"
               >
                 {t('common.cancel')}

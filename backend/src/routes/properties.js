@@ -3,10 +3,21 @@ import Property from '../models/Property.js';
 import User from '../models/User.js';
 import City from '../models/City.js';
 import Transaction from '../models/Transaction.js';
+import Notification from '../models/Notification.js';
 import { authenticate } from '../middleware/auth.js';
 import { awardXp } from '../utils/leveling.js';
+import {
+  GRADE_NAMES,
+  MAX_GRADE,
+  GRADE_VALUE_BONUS,
+  GRADE_RENT_BONUS,
+  GRADE_UPGRADE_COOLDOWN_MS,
+  getGradeUpgradeCost,
+  getGradeRentMultiplier,
+} from '../config/propertyGrades.js';
 
 const router = Router();
+const PROPERTY_XP_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 router.get('/', async (req, res) => {
   try {
@@ -119,7 +130,7 @@ router.get('/:id/detail', authenticate, async (req, res) => {
     const investmentTransactions = ownerId
       ? await Transaction.find({
           propertyId: property._id,
-          type: { $in: ['buy', 'construction', 'upgrade'] },
+          type: { $in: ['buy', 'construction', 'upgrade', 'grade_upgrade'] },
           buyerId: ownerId,
         })
       : [];
@@ -197,6 +208,12 @@ router.post('/buy', authenticate, async (req, res) => {
     property.lastPurchaseDate = new Date();
     await property.save();
 
+    const lastBuyTx = await Transaction.findOne({
+      buyerId: buyer._id,
+      type: 'buy',
+    }).sort({ createdAt: -1 });
+    const boughtRecently = lastBuyTx && new Date() - new Date(lastBuyTx.createdAt) < PROPERTY_XP_COOLDOWN_MS;
+
     await Transaction.create({
       propertyId: property._id,
       buyerId: buyer._id,
@@ -205,7 +222,9 @@ router.post('/buy', authenticate, async (req, res) => {
       type: 'buy',
     });
 
-    await awardXp(buyer, 10, 'property_buy');
+    if (!boughtRecently) {
+      await awardXp(buyer, 10, 'property_buy');
+    }
     buyer.lifetimeStats.totalTransactions += 1;
     buyer.lifetimeStats.totalPropertiesOwned += 1;
     buyer.lifetimeStats.totalMoneySpent += price;
@@ -235,6 +254,7 @@ router.post('/sell', authenticate, async (req, res) => {
 
     const seller = await User.findById(req.user._id);
     const salePrice = property.currentPrice;
+    const purchasedAt = property.lastPurchaseDate;
 
     seller.balance += salePrice;
     seller.ownedProperties = seller.ownedProperties.filter((p) => p.toString() !== propertyId);
@@ -253,12 +273,134 @@ router.post('/sell', authenticate, async (req, res) => {
       type: 'sell',
     });
 
-    await awardXp(seller, 5, 'property_sell');
+    const heldLongEnough = purchasedAt && new Date() - new Date(purchasedAt) >= PROPERTY_XP_COOLDOWN_MS;
+    if (heldLongEnough) {
+      await awardXp(seller, 5, 'property_sell');
+    }
     seller.lifetimeStats.totalTransactions += 1;
     seller.lifetimeStats.totalMoneyEarned += salePrice;
     await seller.save();
 
     res.json({ property, balance: seller.balance });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/:id/grade', authenticate, async (req, res) => {
+  try {
+    const property = await Property.findById(req.params.id);
+    if (!property) return res.status(404).json({ error: 'Property not found' });
+    if (!property.ownerId || property.ownerId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: 'You do not own this property' });
+    }
+
+    const grade = property.grade || 1;
+    const nextGrade = grade < MAX_GRADE ? grade + 1 : null;
+    const upgradeCost = getGradeUpgradeCost(grade, property.currentPrice);
+
+    const now = new Date();
+    const lastUpgrade = property.lastGradeUpgradeAt;
+    const cooldownRemaining = lastUpgrade
+      ? Math.max(0, GRADE_UPGRADE_COOLDOWN_MS - (now.getTime() - new Date(lastUpgrade).getTime()))
+      : 0;
+    const nextAvailableAt = cooldownRemaining > 0 ? new Date(now.getTime() + cooldownRemaining) : null;
+
+    res.json({
+      grade,
+      gradeName: GRADE_NAMES[grade - 1],
+      nextGrade,
+      nextGradeName: nextGrade ? GRADE_NAMES[nextGrade - 1] : null,
+      upgradeCost,
+      valueBonus: GRADE_VALUE_BONUS[grade - 1],
+      rentBonus: GRADE_RENT_BONUS[grade - 1],
+      nextValueBonus: nextGrade ? GRADE_VALUE_BONUS[nextGrade - 1] : null,
+      nextRentBonus: nextGrade ? GRADE_RENT_BONUS[nextGrade - 1] : null,
+      lastUpgradeAt: lastUpgrade ? new Date(lastUpgrade).toISOString() : null,
+      cooldownRemaining,
+      nextAvailableAt: nextAvailableAt ? nextAvailableAt.toISOString() : null,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/grade/upgrade', authenticate, async (req, res) => {
+  try {
+    const { propertyId } = req.body;
+    const property = await Property.findById(propertyId);
+    if (!property) return res.status(404).json({ error: 'Property not found' });
+    if (!property.ownerId || property.ownerId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: 'You do not own this property' });
+    }
+
+    const currentGrade = property.grade || 1;
+    if (currentGrade >= MAX_GRADE) {
+      return res.status(400).json({ error: 'Property is already at maximum grade' });
+    }
+
+    const now = new Date();
+    if (property.lastGradeUpgradeAt) {
+      const elapsed = now.getTime() - new Date(property.lastGradeUpgradeAt).getTime();
+      if (elapsed < GRADE_UPGRADE_COOLDOWN_MS) {
+        const remainingMs = GRADE_UPGRADE_COOLDOWN_MS - elapsed;
+        const remainingH = Math.ceil(remainingMs / (60 * 60 * 1000));
+        return res.status(429).json({
+          error: `Upgrade cooldown active. Try again in ${remainingH} hour${remainingH > 1 ? 's' : ''}.`,
+          cooldownRemaining: remainingMs,
+          nextAvailableAt: new Date(now.getTime() + remainingMs).toISOString(),
+        });
+      }
+    }
+
+    const cost = getGradeUpgradeCost(currentGrade, property.currentPrice);
+    if (cost === null) {
+      return res.status(400).json({ error: 'Property is already at maximum grade' });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (user.balance < cost) {
+      return res.status(400).json({ error: `Insufficient funds. Required: $${cost.toLocaleString()}` });
+    }
+
+    user.balance -= cost;
+    await user.save();
+
+    const newGrade = currentGrade + 1;
+    const oneTimeBoost = 0.01;
+    const prevPrice = property.currentPrice;
+    const prevRent = property.rent || 0;
+    property.currentPrice = Math.round(property.currentPrice * (1 + oneTimeBoost));
+    property.grade = newGrade;
+    const gradeRentFactor = getGradeRentMultiplier(newGrade);
+    property.rent = Math.round(property.currentPrice * 0.004 * 0.75 * gradeRentFactor);
+    property.gradeHistory = property.gradeHistory || [];
+    property.gradeHistory.push({ grade: newGrade, upgradedAt: new Date(), cost });
+    property.lastGradeUpgradeAt = new Date();
+    await property.save();
+
+    await Transaction.create({
+      propertyId: property._id,
+      buyerId: user._id,
+      price: cost,
+      type: 'grade_upgrade',
+    });
+
+    await Notification.create({
+      userId: user._id,
+      type: 'system',
+      title: 'Property Grade Upgraded',
+      message: `"${property.name}" upgraded to Grade ${GRADE_NAMES[newGrade - 1]}. Value: $${prevPrice.toLocaleString()} → $${property.currentPrice.toLocaleString()}. Rent: $${prevRent.toLocaleString()} → $${property.rent.toLocaleString()}.`,
+      relatedId: property._id,
+      global: false,
+    });
+
+    await awardXp(user, 15, 'property_grade_upgrade');
+    user.lifetimeStats.totalTransactions += 1;
+    user.lifetimeStats.totalMoneySpent += cost;
+    await user.save();
+
+    res.json({ property, balance: user.balance, grade: newGrade, upgradeCost: cost });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

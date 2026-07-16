@@ -104,6 +104,19 @@ export const useGameStore = create((set, get) => ({
     return data;
   },
 
+  getPropertyGrade: async (propertyId) => {
+    const data = await api(`/properties/${propertyId}/grade`);
+    return data;
+  },
+
+  upgradePropertyGrade: async (propertyId) => {
+    const data = await api('/properties/grade/upgrade', {
+      method: 'POST',
+      body: JSON.stringify({ propertyId }),
+    });
+    return data;
+  },
+
   fetchUserData: async () => {
     try {
       const data = await api('/users/me');

@@ -4,6 +4,11 @@ export function translateError(err, t) {
 
   const dynamicPatterns = [
     {
+      regex: /^Upgrade cooldown active\. Try again in (\d+) hour/,
+      key: 'errors.upgradeCooldown',
+      params: (m) => ({ hours: m[1] }),
+    },
+    {
       regex: /^Land too small\. Minimum size required: ([\d,]+) sq ft$/,
       key: 'errors.landTooSmall',
       params: (m) => ({ size: m[1] }),

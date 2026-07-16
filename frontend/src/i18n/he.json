@@ -291,7 +291,21 @@
     "unitNumber": "יחידה #{{number}}",
     "perPeriod": "/חודש",
     "occupied": "מושכר",
-    "vacant": "פנוי"
+    "vacant": "פנוי",
+    "propertyGrade": "דירוג נכס",
+    "grade": "דירוג",
+    "nextUpgrade": "שדרוג הבא",
+    "upgradeCost": "עלות שדרוג",
+    "gradeValueBonus": "בונוס ערך",
+    "gradeRentBonus": "בונוס שכירות",
+    "upgradeGrade": "שדרג נכס",
+    "gradeUpgraded": "הנכס שודרג לדירוג {{grade}}!",
+    "alreadyMaxGrade": "דירוג מקסימלי",
+    "confirmGradeUpgrade": "שדרג לדירוג {{grade}}?",
+    "gradeBenefits": "יתרונות",
+    "upgradeLocked": "שדרוג נעול",
+    "nextAvailableAt": "זמין ב{{date}} ב{{time}}",
+    "cooldownActive": "קולדאון שדרוג פעיל"
   },
   "errors": {
     "Property not found": "הנכס לא נמצא",
@@ -344,7 +358,9 @@
     "Password must be at least 8 characters": "הסיסמה חייבת להכיל לפחות 8 תווים",
     "Password must contain at least one uppercase letter": "הסיסמה חייבת להכיל לפחות אות גדולה אחת",
     "Password must contain at least one lowercase letter": "הסיסמה חייבת להכיל לפחות אות קטנה אחת",
-    "Password must contain at least one number": "הסיסמה חייבת להכיל לפחות ספרה אחת"
+    "Password must contain at least one number": "הסיסמה חייבת להכיל לפחות ספרה אחת",
+    "Property is already at maximum grade": "הנכס כבר בדירוג מקסימלי",
+    "upgradeCooldown": "שדרוג בקולדאון. נסה שוב בעוד {{hours}} שעות."
   },
   "development": {
     "title": "פיתוח נכסים",
@@ -1154,6 +1170,9 @@
     "noContributors": "אין עדיין תורמים.",
     "beFirst": "היה הראשון לתרום!",
     "backToHome": "חזרה לדף הבית"
+  },
+  "settings": {
+    "title": "הגדרות"
   },
   "discord": {
     "linkTitle": "אינטגרציית Discord",

@@ -19,6 +19,7 @@ const transactionSchema = new mongoose.Schema(
         'repossess',
         'construction',
         'upgrade',
+        'grade_upgrade',
       ],
       required: true,
     },
