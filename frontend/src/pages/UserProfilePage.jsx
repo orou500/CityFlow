@@ -756,9 +756,7 @@ export default function UserProfilePage() {
                       <span className="text-gray-600 dark:text-gray-300">{tx.propertyId?.name || '—'}</span>
                       <span className={`text-xs font-medium ${info.color}`}>{info.label}</span>
                     </div>
-                    <div className="text-gray-500 dark:text-gray-400 text-xs shrink-0">
-                      {formatMoney(tx.price)}
-                    </div>
+                    <div className="text-gray-500 dark:text-gray-400 text-xs shrink-0">{formatMoney(tx.price)}</div>
                   </div>
                 );
               })}

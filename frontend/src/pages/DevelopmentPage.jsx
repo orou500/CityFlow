@@ -609,15 +609,11 @@ export default function DevelopmentPage() {
                       </div>
                       <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
                         <p className="text-gray-400 dark:text-gray-500 text-xs">{t('development.value')}</p>
-                        <p className="text-gray-900 dark:text-white font-semibold">
-                          {formatMoney(b.currentPrice)}
-                        </p>
+                        <p className="text-gray-900 dark:text-white font-semibold">{formatMoney(b.currentPrice)}</p>
                       </div>
                       <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
                         <p className="text-gray-400 dark:text-gray-500 text-xs">{t('development.incomePerPeriod')}</p>
-                        <p className="text-purple-600 dark:text-purple-400 font-semibold">
-                          {formatMoney(b.rent)}
-                        </p>
+                        <p className="text-purple-600 dark:text-purple-400 font-semibold">{formatMoney(b.rent)}</p>
                       </div>
                     </div>
                     <div className="mt-3">
@@ -884,12 +880,19 @@ export default function DevelopmentPage() {
                 {improvementStatus.activeImprovement && (
                   <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800">
                     <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">
-                      🔨 {improvementStatus.activeImprovement.name} — {Math.round(improvementStatus.activeImprovement.progress || 0)}%
-                      {improvementStatus.activeImprovement.completionPeriod && improvementStatus.currentPeriod != null && (
-                        <span className="ml-1 text-yellow-500 dark:text-yellow-500 font-normal">
-                          ({Math.max(0, improvementStatus.activeImprovement.completionPeriod - improvementStatus.currentPeriod)} {t('development.periodsRemaining') || 'months left'})
-                        </span>
-                      )}
+                      🔨 {improvementStatus.activeImprovement.name} —{' '}
+                      {Math.round(improvementStatus.activeImprovement.progress || 0)}%
+                      {improvementStatus.activeImprovement.completionPeriod &&
+                        improvementStatus.currentPeriod != null && (
+                          <span className="ml-1 text-yellow-500 dark:text-yellow-500 font-normal">
+                            (
+                            {Math.max(
+                              0,
+                              improvementStatus.activeImprovement.completionPeriod - improvementStatus.currentPeriod,
+                            )}{' '}
+                            {t('development.periodsRemaining') || 'months left'})
+                          </span>
+                        )}
                     </p>
                     <p className="text-xs text-yellow-500 dark:text-yellow-500 mt-1">
                       {t('development.mustWaitForCompletion')}
@@ -907,16 +910,18 @@ export default function DevelopmentPage() {
                 <div className="space-y-1.5">
                   {improvementRequirements.requirements.map((req) => (
                     <div key={req.id} className="flex items-start gap-2 text-xs">
-                      <span className={req.met ? 'text-green-500' : 'text-red-500'}>
-                        {req.met ? '✓' : '✗'}
-                      </span>
+                      <span className={req.met ? 'text-green-500' : 'text-red-500'}>{req.met ? '✓' : '✗'}</span>
                       <div className="min-w-0">
-                        <span className={req.met ? 'text-gray-500 dark:text-gray-400 line-through' : 'text-gray-700 dark:text-gray-300'}>
+                        <span
+                          className={
+                            req.met
+                              ? 'text-gray-500 dark:text-gray-400 line-through'
+                              : 'text-gray-700 dark:text-gray-300'
+                          }
+                        >
                           {req.label}
                         </span>
-                        {req.detail && (
-                          <span className="text-gray-400 dark:text-gray-500 ml-1">— {req.detail}</span>
-                        )}
+                        {req.detail && <span className="text-gray-400 dark:text-gray-500 ml-1">— {req.detail}</span>}
                       </div>
                     </div>
                   ))}
@@ -938,80 +943,78 @@ export default function DevelopmentPage() {
               </div>
             ) : improvementOptions.length === 0 ? (
               <div className="text-center py-4">
-                <p className="text-xs text-gray-500 dark:text-gray-400">{t('development.allImprovementsCompleted') || 'All improvements completed.'}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {t('development.allImprovementsCompleted') || 'All improvements completed.'}
+                </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-y-auto flex-1 min-h-0">
                 {improvementOptions.map((improvement) => {
-                    const isCompleted = improvementStatus?.improvements?.some(
-                      (i) => i.improvementId === improvement.id,
-                    );
-                    const isActive = improvementStatus?.activeImprovement?.improvementId === improvement.id;
-                    const hasActiveOther = !!improvementStatus?.activeImprovement?.improvementId && !isActive;
-                    const canStart = !isCompleted && !isActive && !hasActiveOther;
-                    const propertyPrice = improvementStatus?.currentPrice || 0;
-                    const cost = Math.round(propertyPrice * improvement.baseCostPercent);
+                  const isCompleted = improvementStatus?.improvements?.some((i) => i.improvementId === improvement.id);
+                  const isActive = improvementStatus?.activeImprovement?.improvementId === improvement.id;
+                  const hasActiveOther = !!improvementStatus?.activeImprovement?.improvementId && !isActive;
+                  const canStart = !isCompleted && !isActive && !hasActiveOther;
+                  const propertyPrice = improvementStatus?.currentPrice || 0;
+                  const cost = Math.round(propertyPrice * improvement.baseCostPercent);
 
-                    return (
-                      <div
-                        key={improvement.id}
-                        className={`bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border ${
-                          canStart
-                            ? 'border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 cursor-pointer'
-                            : 'border-gray-200 dark:border-gray-700 opacity-60'
-                        } transition-colors`}
-                        onClick={() => canStart && handleStartImprovement(improvementModal, improvement.id)}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <p className="font-semibold text-gray-900 dark:text-white text-sm">
-                              {t(`development.improvement.${improvement.id}.name`, improvement.name)}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                              {t(`development.improvement.${improvement.id}.description`, improvement.description)}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            {isCompleted && (
-                              <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 px-2 py-0.5 rounded">
-                                {t('development.completed')}
-                              </span>
-                            )}
-                            {isActive && (
-                              <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded">
-                                {t('development.inProgress')}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
-                          <span className="text-gray-400 dark:text-gray-500">
-                            {improvement.constructionPeriods} {t('development.periods')}
-                          </span>
-                          {improvement.valueBonus > 0 && (
-                            <span className="text-blue-600 dark:text-blue-400">
-                              +{(improvement.valueBonus * 100).toFixed(0)}% {t('development.value')}
-                            </span>
-                          )}
-                          {improvement.rentBonus > 0 && (
-                            <span className="text-blue-600 dark:text-blue-400">
-                              +{(improvement.rentBonus * 100).toFixed(0)}% {t('development.rent')}
-                            </span>
-                          )}
-                          {improvement.conditionBonus > 0 && (
-                            <span className="text-blue-500">
-                              +{improvement.conditionBonus} {t('development.condition')}
-                            </span>
-                          )}
-                        </div>
-                        {!isCompleted && !isActive && cost > 0 && (
-                          <p className="mt-2 text-xs text-orange-500">
-                            {formatMoney(cost)}
+                  return (
+                    <div
+                      key={improvement.id}
+                      className={`bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border ${
+                        canStart
+                          ? 'border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 cursor-pointer'
+                          : 'border-gray-200 dark:border-gray-700 opacity-60'
+                      } transition-colors`}
+                      onClick={() => canStart && handleStartImprovement(improvementModal, improvement.id)}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-semibold text-gray-900 dark:text-white text-sm">
+                            {t(`development.improvement.${improvement.id}.name`, improvement.name)}
                           </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            {t(`development.improvement.${improvement.id}.description`, improvement.description)}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          {isCompleted && (
+                            <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 px-2 py-0.5 rounded">
+                              {t('development.completed')}
+                            </span>
+                          )}
+                          {isActive && (
+                            <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded">
+                              {t('development.inProgress')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                        <span className="text-gray-400 dark:text-gray-500">
+                          {improvement.constructionPeriods} {t('development.periods')}
+                        </span>
+                        {improvement.valueBonus > 0 && (
+                          <span className="text-blue-600 dark:text-blue-400">
+                            +{(improvement.valueBonus * 100).toFixed(0)}% {t('development.value')}
+                          </span>
+                        )}
+                        {improvement.rentBonus > 0 && (
+                          <span className="text-blue-600 dark:text-blue-400">
+                            +{(improvement.rentBonus * 100).toFixed(0)}% {t('development.rent')}
+                          </span>
+                        )}
+                        {improvement.conditionBonus > 0 && (
+                          <span className="text-blue-500">
+                            +{improvement.conditionBonus} {t('development.condition')}
+                          </span>
                         )}
                       </div>
-                    );
-                  })}
+                      {!isCompleted && !isActive && cost > 0 && (
+                        <p className="mt-2 text-xs text-orange-500">{formatMoney(cost)}</p>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
 

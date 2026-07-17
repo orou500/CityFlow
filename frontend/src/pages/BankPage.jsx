@@ -91,9 +91,7 @@ export default function BankPage() {
         </div>
         <div className="bg-white dark:bg-gray-900 p-4 rounded-lg">
           <p className="text-sm text-gray-500 dark:text-gray-400">{t('bank.netWorth')}</p>
-          <p className="text-2xl font-bold text-orange-500 dark:text-orange-400">
-            {formatMoney(summary?.netWorth)}
-          </p>
+          <p className="text-2xl font-bold text-orange-500 dark:text-orange-400">{formatMoney(summary?.netWorth)}</p>
         </div>
         <div className="bg-white dark:bg-gray-900 p-4 rounded-lg">
           <p className="text-sm text-gray-500 dark:text-gray-400">{t('bank.totalDebt')}</p>
@@ -152,9 +150,7 @@ export default function BankPage() {
                         <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 grid grid-cols-2 gap-2">
                           <span>
                             {t('bank.totalRepayment')}:{' '}
-                            <span className="text-gray-900 dark:text-white">
-                              {formatMoney(opt.totalRepayment)}
-                            </span>
+                            <span className="text-gray-900 dark:text-white">{formatMoney(opt.totalRepayment)}</span>
                           </span>
                           <span>
                             {t('bank.interestCost')}:{' '}

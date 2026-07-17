@@ -434,9 +434,7 @@ export default function PropertyPage() {
                   <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">{property.occupancy}%</p>
                 </div>
                 <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {t('propertyDetail.maintenanceCost')}
-                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.maintenanceCost')}</p>
                   <p className="text-sm md:text-lg font-semibold text-red-600 dark:text-red-400 truncate">
                     {formatMoney(property.maintenanceCost)}
                   </p>
@@ -620,12 +618,19 @@ export default function PropertyPage() {
                 <div className="w-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-sm py-2 rounded text-center space-y-0.5">
                   <div className="font-medium">🔨 {t('development.improvementInProgress')}</div>
                   <div className="text-xs">
-                    {improvementStatus.activeImprovement.name} — {Math.round(improvementStatus.activeImprovement.progress || 0)}%
-                    {improvementStatus.activeImprovement.completionPeriod && improvementStatus.currentPeriod != null && (
-                      <span className="ml-1 text-gray-400 dark:text-gray-500">
-                        ({Math.max(0, improvementStatus.activeImprovement.completionPeriod - improvementStatus.currentPeriod)} {t('development.periodsRemaining') || 'months left'})
-                      </span>
-                    )}
+                    {improvementStatus.activeImprovement.name} —{' '}
+                    {Math.round(improvementStatus.activeImprovement.progress || 0)}%
+                    {improvementStatus.activeImprovement.completionPeriod &&
+                      improvementStatus.currentPeriod != null && (
+                        <span className="ml-1 text-gray-400 dark:text-gray-500">
+                          (
+                          {Math.max(
+                            0,
+                            improvementStatus.activeImprovement.completionPeriod - improvementStatus.currentPeriod,
+                          )}{' '}
+                          {t('development.periodsRemaining') || 'months left'})
+                        </span>
+                      )}
                   </div>
                 </div>
               )}

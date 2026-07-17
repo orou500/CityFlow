@@ -186,9 +186,7 @@ export default function PlayerDashboard() {
                     <p className="text-sm text-gray-500 dark:text-gray-400">{p.cityId?.name || 'Unknown'}</p>
                   </div>
                   <div className="mt-2">
-                    <p className="text-blue-600 dark:text-blue-400 font-semibold">
-                      {formatMoney(p.currentPrice)}
-                    </p>
+                    <p className="text-blue-600 dark:text-blue-400 font-semibold">{formatMoney(p.currentPrice)}</p>
                     {p.rent > 0 && (
                       <p className="text-xs text-green-600 dark:text-green-400">
                         {t('city.rent')}: {formatMoney(p.rent)}

@@ -469,9 +469,7 @@ router.get('/improvements/requirements/:propertyId', async (req, res) => {
         id: 'balance',
         label: `Sufficient funds (cheapest: $${lowestCost.toLocaleString()})`,
         met: user ? user.balance >= lowestCost : false,
-        detail: user && user.balance < lowestCost
-          ? `Your balance: $${user.balance.toLocaleString()}`
-          : null,
+        detail: user && user.balance < lowestCost ? `Your balance: $${user.balance.toLocaleString()}` : null,
       });
     }
 
@@ -508,7 +506,11 @@ router.get('/improvements/available/:propertyId', async (req, res) => {
       return res.status(400).json({ error: 'Only developed properties can be improved' });
     }
 
-    if (property.activeImprovement && property.activeImprovement.improvementId && property.activeImprovement.completionPeriod) {
+    if (
+      property.activeImprovement &&
+      property.activeImprovement.improvementId &&
+      property.activeImprovement.completionPeriod
+    ) {
       const gameState = await getGameState();
       const currentPeriod = gameState.tickNumber;
       if (currentPeriod > property.activeImprovement.completionPeriod) {
@@ -542,7 +544,11 @@ router.get('/improvements/status/:propertyId', async (req, res) => {
     const gameState = await getGameState();
     const currentPeriod = gameState.tickNumber;
 
-    if (property.activeImprovement && property.activeImprovement.improvementId && property.activeImprovement.completionPeriod) {
+    if (
+      property.activeImprovement &&
+      property.activeImprovement.improvementId &&
+      property.activeImprovement.completionPeriod
+    ) {
       if (currentPeriod > property.activeImprovement.completionPeriod) {
         property.activeImprovement = undefined;
         await property.save();
