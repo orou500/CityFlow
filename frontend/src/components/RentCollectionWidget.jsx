@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
+import { formatMoney } from '../utils/format';
 
 function formatCountdown(ms) {
   if (ms <= 0) return '00:00:00';
@@ -88,7 +89,7 @@ export default function RentCollectionWidget({ onCollected }) {
           <span className="text-lg">{'\uD83D\uDCB0'}</span>
           <h3 className="text-sm font-bold text-green-700 dark:text-green-300">{t('rentCollect.collected')}</h3>
         </div>
-        <p className="text-sm text-green-600 dark:text-green-400">+${result.collected.toLocaleString()}</p>
+        <p className="text-sm text-green-600 dark:text-green-400">+{formatMoney(result.collected).slice(1)}</p>
       </div>
     );
   }
@@ -113,7 +114,7 @@ export default function RentCollectionWidget({ onCollected }) {
             {t('rentCollect.title')}
           </h3>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            ${status.uncollectedRent.toLocaleString()} {t('rentCollect.readyToCollect')}
+            {formatMoney(status.uncollectedRent)} {t('rentCollect.readyToCollect')}
           </p>
         </div>
         <div className="flex items-center gap-3 shrink-0">

@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useGameStore } from '../store/useGameStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { translateError } from '../i18n/errors';
+import { formatMoney } from '../utils/format';
 
 export default function DevelopmentPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, fetchMe } = useAuthStore();
   const {
     myLand,
@@ -22,10 +24,15 @@ export default function DevelopmentPage() {
     startConstruction,
     upgradeBuilding,
     fetchUpgradeOptions,
+    fetchImprovementOptions,
+    fetchAvailableImprovements,
+    fetchImprovementStatus,
+    fetchImprovementRequirements,
+    startImprovement,
     fetchUserData,
   } = useGameStore();
 
-  const [tab, setTab] = useState('my-land');
+  const [tab, setTab] = useState(searchParams.get('tab') || 'my-land');
   const [selectedLand, setSelectedLand] = useState(null);
   const [selectedProject, setSelectedProject] = useState(null);
   const [estimate, setEstimate] = useState(null);
@@ -37,6 +44,13 @@ export default function DevelopmentPage() {
   const [upgradeOptions, setUpgradeOptions] = useState(null);
   const [confirmUpgrade, setConfirmUpgrade] = useState(null);
   const [upgrading, setUpgrading] = useState(false);
+  const [improvementModal, setImprovementModal] = useState(null);
+  const [improvementOptions, setImprovementOptions] = useState(null);
+  const [availableImprovements, setAvailableImprovements] = useState(null);
+  const [improvementStatus, setImprovementStatus] = useState(null);
+  const [improvementRequirements, setImprovementRequirements] = useState(null);
+  const [startingImprovement, setStartingImprovement] = useState(false);
+  const [improvementModalError, setImprovementModalError] = useState(null);
 
   useEffect(() => {
     fetchMe();
@@ -44,6 +58,13 @@ export default function DevelopmentPage() {
     fetchMyProjects();
     fetchMyBuildings();
   }, []);
+
+  useEffect(() => {
+    const propertyId = searchParams.get('propertyId');
+    if (propertyId && tab === 'improvements') {
+      setImprovementModal(propertyId);
+    }
+  }, [searchParams, tab]);
 
   async function handleSelectLand(land) {
     setSelectedLand(land);
@@ -106,6 +127,28 @@ export default function DevelopmentPage() {
     }
   }, [upgradeModal]);
 
+  useEffect(() => {
+    if (improvementModal) {
+      setImprovementOptions(null);
+      setAvailableImprovements(null);
+      setImprovementStatus(null);
+      setImprovementRequirements(null);
+      setImprovementModalError(null);
+      fetchImprovementOptions()
+        .then(setImprovementOptions)
+        .catch((e) => setError(e.message));
+      fetchAvailableImprovements(improvementModal)
+        .then(setAvailableImprovements)
+        .catch((e) => setError(e.message));
+      fetchImprovementStatus(improvementModal)
+        .then(setImprovementStatus)
+        .catch((e) => setError(e.message));
+      fetchImprovementRequirements(improvementModal)
+        .then(setImprovementRequirements)
+        .catch((e) => setError(e.message));
+    }
+  }, [improvementModal]);
+
   async function handleUpgrade(propertyId, upgradeType) {
     setUpgrading(true);
     setError(null);
@@ -124,6 +167,26 @@ export default function DevelopmentPage() {
     setUpgrading(false);
   }
 
+  async function handleStartImprovement(propertyId, improvementId) {
+    setStartingImprovement(true);
+    setImprovementModalError(null);
+    try {
+      await startImprovement(propertyId, improvementId);
+      setSuccess(t('development.improvementStarted'));
+      setImprovementModal(null);
+      setImprovementOptions(null);
+      setAvailableImprovements(null);
+      setImprovementStatus(null);
+      setImprovementModalError(null);
+      fetchMyBuildings();
+      fetchMe();
+      fetchUserData();
+    } catch (e) {
+      setImprovementModalError(e.message);
+    }
+    setStartingImprovement(false);
+  }
+
   if (!user) {
     navigate('/login');
     return null;
@@ -137,6 +200,7 @@ export default function DevelopmentPage() {
       label: `${t('development.activeProjects')} (${myProjects.filter((p) => p.status === 'under_construction').length})`,
     },
     { id: 'buildings', label: `${t('development.myBuildings')} (${myBuildings.length})` },
+    { id: 'improvements', label: t('development.propertyImprovements') },
   ];
 
   return (
@@ -222,7 +286,7 @@ export default function DevelopmentPage() {
                     </div>
                     <div>
                       <p className="text-gray-400 dark:text-gray-500">{t('development.value')}</p>
-                      <p className="text-orange-500 dark:text-orange-400">${land.currentPrice?.toLocaleString()}</p>
+                      <p className="text-orange-500 dark:text-orange-400">{formatMoney(land.currentPrice)}</p>
                     </div>
                   </div>
                 </div>
@@ -259,7 +323,7 @@ export default function DevelopmentPage() {
                     <div className="flex justify-between">
                       <span className="text-gray-400 dark:text-gray-500">{t('development.valueLabel')}</span>
                       <span className="text-orange-500 dark:text-orange-400">
-                        ${selectedLand.currentPrice?.toLocaleString()}
+                        {formatMoney(selectedLand.currentPrice)}
                       </span>
                     </div>
                   </div>
@@ -305,7 +369,7 @@ export default function DevelopmentPage() {
                                   {proj.constructionPeriods} {t('development.period')}
                                 </span>
                                 <span className="text-orange-500 dark:text-orange-400">
-                                  ~${proj.estimatedCost?.toLocaleString()}
+                                  ~{formatMoney(proj.estimatedCost)}
                                 </span>
                               </div>
                             </div>
@@ -332,7 +396,7 @@ export default function DevelopmentPage() {
                             <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
                               <p className="text-xs text-gray-500 dark:text-gray-400">{t('development.totalCost')}</p>
                               <p className="text-lg font-bold text-orange-500 dark:text-orange-400">
-                                ${estimate.totalCost?.toLocaleString()}
+                                {formatMoney(estimate.totalCost)}
                               </p>
                             </div>
                             <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
@@ -352,7 +416,7 @@ export default function DevelopmentPage() {
                             <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
                               <p className="text-xs text-gray-500 dark:text-gray-400">{t('development.netIncome')}</p>
                               <p className="text-lg font-bold text-purple-600 dark:text-purple-400">
-                                ${estimate.estimatedNetIncome?.toLocaleString()}
+                                {formatMoney(estimate.estimatedNetIncome)}
                               </p>
                             </div>
                           </div>
@@ -364,20 +428,20 @@ export default function DevelopmentPage() {
                             <div className="space-y-2 text-sm">
                               <div className="flex justify-between">
                                 <span className="text-gray-500 dark:text-gray-400">{t('development.baseCost')}</span>
-                                <span>${estimate.totalCost?.toLocaleString()}</span>
+                                <span>{formatMoney(estimate.totalCost)}</span>
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-gray-500 dark:text-gray-400">
                                   {t('development.estRentPerUnit')}
                                 </span>
-                                <span>${estimate.estimatedUnitRent?.toLocaleString()}</span>
+                                <span>{formatMoney(estimate.estimatedUnitRent)}</span>
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-gray-500 dark:text-gray-400">
                                   {t('development.estGrossIncome')}
                                 </span>
                                 <span className="text-orange-500 dark:text-orange-400">
-                                  +${estimate.estimatedIncome?.toLocaleString()}
+                                  +{formatMoney(estimate.estimatedIncome).slice(1)}
                                 </span>
                               </div>
                               <div className="flex justify-between">
@@ -385,7 +449,7 @@ export default function DevelopmentPage() {
                                   {t('development.estMaintenance')}
                                 </span>
                                 <span className="text-red-600 dark:text-red-400">
-                                  -${estimate.estimatedMaintenance?.toLocaleString()}
+                                  -{formatMoney(estimate.estimatedMaintenance).slice(1)}
                                 </span>
                               </div>
                               <div className="border-t border-gray-200 dark:border-gray-700 pt-2 flex justify-between font-bold">
@@ -393,7 +457,7 @@ export default function DevelopmentPage() {
                                   {t('development.netIncomeLabel')}
                                 </span>
                                 <span className="text-purple-600 dark:text-purple-400">
-                                  ${estimate.estimatedNetIncome?.toLocaleString()}
+                                  {formatMoney(estimate.estimatedNetIncome)}
                                 </span>
                               </div>
                             </div>
@@ -408,7 +472,7 @@ export default function DevelopmentPage() {
                               {starting
                                 ? t('development.starting')
                                 : t('development.startConstructionCost', {
-                                    cost: estimate.totalCost?.toLocaleString(),
+                                    cost: formatMoney(estimate.totalCost),
                                   })}
                             </button>
                             <button
@@ -487,7 +551,7 @@ export default function DevelopmentPage() {
                       <div className="grid grid-cols-3 gap-4 text-sm mt-3">
                         <div>
                           <p className="text-gray-400 dark:text-gray-500">{t('development.invested')}</p>
-                          <p className="text-gray-900 dark:text-white">${project.totalCost?.toLocaleString()}</p>
+                          <p className="text-gray-900 dark:text-white">{formatMoney(project.totalCost)}</p>
                         </div>
                         <div>
                           <p className="text-gray-400 dark:text-gray-500">{t('development.started')}</p>
@@ -546,13 +610,13 @@ export default function DevelopmentPage() {
                       <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
                         <p className="text-gray-400 dark:text-gray-500 text-xs">{t('development.value')}</p>
                         <p className="text-gray-900 dark:text-white font-semibold">
-                          ${b.currentPrice?.toLocaleString()}
+                          {formatMoney(b.currentPrice)}
                         </p>
                       </div>
                       <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded">
                         <p className="text-gray-400 dark:text-gray-500 text-xs">{t('development.incomePerPeriod')}</p>
                         <p className="text-purple-600 dark:text-purple-400 font-semibold">
-                          ${b.rent?.toLocaleString()}
+                          {formatMoney(b.rent)}
                         </p>
                       </div>
                     </div>
@@ -575,41 +639,100 @@ export default function DevelopmentPage() {
         </div>
       )}
 
+      {/* Tab: Property Improvements */}
+      {tab === 'improvements' && (
+        <div>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">{t('development.improvementsDescription')}</p>
+          {myBuildings.length === 0 ? (
+            <div className="bg-white dark:bg-gray-900 rounded-lg p-8 text-center">
+              <p className="text-gray-500 dark:text-gray-400">{t('development.noBuildingsForImprovement')}</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {myBuildings.map((b) => (
+                <div
+                  key={b._id}
+                  className="bg-white dark:bg-gray-900 rounded-lg p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-850 transition-colors"
+                  onClick={() => {
+                    setImprovementModal(b._id);
+                  }}
+                >
+                  <h3 className="font-semibold text-gray-900 dark:text-white">{b.name}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    {b.cityId?.name || t('development.unknown')}
+                  </p>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <p className="text-gray-400 dark:text-gray-500">{t('development.value')}</p>
+                      <p className="text-orange-500 dark:text-orange-400">{formatMoney(b.currentPrice)}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400 dark:text-gray-500">{t('development.propertyRating')}</p>
+                      <p className="text-yellow-500 dark:text-yellow-400 font-semibold capitalize">
+                        {b.propertyRating || 'standard'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setImprovementModal(b._id);
+                      }}
+                      className="text-xs bg-blue-500 hover:bg-blue-400 text-white px-3 py-1 rounded transition-colors"
+                    >
+                      {t('development.viewImprovements')}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Upgrade Modal */}
       {upgradeModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           {confirmUpgrade ? (
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 w-full max-w-sm">
-              <h3 className="text-gray-900 dark:text-white font-semibold mb-4">{t('development.confirmUpgrade')}</h3>
+              <h3 className="text-gray-900 dark:text-white font-semibold mb-4">
+                {t('development.confirmUpgrade')}
+                {confirmUpgrade.level > 1 && (
+                  <span className="ml-1 text-sm text-gray-400 dark:text-gray-500 font-normal">
+                    (Lv.{confirmUpgrade.level})
+                  </span>
+                )}
+              </h3>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-400 dark:text-gray-500">{t('development.currentValue')}</span>
                   <span className="text-gray-900 dark:text-white font-medium">
-                    ${upgradeOptions.propertyValue?.toLocaleString()}
+                    {formatMoney(upgradeOptions.propertyValue)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400 dark:text-gray-500">{t('development.projectedValue')}</span>
                   <span className="text-blue-600 dark:text-blue-400 font-medium">
-                    ${confirmUpgrade.projectedValue?.toLocaleString()}
+                    {formatMoney(confirmUpgrade.projectedValue)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400 dark:text-gray-500">{t('development.upgradeCost')}</span>
-                  <span className="text-red-500 font-medium">-${confirmUpgrade.cost?.toLocaleString()}</span>
+                  <span className="text-red-500 font-medium">-{formatMoney(confirmUpgrade.cost)}</span>
                 </div>
                 {confirmUpgrade.rentIncrease > 0 && (
                   <div className="flex justify-between">
                     <span className="text-gray-400 dark:text-gray-500">{t('development.expectedRentIncrease')}</span>
                     <span className="text-blue-600 dark:text-blue-400 font-medium">
-                      +${confirmUpgrade.rentIncrease?.toLocaleString()}/{t('development.period')}
+                      +{formatMoney(confirmUpgrade.rentIncrease)}/{t('development.period')}
                     </span>
                   </div>
                 )}
                 <div className="border-t border-gray-200 dark:border-gray-700 pt-3 flex justify-between font-semibold">
                   <span className="text-gray-400 dark:text-gray-500">{t('development.newBalance')}</span>
                   <span className="text-gray-900 dark:text-white">
-                    ${(upgradeOptions.balance - confirmUpgrade.cost)?.toLocaleString()}
+                    {formatMoney(upgradeOptions.balance - confirmUpgrade.cost)}
                   </span>
                 </div>
               </div>
@@ -661,15 +784,16 @@ export default function DevelopmentPage() {
                           <div>
                             <p className="font-semibold text-gray-900 dark:text-white text-sm">
                               {t(`development.${u.type}`)}
+                              {u.level > 1 && (
+                                <span className="ml-1 text-xs text-gray-400 dark:text-gray-500">Lv.{u.level}</span>
+                              )}
                             </p>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                               {t(`development.${u.type}Desc`)}
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="font-semibold text-gray-900 dark:text-white text-sm">
-                              ${u.cost?.toLocaleString()}
-                            </p>
+                            <p className="font-semibold text-gray-900 dark:text-white text-sm">{formatMoney(u.cost)}</p>
                             <p className="text-xs text-gray-400 dark:text-gray-500">{t('development.costLabel')}</p>
                           </div>
                         </div>
@@ -698,7 +822,7 @@ export default function DevelopmentPage() {
                         </div>
                         {!canAfford && (
                           <p className="mt-2 text-xs text-red-500">
-                            {t('development.insufficientFunds')} — ${u.cost?.toLocaleString()}
+                            {t('development.insufficientFunds')} — {formatMoney(u.cost)}
                           </p>
                         )}
                       </div>
@@ -723,6 +847,187 @@ export default function DevelopmentPage() {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Improvement Modal */}
+      {improvementModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-gray-900 dark:text-white font-semibold">{t('development.propertyImprovements')}</h3>
+              <button
+                onClick={() => {
+                  setImprovementModal(null);
+                  setImprovementOptions(null);
+                  setAvailableImprovements(null);
+                  setImprovementStatus(null);
+                  setImprovementRequirements(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl leading-none"
+              >
+                &times;
+              </button>
+            </div>
+
+            {improvementStatus && (
+              <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">{t('development.currentRating')}</span>
+                  <span className="text-yellow-500 dark:text-yellow-400 font-semibold capitalize">
+                    {improvementStatus.propertyRating}
+                  </span>
+                </div>
+                <div className="mt-2 text-xs text-gray-400 dark:text-gray-500">
+                  {improvementStatus.improvements.length} {t('development.improvementsCompleted')}
+                </div>
+                {improvementStatus.activeImprovement && (
+                  <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800">
+                    <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">
+                      🔨 {improvementStatus.activeImprovement.name} — {Math.round(improvementStatus.activeImprovement.progress || 0)}%
+                      {improvementStatus.activeImprovement.completionPeriod && improvementStatus.currentPeriod != null && (
+                        <span className="ml-1 text-yellow-500 dark:text-yellow-500 font-normal">
+                          ({Math.max(0, improvementStatus.activeImprovement.completionPeriod - improvementStatus.currentPeriod)} {t('development.periodsRemaining') || 'months left'})
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-xs text-yellow-500 dark:text-yellow-500 mt-1">
+                      {t('development.mustWaitForCompletion')}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {improvementRequirements && (
+              <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  {t('development.requirements')}
+                </p>
+                <div className="space-y-1.5">
+                  {improvementRequirements.requirements.map((req) => (
+                    <div key={req.id} className="flex items-start gap-2 text-xs">
+                      <span className={req.met ? 'text-green-500' : 'text-red-500'}>
+                        {req.met ? '✓' : '✗'}
+                      </span>
+                      <div className="min-w-0">
+                        <span className={req.met ? 'text-gray-500 dark:text-gray-400 line-through' : 'text-gray-700 dark:text-gray-300'}>
+                          {req.label}
+                        </span>
+                        {req.detail && (
+                          <span className="text-gray-400 dark:text-gray-500 ml-1">— {req.detail}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {improvementModalError && (
+              <div className="mb-4 p-3 bg-red-900/40 dark:bg-red-900/40 border border-red-700 dark:border-red-800 rounded-lg">
+                <p className="text-xs text-red-300 dark:text-red-400">
+                  {translateError(new Error(improvementModalError), t)}
+                </p>
+              </div>
+            )}
+
+            {!improvementOptions ? (
+              <div className="text-center py-4">
+                <p className="text-xs text-gray-400 dark:text-gray-500">{t('development.loading') || 'Loading...'}</p>
+              </div>
+            ) : improvementOptions.length === 0 ? (
+              <div className="text-center py-4">
+                <p className="text-xs text-gray-500 dark:text-gray-400">{t('development.allImprovementsCompleted') || 'All improvements completed.'}</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-y-auto flex-1 min-h-0">
+                {improvementOptions.map((improvement) => {
+                    const isCompleted = improvementStatus?.improvements?.some(
+                      (i) => i.improvementId === improvement.id,
+                    );
+                    const isActive = improvementStatus?.activeImprovement?.improvementId === improvement.id;
+                    const hasActiveOther = !!improvementStatus?.activeImprovement?.improvementId && !isActive;
+                    const canStart = !isCompleted && !isActive && !hasActiveOther;
+                    const propertyPrice = improvementStatus?.currentPrice || 0;
+                    const cost = Math.round(propertyPrice * improvement.baseCostPercent);
+
+                    return (
+                      <div
+                        key={improvement.id}
+                        className={`bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border ${
+                          canStart
+                            ? 'border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 cursor-pointer'
+                            : 'border-gray-200 dark:border-gray-700 opacity-60'
+                        } transition-colors`}
+                        onClick={() => canStart && handleStartImprovement(improvementModal, improvement.id)}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="font-semibold text-gray-900 dark:text-white text-sm">
+                              {t(`development.improvement.${improvement.id}.name`, improvement.name)}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                              {t(`development.improvement.${improvement.id}.description`, improvement.description)}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            {isCompleted && (
+                              <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 px-2 py-0.5 rounded">
+                                {t('development.completed')}
+                              </span>
+                            )}
+                            {isActive && (
+                              <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded">
+                                {t('development.inProgress')}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                          <span className="text-gray-400 dark:text-gray-500">
+                            {improvement.constructionPeriods} {t('development.periods')}
+                          </span>
+                          {improvement.valueBonus > 0 && (
+                            <span className="text-blue-600 dark:text-blue-400">
+                              +{(improvement.valueBonus * 100).toFixed(0)}% {t('development.value')}
+                            </span>
+                          )}
+                          {improvement.rentBonus > 0 && (
+                            <span className="text-blue-600 dark:text-blue-400">
+                              +{(improvement.rentBonus * 100).toFixed(0)}% {t('development.rent')}
+                            </span>
+                          )}
+                          {improvement.conditionBonus > 0 && (
+                            <span className="text-blue-500">
+                              +{improvement.conditionBonus} {t('development.condition')}
+                            </span>
+                          )}
+                        </div>
+                        {!isCompleted && !isActive && cost > 0 && (
+                          <p className="mt-2 text-xs text-orange-500">
+                            {formatMoney(cost)}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+
+            <button
+              onClick={() => {
+                setImprovementModal(null);
+                setImprovementOptions(null);
+                setAvailableImprovements(null);
+                setImprovementStatus(null);
+                setImprovementRequirements(null);
+              }}
+              className="w-full mt-4 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-900 dark:text-white py-2 rounded text-sm transition-colors"
+            >
+              {t('development.close')}
+            </button>
+          </div>
         </div>
       )}
     </div>

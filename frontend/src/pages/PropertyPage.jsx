@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useGameStore } from '../store/useGameStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { translateError } from '../i18n/errors';
+import { formatMoney } from '../utils/format';
 
 const API = '/api';
 
@@ -241,6 +242,7 @@ export default function PropertyPage() {
   const [gradeData, setGradeData] = useState(null);
   const [showGradeModal, setShowGradeModal] = useState(false);
   const [gradeLoading, setGradeLoading] = useState(false);
+  const [improvementStatus, setImprovementStatus] = useState(null);
   const UNITS_PER_PAGE = 5;
 
   const load = async () => {
@@ -250,8 +252,8 @@ export default function PropertyPage() {
       setData(res);
       if (res.property?.ownerId?._id === user?._id) {
         try {
-          const gradeRes = await api(`/properties/${id}/grade`);
-          setGradeData(gradeRes);
+          const improvementRes = await api(`/development/improvements/status/${id}`);
+          setImprovementStatus(improvementRes);
         } catch {
           /* not owner or error */
         }
@@ -291,7 +293,7 @@ export default function PropertyPage() {
         body: JSON.stringify({ propertyId: id }),
       });
       const price = res.property?.currentPrice || 0;
-      setActionMsg({ type: 'success', text: t('errors.propertySold', { price: price.toLocaleString() }) });
+      setActionMsg({ type: 'success', text: t('errors.propertySold', { price: formatMoney(price) }) });
       load();
       fetchMe();
       fetchUserData();
@@ -370,32 +372,31 @@ export default function PropertyPage() {
           <div className="bg-white dark:bg-gray-900 rounded-lg p-6">
             <h1 className="text-2xl font-bold mb-4">{property.name}</h1>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+              <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
                 <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.currentValue')}</p>
-                <p className="text-lg font-bold text-orange-500 dark:text-orange-400">
-                  ${property.currentPrice?.toLocaleString()}
+                <p className="text-sm md:text-lg font-bold text-orange-500 dark:text-orange-400 truncate">
+                  {formatMoney(property.currentPrice)}
                 </p>
               </div>
-              <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+              <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
                 <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.baseValue')}</p>
-                <p className="text-lg font-semibold">${property.basePrice?.toLocaleString()}</p>
+                <p className="text-sm md:text-lg font-semibold truncate">{formatMoney(property.basePrice)}</p>
               </div>
-              <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+              <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
                 <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.rentIncome')}</p>
-                <p className="text-lg font-semibold text-orange-500 dark:text-orange-400">
-                  ${property.rent?.toLocaleString()}
+                <p className="text-sm md:text-lg font-semibold text-orange-500 dark:text-orange-400 truncate">
+                  {formatMoney(property.rent)}
                 </p>
               </div>
-              <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+              <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
                 <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.condition')}</p>
-                <p className="text-lg font-semibold">{property.condition}%</p>
+                <p className="text-sm md:text-lg font-semibold">{property.condition}%</p>
               </div>
               <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.propertyGrade')}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.propertyRating')}</p>
                 <div className="flex items-center gap-1">
-                  <span className="text-yellow-500 text-sm leading-none">{'★'.repeat(property.grade || 1)}</span>
-                  <span className="text-sm font-semibold text-yellow-600 dark:text-yellow-400">
-                    {property.grade || 1}
+                  <span className="text-yellow-500 text-sm leading-none capitalize">
+                    {improvementStatus?.propertyRating || property.propertyRating || 'standard'}
                   </span>
                 </div>
               </div>
@@ -432,10 +433,12 @@ export default function PropertyPage() {
                   <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.occupancy')}</p>
                   <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">{property.occupancy}%</p>
                 </div>
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.maintenanceCost')}</p>
-                  <p className="text-lg font-semibold text-red-600 dark:text-red-400">
-                    ${property.maintenanceCost?.toLocaleString()}
+                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {t('propertyDetail.maintenanceCost')}
+                  </p>
+                  <p className="text-sm md:text-lg font-semibold text-red-600 dark:text-red-400 truncate">
+                    {formatMoney(property.maintenanceCost)}
                   </p>
                 </div>
               </div>
@@ -462,7 +465,7 @@ export default function PropertyPage() {
                           </div>
                           <div className="flex items-center gap-3">
                             <span className="text-blue-600 dark:text-blue-400">
-                              ${unit.rentPrice?.toLocaleString()}
+                              {formatMoney(unit.rentPrice)}
                               {t('propertyDetail.perPeriod')}
                             </span>
                             <span
@@ -525,7 +528,7 @@ export default function PropertyPage() {
                 {property.lastPurchasePrice && (
                   <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
                     <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.purchasePrice')}</p>
-                    <p className="font-semibold">${property.lastPurchasePrice?.toLocaleString()}</p>
+                    <p className="font-semibold truncate">{formatMoney(property.lastPurchasePrice)}</p>
                   </div>
                 )}
                 {property.lastPurchaseDate && (
@@ -536,15 +539,15 @@ export default function PropertyPage() {
                 )}
                 <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
                   <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.totalRentEarned')}</p>
-                  <p className="font-semibold text-purple-600 dark:text-purple-400">
-                    ${totalRentEarned?.toLocaleString() || '0'}
+                  <p className="font-semibold text-purple-600 dark:text-purple-400 truncate">
+                    {formatMoney(totalRentEarned) || '$0'}
                   </p>
                 </div>
                 {totalInvestment > 0 && (
                   <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
                     <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.totalInvestment')}</p>
-                    <p className="font-semibold text-orange-500 dark:text-orange-400">
-                      ${totalInvestment?.toLocaleString()}
+                    <p className="font-semibold text-orange-500 dark:text-orange-400 truncate">
+                      {formatMoney(totalInvestment)}
                     </p>
                   </div>
                 )}
@@ -586,7 +589,7 @@ export default function PropertyPage() {
                   onClick={handleBuy}
                   className="w-full bg-orange-500 hover:bg-orange-400 text-gray-900 dark:text-white text-sm py-2 rounded transition-colors"
                 >
-                  {t('propertyDetail.buyProperty')} — ${property.currentPrice?.toLocaleString()}
+                  {t('propertyDetail.buyProperty')} — {formatMoney(property.currentPrice)}
                 </button>
               )}
               {canOffer && (
@@ -602,34 +605,28 @@ export default function PropertyPage() {
                   onClick={handleSell}
                   className="w-full bg-yellow-600 hover:bg-yellow-500 text-gray-900 dark:text-white text-sm py-2 rounded transition-colors"
                 >
-                  {t('propertyDetail.sellProperty')} — ${property.currentPrice?.toLocaleString()}
+                  {t('propertyDetail.sellProperty')} — {formatMoney(property.currentPrice)}
                 </button>
               )}
-              {user && isOwner && gradeData && gradeData.upgradeCost && gradeData.cooldownRemaining === 0 && (
+              {user && isOwner && improvementStatus && property?.type !== 'land' && (
                 <button
-                  onClick={() => setShowGradeModal(true)}
-                  className="w-full bg-purple-600 hover:bg-purple-500 text-white text-sm py-2 rounded transition-colors"
+                  onClick={() => navigate(`/development?tab=improvements&propertyId=${id}`)}
+                  className="w-full bg-blue-600 hover:bg-blue-500 text-white text-sm py-2 rounded transition-colors"
                 >
-                  {t('propertyDetail.upgradeGrade')} — ${gradeData.upgradeCost.toLocaleString()}
+                  {t('propertyDetail.viewImprovements')}
                 </button>
               )}
-              {user && isOwner && gradeData && gradeData.upgradeCost && gradeData.cooldownRemaining > 0 && (
+              {user && isOwner && improvementStatus && improvementStatus.activeImprovement && (
                 <div className="w-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-sm py-2 rounded text-center space-y-0.5">
-                  <div className="font-medium">🔒 {t('propertyDetail.upgradeLocked')}</div>
+                  <div className="font-medium">🔨 {t('development.improvementInProgress')}</div>
                   <div className="text-xs">
-                    {t('propertyDetail.nextAvailableAt', {
-                      time: new Date(gradeData.nextAvailableAt).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      }),
-                      date: new Date(gradeData.nextAvailableAt).toLocaleDateString(),
-                    })}
+                    {improvementStatus.activeImprovement.name} — {Math.round(improvementStatus.activeImprovement.progress || 0)}%
+                    {improvementStatus.activeImprovement.completionPeriod && improvementStatus.currentPeriod != null && (
+                      <span className="ml-1 text-gray-400 dark:text-gray-500">
+                        ({Math.max(0, improvementStatus.activeImprovement.completionPeriod - improvementStatus.currentPeriod)} {t('development.periodsRemaining') || 'months left'})
+                      </span>
+                    )}
                   </div>
-                </div>
-              )}
-              {user && isOwner && gradeData && !gradeData.upgradeCost && (
-                <div className="w-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-sm py-2 rounded text-center">
-                  ⭐ {t('propertyDetail.alreadyMaxGrade')}
                 </div>
               )}
             </div>
@@ -642,9 +639,9 @@ export default function PropertyPage() {
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 w-full max-w-sm">
             <h3 className="text-gray-900 dark:text-white font-semibold mb-2">{t('propertyDetail.makeAnOffer')}</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              {t('propertyDetail.marketValue')}: ${property.currentPrice?.toLocaleString()}
+              {t('propertyDetail.marketValue')}: {formatMoney(property.currentPrice)}
               <br />
-              {t('propertyDetail.minimumOffer')}: ${Math.round(property.currentPrice * 0.7).toLocaleString()} (70%)
+              {t('propertyDetail.minimumOffer')}: {formatMoney(Math.round(property.currentPrice * 0.7))} (70%)
             </p>
             <input
               type="number"
@@ -675,44 +672,16 @@ export default function PropertyPage() {
       {showGradeModal && gradeData && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 w-full max-w-sm">
-            <h3 className="text-gray-900 dark:text-white font-semibold mb-4">
-              {t('propertyDetail.confirmGradeUpgrade', { grade: gradeData.nextGradeName })}
-            </h3>
-            <div className="space-y-3 mb-4">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500 dark:text-gray-400">{t('propertyDetail.grade')}</span>
-                <span className="text-gray-900 dark:text-white font-medium">
-                  {gradeData.gradeName} → {gradeData.nextGradeName}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500 dark:text-gray-400">{t('propertyDetail.gradeValueBonus')}</span>
-                <span className="text-green-600 dark:text-green-400">
-                  +{((gradeData.nextValueBonus - gradeData.valueBonus) * 100).toFixed(0)}%
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500 dark:text-gray-400">{t('propertyDetail.gradeRentBonus')}</span>
-                <span className="text-green-600 dark:text-green-400">
-                  +{((gradeData.nextRentBonus - gradeData.rentBonus) * 100).toFixed(0)}%
-                </span>
-              </div>
-              <div className="border-t border-gray-200 dark:border-gray-600 pt-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500 dark:text-gray-400">{t('propertyDetail.upgradeCost')}</span>
-                  <span className="text-red-600 dark:text-red-400 font-semibold">
-                    ${gradeData.upgradeCost?.toLocaleString()}
-                  </span>
-                </div>
-              </div>
-            </div>
+            <h3 className="text-gray-900 dark:text-white font-semibold mb-4">{t('propertyDetail.viewImprovements')}</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              {t('propertyDetail.improvementsDescription')}
+            </p>
             <div className="flex gap-2">
               <button
-                onClick={handleGradeUpgrade}
-                disabled={gradeLoading}
-                className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-gray-200 dark:disabled:bg-gray-600 text-white text-sm rounded transition-colors"
+                onClick={() => navigate('/development')}
+                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded transition-colors"
               >
-                {gradeLoading ? t('development.processing') : t('propertyDetail.upgradeGrade')}
+                {t('propertyDetail.goToDevelopment')}
               </button>
               <button
                 onClick={() => setShowGradeModal(false)}

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useGameStore } from '../store/useGameStore';
+import { formatMoney } from '../utils/format';
 
 function StatCard({ label, value }) {
   return (
@@ -56,10 +57,6 @@ export default function SeasonHistoryPage() {
       console.error(e);
     }
     setLoading(false);
-  }
-
-  function formatMoney(n) {
-    return `$${(n || 0).toLocaleString()}`;
   }
 
   function formatDate(d) {

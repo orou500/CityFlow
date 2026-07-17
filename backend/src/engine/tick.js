@@ -6,6 +6,7 @@ import { balanceMarket } from './marketBalancing.js';
 import { generateProperties } from './propertyGeneration.js';
 import { generateEvents, tickEvents } from './events.js';
 import { processConstruction } from './constructionProcessing.js';
+import { processImprovements } from './improvementProcessing.js';
 import Event from '../models/Event.js';
 import { incrementTick } from '../models/GameState.js';
 import { endCurrentSeasonAndStartNew } from './seasonReset.js';
@@ -39,6 +40,9 @@ export async function executeTick() {
     console.log('[TICK] Processing construction...');
     const constructionResults = await processConstruction();
 
+    console.log('[TICK] Processing improvements...');
+    const improvementResults = await processImprovements();
+
     console.log('[TICK] Processing event lifecycles...');
     const expiredEvents = await tickEvents();
 
@@ -48,7 +52,11 @@ export async function executeTick() {
     console.log('[TICK] Generating new events...');
     const newEvents = await generateEvents();
 
-    if (newEvents.length > 0 || constructionResults.some((r) => r.status === 'completed')) {
+    if (
+      newEvents.length > 0 ||
+      constructionResults.some((r) => r.status === 'completed') ||
+      improvementResults.some((r) => r.status === 'completed')
+    ) {
       const fields = [];
       if (newEvents.length > 0) {
         fields.push({ name: 'New Events', value: String(newEvents.length), inline: true });
@@ -56,6 +64,10 @@ export async function executeTick() {
       const completedConstruction = constructionResults.filter((r) => r.status === 'completed').length;
       if (completedConstruction > 0) {
         fields.push({ name: 'Construction Complete', value: String(completedConstruction), inline: true });
+      }
+      const completedImprovements = improvementResults.filter((r) => r.status === 'completed').length;
+      if (completedImprovements > 0) {
+        fields.push({ name: 'Improvements Complete', value: String(completedImprovements), inline: true });
       }
 
       sendDiscordNotification({
@@ -80,6 +92,7 @@ export async function executeTick() {
     console.log(`[TICK] Loans processed: ${loanResults.length}`);
     console.log(`[TICK] New properties: ${propertyGeneration.reduce((s, r) => s + r.generated, 0)}`);
     console.log(`[TICK] Construction processed: ${constructionResults.length}`);
+    console.log(`[TICK] Improvements processed: ${improvementResults.length}`);
     console.log(`[TICK] New events: ${newEvents.length}`);
     console.log(`[TICK] Expired events: ${expiredEvents.length}`);
     console.log(`[TICK] Expired uncollected rent: ${expiredRentCount} users`);
@@ -99,6 +112,7 @@ export async function executeTick() {
       rentProcessed: rentResults.length,
       loansProcessed: loanResults.length,
       constructionProcessed: constructionResults.length,
+      improvementsProcessed: improvementResults.length,
       newProperties: propertyGeneration,
       newEvents,
       expiredEvents,

@@ -715,11 +715,11 @@ export default function UserProfilePage() {
                   </div>
                   <div className="text-right">
                     <div className="text-orange-500 dark:text-orange-400 text-sm font-semibold">
-                      ${p.currentPrice?.toLocaleString()}
+                      {formatMoney(p.currentPrice)}
                     </div>
                     {p.rent > 0 && (
                       <div className="text-xs text-gray-500 dark:text-gray-400">
-                        ${p.rent}/{t('general.period')}
+                        {formatMoney(p.rent)}/{t('general.period')}
                       </div>
                     )}
                   </div>
@@ -757,7 +757,7 @@ export default function UserProfilePage() {
                       <span className={`text-xs font-medium ${info.color}`}>{info.label}</span>
                     </div>
                     <div className="text-gray-500 dark:text-gray-400 text-xs shrink-0">
-                      ${tx.price?.toLocaleString()}
+                      {formatMoney(tx.price)}
                     </div>
                   </div>
                 );

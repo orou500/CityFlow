@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useGameStore } from '../store/useGameStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { translateError } from '../i18n/errors';
+import { formatMoney } from '../utils/format';
 
 export default function BankPage() {
   const { t } = useTranslation();
@@ -85,13 +86,13 @@ export default function BankPage() {
         <div className="bg-white dark:bg-gray-900 p-4 rounded-lg">
           <p className="text-sm text-gray-500 dark:text-gray-400">{t('bank.cash')}</p>
           <p className="text-2xl font-bold text-orange-500 dark:text-orange-400">
-            ${summary?.balance?.toLocaleString() || user.balance?.toLocaleString()}
+            {formatMoney(summary?.balance || user.balance)}
           </p>
         </div>
         <div className="bg-white dark:bg-gray-900 p-4 rounded-lg">
           <p className="text-sm text-gray-500 dark:text-gray-400">{t('bank.netWorth')}</p>
           <p className="text-2xl font-bold text-orange-500 dark:text-orange-400">
-            ${summary?.netWorth?.toLocaleString() || '0'}
+            {formatMoney(summary?.netWorth)}
           </p>
         </div>
         <div className="bg-white dark:bg-gray-900 p-4 rounded-lg">
@@ -99,7 +100,7 @@ export default function BankPage() {
           <p
             className={`text-2xl font-bold ${summary?.totalDebt > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-400 dark:text-gray-500'}`}
           >
-            ${summary?.totalDebt?.toLocaleString() || '0'}
+            {formatMoney(summary?.totalDebt)}
           </p>
         </div>
         <div className="bg-white dark:bg-gray-900 p-4 rounded-lg">
@@ -114,7 +115,7 @@ export default function BankPage() {
             <h2 className="text-xl font-bold mb-4">{t('bank.newLoan')}</h2>
             {summary && (
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                {t('bank.maxLoan')}: ${summary.maxLoan?.toLocaleString()}
+                {t('bank.maxLoan')}: {formatMoney(summary.maxLoan)}
               </p>
             )}
             {error && <p className="text-red-600 dark:text-red-400 text-sm mb-2">{error}</p>}
@@ -132,14 +133,14 @@ export default function BankPage() {
                     <input type="radio" name="loanOption" className="sr-only" onChange={() => setSelectedOption(opt)} />
                     <div className="flex justify-between items-center">
                       <div>
-                        <p className="font-semibold">${opt.principal?.toLocaleString()}</p>
+                        <p className="font-semibold">{formatMoney(opt.principal)}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
                           {opt.durationTicks} {t('bank.duration')}
                         </p>
                       </div>
                       <div className="text-right text-sm">
                         <p className="text-orange-500 dark:text-orange-400">
-                          ${opt.paymentPerTick?.toLocaleString()}/{t('general.period')}
+                          {formatMoney(opt.paymentPerTick)}/{t('general.period')}
                         </p>
                         <p className="text-gray-500 dark:text-gray-400">
                           {(opt.interestRate * 100).toFixed(1)}% {t('bank.interest')}
@@ -152,19 +153,19 @@ export default function BankPage() {
                           <span>
                             {t('bank.totalRepayment')}:{' '}
                             <span className="text-gray-900 dark:text-white">
-                              ${opt.totalRepayment?.toLocaleString()}
+                              {formatMoney(opt.totalRepayment)}
                             </span>
                           </span>
                           <span>
                             {t('bank.interestCost')}:{' '}
                             <span className="text-yellow-600 dark:text-yellow-400">
-                              ${opt.totalInterest?.toLocaleString()}
+                              {formatMoney(opt.totalInterest)}
                             </span>
                           </span>
                           <span>
                             {t('bank.paymentPerTick')}:{' '}
                             <span className="text-orange-500 dark:text-orange-400">
-                              ${opt.paymentPerTick?.toLocaleString()}
+                              {formatMoney(opt.paymentPerTick)}
                             </span>
                           </span>
                         </div>
@@ -198,11 +199,11 @@ export default function BankPage() {
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div>
                         <p className="text-gray-500 dark:text-gray-400">{t('bank.amount')}</p>
-                        <p className="font-semibold">${loan.principal?.toLocaleString()}</p>
+                        <p className="font-semibold">{formatMoney(loan.principal)}</p>
                       </div>
                       <div>
                         <p className="text-gray-500 dark:text-gray-400">{t('bank.remaining')}</p>
-                        <p className="font-semibold">${loan.remainingBalance?.toLocaleString()}</p>
+                        <p className="font-semibold">{formatMoney(loan.remainingBalance)}</p>
                       </div>
                       <div>
                         <p className="text-gray-500 dark:text-gray-400">{t('bank.interest')}</p>
@@ -215,7 +216,7 @@ export default function BankPage() {
                       <div>
                         <p className="text-gray-500 dark:text-gray-400">{t('bank.paymentPerTick')}</p>
                         <p className="font-semibold text-orange-500 dark:text-orange-400">
-                          ${loan.paymentPerTick?.toLocaleString()}
+                          {formatMoney(loan.paymentPerTick)}
                         </p>
                       </div>
                       <div>
