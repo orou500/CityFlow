@@ -750,7 +750,9 @@
       "penalty": "PENALTY",
       "repossess": "REPOSSESS",
       "construction": "BUILD",
-      "upgrade": "UPGRADE"
+      "upgrade": "UPGRADE",
+      "grade_upgrade": "GRADE",
+      "improvement": "IMPROVE"
     }
   },
   "landing": {
