@@ -70,7 +70,7 @@
     "showing": "Showing {{shown}} / {{total}}"
   },
   "periodBonus": {
-    "available": "Period Bonus Available",
+    "available": "Month Bonus Available",
     "claim": "Claim Reward",
     "claiming": "Claiming...",
     "claimed": "Bonus Claimed!",
@@ -292,20 +292,10 @@
     "perPeriod": "/month",
     "occupied": "Occupied",
     "vacant": "Vacant",
-    "propertyGrade": "Property Grade",
-    "grade": "Grade",
-    "nextUpgrade": "Next Upgrade",
-    "upgradeCost": "Upgrade Cost",
-    "gradeValueBonus": "Value Bonus",
-    "gradeRentBonus": "Rent Bonus",
-    "upgradeGrade": "Upgrade Property",
-    "gradeUpgraded": "Property upgraded to Grade {{grade}}!",
-    "alreadyMaxGrade": "Maximum Grade",
-    "confirmGradeUpgrade": "Upgrade to Grade {{grade}}?",
-    "gradeBenefits": "Benefits",
-    "upgradeLocked": "Upgrade Locked",
-    "nextAvailableAt": "Available {{date}} at {{time}}",
-    "cooldownActive": "Upgrade cooldown active"
+    "propertyRating": "Property Rating",
+    "viewImprovements": "View Improvements",
+    "improvementsDescription": "Improve your property to increase its rating and value.",
+    "goToDevelopment": "Go to Development"
   },
   "errors": {
     "Property not found": "Property not found",
@@ -437,6 +427,51 @@
     "rent": "Rent",
     "condition": "Condition",
     "units": "Units",
+    "propertyImprovements": "Property Improvements",
+    "improvementsDescription": "Improve your properties to increase their rating and value. Each improvement takes time to complete and provides permanent bonuses.",
+    "noBuildingsForImprovement": "You don't have any developed buildings to improve.",
+    "viewImprovements": "View Improvements",
+    "propertyRating": "Rating",
+    "currentRating": "Current Rating:",
+    "improvementsCompleted": "improvements completed",
+    "improvementInProgress": "Improvement in progress",
+    "mustWaitForCompletion": "You must wait for the current improvement to complete before starting a new one.",
+    "periodsRemaining": "months left",
+    "requirements": "Requirements",
+    "improvementStarted": "Improvement started successfully!",
+    "completed": "Completed",
+    "inProgress": "In Progress",
+    "close": "Close",
+    "improvement": {
+      "renovation": {
+        "name": "Renovation",
+        "description": "Modernize and refresh the property interior and exterior"
+      },
+      "interior_upgrade": {
+        "name": "Interior Upgrade",
+        "description": "Upgrade flooring, fixtures, and interior finishes"
+      },
+      "parking_expansion": {
+        "name": "Parking Expansion",
+        "description": "Add or expand parking facilities"
+      },
+      "landscaping": {
+        "name": "Landscaping",
+        "description": "Enhance outdoor areas with professional landscaping"
+      },
+      "energy_efficiency": {
+        "name": "Energy Efficiency",
+        "description": "Install energy-efficient systems and insulation"
+      },
+      "security_upgrade": {
+        "name": "Security Upgrade",
+        "description": "Install modern security systems and cameras"
+      },
+      "luxury_finishes": {
+        "name": "Luxury Finishes",
+        "description": "Premium materials, designer fixtures, and high-end finishes"
+      }
+    },
     "cat": {
       "residential": { "label": "Residential", "description": "Build homes and apartments for steady rental income" },
       "commercial": { "label": "Commercial", "description": "Build offices and retail spaces for higher income" },
@@ -669,7 +704,7 @@
     },
     "step4": {
       "title": "📊 Your Dashboard",
-      "content": "Your command center.\n\nTrack everything in one place:\n• Net worth, cash balance, and total property value\n• Your full property portfolio with rent per property\n• Rent collection pool — see uncollected rent and claim it\n• Period bonus — free cash & XP every 6 hours\n• Active loans & repayment progress\n• Offers: received from other players & sent by you\n• Full transaction history\n\nCheck back often to manage your empire."
+      "content": "Your command center.\n\nTrack everything in one place:\n• Net worth, cash balance, and total property value\n• Your full property portfolio with rent per property\n• Rent collection pool — see uncollected rent and claim it\n• Month bonus — free cash & XP every 6 hours\n• Active loans & repayment progress\n• Offers: received from other players & sent by you\n• Full transaction history\n\nCheck back often to manage your empire."
     },
     "step5": {
       "title": "🏦 Bank",
@@ -681,11 +716,11 @@
     },
     "step7": {
       "title": "🏗️ Development",
-      "content": "Build your own properties from scratch.\n\n1. Buy Land from the marketplace\n2. Start Development — choose from 8 building types:\n   🏠 Residential: Apartments, Housing Complexes\n   🏢 Commercial: Offices, Shopping Centers\n   🏨 Hospitality: Hotels, Resorts\n3. Wait for construction to complete\n4. Upgrade your buildings for higher rent:\n   Renovation, Security, Luxury, or Expansion\n\nConstruction takes several months — plan ahead!"
+      "content": "Build your own properties from scratch.\n\n1. Buy Land from the marketplace\n2. Start Development — choose from 8 building types:\n   🏠 Residential: Apartments, Housing Complexes\n   🏢 Commercial: Offices, Shopping Centers\n   🏨 Hospitality: Hotels, Resorts\n3. Wait for construction to complete\n4. Upgrade your buildings for higher rent:\n   Renovation, Security, Luxury, or Expansion\n\nProperty Improvements:\n• Renovations, Interior Upgrades, Parking, Landscaping, Energy, Security, Luxury Finishes\n• Each improvement boosts value/rent and contributes to Property Rating\n• Requirements checklist shows what you need before starting\n\nConstruction takes several months — plan ahead!"
     },
     "step8": {
       "title": "⭐ Leveling & XP",
-      "content": "Earn experience points (XP) as you play and level up!\n\nXP is earned by:\n• Buying properties (+10 XP)\n• Selling properties (+5 XP)\n• Taking or repaying loans (+5/+3 XP)\n• Starting construction (+15 XP)\n• Upgrading buildings (+10 XP)\n• Adding friends (+5 XP)\n• Claiming your period bonus (+10–50 XP)\n\nHigher levels unlock achievements and show your experience on your profile."
+      "content": "Earn experience points (XP) as you play and level up!\n\nXP is earned by:\n• Buying properties (+10 XP)\n• Selling properties (+5 XP)\n• Taking or repaying loans (+5/+3 XP)\n• Starting construction (+15 XP)\n• Upgrading buildings (+10 XP)\n• Adding friends (+5 XP)\n• Claiming your month bonus (+10–50 XP)\n\nHigher levels unlock achievements and show your experience on your profile."
     },
     "step9": {
       "title": "🌍 World Events",
@@ -701,7 +736,7 @@
     },
     "step12": {
       "title": "🚀 You're Ready!",
-      "content": "You now know everything you need to start.\n\nQuick strategy tips:\n• Start by buying a few cheap properties\n• Collect your rent regularly — it expires in 24h!\n• Claim your period bonus every 6 hours for free cash & XP\n• Use bank loans wisely to scale faster\n• Watch city demand — buy low, sell high\n• Develop land for long-term income\n• Keep an eye on world events\n\nGood luck, tycoon! 🏆"
+      "content": "You now know everything you need to start.\n\nQuick strategy tips:\n• Start by buying a few cheap properties\n• Collect your rent regularly — it expires in 24h!\n• Claim your month bonus every 6 hours for free cash & XP\n• Use bank loans wisely to scale faster\n• Watch city demand — buy low, sell high\n• Develop land for long-term income\n• Keep an eye on world events\n\nGood luck, tycoon! 🏆"
     }
   },
   "transaction": {

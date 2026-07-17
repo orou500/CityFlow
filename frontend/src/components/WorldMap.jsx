@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import L from 'leaflet';
+import { formatMoney } from '../utils/format';
 
 function getColor(value) {
   if (value >= 1.5) return '#10b981';
@@ -84,7 +85,7 @@ function CountryPopup({ country, events }) {
           {country.avgDemand.toFixed(2)}
         </span>
         <span className="text-gray-500 dark:text-gray-400">{t('map.avgPrice')}:</span>
-        <span className="text-gray-800 dark:text-gray-200 font-semibold">${country.avgPrice.toLocaleString()}</span>
+        <span className="text-gray-800 dark:text-gray-200 font-semibold">{formatMoney(country.avgPrice)}</span>
       </div>
 
       {events.length > 0 && (
@@ -126,7 +127,7 @@ function CountryPopup({ country, events }) {
               className="w-full flex items-center justify-between px-2 py-1 rounded text-xs hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left"
             >
               <span className="text-gray-700 dark:text-gray-300">{city.name}</span>
-              <span className="text-gray-400 dark:text-gray-500">${city.avgPrice?.toLocaleString()}</span>
+              <span className="text-gray-400 dark:text-gray-500">{formatMoney(city.avgPrice)}</span>
             </button>
           ))}
         </div>

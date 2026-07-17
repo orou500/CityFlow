@@ -53,14 +53,14 @@ cityflow/
 | **Rent Collection Pool** | Rent is deposited into a collectible pool with a 24-hour timer; players must manually collect or forfeit |
 | **Bank System** | Players can take loans with interest; missed payments lead to penalties and repossession |
 | **Player-to-Player Offers** | Negotiate property purchases via offers, counter-offers, accept/reject (min 70% of market value) |
-| **Construction & Development** | Buy land, build from 8 project types (residential, commercial, hospitality), upgrade buildings with 4 upgrade types |
+| **Construction & Development** | Buy land, build from 8 project types (residential, commercial, hospitality), upgrade buildings with 4 upgrade types, apply Property Improvements (7 types: renovation, interior, parking, landscaping, energy, security, luxury) |
 | **World Map** | Interactive Leaflet map with 18 cities, demand-colored pins, active event markers, and World Status Widget |
 | **World Events** | Dynamic events (Boom, Recession, Disaster, Policy) affect local or global markets with real-time impact |
 | **Seasons** | Game runs in 720-month seasons with automatic resets, full archive of rankings, and fresh starts |
 | **Season Leaderboards** | View past season champions, top-20 player rankings, city statistics, and economic data |
 | **Player Season History** | Each profile shows the player's rank and stats across all completed seasons |
 | **Player Leveling** | XP-based progression system with lifetime stats; earn XP for buying, selling, loans, construction, and more |
-| **Period Login Bonus** | Claim $250–$1,000 cash + 10–50 XP every 6 hours from the dashboard |
+| **Month Login Bonus** | Claim $250–$1,000 cash + 10–50 XP every 6 hours from the dashboard |
 | **Notifications** | Real-time alerts for offers, trades, construction, and friend requests; toast popups and bell animations; auto-cleanup after 24h |
 | **Friends** | Add, accept, decline, and remove friends; view friends' net worth and portfolios; bidirectional notifications |
 | **User Profiles** | Customizable avatars, display names, bio, portfolio visibility, season history, level badge, and achievements |
@@ -349,6 +349,10 @@ All routes except `GET /` require authentication.
 | GET | `/my-buildings` | List user's developed buildings |
 | GET | `/upgrades/:propertyId` | Available upgrades for a property |
 | POST | `/upgrade` | Upgrade a building |
+| GET | `/improvements/status/:propertyId` | Get improvement status, progress, and active improvement for a property |
+| GET | `/improvements/available/:propertyId` | List available improvements for a property |
+| POST | `/improvements/start` | Start an improvement project (costs a percentage of property value) |
+| GET | `/improvements/requirements/:propertyId` | Get 5-item requirements checklist for starting an improvement |
 
 ### Friends (`/api/friends`) — requires authentication
 
@@ -381,7 +385,7 @@ All routes except `GET /` require authentication.
 | ------ | ---- | ----------- |
 | GET | `/active` | List all currently active events |
 
-### Period Bonus (`/api/bonus`) — requires authentication
+### Month Bonus (`/api/bonus`) — requires authentication
 
 | Method | Path | Description |
 | ------ | ---- | ----------- |
@@ -479,7 +483,7 @@ All routes except `GET /` require authentication.
 | `passwordResetToken` | String | Password reset token hash (not returned) |
 | `passwordResetExpires` | Date | Password reset token expiry (not returned) |
 | `lastLoginAt` | Date | Last login timestamp |
-| `lastPeriodBonusClaim` | Date | When last period bonus was claimed |
+| `lastPeriodBonusClaim` | Date | When last month bonus was claimed |
 | `uncollectedRent` | Number | Rent waiting to be collected (default 0) |
 | `rentStorageStartedAt` | Date | When current rent pool started accumulating (24h expiry) |
 | `level` | Number | Player level (default 1) |
@@ -527,6 +531,10 @@ All routes except `GET /` require authentication.
 | `parentBuilding` | ObjectId? | Reference to parent Property (for units) |
 | `lastUpgrade` | String | Name of last applied upgrade |
 | `upgrades` | [Object] | Applied upgrades |
+| `upgradeLevel` | Number | Total upgrade level (cumulative across all upgrades) |
+| `propertyRating` | String | standard, improved, premium, luxury, elite (based on improvement count) |
+| `improvements` | [Object] | Completed improvements [{type, completedAt, period}] |
+| `activeImprovement` | Object? | Currently in-progress improvement {improvementId, type, startPeriod, completionPeriod, status} |
 | `priceHistory` | [{tick, price}] | Array of historical price data points |
 
 ### City
@@ -612,7 +620,7 @@ All routes except `GET /` require authentication.
 | `sellerId` | ObjectId? | Seller user (null for bank sales) |
 | `propertyId` | ObjectId? | Property involved (null for loan payments and penalties) |
 | `price` | Number | Transaction amount |
-| `type` | String | buy, sell, rent, loan, loan_payment, loan_repay, penalty, repossess, construction, upgrade, system |
+| `type` | String | buy, sell, rent, loan, loan_payment, loan_repay, penalty, repossess, construction, upgrade, improvement, system |
 | `global` | Boolean | Whether this is a system-wide notification |
 | `tickNumber` | Number | Tick when transaction occurred |
 

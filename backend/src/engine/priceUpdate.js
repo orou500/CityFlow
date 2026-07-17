@@ -1,7 +1,7 @@
 import Property from '../models/Property.js';
 import City from '../models/City.js';
 import { getTickNumber } from '../models/GameState.js';
-import { getGradeValueMultiplier, getGradeRentMultiplier } from '../config/propertyGrades.js';
+import { getRatingBonuses } from '../config/improvementProjects.js';
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -106,9 +106,14 @@ export async function updatePrices(activeEvents) {
     const demandFactor = 1 + (effectiveDemand - 1.0) * 0.15;
     const supplyFactor = 1 / (1 + (city.supplyIndex - 1.0) * 0.1);
     const growthFactor = 1 + city.growthRate * 0.5;
-    const gradeFactor = getGradeValueMultiplier(property.grade || 1);
+    const ratingBonuses = getRatingBonuses(property.propertyRating || 'standard');
+    const ratingValueMultiplier = 1 + (ratingBonuses.valueBonus || 0);
     const fairValue =
-      (property.basePrice || property.currentPrice) * demandFactor * supplyFactor * growthFactor * gradeFactor;
+      (property.basePrice || property.currentPrice) *
+      demandFactor *
+      supplyFactor *
+      growthFactor *
+      ratingValueMultiplier;
 
     let regime = property.regime;
     let regimeEndTick = property.regimeEndTick || 0;
@@ -158,8 +163,8 @@ export async function updatePrices(activeEvents) {
     const ceiling = Math.round((property.basePrice || 0) * 3.0);
     newPrice = clamp(newPrice, floor || 1, ceiling || Infinity);
 
-    const gradeRentFactor = getGradeRentMultiplier(property.grade || 1);
-    const newRent = Math.round(newPrice * 0.004 * (0.5 + Math.random() * 0.5) * gradeRentFactor);
+    const ratingRentMultiplier = 1 + (ratingBonuses.rentBonus || 0);
+    const newRent = Math.round(newPrice * 0.004 * (0.5 + Math.random() * 0.5) * ratingRentMultiplier);
 
     const priceHistory = (property.priceHistory || []).concat({ tick: tickNumber, price: newPrice });
     const trimmedHistory = priceHistory.length > 100 ? priceHistory.slice(-100) : priceHistory;

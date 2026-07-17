@@ -206,6 +206,7 @@ router.post('/buy', authenticate, async (req, res) => {
     property.forSale = false;
     property.lastPurchasePrice = price;
     property.lastPurchaseDate = new Date();
+    property.activeImprovement = undefined;
     await property.save();
 
     const lastBuyTx = await Transaction.findOne({

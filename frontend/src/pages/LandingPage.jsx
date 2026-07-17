@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
 import { useTheme } from '../components/ThemeProvider';
 import Footer from '../components/Footer';
+import { formatMoney } from '../utils/format';
 
 function AnimatedCounter({ target, suffix = '' }) {
   const [value, setValue] = useState(0);
@@ -156,7 +157,7 @@ export default function LandingPage() {
     const buyer = tx.buyerId?.displayName || tx.buyerId?.username || 'Someone';
     const seller = tx.sellerId?.displayName || tx.sellerId?.username || 'Someone';
     const property = tx.propertyId?.name || 'a property';
-    const amount = tx.price?.toLocaleString();
+    const amount = formatMoney(tx.price);
 
     switch (tx.type) {
       case 'buy':
@@ -296,7 +297,7 @@ export default function LandingPage() {
                     <span className="text-primary font-medium">{player.displayName || player.username}</span>
                   </div>
                   <span className="text-blue-600 dark:text-blue-400 font-semibold">
-                    ${(player.netWorth || 0).toLocaleString()}
+                    {formatMoney(player.netWorth || 0)}
                   </span>
                 </Link>
               ))}

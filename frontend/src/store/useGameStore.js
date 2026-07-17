@@ -395,6 +395,34 @@ export const useGameStore = create((set, get) => ({
     return data;
   },
 
+  fetchImprovementRequirements: async (propertyId) => {
+    const data = await api(`/development/improvements/requirements/${propertyId}`);
+    return data;
+  },
+
+  fetchImprovementOptions: async () => {
+    const data = await api('/development/improvements/options');
+    return data;
+  },
+
+  fetchAvailableImprovements: async (propertyId) => {
+    const data = await api(`/development/improvements/available/${propertyId}`);
+    return data;
+  },
+
+  fetchImprovementStatus: async (propertyId) => {
+    const data = await api(`/development/improvements/status/${propertyId}`);
+    return data;
+  },
+
+  startImprovement: async (propertyId, improvementId) => {
+    const data = await api('/development/improvements/start', {
+      method: 'POST',
+      body: JSON.stringify({ propertyId, improvementId }),
+    });
+    return data;
+  },
+
   clearSelection: () => {
     set({ selectedCity: null, cityProperties: [], cityEvents: [] });
   },

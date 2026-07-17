@@ -8,7 +8,7 @@ import Notification from '../../models/Notification.js';
 
 const app = createApp();
 
-describe('Property Grade endpoints', () => {
+describe('Property Improvement endpoints', () => {
   let owner, ownerToken, property, city;
 
   beforeEach(async () => {
@@ -26,82 +26,124 @@ describe('Property Grade endpoints', () => {
       ownerId: owner._id,
       currentPrice: 100000,
       basePrice: 100000,
-      grade: 1,
+      developmentLevel: 2,
+      type: 'apartment',
       forSale: false,
     });
   });
 
-  describe('GET /properties/:id/grade', () => {
-    it('returns grade info for property owner', async () => {
-      const res = await request(app).get(`/properties/${property._id}/grade`).set(authHeader(ownerToken));
+  describe('GET /development/improvements/options', () => {
+    it('returns available improvement options', async () => {
+      const res = await request(app).get('/development/improvements/options').set(authHeader(ownerToken));
 
       expect(res.status).toBe(200);
-      expect(res.body.grade).toBe(1);
-      expect(res.body.gradeName).toBe('I');
-      expect(res.body.nextGrade).toBe(2);
-      expect(res.body.nextGradeName).toBe('II');
-      expect(res.body.upgradeCost).toBe(2000);
-      expect(res.body.valueBonus).toBe(0);
-      expect(res.body.rentBonus).toBe(0);
+      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body.length).toBeGreaterThan(0);
+      expect(res.body[0]).toHaveProperty('id');
+      expect(res.body[0]).toHaveProperty('name');
+      expect(res.body[0]).toHaveProperty('description');
+      expect(res.body[0]).toHaveProperty('constructionPeriods');
+      expect(res.body[0]).toHaveProperty('valueBonus');
+      expect(res.body[0]).toHaveProperty('rentBonus');
+    });
+  });
+
+  describe('GET /development/improvements/available/:propertyId', () => {
+    it('returns available improvements for property owner', async () => {
+      const res = await request(app)
+        .get(`/development/improvements/available/${property._id}`)
+        .set(authHeader(ownerToken));
+
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body.available)).toBe(true);
+      expect(res.body.completedCount).toBe(0);
+      expect(res.body.propertyRating).toBe('standard');
     });
 
     it('returns 403 for non-owner', async () => {
       const { token: otherToken } = await createAuthenticatedUser({ balance: 100000 });
-      const res = await request(app).get(`/properties/${property._id}/grade`).set(authHeader(otherToken));
+      const res = await request(app)
+        .get(`/development/improvements/available/${property._id}`)
+        .set(authHeader(otherToken));
 
       expect(res.status).toBe(403);
     });
 
     it('returns 404 for non-existent property', async () => {
       const fakeId = '507f1f77bcf86cd799439013';
-      const res = await request(app).get(`/properties/${fakeId}/grade`).set(authHeader(ownerToken));
+      const res = await request(app).get(`/development/improvements/available/${fakeId}`).set(authHeader(ownerToken));
 
       expect(res.status).toBe(404);
     });
 
     it('returns 401 without auth', async () => {
-      const res = await request(app).get(`/properties/${property._id}/grade`);
+      const res = await request(app).get(`/development/improvements/available/${property._id}`);
       expect(res.status).toBe(401);
     });
   });
 
-  describe('POST /properties/grade/upgrade', () => {
-    it('upgrades Grade I to Grade II', async () => {
+  describe('GET /development/improvements/status/:propertyId', () => {
+    it('returns improvement status for property owner', async () => {
       const res = await request(app)
-        .post('/properties/grade/upgrade')
-        .set(authHeader(ownerToken))
-        .send({ propertyId: property._id.toString() });
+        .get(`/development/improvements/status/${property._id}`)
+        .set(authHeader(ownerToken));
 
       expect(res.status).toBe(200);
-      expect(res.body.grade).toBe(2);
-      expect(res.body.upgradeCost).toBe(2000);
-      expect(res.body.property.grade).toBe(2);
+      expect(res.body.propertyRating).toBe('standard');
+      expect(Array.isArray(res.body.improvements)).toBe(true);
+      expect(res.body.ratingBonuses).toHaveProperty('valueBonus');
+      expect(res.body.ratingBonuses).toHaveProperty('rentBonus');
+    });
+  });
+
+  describe('POST /development/improvements/start', () => {
+    it('starts an improvement project', async () => {
+      const res = await request(app)
+        .post('/development/improvements/start')
+        .set(authHeader(ownerToken))
+        .send({ propertyId: property._id.toString(), improvementId: 'renovation' });
+
+      expect(res.status).toBe(201);
+      expect(res.body.improvement).toHaveProperty('improvementId', 'renovation');
+      expect(res.body.improvement).toHaveProperty('name', 'Renovation');
+      expect(res.body.balance).toBeLessThan(1000000);
     });
 
     it('deducts correct cost from balance', async () => {
       const initialBalance = owner.balance;
-      const cost = 2000;
 
-      await request(app)
-        .post('/properties/grade/upgrade')
+      const res = await request(app)
+        .post('/development/improvements/start')
         .set(authHeader(ownerToken))
-        .send({ propertyId: property._id.toString() });
+        .send({ propertyId: property._id.toString(), improvementId: 'renovation' });
 
-      const res = await request(app).get('/users/me').set(authHeader(ownerToken));
-
-      expect(res.body.balance || res.body.user?.balance).toBe(initialBalance - cost);
+      expect(res.status).toBe(201);
+      expect(res.body.balance).toBeLessThan(initialBalance);
     });
 
-    it('applies modest one-time value boost and updates rent after upgrade', async () => {
-      const res = await request(app)
-        .post('/properties/grade/upgrade')
+    it('returns 400 if improvement already in progress', async () => {
+      await request(app)
+        .post('/development/improvements/start')
         .set(authHeader(ownerToken))
-        .send({ propertyId: property._id.toString() });
+        .send({ propertyId: property._id.toString(), improvementId: 'renovation' });
 
-      expect(res.status).toBe(200);
-      expect(res.body.property.currentPrice).toBe(101000);
-      expect(res.body.property.grade).toBe(2);
-      expect(res.body.property.rent).toBeGreaterThan(0);
+      const res = await request(app)
+        .post('/development/improvements/start')
+        .set(authHeader(ownerToken))
+        .send({ propertyId: property._id.toString(), improvementId: 'interior_upgrade' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/improvement is already in progress/i);
+    });
+
+    it('returns 400 for invalid improvement type', async () => {
+      const res = await request(app)
+        .post('/development/improvements/start')
+        .set(authHeader(ownerToken))
+        .send({ propertyId: property._id.toString(), improvementId: 'invalid_type' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/Invalid improvement type/i);
     });
 
     it('returns 400 if insufficient balance', async () => {
@@ -111,169 +153,75 @@ describe('Property Grade endpoints', () => {
         ownerId: poor.user._id,
         currentPrice: 100000,
         basePrice: 100000,
-        grade: 1,
+        developmentLevel: 2,
+        type: 'apartment',
         forSale: false,
       });
 
       const res = await request(app)
-        .post('/properties/grade/upgrade')
+        .post('/development/improvements/start')
         .set(authHeader(poor.token))
-        .send({ propertyId: cheapProperty._id.toString() });
+        .send({ propertyId: cheapProperty._id.toString(), improvementId: 'renovation' });
 
       expect(res.status).toBe(400);
-      expect(res.body.error).toMatch(/Insufficient funds/);
-    });
-
-    it('returns 400 if already max grade', async () => {
-      await Property.findByIdAndUpdate(property._id, { grade: 5 });
-
-      const res = await request(app)
-        .post('/properties/grade/upgrade')
-        .set(authHeader(ownerToken))
-        .send({ propertyId: property._id.toString() });
-
-      expect(res.status).toBe(400);
-      expect(res.body.error).toMatch(/maximum grade/);
+      expect(res.body.error).toMatch(/Insufficient funds/i);
     });
 
     it('returns 400 if not property owner', async () => {
       const { token: otherToken } = await createAuthenticatedUser({ balance: 100000 });
       const res = await request(app)
-        .post('/properties/grade/upgrade')
+        .post('/development/improvements/start')
         .set(authHeader(otherToken))
-        .send({ propertyId: property._id.toString() });
+        .send({ propertyId: property._id.toString(), improvementId: 'renovation' });
 
       expect(res.status).toBe(403);
     });
 
     it('creates a Transaction record', async () => {
       await request(app)
-        .post('/properties/grade/upgrade')
+        .post('/development/improvements/start')
         .set(authHeader(ownerToken))
-        .send({ propertyId: property._id.toString() });
+        .send({ propertyId: property._id.toString(), improvementId: 'renovation' });
 
       const tx = await Transaction.findOne({
         propertyId: property._id,
-        type: 'grade_upgrade',
+        type: 'improvement',
       });
 
       expect(tx).toBeTruthy();
-      expect(tx.price).toBe(2000);
       expect(tx.buyerId.toString()).toBe(owner._id.toString());
     });
 
-    it('creates a Notification', async () => {
-      await request(app)
-        .post('/properties/grade/upgrade')
-        .set(authHeader(ownerToken))
-        .send({ propertyId: property._id.toString() });
+    it('returns 401 without auth', async () => {
+      const res = await request(app)
+        .post('/development/improvements/start')
+        .send({ propertyId: property._id.toString(), improvementId: 'renovation' });
 
-      const notif = await Notification.findOne({
-        userId: owner._id,
-        type: 'system',
-        title: 'Property Grade Upgraded',
-      });
+      expect(res.status).toBe(401);
+    });
+  });
 
-      expect(notif).toBeTruthy();
-      expect(notif.message).toMatch(/Grade II/);
+  describe('Property Rating', () => {
+    it('starts with standard rating', async () => {
+      const res = await request(app)
+        .get(`/development/improvements/status/${property._id}`)
+        .set(authHeader(ownerToken));
+
+      expect(res.body.propertyRating).toBe('standard');
     });
 
-    it('allows sequential upgrades through all grades', async () => {
-      let currentProperty = property;
-
-      for (let grade = 1; grade < 5; grade++) {
-        await Property.findByIdAndUpdate(currentProperty._id, {
-          lastGradeUpgradeAt: new Date(Date.now() - 25 * 60 * 60 * 1000),
-        });
-
-        const res = await request(app)
-          .post('/properties/grade/upgrade')
-          .set(authHeader(ownerToken))
-          .send({ propertyId: currentProperty._id.toString() });
-
-        expect(res.status).toBe(200);
-        expect(res.body.grade).toBe(grade + 1);
-
-        currentProperty = await Property.findById(currentProperty._id);
-      }
-
-      expect(currentProperty.grade).toBe(5);
+    it('prevents starting duplicate improvement', async () => {
+      await request(app)
+        .post('/development/improvements/start')
+        .set(authHeader(ownerToken))
+        .send({ propertyId: property._id.toString(), improvementId: 'renovation' });
 
       const res = await request(app)
-        .post('/properties/grade/upgrade')
+        .post('/development/improvements/start')
         .set(authHeader(ownerToken))
-        .send({ propertyId: currentProperty._id.toString() });
+        .send({ propertyId: property._id.toString(), improvementId: 'renovation' });
 
       expect(res.status).toBe(400);
-    });
-
-    it('scales cost with property value', async () => {
-      const expensiveProperty = await createTestProperty({
-        cityId: city._id,
-        ownerId: owner._id,
-        currentPrice: 500000,
-        basePrice: 500000,
-        grade: 1,
-        forSale: false,
-      });
-
-      const res = await request(app)
-        .post('/properties/grade/upgrade')
-        .set(authHeader(ownerToken))
-        .send({ propertyId: expensiveProperty._id.toString() });
-
-      expect(res.status).toBe(200);
-      expect(res.body.upgradeCost).toBe(10000);
-    });
-
-    it('blocks upgrade during cooldown period', async () => {
-      await request(app)
-        .post('/properties/grade/upgrade')
-        .set(authHeader(ownerToken))
-        .send({ propertyId: property._id.toString() });
-
-      const res = await request(app)
-        .post('/properties/grade/upgrade')
-        .set(authHeader(ownerToken))
-        .send({ propertyId: property._id.toString() });
-
-      expect(res.status).toBe(429);
-      expect(res.body.error).toMatch(/cooldown/i);
-      expect(res.body.cooldownRemaining).toBeGreaterThan(0);
-      expect(res.body.nextAvailableAt).toBeTruthy();
-    });
-
-    it('returns cooldown info in grade endpoint', async () => {
-      await request(app)
-        .post('/properties/grade/upgrade')
-        .set(authHeader(ownerToken))
-        .send({ propertyId: property._id.toString() });
-
-      const res = await request(app).get(`/properties/${property._id}/grade`).set(authHeader(ownerToken));
-
-      expect(res.status).toBe(200);
-      expect(res.body.lastUpgradeAt).toBeTruthy();
-      expect(res.body.cooldownRemaining).toBeGreaterThan(0);
-      expect(res.body.nextAvailableAt).toBeTruthy();
-    });
-
-    it('allows upgrade after cooldown expires', async () => {
-      await request(app)
-        .post('/properties/grade/upgrade')
-        .set(authHeader(ownerToken))
-        .send({ propertyId: property._id.toString() });
-
-      await Property.findByIdAndUpdate(property._id, {
-        lastGradeUpgradeAt: new Date(Date.now() - 25 * 60 * 60 * 1000),
-      });
-
-      const res = await request(app)
-        .post('/properties/grade/upgrade')
-        .set(authHeader(ownerToken))
-        .send({ propertyId: property._id.toString() });
-
-      expect(res.status).toBe(200);
-      expect(res.body.grade).toBe(3);
     });
   });
 });

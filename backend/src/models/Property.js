@@ -53,16 +53,33 @@ const propertySchema = new mongoose.Schema(
       default: 'stable',
     },
     regimeEndTick: { type: Number, default: 0 },
-    grade: { type: Number, default: 1, min: 1, max: 5 },
-    gradeHistory: [
+    propertyRating: {
+      type: String,
+      enum: ['standard', 'improved', 'premium', 'luxury', 'elite'],
+      default: 'standard',
+    },
+    improvements: [
       {
-        grade: { type: Number },
-        upgradedAt: { type: Date },
+        improvementId: { type: String, required: true },
+        name: { type: String, required: true },
+        completedAt: { type: Date },
         cost: { type: Number },
+        valueBonus: { type: Number },
+        rentBonus: { type: Number },
+        conditionBonus: { type: Number },
+        demandBonus: { type: Number },
       },
     ],
-    lastGradeUpgradeAt: { type: Date, default: null },
+    activeImprovement: {
+      improvementId: { type: String },
+      name: { type: String },
+      startedAt: { type: Date },
+      startPeriod: { type: Number },
+      completionPeriod: { type: Number },
+      progress: { type: Number, default: 0, min: 0, max: 100 },
+    },
     lastUpgrade: { type: String },
+    upgradeLevel: { type: Number, default: 0, min: 0 },
     upgrades: [
       {
         name: { type: String },

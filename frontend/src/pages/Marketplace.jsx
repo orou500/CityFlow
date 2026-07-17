@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
 import { translateError } from '../i18n/errors';
+import { formatMoney } from '../utils/format';
 
 const API = '/api';
 
@@ -48,12 +49,12 @@ function PropertyCard({ p, cities, propertyTypes, onBuy, t, user, navigate }) {
           <span>{propertyTypes[p.type] || p.type}</span>
           <span>·</span>
           <span>
-            {t('city.rent')}: ${p.rent?.toLocaleString()}
+            {t('city.rent')}: {formatMoney(p.rent)}
           </span>
         </div>
       </div>
       <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800">
-        <p className="text-lg font-bold text-orange-500 dark:text-orange-400">${p.currentPrice?.toLocaleString()}</p>
+        <p className="text-lg font-bold text-orange-500 dark:text-orange-400">{formatMoney(p.currentPrice)}</p>
         {user ? (
           <button
             onClick={() => onBuy(p._id)}

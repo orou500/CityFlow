@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useGameStore } from '../store/useGameStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { translateError } from '../i18n/errors';
+import { formatMoney } from '../utils/format';
 
 export default function CityDashboard() {
   const { id } = useParams();
@@ -93,7 +94,7 @@ export default function CityDashboard() {
           </div>
           <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
             <p className="text-xs text-gray-500 dark:text-gray-400">{t('map.avgPrice')}</p>
-            <p className="text-lg font-semibold">${selectedCity.avgPrice?.toLocaleString()}</p>
+            <p className="text-lg font-semibold">{formatMoney(selectedCity.avgPrice)}</p>
           </div>
         </div>
       </div>
@@ -152,7 +153,7 @@ export default function CityDashboard() {
                         <span>{propertyTypes[p.type] || p.type}</span>
                         <span>·</span>
                         <span>
-                          {t('city.rent')}: ${p.rent?.toLocaleString()}
+                          {t('city.rent')}: {formatMoney(p.rent)}
                         </span>
                         {p.ownerId && (
                           <>
@@ -166,7 +167,7 @@ export default function CityDashboard() {
                     </div>
                     <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
                       <p className="text-lg font-bold text-orange-500 dark:text-orange-400">
-                        ${p.currentPrice?.toLocaleString()}
+                        {formatMoney(p.currentPrice)}
                       </p>
                       {!user && <p className="text-xs text-gray-400 dark:text-gray-500">{t('city.forSale')}</p>}
                       {user && !isOwner && p.forSale && (

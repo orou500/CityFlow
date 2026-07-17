@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useGameStore } from '../store/useGameStore';
 import { useAuthStore } from '../store/useAuthStore';
+import { formatMoney } from '../utils/format';
 
 export default function ProjectDetailsPage() {
   const { t } = useTranslation();
@@ -178,13 +179,13 @@ export default function ProjectDetailsPage() {
             <div className="flex justify-between">
               <span className="text-gray-500 dark:text-gray-400 text-sm">{t('projectDetail.developmentCost')}</span>
               <span className="text-gray-900 dark:text-white text-sm font-medium">
-                ${project.totalCost?.toLocaleString()}
+                {formatMoney(project.totalCost)}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500 dark:text-gray-400 text-sm">{t('projectDetail.investedAmount')}</span>
               <span className="text-gray-900 dark:text-white text-sm font-medium">
-                ${(project.investedAmount || project.totalCost)?.toLocaleString()}
+                {formatMoney(project.investedAmount || project.totalCost)}
               </span>
             </div>
             {project.status === 'completed' && (

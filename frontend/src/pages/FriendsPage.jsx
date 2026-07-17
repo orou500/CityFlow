@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
+import { formatMoney } from '../utils/format';
 
 function getToken() {
   return useAuthStore.getState().token || localStorage.getItem('token');
@@ -138,7 +139,7 @@ export default function FriendsPage() {
             <div className="text-gray-900 dark:text-white text-sm font-medium truncate">
               {friend.displayName || friend.username}
             </div>
-            <div className="text-xs text-blue-600 dark:text-blue-400">${(friend.netWorth || 0).toLocaleString()}</div>
+            <div className="text-xs text-blue-600 dark:text-blue-400">{formatMoney(friend.netWorth || 0)}</div>
           </div>
         </Link>
         {showRemove && (
