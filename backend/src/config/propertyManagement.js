@@ -91,8 +91,7 @@ export function calculateQualityScore(property) {
 
   const tier = MAINTENANCE_TIERS[property.maintenanceLevel] || MAINTENANCE_TIERS.none;
   const maintenanceScores = { none: 0, basic: 40, standard: 70, premium: 100 };
-  const maintenanceScore =
-    (maintenanceScores[property.maintenanceLevel] || 0) * QUALITY_WEIGHTS.maintenanceLevel;
+  const maintenanceScore = (maintenanceScores[property.maintenanceLevel] || 0) * QUALITY_WEIGHTS.maintenanceLevel;
 
   const improvementCount = property.improvements?.length || 0;
   const improvementScore = Math.min(100, improvementCount * 15) * QUALITY_WEIGHTS.improvements;

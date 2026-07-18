@@ -34,11 +34,8 @@ router.get('/:propertyId', authenticate, async (req, res) => {
     const maintenanceCost = Math.round(actualRentIncome * tier.costPercentOfRent);
     const profit = calculateMonthlyProfit(actualRentIncome, property.maintenanceLevel, property.currentPrice);
 
-    const currentOccupancy = property.occupancy || simulateOccupancy(
-      property,
-      property.cityId?.demandIndex,
-      property.cityId?.supplyIndex,
-    );
+    const currentOccupancy =
+      property.occupancy || simulateOccupancy(property, property.cityId?.demandIndex, property.cityId?.supplyIndex);
 
     const gameState = await GameState.findOne({ key: 'global' });
     const currentTick = gameState?.tickNumber || 0;
