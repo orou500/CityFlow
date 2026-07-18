@@ -24,6 +24,7 @@ import seasonRoutes from './routes/seasons.js';
 import backupRoutes from './routes/backup.js';
 import bonusRoutes from './routes/bonus.js';
 import rentRoutes from './routes/rent.js';
+import managementRoutes from './routes/management.js';
 import oauthRoutes from './routes/oauth.js';
 import discordRoutes from './routes/discord.js';
 import { maintenanceCheck } from './middleware/maintenance.js';
@@ -84,6 +85,7 @@ app.use('/events', eventRoutes);
 app.use('/admin/backups', backupRoutes);
 app.use('/bonus', bonusRoutes);
 app.use('/rent', rentRoutes);
+app.use('/management', managementRoutes);
 app.use('/discord', discordRoutes);
 app.use('/auth', oauthRoutes);
 

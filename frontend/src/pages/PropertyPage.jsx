@@ -110,7 +110,7 @@ function PriceHistoryChart({ history }) {
           className="fill-gray-600 dark:fill-gray-300 text-[10px]"
           textAnchor={isRtl ? 'end' : 'start'}
         >
-          {fmt(min)}
+          {fmt(max)}
         </text>
         <text
           x={isRtl ? w - padding : padding}
@@ -118,7 +118,7 @@ function PriceHistoryChart({ history }) {
           className="fill-gray-600 dark:fill-gray-300 text-[10px]"
           textAnchor={isRtl ? 'end' : 'start'}
         >
-          {fmt(max)}
+          {fmt(min)}
         </text>
         <text
           x={isRtl ? padding : w - padding}
@@ -244,6 +244,11 @@ export default function PropertyPage() {
   const [showGradeModal, setShowGradeModal] = useState(false);
   const [gradeLoading, setGradeLoading] = useState(false);
   const [improvementStatus, setImprovementStatus] = useState(null);
+  const [managementData, setManagementData] = useState(null);
+  const [managementHistory, setManagementHistory] = useState([]);
+  const [rentInput, setRentInput] = useState('');
+  const [maintenanceMsg, setMaintenanceMsg] = useState(null);
+  const [rentMsg, setRentMsg] = useState(null);
   const UNITS_PER_PAGE = 5;
 
   const load = async () => {
@@ -255,6 +260,19 @@ export default function PropertyPage() {
         try {
           const improvementRes = await api(`/development/improvements/status/${id}`);
           setImprovementStatus(improvementRes);
+        } catch {
+          /* not owner or error */
+        }
+        try {
+          const mgmtRes = await api(`/management/${id}`);
+          setManagementData(mgmtRes);
+          setRentInput(String(mgmtRes.perUnitRent || ''));
+          try {
+            const histRes = await api(`/management/${id}/history?limit=30`);
+            setManagementHistory(histRes);
+          } catch {
+            /* no history yet */
+          }
         } catch {
           /* not owner or error */
         }
@@ -334,6 +352,45 @@ export default function PropertyPage() {
       setActionMsg({ type: 'error', text: translateError(err, t) });
     }
     setGradeLoading(false);
+  };
+
+  const handleSetRent = async () => {
+    const amount = parseFloat(rentInput);
+    if (!amount || amount <= 0) {
+      setRentMsg({ type: 'error', text: t('propertyManagement.rentInputPlaceholder') });
+      return;
+    }
+    setRentMsg(null);
+    try {
+      await api(`/management/${id}/rent`, {
+        method: 'POST',
+        body: JSON.stringify({ rentPerUnit: amount }),
+      });
+      setRentMsg({ type: 'success', text: t('propertyManagement.rentUpdated') });
+      const mgmtRes = await api(`/management/${id}`);
+      setManagementData(mgmtRes);
+      await load();
+    } catch (err) {
+      setRentMsg({ type: 'error', text: err.message });
+    }
+  };
+
+  const handleSetMaintenance = async (level) => {
+    setMaintenanceMsg(null);
+    try {
+      await api(`/management/${id}/maintenance`, {
+        method: 'POST',
+        body: JSON.stringify({ level }),
+      });
+      setMaintenanceMsg({ type: 'success', text: t('propertyManagement.maintenanceUpdated') });
+      const mgmtRes = await api(`/management/${id}`);
+      setManagementData(mgmtRes);
+      const histRes = await api(`/management/${id}/history?limit=30`);
+      setManagementHistory(histRes);
+      await load();
+    } catch (err) {
+      setMaintenanceMsg({ type: 'error', text: err.message });
+    }
   };
 
   if (loading && !data) {
@@ -505,6 +562,182 @@ export default function PropertyPage() {
                     </>
                   );
                 })()}
+              </div>
+            </div>
+          )}
+
+          {isOwner && managementData && property?.type !== 'land' && (
+            <div className="bg-white dark:bg-gray-900 rounded-lg p-6">
+              <h2 className="text-lg font-bold mb-4">{t('propertyManagement.title')}</h2>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyManagement.qualityScore')}</p>
+                  <p
+                    className={`text-lg font-bold ${managementData.qualityScore >= 70 ? 'text-blue-600 dark:text-blue-400' : managementData.qualityScore >= 40 ? 'text-yellow-500' : 'text-red-500'}`}
+                  >
+                    {managementData.qualityScore}/100
+                  </p>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyManagement.occupancy')}</p>
+                  <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{managementData.occupancy}%</p>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyManagement.maintenanceLevel')}</p>
+                  <p className="text-lg font-bold capitalize">{managementData.maintenanceLevel}</p>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyManagement.netProfit')}</p>
+                  <p
+                    className={`text-lg font-bold ${managementData.netProfit >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-500'}`}
+                  >
+                    {formatMoney(managementData.netProfit)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded">
+                  <p className="text-sm font-semibold mb-2">{t('propertyManagement.setRent')}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                    {t('propertyManagement.currentRentPerUnit')}: {formatMoney(managementData.perUnitRent)}
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      value={rentInput}
+                      onChange={(e) => setRentInput(e.target.value)}
+                      placeholder={t('propertyManagement.rentInputPlaceholder')}
+                      className="flex-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-3 py-2 text-gray-900 dark:text-white text-sm"
+                    />
+                    <button
+                      onClick={handleSetRent}
+                      disabled={!managementData.rentChangeAvailable}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white text-sm rounded transition-colors"
+                    >
+                      {t('common.save')}
+                    </button>
+                  </div>
+                  {rentMsg && (
+                    <p className={`text-xs mt-2 ${rentMsg.type === 'success' ? 'text-blue-500' : 'text-red-500'}`}>
+                      {rentMsg.text}
+                    </p>
+                  )}
+                  {!managementData.rentChangeAvailable && (
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                      {t('propertyManagement.rentCooldown', { months: 1 })}
+                    </p>
+                  )}
+                </div>
+
+                <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded">
+                  <p className="text-sm font-semibold mb-2">{t('propertyManagement.setMaintenance')}</p>
+                  <div className="space-y-1.5">
+                    {managementData.maintenanceTiers?.map((tier) => (
+                      <button
+                        key={tier.id}
+                        onClick={() => handleSetMaintenance(tier.id)}
+                        disabled={managementData.maintenanceLevel === tier.id}
+                        className={`w-full text-left px-3 py-2 rounded text-sm transition-colors ${
+                          managementData.maintenanceLevel === tier.id
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white'
+                        }`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium">
+                            {t(`propertyManagement.${tier.id === 'none' ? 'noMaintenance' : tier.id + 'Maintenance'}`)}
+                          </span>
+                          <span className="text-xs opacity-75">
+                            {tier.monthlyCost > 0
+                              ? formatMoney(tier.monthlyCost) + t('propertyDetail.perPeriod')
+                              : t('propertyManagement.none')}
+                          </span>
+                        </div>
+                        <p className="text-xs opacity-70 mt-0.5">
+                          {t(
+                            `propertyManagement.${tier.id === 'none' ? 'noMaintenance' : tier.id + 'Maintenance'}Desc`,
+                          )}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                  {maintenanceMsg && (
+                    <p
+                      className={`text-xs mt-2 ${maintenanceMsg.type === 'success' ? 'text-blue-500' : 'text-red-500'}`}
+                    >
+                      {maintenanceMsg.text}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded">
+                <div className="flex justify-between items-center mb-3">
+                  <div>
+                    <p className="text-sm font-semibold">{t('propertyManagement.history')}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyManagement.historyDesc')}</p>
+                  </div>
+                </div>
+                {managementHistory.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+                          <th className="text-left py-1 pr-2">{t('propertyManagement.month')}</th>
+                          <th className="text-right py-1 px-2">{t('propertyManagement.qualityScore')}</th>
+                          <th className="text-right py-1 px-2">{t('propertyManagement.occupancy')}</th>
+                          <th className="text-right py-1 px-2">{t('propertyManagement.rentIncome')}</th>
+                          <th className="text-right py-1 px-2">{t('propertyManagement.maintenanceCost')}</th>
+                          <th className="text-right py-1 pl-2">{t('propertyManagement.netProfit')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {managementHistory
+                          .slice()
+                          .reverse()
+                          .slice(0, 12)
+                          .map((entry, i) => (
+                            <tr key={i} className="border-b border-gray-100 dark:border-gray-700/50">
+                              <td className="py-1 pr-2 text-gray-600 dark:text-gray-300">
+                                {t('propertyManagement.tick', { number: entry.tick })}
+                              </td>
+                              <td className="py-1 px-2 text-right">
+                                <span
+                                  className={
+                                    entry.qualityScore >= 70
+                                      ? 'text-blue-500'
+                                      : entry.qualityScore >= 40
+                                        ? 'text-yellow-500'
+                                        : 'text-red-500'
+                                  }
+                                >
+                                  {entry.qualityScore}
+                                </span>
+                              </td>
+                              <td className="py-1 px-2 text-right text-blue-500">{entry.occupancy}%</td>
+                              <td className="py-1 px-2 text-right text-blue-600 dark:text-blue-400">
+                                {formatMoney(entry.rentIncome)}
+                              </td>
+                              <td className="py-1 px-2 text-right text-red-500">
+                                {formatMoney(entry.maintenanceCost)}
+                              </td>
+                              <td
+                                className={`py-1 pl-2 text-right font-medium ${entry.netProfit >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-500'}`}
+                              >
+                                {formatMoney(entry.netProfit)}
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
+                    {t('propertyManagement.noHistory')}
+                  </p>
+                )}
               </div>
             </div>
           )}
