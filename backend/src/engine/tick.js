@@ -1,4 +1,5 @@
 import { simulateCities } from './citySimulation.js';
+import { simulateDemographics } from './demographics.js';
 import { updatePrices } from './priceUpdate.js';
 import { processRent, expireUncollectedRent, sendRentExpiryWarnings } from './rentProcessing.js';
 import { processLoans } from './loanProcessing.js';
@@ -25,6 +26,9 @@ export async function executeTick() {
 
     console.log('[TICK] Simulating cities...');
     const cityResults = await simulateCities(activeEvents);
+
+    console.log('[TICK] Simulating demographics...');
+    const demoResults = await simulateDemographics(tickNumber);
 
     console.log('[TICK] Updating prices...');
     const priceUpdates = await updatePrices(activeEvents);
@@ -91,6 +95,7 @@ export async function executeTick() {
     const duration = Date.now() - startTime;
     console.log(`[TICK] World tick #${tickNumber} completed in ${duration}ms`);
     console.log(`[TICK] Cities simulated: ${cityResults.length}`);
+    console.log(`[TICK] Demographics simulated: ${demoResults.length}`);
     console.log(`[TICK] Prices updated: ${priceUpdates.length}`);
     console.log(`[TICK] Rent processed: ${rentResults.length}`);
     console.log(`[TICK] Loans processed: ${loanResults.length}`);
@@ -112,6 +117,7 @@ export async function executeTick() {
       tickNumber,
       duration,
       cities: cityResults,
+      demographics: demoResults,
       priceUpdates: priceUpdates.length,
       rentProcessed: rentResults.length,
       loansProcessed: loanResults.length,

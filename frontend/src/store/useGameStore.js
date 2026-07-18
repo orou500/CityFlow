@@ -22,6 +22,7 @@ export const useGameStore = create((set, get) => ({
   selectedCity: null,
   cityProperties: [],
   cityEvents: [],
+  cityDemographics: null,
   activeEvents: [],
   userData: null,
   loading: false,
@@ -45,6 +46,7 @@ export const useGameStore = create((set, get) => ({
         selectedCity: data.city,
         cityProperties: data.properties,
         cityEvents: data.activeEvents,
+        cityDemographics: data.demographics || null,
         loading: false,
       });
     } catch (err) {
@@ -198,6 +200,13 @@ export const useGameStore = create((set, get) => ({
 
   toggleUserBan: async (userId) => {
     return await api(`/admin/users/${userId}/ban`, { method: 'PUT' });
+  },
+
+  setUserRole: async (userId, role) => {
+    return await api(`/admin/users/${userId}/role`, {
+      method: 'PUT',
+      body: JSON.stringify({ role }),
+    });
   },
 
   fetchAdminProperties: async (page = 1) => {
@@ -424,7 +433,7 @@ export const useGameStore = create((set, get) => ({
   },
 
   clearSelection: () => {
-    set({ selectedCity: null, cityProperties: [], cityEvents: [] });
+    set({ selectedCity: null, cityProperties: [], cityEvents: [], cityDemographics: null });
   },
 
   fetchAdminSeasons: async () => {

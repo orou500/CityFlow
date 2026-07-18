@@ -33,36 +33,20 @@ export async function simulateCities(activeEvents) {
       (e) => e.type === 'global' || e.affectedCities?.some((id) => id.toString() === city._id.toString()),
     );
 
-    let demandMod = 0;
     let supplyMod = 0;
-    let growthMod = 0;
 
     for (const event of activeForCity) {
-      demandMod += event.impact.demandDelta || 0;
       supplyMod += event.impact.supplyDelta || 0;
-      growthMod += event.impact.growthDelta || 0;
     }
 
     const stats = statsMap.get(city._id.toString()) || { total: 0, owned: 0, totalPrice: 0 };
     const totalProperties = stats.total;
-    const ownedProperties = stats.owned;
-
-    const occupancyRate = totalProperties > 0 ? ownedProperties / totalProperties : 0.5;
-
-    const occupancyBoost = occupancyRate > 0.1 ? (occupancyRate - 0.1) * 0.15 : 0;
-
-    city.demandIndex = clamp(city.demandIndex + 0.01 * (1 - city.demandIndex) + demandMod + occupancyBoost, 0.3, 3.0);
 
     city.supplyIndex = clamp(
       city.supplyIndex + 0.03 * (1 - city.supplyIndex) + supplyMod - totalProperties * 0.001,
       0.3,
       3.0,
     );
-
-    const popGrowth = city.growthRate * (1 + city.demandIndex * 0.1) + growthMod;
-    city.population = Math.max(10000, Math.floor(city.population * (1 + popGrowth * 0.01)));
-
-    city.growthRate = clamp(city.growthRate + 0.001 * (city.demandIndex - 1) + growthMod * 0.1, -0.05, 0.1);
 
     city.avgPrice = totalProperties > 0 ? stats.totalPrice / totalProperties : city.avgPrice;
     city.propertyCount = totalProperties;
@@ -72,10 +56,7 @@ export async function simulateCities(activeEvents) {
         filter: { _id: city._id },
         update: {
           $set: {
-            demandIndex: city.demandIndex,
             supplyIndex: city.supplyIndex,
-            population: city.population,
-            growthRate: city.growthRate,
             avgPrice: city.avgPrice,
             propertyCount: city.propertyCount,
           },
@@ -86,11 +67,9 @@ export async function simulateCities(activeEvents) {
     results.push({
       cityId: city._id,
       name: city.name,
-      demandIndex: city.demandIndex,
       supplyIndex: city.supplyIndex,
-      population: city.population,
-      growthRate: city.growthRate,
       avgPrice: city.avgPrice,
+      economicCondition: city.economicCondition,
     });
   }
 

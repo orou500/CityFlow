@@ -157,6 +157,25 @@ router.put('/users/:id/ban', async (req, res) => {
   }
 });
 
+router.put('/users/:id/role', async (req, res) => {
+  try {
+    const { role } = req.body;
+    if (!['user', 'admin'].includes(role)) {
+      return res.status(400).json({ error: 'Invalid role' });
+    }
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (user._id.toString() === req.user._id.toString()) {
+      return res.status(400).json({ error: 'Cannot change your own role' });
+    }
+    user.role = role;
+    await user.save();
+    res.json({ _id: user._id, username: user.username, role: user.role });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/properties', async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -233,7 +252,15 @@ router.put('/properties/:id', async (req, res) => {
 router.put('/cities/:id', async (req, res) => {
   try {
     const updates = {};
-    const allowed = ['demandIndex', 'supplyIndex', 'population', 'growthRate', 'avgPrice'];
+    const allowed = [
+      'demandIndex',
+      'supplyIndex',
+      'population',
+      'growthRate',
+      'avgPrice',
+      'avgRent',
+      'economicCondition',
+    ];
     for (const key of allowed) {
       if (req.body[key] !== undefined) updates[key] = req.body[key];
     }

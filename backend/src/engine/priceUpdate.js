@@ -2,6 +2,7 @@ import Property from '../models/Property.js';
 import City from '../models/City.js';
 import { getTickNumber } from '../models/GameState.js';
 import { getRatingBonuses } from '../config/improvementProjects.js';
+import { ECONOMIC_CONDITIONS } from '../config/demographics.js';
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -106,6 +107,8 @@ export async function updatePrices(activeEvents) {
     const demandFactor = 1 + (effectiveDemand - 1.0) * 0.15;
     const supplyFactor = 1 / (1 + (city.supplyIndex - 1.0) * 0.1);
     const growthFactor = 1 + city.growthRate * 0.5;
+    const econ = ECONOMIC_CONDITIONS[city.economicCondition] || ECONOMIC_CONDITIONS.stable;
+    const economicFactor = econ.priceModifier;
     const ratingBonuses = getRatingBonuses(property.propertyRating || 'standard');
     const ratingValueMultiplier = 1 + (ratingBonuses.valueBonus || 0);
     const fairValue =
@@ -113,6 +116,7 @@ export async function updatePrices(activeEvents) {
       demandFactor *
       supplyFactor *
       growthFactor *
+      economicFactor *
       ratingValueMultiplier;
 
     let regime = property.regime;
@@ -164,7 +168,11 @@ export async function updatePrices(activeEvents) {
     newPrice = clamp(newPrice, floor || 1, ceiling || Infinity);
 
     const ratingRentMultiplier = 1 + (ratingBonuses.rentBonus || 0);
-    const newRent = Math.round(newPrice * 0.004 * (0.5 + Math.random() * 0.5) * ratingRentMultiplier);
+    const unitCount = property.units?.length || 1;
+    const cityAvgRent = city.avgRent || Math.round(newPrice * 0.004);
+    const rentFromCity = Math.round((cityAvgRent * unitCount * econ.rentModifier) / unitCount);
+    const rentFromPrice = Math.round(newPrice * 0.004 * (0.5 + Math.random() * 0.5));
+    const newRent = Math.round((rentFromCity * 0.6 + rentFromPrice * 0.4) * ratingRentMultiplier);
 
     const priceHistory = (property.priceHistory || []).concat({ tick: tickNumber, price: newPrice });
     const trimmedHistory = priceHistory.length > 100 ? priceHistory.slice(-100) : priceHistory;

@@ -375,7 +375,36 @@ export async function resetWorld() {
     console.log(`[SEASON] Deducted outstanding loan balances from ${loanBulkOps.length} users`);
   }
 
-  await User.updateMany({}, { $inc: { balance: 100000, 'lifetimeStats.totalSeasonsCompleted': 1 } });
+  const netWorths = await User.aggregate([
+    { $lookup: { from: 'properties', localField: '_id', foreignField: 'ownerId', as: 'props' } },
+    { $addFields: { portfolioValue: { $sum: '$props.currentPrice' } } },
+    { $addFields: { netWorth: { $add: ['$balance', '$portfolioValue'] } } },
+    { $project: { netWorth: 1 } },
+  ]);
+
+  const netWorthMap = new Map();
+  for (const entry of netWorths) {
+    netWorthMap.set(entry._id.toString(), entry.netWorth || 0);
+  }
+
+  const userBulkOps = [];
+  const allUsers = await User.find({}, { _id: 1 }).lean();
+  for (const user of allUsers) {
+    const nw = netWorthMap.get(user._id.toString()) || 0;
+    const startingBalance = Math.round(nw * 0.5);
+    userBulkOps.push({
+      updateOne: {
+        filter: { _id: user._id },
+        update: {
+          $set: { balance: startingBalance },
+          $inc: { 'lifetimeStats.totalSeasonsCompleted': 1 },
+        },
+      },
+    });
+  }
+  if (userBulkOps.length > 0) {
+    await User.bulkWrite(userBulkOps);
+  }
   await User.updateMany({ uncollectedRent: { $gt: 0 } }, { $set: { uncollectedRent: 0, rentStorageStartedAt: null } });
 
   await Promise.all([

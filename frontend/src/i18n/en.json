@@ -619,6 +619,8 @@
     "editBalance": "Edit Balance",
     "unban": "Unban",
     "ban": "Ban",
+    "promote": "Make Admin",
+    "demote": "Remove Admin",
     "createProperty": "Create Property",
     "selectCity": "Select City",
     "namePlaceholder": "Name",
@@ -710,7 +712,13 @@
     "logs": "Logs",
     "backupLogs": "Backup Logs",
     "noLogs": "No logs available",
-    "disabled": "Disabled"
+    "disabled": "Disabled",
+    "demographicsTab": "Demographics",
+    "economicCondition": "Economic Condition",
+    "totalPopulation": "Total Population",
+    "avgDemand": "Avg. Demand",
+    "totalImmigration": "Total Immigration",
+    "totalEmigration": "Total Emigration"
   },
   "onboarding": {
     "welcome": {
@@ -727,7 +735,7 @@
     },
     "step1": {
       "title": "🗺️ World Map",
-      "content": "Your window to the world.\n\nExplore 18 cities across different countries.\nSee demand levels, average prices, and active events at a glance.\n\n🟢 Green = High demand (good time to sell)\n🟡 Yellow = Medium demand\n🔴 Red = Low demand (good time to buy)\n\nClick any city to dive into its property market."
+      "content": "Your window to the world.\n\nExplore 18 cities across different countries.\nSee demand levels, average prices, and active events at a glance.\n\n🟢 Green = High demand (good time to sell)\n🟡 Yellow = Medium demand\n🔴 Red = Low demand (good time to buy)\n\nEach city has unique demographics — population growth, economic conditions, and migration patterns affect property values.\n\nClick any city to dive into its property market."
     },
     "step2": {
       "title": "🏪 Marketplace",
@@ -735,7 +743,7 @@
     },
     "step3": {
       "title": "🏢 Property Details",
-      "content": "Every property has a dedicated page with:\n\n• Current market value & price history chart\n• Monthly rent income & occupancy rate\n• Building units with individual rent prices\n• Market info: demand index, supply, growth rate\n• Ownership history & transaction log\n\nYou can Buy, Sell, or Make an Offer on any property."
+      "content": "Every property has a dedicated page with:\n\n• Current market value & price history chart\n• Monthly rent income & occupancy rate\n• Building units with individual rent prices\n• Market info: demand index, supply, growth rate\n• Ownership history & transaction log\n\nProperty Management:\n• Set maintenance level: None, Basic, Standard, or Premium\n• Higher maintenance = higher occupancy & rent potential\n• Track occupancy rate based on demand & supply\n\nYou can Buy, Sell, or Make an Offer on any property."
     },
     "step4": {
       "title": "📊 Your Dashboard",
@@ -751,15 +759,15 @@
     },
     "step7": {
       "title": "🏗️ Development",
-      "content": "Build your own properties from scratch.\n\n1. Buy Land from the marketplace\n2. Start Development — choose from 8 building types:\n   🏠 Residential: Apartments, Housing Complexes\n   🏢 Commercial: Offices, Shopping Centers\n   🏨 Hospitality: Hotels, Resorts\n3. Wait for construction to complete\n4. Upgrade your buildings for higher rent:\n   Renovation, Security, Luxury, or Expansion\n\nProperty Improvements:\n• Renovations, Interior Upgrades, Parking, Landscaping, Energy, Security, Luxury Finishes\n• Each improvement boosts value/rent and contributes to Property Rating\n• Requirements checklist shows what you need before starting\n\nConstruction takes several months — plan ahead!"
+      "content": "Build your own properties from scratch.\n\n1. Buy Land from the marketplace\n2. Start Development — choose from 8 building types:\n   🏠 Residential: Apartments, Housing Complexes\n   🏢 Commercial: Offices, Shopping Centers\n   🏨 Hospitality: Hotels, Resorts\n3. Wait for construction to complete\n4. Upgrade your buildings for higher rent:\n   Renovation, Security, Luxury, or Expansion\n\nProperty Improvements:\n• Renovations, Interior Upgrades, Parking, Landscaping, Energy, Security, Luxury Finishes\n• Each improvement boosts value/rent and contributes to Property Rating\n• Property Rating affects occupancy rate and rent potential\n\nMaintenance Levels:\n• None: 0% cost, low occupancy\n• Basic: 10% of rent, moderate occupancy\n• Standard: 25% of rent, good occupancy\n• Premium: 40% of rent, highest occupancy\n\nConstruction takes several months — plan ahead!"
     },
     "step8": {
       "title": "⭐ Leveling & XP",
       "content": "Earn experience points (XP) as you play and level up!\n\nXP is earned by:\n• Buying properties (+10 XP)\n• Selling properties (+5 XP)\n• Taking or repaying loans (+5/+3 XP)\n• Starting construction (+15 XP)\n• Upgrading buildings (+10 XP)\n• Adding friends (+5 XP)\n• Claiming your month bonus (+10–50 XP)\n\nHigher levels unlock achievements and show your experience on your profile."
     },
     "step9": {
-      "title": "🌍 World Events",
-      "content": "The world is alive and unpredictable.\n\nEvents affect city economies in real time:\n• 📈 Boom — prices and demand surge\n• 📉 Recession — demand drops, bargains appear\n• 🌪️ Disaster — markets crash temporarily\n• 📋 Policy Change — new regulations shift demand\n\nEvents can be local (one city) or global (all cities).\nAdapt your strategy to profit from every situation."
+      "title": "🌍 World Events & Economy",
+      "content": "The world is alive and unpredictable.\n\nEvents affect city economies in real time:\n• 📈 Boom — prices and demand surge\n• 📉 Recession — demand drops, bargains appear\n• 🌪️ Disaster — markets crash temporarily\n• 📋 Policy Change — new regulations shift demand\n\nEach city has an Economic Condition:\n• Boom, Growth, Stable, Slowdown, or Recession\n• Conditions affect demand, prices, and rent levels\n• Population growth and migration drive long-term value\n\nEvents can be local (one city) or global (all cities).\nAdapt your strategy to profit from every situation."
     },
     "step10": {
       "title": "📅 Seasons",
@@ -771,7 +779,7 @@
     },
     "step12": {
       "title": "🚀 You're Ready!",
-      "content": "You now know everything you need to start.\n\nQuick strategy tips:\n• Start by buying a few cheap properties\n• Collect your rent regularly — it expires in 24h!\n• Claim your month bonus every 6 hours for free cash & XP\n• Use bank loans wisely to scale faster\n• Watch city demand — buy low, sell high\n• Develop land for long-term income\n• Keep an eye on world events\n\nGood luck, tycoon! 🏆"
+      "content": "You now know everything you need to start.\n\nQuick strategy tips:\n• Start by buying a few cheap properties\n• Collect your rent regularly — it expires in 24h!\n• Claim your month bonus every 6 hours for free cash & XP\n• Use bank loans wisely to scale faster\n• Watch city demand — buy low, sell high\n• Check city demographics — growing populations = rising values\n• Set maintenance to Standard or Premium for better occupancy\n• Develop land for long-term income\n• Keep an eye on world events\n\nGood luck, tycoon! 🏆"
     }
   },
   "transaction": {
@@ -1272,5 +1280,35 @@
     "worldEvents": "World Events",
     "achievements": "Achievements",
     "systemAlerts": "System Alerts"
+  },
+  "demographics": {
+    "title": "City Demographics",
+    "population": "Population",
+    "demandIndex": "Demand Index",
+    "supplyIndex": "Supply Index",
+    "growthRate": "Growth Rate",
+    "avgRent": "Avg. Rent",
+    "avgRentLevel": "Avg. Rent Level",
+    "economicCondition": "Economic Condition",
+    "immigration": "Immigration",
+    "emigration": "Emigration",
+    "netMigration": "Net Migration",
+    "perMonth": "per month",
+    "housingDemand": "Housing Demand",
+    "history": "Demographics History",
+    "month": "Month",
+    "demandLevels": {
+      "veryHigh": "Very High",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "economicConditions": {
+      "boom": "Boom",
+      "growth": "Growth",
+      "stable": "Stable",
+      "slowdown": "Slowdown",
+      "recession": "Recession"
+    }
   }
 }
