@@ -17,7 +17,11 @@ async function api(path, options = {}) {
 
 function getTarget(selector) {
   if (selector === 'body') return document.body;
-  return document.querySelector(selector);
+  const el = document.querySelector(selector);
+  if (!el) return null;
+  const rect = el.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0 || rect.right < 0 || rect.bottom < 0) return null;
+  return el;
 }
 
 function getTooltipPosition(targetRect, tooltipWidth, tooltipHeight, vw, vh) {
@@ -314,7 +318,7 @@ export default function OnboardingWrapper({ children }) {
 
             <div
               ref={tooltipRef}
-              className="fixed bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-2xl p-5"
+              className="fixed bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-2xl p-5 max-h-[85vh] flex flex-col"
               style={{
                 top: tooltipPos.top,
                 left: tooltipPos.left,
@@ -328,7 +332,7 @@ export default function OnboardingWrapper({ children }) {
                 {stepIndex + 1} / {steps.length}
               </div>
               <h3 className="text-gray-900 dark:text-white text-lg font-bold mb-2">{currentStep.title}</h3>
-              <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-line mb-5">
+              <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-line mb-5 max-h-[50vh] overflow-y-auto pr-1">
                 {currentStep.content}
               </p>
               <div

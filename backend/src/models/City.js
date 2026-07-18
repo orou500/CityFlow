@@ -1,5 +1,20 @@
 import mongoose from 'mongoose';
 
+const demographicsHistoryEntry = new mongoose.Schema(
+  {
+    tick: { type: Number, required: true },
+    population: { type: Number },
+    demandIndex: { type: Number },
+    supplyIndex: { type: Number },
+    growthRate: { type: Number },
+    avgRent: { type: Number },
+    immigration: { type: Number },
+    emigration: { type: Number },
+    economicCondition: { type: String },
+  },
+  { _id: false },
+);
+
 const citySchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
@@ -22,8 +37,27 @@ const citySchema = new mongoose.Schema(
         remainingTicks: Number,
       },
     ],
+    economicCondition: {
+      type: String,
+      enum: ['boom', 'growth', 'stable', 'slowdown', 'recession'],
+      default: 'stable',
+    },
+    avgRent: { type: Number, default: 500 },
+    immigration: { type: Number, default: 0 },
+    emigration: { type: Number, default: 0 },
+    demographicsHistory: [demographicsHistoryEntry],
   },
   { timestamps: true },
 );
+
+citySchema.set('toJSON', {
+  virtuals: true,
+  transform(doc, ret) {
+    if (ret._id && typeof ret._id === 'object') {
+      ret._id = ret._id.toString();
+    }
+    return ret;
+  },
+});
 
 export default mongoose.model('City', citySchema);

@@ -86,6 +86,7 @@ export default function AdminPage() {
     fetchAdminUsers,
     setUserBalance,
     toggleUserBan,
+    setUserRole,
     fetchAdminProperties,
     createProperty,
     updateProperty,
@@ -421,6 +422,16 @@ export default function AdminPage() {
     }
   }
 
+  async function handleToggleRole(userId, currentRole) {
+    try {
+      const newRole = currentRole === 'admin' ? 'user' : 'admin';
+      await setUserRole(userId, newRole);
+      await fetchAdminUsers();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
   async function handleCreateProperty() {
     try {
       await createProperty({
@@ -546,6 +557,9 @@ export default function AdminPage() {
         </TabButton>
         <TabButton active={tab === 'cities'} onClick={() => setTab('cities')}>
           {t('admin.cities')}
+        </TabButton>
+        <TabButton active={tab === 'demographics'} onClick={() => setTab('demographics')}>
+          {t('admin.demographicsTab')}
         </TabButton>
         <TabButton active={tab === 'events'} onClick={() => setTab('events')}>
           {t('admin.events')}
@@ -752,6 +766,12 @@ export default function AdminPage() {
                             className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300"
                           >
                             {t('admin.editBalance')}
+                          </button>
+                          <button
+                            onClick={() => handleToggleRole(u._id, u.role)}
+                            className={`text-xs ${u.role === 'admin' ? 'text-yellow-600 dark:text-yellow-400 hover:text-yellow-500 dark:hover:text-yellow-300' : 'text-purple-600 dark:text-purple-400 hover:text-purple-500 dark:hover:text-purple-300'}`}
+                          >
+                            {u.role === 'admin' ? t('admin.demote') : t('admin.promote')}
                           </button>
                           <button
                             onClick={() => handleToggleBan(u._id)}
@@ -1004,6 +1024,7 @@ export default function AdminPage() {
           headers={[
             t('admin.name'),
             t('map.population'),
+            t('admin.economicCondition'),
             t('map.demand'),
             t('map.supply'),
             t('map.avgPrice'),
@@ -1015,6 +1036,17 @@ export default function AdminPage() {
             <>
               <td className="px-3 py-2 text-gray-900 dark:text-white">{c.name}</td>
               <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{c.population?.toLocaleString()}</td>
+              <td className="px-3 py-2">
+                {c.economicCondition ? (
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded ${c.economicCondition === 'boom' ? 'bg-green-900 text-green-300' : c.economicCondition === 'growth' ? 'bg-blue-900 text-blue-300' : c.economicCondition === 'stable' ? 'bg-gray-900 text-gray-300' : c.economicCondition === 'slowdown' ? 'bg-yellow-900 text-yellow-300' : 'bg-red-900 text-red-300'}`}
+                  >
+                    {c.economicCondition}
+                  </span>
+                ) : (
+                  <span className="text-gray-400 dark:text-gray-500">-</span>
+                )}
+              </td>
               <td className="px-3 py-2">
                 {c.demandIndex != null ? (
                   <span
@@ -1043,6 +1075,8 @@ export default function AdminPage() {
                       population: c.population,
                       growthRate: c.growthRate,
                       avgPrice: c.avgPrice,
+                      avgRent: c.avgRent,
+                      economicCondition: c.economicCondition,
                     });
                   }}
                   className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300"
@@ -1060,7 +1094,7 @@ export default function AdminPage() {
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 w-full max-w-md">
             <h3 className="text-gray-900 dark:text-white font-semibold mb-4">{t('admin.editCity')}</h3>
             <div className="space-y-3">
-              {['demandIndex', 'supplyIndex', 'population', 'growthRate', 'avgPrice'].map((field) => (
+              {['demandIndex', 'supplyIndex', 'population', 'growthRate', 'avgPrice', 'avgRent'].map((field) => (
                 <div key={field}>
                   <label className="text-xs text-gray-500 dark:text-gray-400 block capitalize">
                     {field.replace(/([A-Z])/g, ' $1')}
@@ -1073,6 +1107,22 @@ export default function AdminPage() {
                   />
                 </div>
               ))}
+              <div>
+                <label className="text-xs text-gray-500 dark:text-gray-400 block capitalize">
+                  {t('admin.economicCondition')}
+                </label>
+                <select
+                  value={editCityData.economicCondition || 'stable'}
+                  onChange={(e) => setEditCityData((d) => ({ ...d, economicCondition: e.target.value }))}
+                  className="w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-gray-900 dark:text-white text-sm"
+                >
+                  <option value="boom">{t('demographics.economicConditions.boom')}</option>
+                  <option value="growth">{t('demographics.economicConditions.growth')}</option>
+                  <option value="stable">{t('demographics.economicConditions.stable')}</option>
+                  <option value="slowdown">{t('demographics.economicConditions.slowdown')}</option>
+                  <option value="recession">{t('demographics.economicConditions.recession')}</option>
+                </select>
+              </div>
             </div>
             <div className="flex gap-2 mt-4">
               <button
@@ -1089,6 +1139,97 @@ export default function AdminPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {tab === 'demographics' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            <StatCard
+              label={t('admin.totalPopulation')}
+              value={cityOptions.reduce((sum, c) => sum + (c.population || 0), 0).toLocaleString()}
+            />
+            <StatCard
+              label={t('admin.avgDemand')}
+              value={
+                cityOptions.length > 0
+                  ? (cityOptions.reduce((sum, c) => sum + (c.demandIndex || 0), 0) / cityOptions.length).toFixed(1)
+                  : '0'
+              }
+            />
+            <StatCard
+              label={t('admin.totalImmigration')}
+              value={cityOptions.reduce((sum, c) => sum + (c.immigration || 0), 0).toLocaleString()}
+            />
+            <StatCard
+              label={t('admin.totalEmigration')}
+              value={cityOptions.reduce((sum, c) => sum + (c.emigration || 0), 0).toLocaleString()}
+            />
+          </div>
+
+          <Table
+            headers={[
+              t('admin.name'),
+              t('demographics.population'),
+              t('admin.economicCondition'),
+              t('demographics.immigration'),
+              t('demographics.emigration'),
+              t('demographics.netMigration'),
+              t('demographics.avgRent'),
+              t('map.demand'),
+            ]}
+            rows={cityOptions}
+            renderRow={(c) => {
+              const netMigration = (c.immigration || 0) - (c.emigration || 0);
+              return (
+                <>
+                  <td className="px-3 py-2 text-gray-900 dark:text-white">{c.name}</td>
+                  <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{c.population?.toLocaleString()}</td>
+                  <td className="px-3 py-2">
+                    {c.economicCondition ? (
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded ${c.economicCondition === 'boom' ? 'bg-green-900 text-green-300' : c.economicCondition === 'growth' ? 'bg-blue-900 text-blue-300' : c.economicCondition === 'stable' ? 'bg-gray-900 text-gray-300' : c.economicCondition === 'slowdown' ? 'bg-yellow-900 text-yellow-300' : 'bg-red-900 text-red-300'}`}
+                      >
+                        {t(`demographics.economicConditions.${c.economicCondition}`)}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 dark:text-gray-500">-</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-green-500 dark:text-green-400">
+                    {c.immigration != null ? `+${c.immigration.toLocaleString()}` : '-'}
+                  </td>
+                  <td className="px-3 py-2 text-red-500 dark:text-red-400">
+                    {c.emigration != null ? `-${c.emigration.toLocaleString()}` : '-'}
+                  </td>
+                  <td className="px-3 py-2">
+                    <span
+                      className={
+                        netMigration >= 0 ? 'text-green-500 dark:text-green-400' : 'text-red-500 dark:text-red-400'
+                      }
+                    >
+                      {netMigration >= 0 ? '+' : ''}
+                      {netMigration.toLocaleString()}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 text-blue-600 dark:text-blue-400">
+                    {c.avgRent ? `$${c.avgRent.toLocaleString()}` : '-'}
+                  </td>
+                  <td className="px-3 py-2">
+                    {c.demandIndex != null ? (
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded ${c.demandIndex > 60 ? 'bg-green-900 text-green-300' : c.demandIndex > 30 ? 'bg-yellow-900 text-yellow-300' : 'bg-red-900 text-red-300'}`}
+                      >
+                        {c.demandIndex}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 dark:text-gray-500">-</span>
+                    )}
+                  </td>
+                </>
+              );
+            }}
+          />
         </div>
       )}
 
