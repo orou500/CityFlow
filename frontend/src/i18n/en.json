@@ -393,7 +393,7 @@
     "estMaintenance": "Estimated Maintenance:",
     "netIncomeLabel": "Net Income / Month:",
     "starting": "Starting...",
-    "startConstructionCost": "Start Construction — ${{cost}}",
+    "startConstructionCost": "Start Construction — {{cost}}",
     "backToProjects": "Back to Projects",
     "calculating": "Calculating estimate...",
     "startAQuote": "Start a Development",
@@ -821,11 +821,11 @@
     "activity": {
       "title": "World Activity",
       "description": "Recent activity across the CityFlow universe.",
-      "buy": "{{buyer}} bought {{property}} for ${{amount}}",
-      "sell": "{{seller}} sold {{property}} for ${{amount}}",
+      "buy": "{{buyer}} bought {{property}} for {{amount}}",
+      "sell": "{{seller}} sold {{property}} for {{amount}}",
       "construction": "{{buyer}} completed construction on {{property}}",
       "upgrade": "{{buyer}} upgraded {{property}}",
-      "default": "{{property}} was transacted for ${{amount}}"
+      "default": "{{property}} was transacted for {{amount}}"
     },
     "cta": {
       "title": "Ready To Build Your Empire?",

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useGameStore } from '../store/useGameStore';
 import { formatMoney } from '../utils/format';
+import CompactValue from '../components/CompactValue';
 
 function StatCard({ label, value }) {
   return (
@@ -139,7 +140,7 @@ export default function SeasonHistoryPage() {
                         </div>
                         {season.archive.winner.netWorth != null && (
                           <div className="text-sm text-yellow-600 dark:text-yellow-400">
-                            {t('seasons.netWorth')}: {formatMoney(season.archive.winner.netWorth)}
+                            {t('seasons.netWorth')}: <CompactValue value={season.archive.winner.netWorth} />
                           </div>
                         )}
                       </div>
@@ -183,13 +184,13 @@ export default function SeasonHistoryPage() {
                                   </Link>
                                 </td>
                                 <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">
-                                  {formatMoney(player.netWorth)}
+                                  <CompactValue value={player.netWorth} />
                                 </td>
                                 <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
-                                  {formatMoney(player.balance)}
+                                  <CompactValue value={player.balance} />
                                 </td>
                                 <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
-                                  {formatMoney(player.portfolioValue)}
+                                  <CompactValue value={player.portfolioValue} />
                                 </td>
                                 <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
                                   {player.propertiesOwned || 0}
@@ -260,7 +261,7 @@ export default function SeasonHistoryPage() {
                                   >
                                     <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">{city.name}</td>
                                     <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
-                                      {formatMoney(city.finalAvgPrice)}
+                                      <CompactValue value={city.finalAvgPrice} />
                                     </td>
                                     <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
                                       {city.finalDemandIndex?.toFixed(2)}
@@ -283,7 +284,7 @@ export default function SeasonHistoryPage() {
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     <StatCard
                       label={t('seasons.totalCash')}
-                      value={formatMoney(season.archive?.economicStatistics?.totalCashInCirculation)}
+                      value={<CompactValue value={season.archive?.economicStatistics?.totalCashInCirculation} />}
                     />
                     <StatCard
                       label={t('seasons.totalProperties')}
@@ -295,7 +296,7 @@ export default function SeasonHistoryPage() {
                     />
                     <StatCard
                       label={t('seasons.totalVolume')}
-                      value={formatMoney(season.archive?.marketStatistics?.totalVolume)}
+                      value={<CompactValue value={season.archive?.marketStatistics?.totalVolume} />}
                     />
                     <StatCard
                       label={t('seasons.avgPropertyPrice')}

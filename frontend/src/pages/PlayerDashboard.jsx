@@ -6,6 +6,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import PeriodBonusWidget from '../components/PeriodBonusWidget';
 import RentCollectionWidget from '../components/RentCollectionWidget';
 import { formatMoney } from '../utils/format';
+import CompactValue from '../components/CompactValue';
 
 export default function PlayerDashboard() {
   const { t } = useTranslation();
@@ -106,23 +107,27 @@ export default function PlayerDashboard() {
         <div className="bg-white dark:bg-gray-900 p-4 rounded-lg">
           <p className="text-sm text-gray-500 dark:text-gray-400">{t('dashboard.balance')}</p>
           <p className="text-2xl font-bold text-orange-500 dark:text-orange-400">
-            {formatMoney(data.user?.balance || user.balance)}
+            <CompactValue value={data.user?.balance || user.balance} />
           </p>
         </div>
         <div className="bg-white dark:bg-gray-900 p-4 rounded-lg">
           <p className="text-sm text-gray-500 dark:text-gray-400">{t('dashboard.totalValue')}</p>
-          <p className="text-2xl font-bold text-orange-500 dark:text-orange-400">{formatMoney(totalValue)}</p>
+          <p className="text-2xl font-bold text-orange-500 dark:text-orange-400">
+            <CompactValue value={totalValue} />
+          </p>
         </div>
         <div className="bg-white dark:bg-gray-900 p-4 rounded-lg">
           <p className="text-sm text-gray-500 dark:text-gray-400">{t('bank.netWorth')}</p>
-          <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{formatMoney(netWorth)}</p>
+          <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+            <CompactValue value={netWorth} />
+          </p>
         </div>
         <div className="bg-white dark:bg-gray-900 p-4 rounded-lg">
           <p className="text-sm text-gray-500 dark:text-gray-400">{t('bank.totalDebt')}</p>
           <p
             className={`text-2xl font-bold ${totalDebt > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-400 dark:text-gray-500'}`}
           >
-            {formatMoney(totalDebt)}
+            <CompactValue value={totalDebt} />
           </p>
         </div>
       </div>
@@ -228,7 +233,9 @@ export default function PlayerDashboard() {
 
       <div className="bg-white dark:bg-gray-900 rounded-lg p-6 mb-6">
         <h2 className="text-xl font-bold mb-4">{t('dashboard.income')}</h2>
-        <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">{formatMoney(totalIncome)}</p>
+        <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">
+          <CompactValue value={totalIncome} />
+        </p>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('dashboard.totalRent')}</p>
         {loans && loans.length > 0 && (
           <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">

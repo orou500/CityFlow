@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
-import { formatMoney } from '../utils/format';
+import { formatDiff } from '../utils/format';
 
 function formatCountdown(ms) {
   if (ms <= 0) return '00:00:00';
@@ -88,7 +88,7 @@ export default function PeriodBonusWidget({ onClaimed }) {
           <h3 className="text-sm font-bold text-green-700 dark:text-green-300">{t('periodBonus.claimed')}</h3>
         </div>
         <div className="flex gap-4 mb-3">
-          <span className="text-sm text-green-600 dark:text-green-400">+{formatMoney(result.money).slice(1)}</span>
+          <span className="text-sm text-green-600 dark:text-green-400">{formatDiff(result.money)}</span>
           <span className="text-sm text-blue-600 dark:text-blue-400">+{result.xp} XP</span>
           {result.levelUps > 0 && (
             <span className="text-sm text-yellow-600 dark:text-yellow-400">

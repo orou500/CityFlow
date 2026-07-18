@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { useGameStore } from '../store/useGameStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { translateError } from '../i18n/errors';
-import { formatMoney } from '../utils/format';
+import { formatMoney, formatDiff, formatDiffExact, formatCompact } from '../utils/format';
+import CompactValue from '../components/CompactValue';
 
 export default function DevelopmentPage() {
   const { t } = useTranslation();
@@ -281,7 +282,7 @@ export default function DevelopmentPage() {
                     <div>
                       <p className="text-gray-400 dark:text-gray-500">{t('development.landSize')}</p>
                       <p className="text-gray-900 dark:text-white">
-                        {land.size ? `${land.size.toLocaleString()} ${t('development.sqft')}` : 'N/A'}
+                        {land.size ? `${formatCompact(land.size)} ${t('development.sqft')}` : 'N/A'}
                       </p>
                     </div>
                     <div>
@@ -317,7 +318,7 @@ export default function DevelopmentPage() {
                     <div className="flex justify-between">
                       <span className="text-gray-400 dark:text-gray-500">{t('development.sizeLabel')}</span>
                       <span>
-                        {selectedLand.size ? `${selectedLand.size.toLocaleString()} ${t('development.sqft')}` : 'N/A'}
+                        {selectedLand.size ? `${formatCompact(selectedLand.size)} ${t('development.sqft')}` : 'N/A'}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -441,7 +442,7 @@ export default function DevelopmentPage() {
                                   {t('development.estGrossIncome')}
                                 </span>
                                 <span className="text-orange-500 dark:text-orange-400">
-                                  +{formatMoney(estimate.estimatedIncome).slice(1)}
+                                  {formatDiff(estimate.estimatedIncome)}
                                 </span>
                               </div>
                               <div className="flex justify-between">
@@ -449,7 +450,7 @@ export default function DevelopmentPage() {
                                   {t('development.estMaintenance')}
                                 </span>
                                 <span className="text-red-600 dark:text-red-400">
-                                  -{formatMoney(estimate.estimatedMaintenance).slice(1)}
+                                  {formatDiffExact(-estimate.estimatedMaintenance)}
                                 </span>
                               </div>
                               <div className="border-t border-gray-200 dark:border-gray-700 pt-2 flex justify-between font-bold">
@@ -715,13 +716,13 @@ export default function DevelopmentPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400 dark:text-gray-500">{t('development.upgradeCost')}</span>
-                  <span className="text-red-500 font-medium">-{formatMoney(confirmUpgrade.cost)}</span>
+                  <span className="text-red-500 font-medium">{formatDiffExact(-confirmUpgrade.cost)}</span>
                 </div>
                 {confirmUpgrade.rentIncrease > 0 && (
                   <div className="flex justify-between">
                     <span className="text-gray-400 dark:text-gray-500">{t('development.expectedRentIncrease')}</span>
                     <span className="text-blue-600 dark:text-blue-400 font-medium">
-                      +{formatMoney(confirmUpgrade.rentIncrease)}/{t('development.period')}
+                      {formatDiff(confirmUpgrade.rentIncrease)}/{t('development.period')}
                     </span>
                   </div>
                 )}
@@ -789,7 +790,9 @@ export default function DevelopmentPage() {
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="font-semibold text-gray-900 dark:text-white text-sm">{formatMoney(u.cost)}</p>
+                            <p className="font-semibold text-gray-900 dark:text-white text-sm">
+                              <CompactValue value={u.cost} />
+                            </p>
                             <p className="text-xs text-gray-400 dark:text-gray-500">{t('development.costLabel')}</p>
                           </div>
                         </div>
@@ -818,7 +821,7 @@ export default function DevelopmentPage() {
                         </div>
                         {!canAfford && (
                           <p className="mt-2 text-xs text-red-500">
-                            {t('development.insufficientFunds')} — {formatMoney(u.cost)}
+                            {t('development.insufficientFunds')} — <CompactValue value={u.cost} />
                           </p>
                         )}
                       </div>
@@ -1010,7 +1013,9 @@ export default function DevelopmentPage() {
                         )}
                       </div>
                       {!isCompleted && !isActive && cost > 0 && (
-                        <p className="mt-2 text-xs text-orange-500">{formatMoney(cost)}</p>
+                        <p className="mt-2 text-xs text-orange-500">
+                          <CompactValue value={cost} />
+                        </p>
                       )}
                     </div>
                   );

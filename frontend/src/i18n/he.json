@@ -393,7 +393,7 @@
     "estMaintenance": "תחזוקה משוערת:",
     "netIncomeLabel": "הכנסה נטו לחודש:",
     "starting": "מתחיל...",
-    "startConstructionCost": "התחל בנייה — ${{cost}}",
+    "startConstructionCost": "התחל בנייה — {{cost}}",
     "backToProjects": "חזרה לפרויקטים",
     "calculating": "מחשב הערכה...",
     "startAQuote": "התחל פיתוח",
@@ -812,11 +812,11 @@
     "activity": {
       "title": "פעילות עולמית",
       "description": "פעילות אחרונה ברחבי יקום CityFlow.",
-      "buy": "{{buyer}} קנה את {{property}} ב-${{amount}}",
-      "sell": "{{seller}} מכר את {{property}} ב-${{amount}}",
+      "buy": "{{buyer}} קנה את {{property}} ב-{{amount}}",
+      "sell": "{{seller}} מכר את {{property}} ב-{{amount}}",
       "construction": "{{buyer}} השלים בנייה ב-{{property}}",
       "upgrade": "{{buyer}} שדרג את {{property}}",
-      "default": "{{property}} עבר עסקה ב-${{amount}}"
+      "default": "{{property}} עבר עסקה ב-{{amount}}"
     },
     "cta": {
       "title": "מוכן לבנות את האימפריה שלך?",

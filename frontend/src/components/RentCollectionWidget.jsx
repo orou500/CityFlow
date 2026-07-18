@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
-import { formatMoney } from '../utils/format';
+import { formatDiff } from '../utils/format';
 
 function formatCountdown(ms) {
   if (ms <= 0) return '00:00:00';
@@ -89,7 +89,7 @@ export default function RentCollectionWidget({ onCollected }) {
           <span className="text-lg">{'\uD83D\uDCB0'}</span>
           <h3 className="text-sm font-bold text-green-700 dark:text-green-300">{t('rentCollect.collected')}</h3>
         </div>
-        <p className="text-sm text-green-600 dark:text-green-400">+{formatMoney(result.collected).slice(1)}</p>
+        <p className="text-sm text-green-600 dark:text-green-400">{formatDiff(result.collected)}</p>
       </div>
     );
   }

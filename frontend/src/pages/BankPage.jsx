@@ -5,6 +5,7 @@ import { useGameStore } from '../store/useGameStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { translateError } from '../i18n/errors';
 import { formatMoney } from '../utils/format';
+import CompactValue from '../components/CompactValue';
 
 export default function BankPage() {
   const { t } = useTranslation();
@@ -86,19 +87,21 @@ export default function BankPage() {
         <div className="bg-white dark:bg-gray-900 p-4 rounded-lg">
           <p className="text-sm text-gray-500 dark:text-gray-400">{t('bank.cash')}</p>
           <p className="text-2xl font-bold text-orange-500 dark:text-orange-400">
-            {formatMoney(summary?.balance || user.balance)}
+            <CompactValue value={summary?.balance || user.balance} />
           </p>
         </div>
         <div className="bg-white dark:bg-gray-900 p-4 rounded-lg">
           <p className="text-sm text-gray-500 dark:text-gray-400">{t('bank.netWorth')}</p>
-          <p className="text-2xl font-bold text-orange-500 dark:text-orange-400">{formatMoney(summary?.netWorth)}</p>
+          <p className="text-2xl font-bold text-orange-500 dark:text-orange-400">
+            <CompactValue value={summary?.netWorth} />
+          </p>
         </div>
         <div className="bg-white dark:bg-gray-900 p-4 rounded-lg">
           <p className="text-sm text-gray-500 dark:text-gray-400">{t('bank.totalDebt')}</p>
           <p
             className={`text-2xl font-bold ${summary?.totalDebt > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-400 dark:text-gray-500'}`}
           >
-            {formatMoney(summary?.totalDebt)}
+            <CompactValue value={summary?.totalDebt} />
           </p>
         </div>
         <div className="bg-white dark:bg-gray-900 p-4 rounded-lg">
@@ -113,7 +116,7 @@ export default function BankPage() {
             <h2 className="text-xl font-bold mb-4">{t('bank.newLoan')}</h2>
             {summary && (
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                {t('bank.maxLoan')}: {formatMoney(summary.maxLoan)}
+                {t('bank.maxLoan')}: <CompactValue value={summary.maxLoan} />
               </p>
             )}
             {error && <p className="text-red-600 dark:text-red-400 text-sm mb-2">{error}</p>}

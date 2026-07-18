@@ -3,7 +3,8 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
 import { useGameStore } from '../store/useGameStore';
-import { formatMoney } from '../utils/format';
+import { formatMoney, formatCompact } from '../utils/format';
+import CompactValue from '../components/CompactValue';
 
 function StatCard({ label, value, color }) {
   return (
@@ -556,7 +557,7 @@ export default function UserProfilePage() {
             <div className="flex items-center gap-3">
               <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">Lv.{profileUser.level || 1}</span>
               <span className="text-sm text-gray-500 dark:text-gray-400">
-                {(profileUser.xp || 0).toLocaleString()} / {(profileUser.xpToNextLevel || 100).toLocaleString()} XP
+                {formatCompact(profileUser.xp || 0)} / {formatCompact(profileUser.xpToNextLevel || 100)} XP
               </span>
             </div>
             <span className="text-xs text-gray-400 dark:text-gray-500">

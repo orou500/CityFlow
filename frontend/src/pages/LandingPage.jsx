@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { useTheme } from '../components/ThemeProvider';
 import Footer from '../components/Footer';
 import { formatMoney } from '../utils/format';
+import CompactValue from '../components/CompactValue';
 
 function AnimatedCounter({ target, suffix = '' }) {
   const [value, setValue] = useState(0);
@@ -297,7 +298,7 @@ export default function LandingPage() {
                     <span className="text-primary font-medium">{player.displayName || player.username}</span>
                   </div>
                   <span className="text-blue-600 dark:text-blue-400 font-semibold">
-                    {formatMoney(player.netWorth || 0)}
+                    <CompactValue value={player.netWorth || 0} />
                   </span>
                 </Link>
               ))}

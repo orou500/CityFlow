@@ -7,6 +7,7 @@ import { useTheme } from './ThemeProvider';
 import { useToast } from './Toast';
 import UserSearch from './UserSearch';
 import { formatMoney } from '../utils/format';
+import CompactValue from './CompactValue';
 
 export default function Navbar() {
   const { t, i18n } = useTranslation();
@@ -213,7 +214,7 @@ export default function Navbar() {
             </button>
 
             <span className="text-sm text-green-600 dark:text-green-400 font-semibold bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded">
-              {formatMoney(user.balance)}
+              <CompactValue value={user.balance} />
             </span>
 
             {user?.level > 0 && (

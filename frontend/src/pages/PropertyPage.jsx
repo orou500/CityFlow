@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { useGameStore } from '../store/useGameStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { translateError } from '../i18n/errors';
-import { formatMoney } from '../utils/format';
+import { formatMoney, formatMoneyExact, formatCompact } from '../utils/format';
+import CompactValue from '../components/CompactValue';
 
 const API = '/api';
 
@@ -64,10 +65,10 @@ function PriceHistoryChart({ history }) {
   const diff = activeIdx > 0 && active ? active.price - history[activeIdx - 1].price : null;
   const diffPct = diff !== null && prevPrice ? (diff / prevPrice) * 100 : null;
 
-  const fmt = (v) => `$${v.toLocaleString('en-US')}`;
+  const fmt = formatMoneyExact;
   const fmtDiff = (v) => {
     const sign = v >= 0 ? '+' : '';
-    return `${sign}$${Math.abs(v).toLocaleString('en-US')}`;
+    return `${sign}$${formatCompact(Math.abs(v))}`;
   };
   const fmtPct = (v) => {
     const sign = v >= 0 ? '+' : '';
@@ -375,17 +376,19 @@ export default function PropertyPage() {
               <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
                 <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.currentValue')}</p>
                 <p className="text-sm md:text-lg font-bold text-orange-500 dark:text-orange-400 truncate">
-                  {formatMoney(property.currentPrice)}
+                  <CompactValue value={property.currentPrice} />
                 </p>
               </div>
               <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
                 <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.baseValue')}</p>
-                <p className="text-sm md:text-lg font-semibold truncate">{formatMoney(property.basePrice)}</p>
+                <p className="text-sm md:text-lg font-semibold truncate">
+                  <CompactValue value={property.basePrice} />
+                </p>
               </div>
               <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
                 <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.rentIncome')}</p>
                 <p className="text-sm md:text-lg font-semibold text-orange-500 dark:text-orange-400 truncate">
-                  {formatMoney(property.rent)}
+                  <CompactValue value={property.rent} />
                 </p>
               </div>
               <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
@@ -436,7 +439,7 @@ export default function PropertyPage() {
                 <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
                   <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.maintenanceCost')}</p>
                   <p className="text-sm md:text-lg font-semibold text-red-600 dark:text-red-400 truncate">
-                    {formatMoney(property.maintenanceCost)}
+                    <CompactValue value={property.maintenanceCost} />
                   </p>
                 </div>
               </div>
@@ -538,7 +541,7 @@ export default function PropertyPage() {
                 <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
                   <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.totalRentEarned')}</p>
                   <p className="font-semibold text-purple-600 dark:text-purple-400 truncate">
-                    {formatMoney(totalRentEarned) || '$0'}
+                    {formatMoney(totalRentEarned)}
                   </p>
                 </div>
                 {totalInvestment > 0 && (
