@@ -130,11 +130,18 @@ router.get('/:id/detail', authenticate, async (req, res) => {
     const investmentTransactions = ownerId
       ? await Transaction.find({
           propertyId: property._id,
-          type: { $in: ['buy', 'construction', 'upgrade', 'grade_upgrade'] },
+          type: { $in: ['buy', 'construction', 'upgrade', 'grade_upgrade', 'improvement'] },
           buyerId: ownerId,
         })
       : [];
-    const totalInvestment = investmentTransactions.reduce((sum, t) => sum + t.price, 0);
+    const totalInvestmentFromTransactions = investmentTransactions.reduce((sum, t) => sum + t.price, 0);
+
+    const totalMaintenanceSpent = (property.managementHistory || []).reduce(
+      (sum, h) => sum + (h.maintenanceCost || 0),
+      0,
+    );
+
+    const totalInvestment = totalInvestmentFromTransactions + totalMaintenanceSpent;
 
     res.json({ property, totalRentEarned, totalInvestment });
   } catch (err) {

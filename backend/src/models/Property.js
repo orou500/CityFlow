@@ -87,6 +87,26 @@ const propertySchema = new mongoose.Schema(
         effect: { type: mongoose.Schema.Types.Mixed },
       },
     ],
+
+    qualityScore: { type: Number, default: 70, min: 0, max: 100 },
+    maintenanceLevel: {
+      type: String,
+      enum: ['none', 'basic', 'standard', 'premium'],
+      default: 'none',
+    },
+    rentPerUnit: { type: Number, default: 0 },
+    lastRentAdjustTick: { type: Number, default: 0 },
+    lastQualityTick: { type: Number, default: 0 },
+    managementHistory: [
+      {
+        tick: { type: Number },
+        occupancy: { type: Number },
+        qualityScore: { type: Number },
+        rentIncome: { type: Number },
+        maintenanceCost: { type: Number },
+        netProfit: { type: Number },
+      },
+    ],
   },
   { timestamps: true },
 );

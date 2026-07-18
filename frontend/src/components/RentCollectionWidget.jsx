@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
-import { formatDiff } from '../utils/format';
+import { formatMoney, formatDiff } from '../utils/format';
 
 function formatCountdown(ms) {
   if (ms <= 0) return '00:00:00';

@@ -7,6 +7,7 @@ import { generateProperties } from './propertyGeneration.js';
 import { generateEvents, tickEvents } from './events.js';
 import { processConstruction } from './constructionProcessing.js';
 import { processImprovements } from './improvementProcessing.js';
+import { processPropertyManagement } from './propertyManagement.js';
 import Event from '../models/Event.js';
 import { incrementTick } from '../models/GameState.js';
 import { endCurrentSeasonAndStartNew } from './seasonReset.js';
@@ -30,6 +31,9 @@ export async function executeTick() {
 
     console.log('[TICK] Processing rent...');
     const rentResults = await processRent();
+
+    console.log('[TICK] Processing property management...');
+    await processPropertyManagement(tickNumber);
 
     console.log('[TICK] Processing loans...');
     const loanResults = await processLoans();
