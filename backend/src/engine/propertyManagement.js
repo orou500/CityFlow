@@ -6,6 +6,7 @@ import {
   simulateOccupancy,
   HISTORY_MAX_ENTRIES,
 } from '../config/propertyManagement.js';
+import { getInvestmentFactors } from './propertyValuation.js';
 
 export async function processPropertyManagement(currentTick) {
   const properties = await Property.find({
@@ -24,6 +25,9 @@ export async function processPropertyManagement(currentTick) {
         cityCache.set(city._id.toString(), city);
       }
       const cityData = cityCache.get(city._id.toString());
+
+      const investmentFactors = getInvestmentFactors(property);
+      property._investmentOccupancyBonus = investmentFactors.occupancyBonus;
 
       const newOccupancy = simulateOccupancy(property, cityData.demandIndex, cityData.supplyIndex);
       property.occupancy = newOccupancy;

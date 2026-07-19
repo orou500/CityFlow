@@ -194,11 +194,11 @@ function CompaniesTab() {
             <thead>
               <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
                 <th className="px-4 py-3 text-left">{t('stocks.company')}</th>
-                <th className="px-4 py-3 text-left">{t('stocks.industry')}</th>
+                <th className="hidden sm:table-cell px-4 py-3 text-left">{t('stocks.industry')}</th>
                 <th className="px-4 py-3 text-right">{t('stocks.sharePrice')}</th>
                 <th className="px-4 py-3 text-right">{t('stocks.change')}</th>
-                <th className="px-4 py-3 text-right">{t('stocks.marketCap')}</th>
-                <th className="px-4 py-3 text-right">{t('stocks.employees')}</th>
+                <th className="hidden sm:table-cell px-4 py-3 text-right">{t('stocks.marketCap')}</th>
+                <th className="hidden md:table-cell px-4 py-3 text-right">{t('stocks.employees')}</th>
               </tr>
             </thead>
             <tbody>
@@ -216,7 +216,7 @@ function CompaniesTab() {
                       </div>
                     </Link>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="hidden sm:table-cell px-4 py-3">
                     <span className={`text-xs px-2 py-0.5 rounded ${INDUSTRY_COLORS[c.industry]}`}>{c.industry}</span>
                   </td>
                   <td className="px-4 py-3 text-right text-gray-900 dark:text-white font-medium">
@@ -229,13 +229,13 @@ function CompaniesTab() {
                     </span>
                   </td>
                   <td
-                    className="px-4 py-3 text-right text-gray-500 dark:text-gray-400"
+                    className="hidden sm:table-cell px-4 py-3 text-right text-gray-500 dark:text-gray-400"
                     title={formatMoneyExact(c.marketCap)}
                   >
                     {formatMoney(c.marketCap)}
                   </td>
                   <td
-                    className="px-4 py-3 text-right text-gray-500 dark:text-gray-400"
+                    className="hidden md:table-cell px-4 py-3 text-right text-gray-500 dark:text-gray-400"
                     title={c.employees?.toLocaleString()}
                   >
                     {formatCount(c.employees)}
@@ -300,7 +300,7 @@ function IndexesTab() {
 
   return (
     <>
-      <div className="flex flex-wrap gap-2 items-center">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-2 items-stretch sm:items-center">
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -327,7 +327,10 @@ function IndexesTab() {
           <option value="return">{t('indexes.totalReturn')}</option>
           <option value="name">{t('indexes.name')}</option>
         </select>
-        <Link to="/stocks/portfolio" className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-500 ml-auto">
+        <Link
+          to="/stocks/portfolio"
+          className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-500 sm:ml-auto text-center"
+        >
           {t('indexes.myPortfolio')}
         </Link>
       </div>
@@ -338,11 +341,11 @@ function IndexesTab() {
             <thead>
               <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
                 <th className="px-4 py-3 text-left">{t('indexes.index')}</th>
-                <th className="px-4 py-3 text-left">{t('indexes.type')}</th>
+                <th className="hidden sm:table-cell px-4 py-3 text-left">{t('indexes.type')}</th>
                 <th className="px-4 py-3 text-right">{t('indexes.indexValue')}</th>
                 <th className="px-4 py-3 text-right">{t('indexes.change')}</th>
-                <th className="px-4 py-3 text-right">{t('indexes.totalReturn')}</th>
-                <th className="px-4 py-3 text-right">{t('indexes.constituents')}</th>
+                <th className="hidden sm:table-cell px-4 py-3 text-right">{t('indexes.totalReturn')}</th>
+                <th className="hidden md:table-cell px-4 py-3 text-right">{t('indexes.constituents')}</th>
               </tr>
             </thead>
             <tbody>
@@ -360,7 +363,7 @@ function IndexesTab() {
                       </div>
                     </Link>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="hidden sm:table-cell px-4 py-3">
                     <span className={`text-xs px-2 py-0.5 rounded capitalize ${INDEX_TYPE_COLORS[idx.type]}`}>
                       {idx.type}
                     </span>
@@ -377,13 +380,15 @@ function IndexesTab() {
                       {idx.dayChangePercent}%
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="hidden sm:table-cell px-4 py-3 text-right">
                     <span className={idx.totalReturn >= 0 ? 'text-green-500' : 'text-red-500'}>
                       {idx.totalReturn >= 0 ? '+' : ''}
                       {idx.totalReturn}%
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400">{idx.constituentCount}</td>
+                  <td className="hidden md:table-cell px-4 py-3 text-right text-gray-500 dark:text-gray-400">
+                    {idx.constituentCount}
+                  </td>
                 </tr>
               ))}
             </tbody>

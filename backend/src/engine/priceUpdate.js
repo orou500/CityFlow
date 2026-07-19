@@ -3,6 +3,7 @@ import City from '../models/City.js';
 import { getTickNumber } from '../models/GameState.js';
 import { getRatingBonuses } from '../config/improvementProjects.js';
 import { ECONOMIC_CONDITIONS } from '../config/demographics.js';
+import { getInvestmentFactors } from './propertyValuation.js';
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -111,13 +112,10 @@ export async function updatePrices(activeEvents) {
     const economicFactor = econ.priceModifier;
     const ratingBonuses = getRatingBonuses(property.propertyRating || 'standard');
     const ratingValueMultiplier = 1 + (ratingBonuses.valueBonus || 0);
+
+    const intrinsicValue = property.intrinsicValue || property.basePrice || property.currentPrice;
     const fairValue =
-      (property.basePrice || property.currentPrice) *
-      demandFactor *
-      supplyFactor *
-      growthFactor *
-      economicFactor *
-      ratingValueMultiplier;
+      intrinsicValue * demandFactor * supplyFactor * growthFactor * economicFactor * ratingValueMultiplier;
 
     let regime = property.regime;
     let regimeEndTick = property.regimeEndTick || 0;
@@ -130,7 +128,11 @@ export async function updatePrices(activeEvents) {
 
     const regimeConfig = REGIMES[regime];
 
+    const investmentFactors = getInvestmentFactors(property);
+
     const regimeBias = regimeConfig.bias;
+
+    const resilienceMod = regime === 'bear' || regime === 'correction' ? investmentFactors.downturnResilience * 0.5 : 0;
 
     const reversionStrength = 0.025;
     const reversion = clamp(
@@ -145,9 +147,9 @@ export async function updatePrices(activeEvents) {
     const noiseBase = propertyVol * 0.012 * regimeConfig.volMod;
     const noise = (Math.random() - 0.5) * noiseBase * 2;
 
-    let change = regimeBias + reversion + momentum + noise;
+    let change = regimeBias + reversion + momentum + noise + resilienceMod;
 
-    const priceRatio = property.basePrice > 0 ? property.currentPrice / property.basePrice : 1.0;
+    const priceRatio = intrinsicValue > 0 ? property.currentPrice / intrinsicValue : 1.0;
 
     if (priceRatio > 2.5) {
       const zone = (priceRatio - 2.5) / 0.5;
@@ -163,8 +165,9 @@ export async function updatePrices(activeEvents) {
 
     let newPrice = property.currentPrice * (1 + change);
 
-    const floor = Math.round((property.basePrice || 0) * 0.5);
-    const ceiling = Math.round((property.basePrice || 0) * 3.0);
+    const anchorPrice = intrinsicValue || property.basePrice || 1;
+    const floor = Math.round(anchorPrice * 0.5);
+    const ceiling = Math.round(anchorPrice * 3.0);
     newPrice = clamp(newPrice, floor || 1, ceiling || Infinity);
 
     const ratingRentMultiplier = 1 + (ratingBonuses.rentBonus || 0);
@@ -172,7 +175,9 @@ export async function updatePrices(activeEvents) {
     const cityAvgRent = city.avgRent || Math.round(newPrice * 0.004);
     const rentFromCity = Math.round((cityAvgRent * unitCount * econ.rentModifier) / unitCount);
     const rentFromPrice = Math.round(newPrice * 0.004 * (0.5 + Math.random() * 0.5));
-    const newRent = Math.round((rentFromCity * 0.6 + rentFromPrice * 0.4) * ratingRentMultiplier);
+    const newRent = Math.round(
+      (rentFromCity * 0.6 + rentFromPrice * 0.4) * ratingRentMultiplier * investmentFactors.rentMultiplier,
+    );
 
     const priceHistory = (property.priceHistory || []).concat({ tick: tickNumber, price: newPrice });
     const trimmedHistory = priceHistory.length > 100 ? priceHistory.slice(-100) : priceHistory;

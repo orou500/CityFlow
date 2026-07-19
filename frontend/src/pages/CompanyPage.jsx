@@ -113,11 +113,11 @@ export default function CompanyPage() {
 
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex items-center gap-3">
           <span className="text-3xl">{INDUSTRY_ICONS[company.industry]}</span>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{company.name}</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{company.name}</h1>
             <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
               <span>{company.ticker}</span>
               <span className="capitalize">{company.industry}</span>
@@ -381,9 +381,9 @@ export default function CompanyPage() {
                 <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
                   <th className="px-3 py-2 text-left">{t('stocks.month')}</th>
                   <th className="px-3 py-2 text-right">{t('stocks.sharePrice')}</th>
-                  <th className="px-3 py-2 text-right">{t('stocks.employees')}</th>
-                  <th className="px-3 py-2 text-right">{t('stocks.revenue')}</th>
-                  <th className="px-3 py-2 text-right">{t('stocks.marketCap')}</th>
+                  <th className="hidden sm:table-cell px-3 py-2 text-right">{t('stocks.employees')}</th>
+                  <th className="hidden sm:table-cell px-3 py-2 text-right">{t('stocks.revenue')}</th>
+                  <th className="hidden md:table-cell px-3 py-2 text-right">{t('stocks.marketCap')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -395,19 +395,19 @@ export default function CompanyPage() {
                       <td className="px-3 py-2 text-gray-900 dark:text-white">{h.tick}</td>
                       <td className="px-3 py-2 text-right text-gray-900 dark:text-white">${h.price?.toFixed(2)}</td>
                       <td
-                        className="px-3 py-2 text-right text-gray-500 dark:text-gray-400"
+                        className="hidden sm:table-cell px-3 py-2 text-right text-gray-500 dark:text-gray-400"
                         title={h.employees?.toLocaleString()}
                       >
                         {formatCount(h.employees)}
                       </td>
                       <td
-                        className="px-3 py-2 text-right text-gray-500 dark:text-gray-400"
+                        className="hidden sm:table-cell px-3 py-2 text-right text-gray-500 dark:text-gray-400"
                         title={formatMoneyExact(h.revenue)}
                       >
                         {formatMoney(h.revenue)}
                       </td>
                       <td
-                        className="px-3 py-2 text-right text-gray-500 dark:text-gray-400"
+                        className="hidden md:table-cell px-3 py-2 text-right text-gray-500 dark:text-gray-400"
                         title={formatMoneyExact(h.marketCap)}
                       >
                         {formatMoney(h.marketCap)}

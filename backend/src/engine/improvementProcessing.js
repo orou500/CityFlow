@@ -46,6 +46,7 @@ export async function processImprovements() {
         improvementId: improvement.id,
         name: improvement.name,
         completedAt: new Date(),
+        completedAtTick: tickNumber,
         cost: property.activeImprovement.cost || 0,
         valueBonus: improvement.valueBonus,
         rentBonus: improvement.rentBonus,

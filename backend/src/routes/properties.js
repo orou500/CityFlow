@@ -143,7 +143,20 @@ router.get('/:id/detail', authenticate, async (req, res) => {
 
     const totalInvestment = totalInvestmentFromTransactions + totalMaintenanceSpent;
 
-    res.json({ property, totalRentEarned, totalInvestment });
+    const investmentHistory = property.investmentHistory || [];
+    const intrinsicValue = property.intrinsicValue || 0;
+    const unrealizedGain = intrinsicValue > 0 && totalInvestment > 0 ? intrinsicValue - totalInvestment : 0;
+    const roi = totalInvestment > 0 ? ((intrinsicValue - totalInvestment) / totalInvestment) * 100 : 0;
+
+    res.json({
+      property,
+      totalRentEarned,
+      totalInvestment,
+      investmentHistory,
+      intrinsicValue,
+      unrealizedGain,
+      roi,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -214,6 +227,14 @@ router.post('/buy', authenticate, async (req, res) => {
     property.lastPurchasePrice = price;
     property.lastPurchaseDate = new Date();
     property.activeImprovement = undefined;
+
+    if (!property.investmentHistory) property.investmentHistory = [];
+    property.investmentHistory.push({
+      type: 'purchase',
+      amount: price,
+      description: `Purchased by ${buyer.username}`,
+    });
+
     await property.save();
 
     const lastBuyTx = await Transaction.findOne({
@@ -385,6 +406,14 @@ router.post('/grade/upgrade', authenticate, async (req, res) => {
     property.gradeHistory = property.gradeHistory || [];
     property.gradeHistory.push({ grade: newGrade, upgradedAt: new Date(), cost });
     property.lastGradeUpgradeAt = new Date();
+
+    if (!property.investmentHistory) property.investmentHistory = [];
+    property.investmentHistory.push({
+      type: 'grade_upgrade',
+      amount: cost,
+      description: `Grade ${newGrade}`,
+    });
+
     await property.save();
 
     await Transaction.create({

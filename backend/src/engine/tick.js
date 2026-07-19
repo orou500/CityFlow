@@ -11,6 +11,8 @@ import { generateEvents, tickEvents } from './events.js';
 import { processConstruction } from './constructionProcessing.js';
 import { processImprovements } from './improvementProcessing.js';
 import { processPropertyManagement } from './propertyManagement.js';
+import { updateCreditScores } from './creditScore.js';
+import { updateIntrinsicValues } from './propertyValuation.js';
 import Event from '../models/Event.js';
 import { incrementTick } from '../models/GameState.js';
 import { endCurrentSeasonAndStartNew } from './seasonReset.js';
@@ -38,6 +40,9 @@ export async function executeTick() {
     console.log('[TICK] Simulating stock indexes...');
     const indexResults = await simulateIndexes(tickNumber);
 
+    console.log('[TICK] Updating intrinsic property values...');
+    const intrinsicCount = await updateIntrinsicValues();
+
     console.log('[TICK] Updating prices...');
     const priceUpdates = await updatePrices(activeEvents);
 
@@ -49,6 +54,9 @@ export async function executeTick() {
 
     console.log('[TICK] Processing loans...');
     const loanResults = await processLoans();
+
+    console.log('[TICK] Updating credit scores...');
+    const creditResults = await updateCreditScores(tickNumber);
 
     console.log('[TICK] Balancing market...');
     await balanceMarket();
@@ -109,8 +117,10 @@ export async function executeTick() {
     if (stockEvents > 0) console.log(`[TICK] Company events: ${stockEvents}`);
     console.log(`[TICK] Stock indexes: ${indexResults.length} indexes updated`);
     console.log(`[TICK] Prices updated: ${priceUpdates.length}`);
+    console.log(`[TICK] Intrinsic values updated: ${intrinsicCount}`);
     console.log(`[TICK] Rent processed: ${rentResults.length}`);
     console.log(`[TICK] Loans processed: ${loanResults.length}`);
+    console.log(`[TICK] Credit scores updated: ${creditResults.length}`);
     console.log(`[TICK] New properties: ${propertyGeneration.reduce((s, r) => s + r.generated, 0)}`);
     console.log(`[TICK] Construction processed: ${constructionResults.length}`);
     console.log(`[TICK] Improvements processed: ${improvementResults.length}`);

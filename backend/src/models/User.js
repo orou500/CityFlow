@@ -44,6 +44,8 @@ const userSchema = new mongoose.Schema(
     verificationExpires: { type: Date, default: null },
     passwordResetToken: { type: String, default: null },
     passwordResetExpires: { type: Date, default: null },
+    creditScore: { type: Number, default: 650 },
+    creditScoreUpdatedTick: { type: Number, default: 0 },
     lastPeriodBonusClaim: { type: Date, default: null },
     uncollectedRent: { type: Number, default: 0 },
     rentStorageStartedAt: { type: Date, default: null },

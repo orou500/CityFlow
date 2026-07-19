@@ -63,6 +63,15 @@ export async function processConstruction() {
             land.basePrice = project.totalCost;
             land.currentPrice = project.totalCost;
 
+            land.investmentHistory = [
+              {
+                type: 'construction',
+                amount: project.totalCost,
+                tick: tickNumber,
+                description: project.projectName,
+              },
+            ];
+
             const cityMultiplier = land.cityId ? 0.8 + (land.cityId.demandIndex || 1.0) * 0.2 : 1.0;
             land.currentPrice = Math.round(project.totalCost * (0.9 + Math.random() * 0.2) * cityMultiplier);
 

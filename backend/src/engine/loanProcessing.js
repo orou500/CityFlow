@@ -2,6 +2,7 @@ import Loan from '../models/Loan.js';
 import User from '../models/User.js';
 import Property from '../models/Property.js';
 import Transaction from '../models/Transaction.js';
+import CreditScoreHistory from '../models/CreditScoreHistory.js';
 
 export async function processLoans() {
   const activeLoans = await Loan.find({ active: true });
@@ -19,6 +20,7 @@ export async function processLoans() {
       user.balance -= payment;
       loan.remainingBalance -= principalPortion;
       loan.ticksRemaining--;
+      loan.ticksPaid++;
       loan.missedPayments = 0;
 
       await Transaction.create({
@@ -34,6 +36,15 @@ export async function processLoans() {
       }
     } else {
       loan.missedPayments++;
+
+      user.creditScore = Math.max(300, (user.creditScore || 650) - 15);
+      await CreditScoreHistory.create({
+        userId: user._id,
+        tick: 0,
+        score: user.creditScore,
+        change: -15,
+        reason: 'missed_payment',
+      });
 
       if (loan.missedPayments >= 3) {
         const properties = await Property.find({ ownerId: user._id });
@@ -56,6 +67,15 @@ export async function processLoans() {
         loan.active = false;
         loan.remainingBalance = 0;
         loan.ticksRemaining = 0;
+
+        user.creditScore = Math.max(300, (user.creditScore || 650) - 30);
+        await CreditScoreHistory.create({
+          userId: user._id,
+          tick: 0,
+          score: user.creditScore,
+          change: -30,
+          reason: 'default',
+        });
       } else {
         const penalty = Math.round(payment * 0.1);
         user.balance = Math.max(0, user.balance - penalty);
