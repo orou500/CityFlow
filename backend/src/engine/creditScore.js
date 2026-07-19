@@ -67,9 +67,7 @@ export async function updateCreditScores(tickNumber) {
   for (const user of users) {
     const activeLoans = await Loan.find({ userId: user._id, active: true });
     const completedLoans = await Loan.find({ userId: user._id, active: false });
-    const meaningfulCompleted = completedLoans.filter(
-      (l) => l.ticksPaid >= Math.ceil(l.durationTicks / 2),
-    ).length;
+    const meaningfulCompleted = completedLoans.filter((l) => l.ticksPaid >= Math.ceil(l.durationTicks / 2)).length;
     const propertyCount = user.ownedProperties.length;
 
     const { score, logs } = calculateCreditScore(user, activeLoans, propertyCount, meaningfulCompleted);
