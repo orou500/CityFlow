@@ -115,8 +115,8 @@ export default function StockPortfolio() {
                 <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
                   <th className="px-4 py-3 text-left">{t('stocks.company')}</th>
                   <th className="px-4 py-3 text-right">{t('stocks.shares')}</th>
-                  <th className="px-4 py-3 text-right">{t('stocks.avgBuyPrice')}</th>
-                  <th className="px-4 py-3 text-right">{t('stocks.currentPrice')}</th>
+                  <th className="hidden sm:table-cell px-4 py-3 text-right">{t('stocks.avgBuyPrice')}</th>
+                  <th className="hidden sm:table-cell px-4 py-3 text-right">{t('stocks.currentPrice')}</th>
                   <th className="px-4 py-3 text-right">{t('stocks.currentValue')}</th>
                   <th className="px-4 py-3 text-right">{t('stocks.profitLoss')}</th>
                 </tr>
@@ -142,10 +142,10 @@ export default function StockPortfolio() {
                     >
                       {formatCount(h.shares)}
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400">
+                    <td className="hidden sm:table-cell px-4 py-3 text-right text-gray-500 dark:text-gray-400">
                       ${h.avgBuyPrice?.toFixed(2)}
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-900 dark:text-white">
+                    <td className="hidden sm:table-cell px-4 py-3 text-right text-gray-900 dark:text-white">
                       ${h.company?.sharePrice?.toFixed(2)}
                     </td>
                     <td className="px-4 py-3 text-right text-gray-900 dark:text-white">
@@ -185,8 +185,8 @@ export default function StockPortfolio() {
                 <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
                   <th className="px-4 py-3 text-left">{t('indexes.index')}</th>
                   <th className="px-4 py-3 text-right">{t('indexes.shares')}</th>
-                  <th className="px-4 py-3 text-right">{t('indexes.avgBuyPrice')}</th>
-                  <th className="px-4 py-3 text-right">{t('indexes.currentPrice')}</th>
+                  <th className="hidden sm:table-cell px-4 py-3 text-right">{t('indexes.avgBuyPrice')}</th>
+                  <th className="hidden sm:table-cell px-4 py-3 text-right">{t('indexes.currentPrice')}</th>
                   <th className="px-4 py-3 text-right">{t('indexes.currentValue')}</th>
                   <th className="px-4 py-3 text-right">{t('indexes.profitLoss')}</th>
                 </tr>
@@ -212,10 +212,10 @@ export default function StockPortfolio() {
                     >
                       {formatCount(h.shares)}
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400">
+                    <td className="hidden sm:table-cell px-4 py-3 text-right text-gray-500 dark:text-gray-400">
                       ${h.avgBuyPrice?.toFixed(2)}
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-900 dark:text-white">
+                    <td className="hidden sm:table-cell px-4 py-3 text-right text-gray-900 dark:text-white">
                       <span title={`$${h.index?.value?.toFixed(2)}`}>{formatPrice(h.index?.value)}</span>
                     </td>
                     <td className="px-4 py-3 text-right text-gray-900 dark:text-white">

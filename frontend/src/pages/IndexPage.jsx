@@ -108,11 +108,11 @@ export default function IndexPage() {
 
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex items-center gap-3">
           <span className="text-3xl">{TYPE_ICONS[index.type]}</span>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{index.name}</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{index.name}</h1>
             <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
               <span>{index.ticker}</span>
               <span className="capitalize">{index.type}</span>
@@ -354,10 +354,10 @@ export default function IndexPage() {
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
                   <th className="px-4 py-3 text-left">{t('indexes.company')}</th>
-                  <th className="px-4 py-3 text-left">{t('indexes.industry')}</th>
+                  <th className="hidden sm:table-cell px-4 py-3 text-left">{t('indexes.industry')}</th>
                   <th className="px-4 py-3 text-right">{t('indexes.sharePrice')}</th>
                   <th className="px-4 py-3 text-right">{t('indexes.change')}</th>
-                  <th className="px-4 py-3 text-right">{t('indexes.marketCap')}</th>
+                  <th className="hidden sm:table-cell px-4 py-3 text-right">{t('indexes.marketCap')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -375,7 +375,9 @@ export default function IndexPage() {
                       </Link>
                       <div className="text-xs text-gray-500 dark:text-gray-400">{c.ticker}</div>
                     </td>
-                    <td className="px-4 py-3 text-gray-500 dark:text-gray-400 capitalize">{c.industry}</td>
+                    <td className="hidden sm:table-cell px-4 py-3 text-gray-500 dark:text-gray-400 capitalize">
+                      {c.industry}
+                    </td>
                     <td className="px-4 py-3 text-right text-gray-900 dark:text-white">${c.sharePrice?.toFixed(2)}</td>
                     <td className="px-4 py-3 text-right">
                       <span className={c.dayChangePercent >= 0 ? 'text-green-500' : 'text-red-500'}>
@@ -384,7 +386,7 @@ export default function IndexPage() {
                       </span>
                     </td>
                     <td
-                      className="px-4 py-3 text-right text-gray-500 dark:text-gray-400"
+                      className="hidden sm:table-cell px-4 py-3 text-right text-gray-500 dark:text-gray-400"
                       title={formatMoneyExact(c.marketCap)}
                     >
                       {formatMoney(c.marketCap)}

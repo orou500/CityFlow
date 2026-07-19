@@ -145,10 +145,10 @@ export const useGameStore = create((set, get) => ({
     return await api('/bank/options');
   },
 
-  applyLoan: async (principal, durationTicks) => {
+  applyLoan: async (productId, principal, durationTicks) => {
     const data = await api('/bank/apply', {
       method: 'POST',
-      body: JSON.stringify({ principal, durationTicks }),
+      body: JSON.stringify({ productId, principal, durationTicks }),
     });
     await get().fetchLoans();
     return data;

@@ -117,13 +117,16 @@ export function simulateOccupancy(property, cityDemandIndex, citySupplyIndex) {
 
   const tier = MAINTENANCE_TIERS[property.maintenanceLevel] || MAINTENANCE_TIERS.none;
 
+  const investmentOccupancyBonus = property._investmentOccupancyBonus || 0;
+
   const targetOccupancy =
     OCCUPANCY_FACTORS.baseOccupancy +
     normalizedQuality * OCCUPANCY_FACTORS.qualityWeight +
     (rentCompetitiveness - 1) * OCCUPANCY_FACTORS.rentCompetitivenessWeight +
     demand * OCCUPANCY_FACTORS.demandWeight +
     supplyPressure * OCCUPANCY_FACTORS.supplyWeight +
-    tier.occupancyModifier;
+    tier.occupancyModifier +
+    investmentOccupancyBonus / 100;
 
   const clampedTarget = Math.max(
     OCCUPANCY_FACTORS.minOccupancy,

@@ -117,6 +117,8 @@ router.post('/accept/:id', async (req, res) => {
     property.lastPurchasePrice = price;
     property.lastPurchaseDate = new Date();
     property.activeImprovement = undefined;
+    if (!property.investmentHistory) property.investmentHistory = [];
+    property.investmentHistory.push({ type: 'purchase', amount: price, description: `Purchased by ${buyer.username}` });
     await property.save();
 
     const t = await Transaction.create({
@@ -265,6 +267,8 @@ router.post('/accept-counter/:id', async (req, res) => {
     property.lastPurchasePrice = price;
     property.lastPurchaseDate = new Date();
     property.activeImprovement = undefined;
+    if (!property.investmentHistory) property.investmentHistory = [];
+    property.investmentHistory.push({ type: 'purchase', amount: price, description: `Purchased by ${buyer.username}` });
     await property.save();
 
     const t = await Transaction.create({

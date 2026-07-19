@@ -411,7 +411,7 @@ export default function PropertyPage() {
     );
   }
 
-  const { property, totalRentEarned, totalInvestment } = data;
+  const { property, totalRentEarned, totalInvestment, investmentHistory, intrinsicValue, unrealizedGain, roi } = data;
   const isOwner = user && property.ownerId?._id === user._id;
   const isBankOwned = !property?.ownerId;
   const canOffer = user && !isOwner && !isBankOwned && property?.ownerId;
@@ -429,7 +429,7 @@ export default function PropertyPage() {
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white dark:bg-gray-900 rounded-lg p-6">
             <h1 className="text-2xl font-bold mb-4">{property.name}</h1>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
               <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
                 <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.currentValue')}</p>
                 <p className="text-sm md:text-lg font-bold text-orange-500 dark:text-orange-400 truncate">
@@ -442,6 +442,14 @@ export default function PropertyPage() {
                   <CompactValue value={property.basePrice} />
                 </p>
               </div>
+              {intrinsicValue > 0 && (
+                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.intrinsicValue')}</p>
+                  <p className="text-sm md:text-lg font-semibold text-blue-600 dark:text-blue-400 truncate">
+                    <CompactValue value={intrinsicValue} />
+                  </p>
+                </div>
+              )}
               <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
                 <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.rentIncome')}</p>
                 <p className="text-sm md:text-lg font-semibold text-orange-500 dark:text-orange-400 truncate">
@@ -795,6 +803,87 @@ export default function PropertyPage() {
               <p className="text-gray-500 dark:text-gray-400">{t('propertyDetail.unowned')}</p>
             )}
           </div>
+
+          {isOwner && investmentHistory && investmentHistory.length > 0 && (
+            <div className="bg-white dark:bg-gray-900 rounded-lg p-6">
+              <h2 className="text-lg font-bold mb-4">{t('propertyDetail.investments')}</h2>
+              <div className="space-y-3">
+                {property.lastPurchasePrice > 0 && (
+                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.purchasePrice')}</p>
+                    <p className="font-semibold">{formatMoney(property.lastPurchasePrice)}</p>
+                  </div>
+                )}
+                {totalInvestment > 0 && (
+                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {t('propertyDetail.totalCapitalInvested')}
+                    </p>
+                    <p className="font-semibold text-orange-500 dark:text-orange-400">{formatMoney(totalInvestment)}</p>
+                  </div>
+                )}
+                {intrinsicValue > 0 && (
+                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.intrinsicValue')}</p>
+                    <p className="font-semibold text-blue-600 dark:text-blue-400">
+                      <CompactValue value={intrinsicValue} />
+                    </p>
+                  </div>
+                )}
+                {totalInvestment > 0 && (
+                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.unrealizedGain')}</p>
+                    <p
+                      className={`font-semibold ${unrealizedGain >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}
+                    >
+                      {unrealizedGain >= 0 ? '+' : ''}
+                      {formatMoney(unrealizedGain)}
+                    </p>
+                  </div>
+                )}
+                {totalInvestment > 0 && (
+                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.roi')}</p>
+                    <p
+                      className={`font-semibold ${roi >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}
+                    >
+                      {roi >= 0 ? '+' : ''}
+                      {roi.toFixed(1)}%
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {investmentHistory.length > 0 && (
+                <div className="mt-4">
+                  <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">
+                    {t('propertyDetail.investmentHistory')}
+                  </h3>
+                  <div className="max-h-48 overflow-y-auto space-y-1">
+                    {investmentHistory
+                      .slice()
+                      .reverse()
+                      .map((inv, idx) => (
+                        <div
+                          key={idx}
+                          className="bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded text-sm flex justify-between items-center"
+                        >
+                          <div>
+                            <span className="text-gray-900 dark:text-white">{inv.description || inv.type}</span>
+                            {inv.tick && (
+                              <span className="text-xs text-gray-400 dark:text-gray-500 ml-2">#{inv.tick}</span>
+                            )}
+                          </div>
+                          <span className="font-semibold text-orange-500 dark:text-orange-400">
+                            {formatMoney(inv.amount)}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {actionMsg && (
             <div

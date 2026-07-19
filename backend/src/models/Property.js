@@ -107,6 +107,15 @@ const propertySchema = new mongoose.Schema(
         netProfit: { type: Number },
       },
     ],
+    investmentHistory: [
+      {
+        type: { type: String, enum: ['purchase', 'upgrade', 'improvement', 'grade_upgrade', 'construction'] },
+        amount: { type: Number, required: true },
+        tick: { type: Number },
+        description: { type: String },
+      },
+    ],
+    intrinsicValue: { type: Number, default: 0 },
   },
   { timestamps: true },
 );

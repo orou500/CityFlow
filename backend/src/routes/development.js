@@ -372,6 +372,15 @@ router.post('/upgrade', async (req, res) => {
     });
     property.lastUpgrade = upgradeType;
     property.upgradeLevel = (property.upgradeLevel || 0) + 1;
+
+    if (!property.investmentHistory) property.investmentHistory = [];
+    property.investmentHistory.push({
+      type: 'upgrade',
+      amount: cost,
+      tick: currentPeriod,
+      description: `${upgradeDef.name} (Level ${currentLevel + 1})`,
+    });
+
     await property.save();
 
     await Transaction.create({
@@ -635,6 +644,15 @@ router.post('/improvements/start', async (req, res) => {
       completionPeriod: currentPeriod + improvement.constructionPeriods,
       progress: 0,
     };
+
+    if (!property.investmentHistory) property.investmentHistory = [];
+    property.investmentHistory.push({
+      type: 'improvement',
+      amount: cost,
+      tick: currentPeriod,
+      description: improvement.name,
+    });
+
     await property.save();
 
     await awardXp(user, 10, 'improvement_start');
