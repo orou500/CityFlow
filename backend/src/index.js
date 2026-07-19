@@ -27,6 +27,9 @@ import rentRoutes from './routes/rent.js';
 import managementRoutes from './routes/management.js';
 import oauthRoutes from './routes/oauth.js';
 import discordRoutes from './routes/discord.js';
+import companyRoutes from './routes/companies.js';
+import stockRoutes from './routes/stocks.js';
+import indexRoutes from './routes/indexes.js';
 import { maintenanceCheck } from './middleware/maintenance.js';
 import { getMaintenanceInfo } from './models/GameState.js';
 import { createNewSeason } from './engine/seasonReset.js';
@@ -88,6 +91,9 @@ app.use('/rent', rentRoutes);
 app.use('/management', managementRoutes);
 app.use('/discord', discordRoutes);
 app.use('/auth', oauthRoutes);
+app.use('/companies', companyRoutes);
+app.use('/stocks', stockRoutes);
+app.use('/indexes', indexRoutes);
 
 app.use((req, res) => {
   console.warn(`404 API Route: ${req.method} ${req.originalUrl}`);

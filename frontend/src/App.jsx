@@ -32,6 +32,10 @@ import VerifyEmailPage from './pages/VerifyEmailPage';
 import OAuthCallbackPage from './pages/OAuthCallbackPage';
 import OAuthAcceptTermsPage from './pages/OAuthAcceptTermsPage';
 import SettingsPage from './pages/SettingsPage';
+import StockMarket from './pages/StockMarket';
+import CompanyPage from './pages/CompanyPage';
+import StockPortfolio from './pages/StockPortfolio';
+import IndexPage from './pages/IndexPage';
 import { useEffect } from 'react';
 import { useAuthStore } from './store/useAuthStore';
 import { useGameStore } from './store/useGameStore';
@@ -201,6 +205,46 @@ function AppRoutes() {
           <ErrorBoundary>
             <ProtectedRoute>
               <SettingsPage />
+            </ProtectedRoute>
+          </ErrorBoundary>
+        }
+      />
+      <Route
+        path="/stocks"
+        element={
+          <ErrorBoundary>
+            <ProtectedRoute>
+              <StockMarket />
+            </ProtectedRoute>
+          </ErrorBoundary>
+        }
+      />
+      <Route
+        path="/stocks/portfolio"
+        element={
+          <ErrorBoundary>
+            <ProtectedRoute>
+              <StockPortfolio />
+            </ProtectedRoute>
+          </ErrorBoundary>
+        }
+      />
+      <Route
+        path="/company/:id"
+        element={
+          <ErrorBoundary>
+            <ProtectedRoute>
+              <CompanyPage />
+            </ProtectedRoute>
+          </ErrorBoundary>
+        }
+      />
+      <Route
+        path="/index/:id"
+        element={
+          <ErrorBoundary>
+            <ProtectedRoute>
+              <IndexPage />
             </ProtectedRoute>
           </ErrorBoundary>
         }

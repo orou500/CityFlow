@@ -42,4 +42,16 @@ export function formatDiffExact(value, prefix = '+') {
   return `${sign}$${Math.abs(num).toLocaleString('en-US')}`;
 }
 
+export function formatPrice(value) {
+  const num = Number(value) || 0;
+  if (Math.abs(num) < 1000) return `$${num.toFixed(2)}`;
+  return `$${formatCompact(Math.round(num))}`;
+}
+
+export function formatCount(value) {
+  const num = Number(value) || 0;
+  if (Math.abs(num) < 1000) return num.toLocaleString('en-US');
+  return formatCompact(num);
+}
+
 export { formatCompact as formatNumber };

@@ -83,6 +83,7 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
     { to: '/marketplace', icon: '\uD83C\uDFEA', label: t('nav.market'), tour: 'marketplace' },
     { to: '/development', icon: '\uD83C\uDFD7\uFE0F', label: t('nav.development'), tour: 'development' },
     { to: '/bank', icon: '\uD83C\uDFE6', label: t('nav.bank'), tour: 'bank' },
+    { to: '/stocks', icon: '\uD83D\uDCC8', label: t('nav.stocks'), tour: 'stocks' },
     { to: '/dashboard', icon: '\uD83D\uDCCA', label: t('nav.portfolio'), tour: 'dashboard' },
   ];
 
