@@ -1,5 +1,7 @@
 import { simulateCities } from './citySimulation.js';
 import { simulateDemographics } from './demographics.js';
+import { simulateStockMarket } from './stockMarket.js';
+import { simulateIndexes } from './indexSimulation.js';
 import { updatePrices } from './priceUpdate.js';
 import { processRent, expireUncollectedRent, sendRentExpiryWarnings } from './rentProcessing.js';
 import { processLoans } from './loanProcessing.js';
@@ -29,6 +31,12 @@ export async function executeTick() {
 
     console.log('[TICK] Simulating demographics...');
     const demoResults = await simulateDemographics(tickNumber);
+
+    console.log('[TICK] Simulating stock market...');
+    const stockResults = await simulateStockMarket(tickNumber);
+
+    console.log('[TICK] Simulating stock indexes...');
+    const indexResults = await simulateIndexes(tickNumber);
 
     console.log('[TICK] Updating prices...');
     const priceUpdates = await updatePrices(activeEvents);
@@ -96,6 +104,10 @@ export async function executeTick() {
     console.log(`[TICK] World tick #${tickNumber} completed in ${duration}ms`);
     console.log(`[TICK] Cities simulated: ${cityResults.length}`);
     console.log(`[TICK] Demographics simulated: ${demoResults.length}`);
+    console.log(`[TICK] Stock market: ${stockResults.length} companies updated`);
+    const stockEvents = stockResults.filter((r) => r.event).length;
+    if (stockEvents > 0) console.log(`[TICK] Company events: ${stockEvents}`);
+    console.log(`[TICK] Stock indexes: ${indexResults.length} indexes updated`);
     console.log(`[TICK] Prices updated: ${priceUpdates.length}`);
     console.log(`[TICK] Rent processed: ${rentResults.length}`);
     console.log(`[TICK] Loans processed: ${loanResults.length}`);
@@ -118,6 +130,7 @@ export async function executeTick() {
       duration,
       cities: cityResults,
       demographics: demoResults,
+      stockMarket: stockResults,
       priceUpdates: priceUpdates.length,
       rentProcessed: rentResults.length,
       loansProcessed: loanResults.length,

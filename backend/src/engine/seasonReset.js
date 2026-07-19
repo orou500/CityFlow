@@ -9,6 +9,12 @@ import PropertyOffer from '../models/PropertyOffer.js';
 import Notification from '../models/Notification.js';
 import ConstructionProject from '../models/ConstructionProject.js';
 import Event from '../models/Event.js';
+import Company from '../models/Company.js';
+import StockHolding from '../models/StockHolding.js';
+import StockTransaction from '../models/StockTransaction.js';
+import StockIndex from '../models/StockIndex.js';
+import IndexHolding from '../models/IndexHolding.js';
+import IndexTransaction from '../models/IndexTransaction.js';
 import { sendDiscordNotification } from '../services/discordBot.js';
 
 const CITIES_DATA = [
@@ -375,6 +381,21 @@ export async function resetWorld() {
     console.log(`[SEASON] Deducted outstanding loan balances from ${loanBulkOps.length} users`);
   }
 
+  const stockHoldings = await StockHolding.find().populate('companyId', 'sharePrice');
+  const stockValueByUser = new Map();
+  for (const sh of stockHoldings) {
+    if (!sh.companyId) continue;
+    const uid = sh.userId.toString();
+    stockValueByUser.set(uid, (stockValueByUser.get(uid) || 0) + sh.shares * sh.companyId.sharePrice);
+  }
+
+  const indexHoldings = await IndexHolding.find().populate('indexId', 'value');
+  for (const ih of indexHoldings) {
+    if (!ih.indexId) continue;
+    const uid = ih.userId.toString();
+    stockValueByUser.set(uid, (stockValueByUser.get(uid) || 0) + ih.shares * ih.indexId.value);
+  }
+
   const netWorths = await User.aggregate([
     { $lookup: { from: 'properties', localField: '_id', foreignField: 'ownerId', as: 'props' } },
     { $addFields: { portfolioValue: { $sum: '$props.currentPrice' } } },
@@ -391,7 +412,9 @@ export async function resetWorld() {
   const allUsers = await User.find({}, { _id: 1 }).lean();
   for (const user of allUsers) {
     const nw = netWorthMap.get(user._id.toString()) || 0;
-    const startingBalance = Math.round(nw * 0.5);
+    const stockVal = stockValueByUser.get(user._id.toString()) || 0;
+    const totalNW = nw + stockVal;
+    const startingBalance = Math.round(totalNW * 0.5);
     userBulkOps.push({
       updateOne: {
         filter: { _id: user._id },
@@ -417,6 +440,12 @@ export async function resetWorld() {
     ConstructionProject.deleteMany({}),
     Event.deleteMany({}),
     City.deleteMany({}),
+    Company.deleteMany({}),
+    StockHolding.deleteMany({}),
+    StockTransaction.deleteMany({}),
+    StockIndex.deleteMany({}),
+    IndexHolding.deleteMany({}),
+    IndexTransaction.deleteMany({}),
   ]);
 
   console.log('[SEASON] Cleared all game data');
