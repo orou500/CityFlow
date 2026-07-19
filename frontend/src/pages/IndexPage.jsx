@@ -127,7 +127,9 @@ export default function IndexPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
           <div className="text-xs text-gray-500 dark:text-gray-400">{t('indexes.indexValue')}</div>
-          <div className="text-xl font-bold text-gray-900 dark:text-white" title={`$${index.value?.toFixed(2)}`}>{formatPrice(index.value)}</div>
+          <div className="text-xl font-bold text-gray-900 dark:text-white" title={`$${index.value?.toFixed(2)}`}>
+            {formatPrice(index.value)}
+          </div>
           <div className={`text-sm ${priceChangeColor}`}>
             {index.dayChange >= 0 ? '+' : ''}
             {index.dayChange?.toFixed(2)} ({index.dayChangePercent}%)
@@ -146,7 +148,9 @@ export default function IndexPage() {
         </div>
         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
           <div className="text-xs text-gray-500 dark:text-gray-400">{t('indexes.high52')}</div>
-          <div className="text-xl font-bold text-gray-900 dark:text-white" title={`$${index.high52Week?.toFixed(2)}`}>{formatPrice(index.high52Week)}</div>
+          <div className="text-xl font-bold text-gray-900 dark:text-white" title={`$${index.high52Week?.toFixed(2)}`}>
+            {formatPrice(index.high52Week)}
+          </div>
         </div>
       </div>
 
@@ -202,7 +206,10 @@ export default function IndexPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
             <div>
               <div className="text-blue-600 dark:text-blue-400">{t('indexes.shares')}</div>
-              <div className="font-medium text-gray-900 dark:text-white" title={index.userHolding.shares.toLocaleString()}>
+              <div
+                className="font-medium text-gray-900 dark:text-white"
+                title={index.userHolding.shares.toLocaleString()}
+              >
                 {formatCount(index.userHolding.shares)}
               </div>
             </div>
@@ -214,7 +221,10 @@ export default function IndexPage() {
             </div>
             <div>
               <div className="text-blue-600 dark:text-blue-400">{t('indexes.currentValue')}</div>
-              <div className="font-medium text-gray-900 dark:text-white" title={formatMoneyExact(index.userHolding.currentValue)}>
+              <div
+                className="font-medium text-gray-900 dark:text-white"
+                title={formatMoneyExact(index.userHolding.currentValue)}
+              >
                 {formatMoney(index.userHolding.currentValue)}
               </div>
             </div>
@@ -255,7 +265,10 @@ export default function IndexPage() {
             </div>
             {buyShares && (
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {t('indexes.total')}: <span title={formatMoneyExact(parseInt(buyShares) * index.value)}>{formatMoney(parseInt(buyShares) * index.value)}</span>
+                {t('indexes.total')}:{' '}
+                <span title={formatMoneyExact(parseInt(buyShares) * index.value)}>
+                  {formatMoney(parseInt(buyShares) * index.value)}
+                </span>
               </div>
             )}
           </div>
@@ -281,7 +294,10 @@ export default function IndexPage() {
             </div>
             {sellShares && (
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {t('indexes.total')}: <span title={formatMoneyExact(parseInt(sellShares) * index.value)}>{formatMoney(parseInt(sellShares) * index.value)}</span>
+                {t('indexes.total')}:{' '}
+                <span title={formatMoneyExact(parseInt(sellShares) * index.value)}>
+                  {formatMoney(parseInt(sellShares) * index.value)}
+                </span>
               </div>
             )}
           </div>
@@ -317,11 +333,15 @@ export default function IndexPage() {
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500 dark:text-gray-400">{t('indexes.high52')}</span>
-              <span className="text-gray-900 dark:text-white" title={`$${index.high52Week?.toFixed(2)}`}>{formatPrice(index.high52Week)}</span>
+              <span className="text-gray-900 dark:text-white" title={`$${index.high52Week?.toFixed(2)}`}>
+                {formatPrice(index.high52Week)}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500 dark:text-gray-400">{t('indexes.low52')}</span>
-              <span className="text-gray-900 dark:text-white" title={`$${index.low52Week?.toFixed(2)}`}>{formatPrice(index.low52Week)}</span>
+              <span className="text-gray-900 dark:text-white" title={`$${index.low52Week?.toFixed(2)}`}>
+                {formatPrice(index.low52Week)}
+              </span>
             </div>
           </div>
         </div>
@@ -363,7 +383,10 @@ export default function IndexPage() {
                         {c.dayChangePercent}%
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400" title={formatMoneyExact(c.marketCap)}>
+                    <td
+                      className="px-4 py-3 text-right text-gray-500 dark:text-gray-400"
+                      title={formatMoneyExact(c.marketCap)}
+                    >
                       {formatMoney(c.marketCap)}
                     </td>
                   </tr>

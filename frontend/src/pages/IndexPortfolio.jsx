@@ -58,13 +58,19 @@ export default function IndexPortfolio() {
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
           <div className="text-xs text-gray-500 dark:text-gray-400">{t('indexes.totalValue')}</div>
-          <div className="text-xl font-bold text-gray-900 dark:text-white" title={formatMoneyExact(portfolio?.totalValue || 0)}>
+          <div
+            className="text-xl font-bold text-gray-900 dark:text-white"
+            title={formatMoneyExact(portfolio?.totalValue || 0)}
+          >
             {formatMoney(portfolio?.totalValue || 0)}
           </div>
         </div>
         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
           <div className="text-xs text-gray-500 dark:text-gray-400">{t('indexes.totalCost')}</div>
-          <div className="text-xl font-bold text-gray-900 dark:text-white" title={formatMoneyExact(portfolio?.totalCost || 0)}>
+          <div
+            className="text-xl font-bold text-gray-900 dark:text-white"
+            title={formatMoneyExact(portfolio?.totalCost || 0)}
+          >
             {formatMoney(portfolio?.totalCost || 0)}
           </div>
         </div>
@@ -72,9 +78,7 @@ export default function IndexPortfolio() {
           <div className="text-xs text-gray-500 dark:text-gray-400">{t('indexes.profitLoss')}</div>
           <div className={`text-xl font-bold ${(portfolio?.totalPL || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
             {(portfolio?.totalPL || 0) >= 0 ? '+' : ''}
-            <span title={formatMoneyExact(portfolio?.totalPL || 0)}>
-              {formatMoney(portfolio?.totalPL || 0)}
-            </span>
+            <span title={formatMoneyExact(portfolio?.totalPL || 0)}>{formatMoney(portfolio?.totalPL || 0)}</span>
           </div>
         </div>
       </div>
@@ -124,7 +128,12 @@ export default function IndexPortfolio() {
                       </Link>
                       <div className="text-xs text-gray-500 dark:text-gray-400">{h.index?.ticker}</div>
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-900 dark:text-white" title={h.shares.toLocaleString()}>{formatCount(h.shares)}</td>
+                    <td
+                      className="px-4 py-3 text-right text-gray-900 dark:text-white"
+                      title={h.shares.toLocaleString()}
+                    >
+                      {formatCount(h.shares)}
+                    </td>
                     <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400">
                       ${h.avgBuyPrice?.toFixed(2)}
                     </td>
@@ -188,9 +197,19 @@ export default function IndexPortfolio() {
                         {tx.type === 'buy' ? t('indexes.buy') : t('indexes.sell')}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-900 dark:text-white" title={tx.shares.toLocaleString()}>{formatCount(tx.shares)}</td>
+                    <td
+                      className="px-4 py-3 text-right text-gray-900 dark:text-white"
+                      title={tx.shares.toLocaleString()}
+                    >
+                      {formatCount(tx.shares)}
+                    </td>
                     <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400">${tx.price?.toFixed(2)}</td>
-                    <td className="px-4 py-3 text-right text-gray-900 dark:text-white" title={formatMoneyExact(tx.total)}>{formatMoney(tx.total)}</td>
+                    <td
+                      className="px-4 py-3 text-right text-gray-900 dark:text-white"
+                      title={formatMoneyExact(tx.total)}
+                    >
+                      {formatMoney(tx.total)}
+                    </td>
                   </tr>
                 ))}
               </tbody>

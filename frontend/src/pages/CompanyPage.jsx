@@ -141,15 +141,21 @@ export default function CompanyPage() {
         </div>
         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
           <div className="text-xs text-gray-500 dark:text-gray-400">{t('stocks.marketCap')}</div>
-          <div className="text-xl font-bold text-gray-900 dark:text-white" title={formatMoneyExact(company.marketCap)}>{formatMoney(company.marketCap)}</div>
+          <div className="text-xl font-bold text-gray-900 dark:text-white" title={formatMoneyExact(company.marketCap)}>
+            {formatMoney(company.marketCap)}
+          </div>
         </div>
         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
           <div className="text-xs text-gray-500 dark:text-gray-400">{t('stocks.employees')}</div>
-          <div className="text-xl font-bold text-gray-900 dark:text-white" title={company.employees?.toLocaleString()}>{formatCount(company.employees)}</div>
+          <div className="text-xl font-bold text-gray-900 dark:text-white" title={company.employees?.toLocaleString()}>
+            {formatCount(company.employees)}
+          </div>
         </div>
         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
           <div className="text-xs text-gray-500 dark:text-gray-400">{t('stocks.revenue')}</div>
-          <div className="text-xl font-bold text-gray-900 dark:text-white" title={formatMoneyExact(company.revenue)}>{formatMoney(company.revenue)}</div>
+          <div className="text-xl font-bold text-gray-900 dark:text-white" title={formatMoneyExact(company.revenue)}>
+            {formatMoney(company.revenue)}
+          </div>
         </div>
       </div>
 
@@ -205,7 +211,10 @@ export default function CompanyPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
             <div>
               <div className="text-blue-600 dark:text-blue-400">{t('stocks.shares')}</div>
-              <div className="font-medium text-gray-900 dark:text-white" title={company.userHolding.shares.toLocaleString()}>
+              <div
+                className="font-medium text-gray-900 dark:text-white"
+                title={company.userHolding.shares.toLocaleString()}
+              >
                 {formatCount(company.userHolding.shares)}
               </div>
             </div>
@@ -217,7 +226,10 @@ export default function CompanyPage() {
             </div>
             <div>
               <div className="text-blue-600 dark:text-blue-400">{t('stocks.currentValue')}</div>
-              <div className="font-medium text-gray-900 dark:text-white" title={formatMoneyExact(company.userHolding.currentValue)}>
+              <div
+                className="font-medium text-gray-900 dark:text-white"
+                title={formatMoneyExact(company.userHolding.currentValue)}
+              >
                 {formatMoney(company.userHolding.currentValue)}
               </div>
             </div>
@@ -258,7 +270,10 @@ export default function CompanyPage() {
             </div>
             {buyShares && (
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {t('stocks.total')}: <span title={formatMoneyExact(parseInt(buyShares) * company.sharePrice)}>{formatMoney(parseInt(buyShares) * company.sharePrice)}</span>
+                {t('stocks.total')}:{' '}
+                <span title={formatMoneyExact(parseInt(buyShares) * company.sharePrice)}>
+                  {formatMoney(parseInt(buyShares) * company.sharePrice)}
+                </span>
               </div>
             )}
           </div>
@@ -284,7 +299,10 @@ export default function CompanyPage() {
             </div>
             {sellShares && (
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {t('stocks.total')}: <span title={formatMoneyExact(parseInt(sellShares) * company.sharePrice)}>{formatMoney(parseInt(sellShares) * company.sharePrice)}</span>
+                {t('stocks.total')}:{' '}
+                <span title={formatMoneyExact(parseInt(sellShares) * company.sharePrice)}>
+                  {formatMoney(parseInt(sellShares) * company.sharePrice)}
+                </span>
               </div>
             )}
           </div>
@@ -376,13 +394,22 @@ export default function CompanyPage() {
                     <tr key={i} className="border-b border-gray-100 dark:border-gray-800">
                       <td className="px-3 py-2 text-gray-900 dark:text-white">{h.tick}</td>
                       <td className="px-3 py-2 text-right text-gray-900 dark:text-white">${h.price?.toFixed(2)}</td>
-                      <td className="px-3 py-2 text-right text-gray-500 dark:text-gray-400" title={h.employees?.toLocaleString()}>
+                      <td
+                        className="px-3 py-2 text-right text-gray-500 dark:text-gray-400"
+                        title={h.employees?.toLocaleString()}
+                      >
                         {formatCount(h.employees)}
                       </td>
-                      <td className="px-3 py-2 text-right text-gray-500 dark:text-gray-400" title={formatMoneyExact(h.revenue)}>
+                      <td
+                        className="px-3 py-2 text-right text-gray-500 dark:text-gray-400"
+                        title={formatMoneyExact(h.revenue)}
+                      >
                         {formatMoney(h.revenue)}
                       </td>
-                      <td className="px-3 py-2 text-right text-gray-500 dark:text-gray-400" title={formatMoneyExact(h.marketCap)}>
+                      <td
+                        className="px-3 py-2 text-right text-gray-500 dark:text-gray-400"
+                        title={formatMoneyExact(h.marketCap)}
+                      >
                         {formatMoney(h.marketCap)}
                       </td>
                     </tr>

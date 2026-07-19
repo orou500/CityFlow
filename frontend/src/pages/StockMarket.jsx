@@ -101,7 +101,10 @@ function CompaniesTab() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
             <div className="text-xs text-gray-500 dark:text-gray-400">{t('stocks.totalMarketCap')}</div>
-            <div className="text-lg font-semibold text-gray-900 dark:text-white" title={formatMoneyExact(overview.totalMarketCap)}>
+            <div
+              className="text-lg font-semibold text-gray-900 dark:text-white"
+              title={formatMoneyExact(overview.totalMarketCap)}
+            >
               {formatMoney(overview.totalMarketCap)}
             </div>
           </div>
@@ -225,8 +228,16 @@ function CompaniesTab() {
                       {c.dayChangePercent}%
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400" title={formatMoneyExact(c.marketCap)}>{formatMoney(c.marketCap)}</td>
-                  <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400" title={c.employees?.toLocaleString()}>
+                  <td
+                    className="px-4 py-3 text-right text-gray-500 dark:text-gray-400"
+                    title={formatMoneyExact(c.marketCap)}
+                  >
+                    {formatMoney(c.marketCap)}
+                  </td>
+                  <td
+                    className="px-4 py-3 text-right text-gray-500 dark:text-gray-400"
+                    title={c.employees?.toLocaleString()}
+                  >
                     {formatCount(c.employees)}
                   </td>
                 </tr>
@@ -354,7 +365,10 @@ function IndexesTab() {
                       {idx.type}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right text-gray-900 dark:text-white font-medium" title={`$${idx.value?.toFixed(2)}`}>
+                  <td
+                    className="px-4 py-3 text-right text-gray-900 dark:text-white font-medium"
+                    title={`$${idx.value?.toFixed(2)}`}
+                  >
                     {formatPrice(idx.value)}
                   </td>
                   <td className="px-4 py-3 text-right">

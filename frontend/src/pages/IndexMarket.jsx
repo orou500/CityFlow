@@ -186,7 +186,10 @@ export default function IndexMarket() {
                       {t(`indexes.type${idx.type.charAt(0).toUpperCase() + idx.type.slice(1)}`)}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right text-gray-900 dark:text-white font-medium" title={`$${idx.value?.toFixed(2)}`}>
+                  <td
+                    className="px-4 py-3 text-right text-gray-900 dark:text-white font-medium"
+                    title={`$${idx.value?.toFixed(2)}`}
+                  >
                     {formatPrice(idx.value)}
                   </td>
                   <td className="px-4 py-3 text-right">

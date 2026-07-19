@@ -86,9 +86,7 @@ export default function StockPortfolio() {
           <div className="text-xs text-gray-500 dark:text-gray-400">{t('stocks.profitLoss')}</div>
           <div className={`text-xl font-bold ${totalPL >= 0 ? 'text-green-500' : 'text-red-500'}`}>
             {totalPL >= 0 ? '+' : ''}
-            <span title={formatMoneyExact(totalPL)}>
-              {formatMoney(totalPL)}
-            </span>
+            <span title={formatMoneyExact(totalPL)}>{formatMoney(totalPL)}</span>
           </div>
         </div>
       </div>
@@ -138,7 +136,12 @@ export default function StockPortfolio() {
                       </Link>
                       <div className="text-xs text-gray-500 dark:text-gray-400">{h.company?.ticker}</div>
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-900 dark:text-white" title={h.shares.toLocaleString()}>{formatCount(h.shares)}</td>
+                    <td
+                      className="px-4 py-3 text-right text-gray-900 dark:text-white"
+                      title={h.shares.toLocaleString()}
+                    >
+                      {formatCount(h.shares)}
+                    </td>
                     <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400">
                       ${h.avgBuyPrice?.toFixed(2)}
                     </td>
@@ -203,7 +206,12 @@ export default function StockPortfolio() {
                       </Link>
                       <div className="text-xs text-gray-500 dark:text-gray-400">{h.index?.ticker}</div>
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-900 dark:text-white" title={h.shares.toLocaleString()}>{formatCount(h.shares)}</td>
+                    <td
+                      className="px-4 py-3 text-right text-gray-900 dark:text-white"
+                      title={h.shares.toLocaleString()}
+                    >
+                      {formatCount(h.shares)}
+                    </td>
                     <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400">
                       ${h.avgBuyPrice?.toFixed(2)}
                     </td>
