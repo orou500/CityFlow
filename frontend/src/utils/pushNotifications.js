@@ -36,27 +36,21 @@ export function setupPushNotificationListeners(navigate) {
     console.error('Push registration error:', err.error);
   });
 
-  PushNotifications.addListener(
-    'pushNotificationReceived',
-    (notification) => {
-      console.log('Push received:', notification);
-    },
-  );
+  PushNotifications.addListener('pushNotificationReceived', (notification) => {
+    console.log('Push received:', notification);
+  });
 
-  PushNotifications.addListener(
-    'pushNotificationActionPerformed',
-    (action) => {
-      console.log('Push action performed:', action);
-      const data = action.notification.data;
-      if (data && data.deepLink && navigate) {
-        navigate(data.deepLink);
-      } else if (data && data.propertyId && navigate) {
-        navigate(`/property/${data.propertyId}`);
-      } else if (data && data.auctionId && navigate) {
-        navigate(`/auctions/${data.auctionId}`);
-      }
-    },
-  );
+  PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+    console.log('Push action performed:', action);
+    const data = action.notification.data;
+    if (data && data.deepLink && navigate) {
+      navigate(data.deepLink);
+    } else if (data && data.propertyId && navigate) {
+      navigate(`/property/${data.propertyId}`);
+    } else if (data && data.auctionId && navigate) {
+      navigate(`/auctions/${data.auctionId}`);
+    }
+  });
 }
 
 async function sendTokenToServer(token) {

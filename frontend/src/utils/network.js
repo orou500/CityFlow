@@ -35,6 +35,8 @@ function updateStatus(connected) {
   for (const listener of networkListeners) {
     try {
       listener(connected);
-    } catch { /* ignore listener errors */ }
+    } catch {
+      /* ignore listener errors */
+    }
   }
 }

@@ -2,17 +2,9 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { isNativePlatform, saveSetting, loadSetting } from '../utils/capacitor';
-import {
-  isBiometricAvailable,
-  getBiometricType,
-  isBiometricEnabled,
-  setBiometricEnabled,
-} from '../utils/biometric';
+import { isBiometricAvailable, getBiometricType, isBiometricEnabled, setBiometricEnabled } from '../utils/biometric';
 import { useTheme } from '../components/ThemeProvider';
-import {
-  registerForPushNotifications,
-  unregisterPushNotifications,
-} from '../utils/pushNotifications';
+import { registerForPushNotifications, unregisterPushNotifications } from '../utils/pushNotifications';
 
 export default function MobileSettingsPage() {
   const { t } = useTranslation();
@@ -80,9 +72,7 @@ export default function MobileSettingsPage() {
   return (
     <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          {t('mobile.settings', 'Mobile Settings')}
-        </h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('mobile.settings', 'Mobile Settings')}</h1>
         <Link to="/settings" className="text-sm text-blue-600 dark:text-blue-400">
           {t('settings.title', 'Settings')}
         </Link>
@@ -137,9 +127,7 @@ export default function MobileSettingsPage() {
 
         <div className="flex items-center justify-between p-4">
           <div>
-            <div className="text-sm font-medium text-gray-900 dark:text-white">
-              {t('mobile.darkMode', 'Dark Mode')}
-            </div>
+            <div className="text-sm font-medium text-gray-900 dark:text-white">{t('mobile.darkMode', 'Dark Mode')}</div>
             <div className="text-xs text-gray-500 dark:text-gray-400">
               {t('mobile.darkModeDesc', 'Switch between light and dark themes')}
             </div>
@@ -185,9 +173,7 @@ export default function MobileSettingsPage() {
         </div>
       </div>
 
-      <div className="text-xs text-gray-400 dark:text-gray-500 text-center">
-        CityFlow Mobile v1.0.0
-      </div>
+      <div className="text-xs text-gray-400 dark:text-gray-500 text-center">CityFlow Mobile v1.0.0</div>
     </div>
   );
 }

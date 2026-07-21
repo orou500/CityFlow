@@ -555,7 +555,10 @@ export default function UserProfilePage() {
                       )}
                     </div>
                   ) : (
-                    <a href={`${API}/auth/google`} className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500">
+                    <a
+                      href={`${API}/auth/google`}
+                      className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500"
+                    >
                       {t('profile.link')}
                     </a>
                   )}
@@ -596,9 +599,7 @@ export default function UserProfilePage() {
                   ) : (
                     <form onSubmit={handleSetPassword} className="space-y-2">
                       <p className="text-xs text-gray-500 dark:text-gray-400">{t('profile.setPasswordPrompt')}</p>
-                      {setPwError && (
-                        <p className="text-xs text-red-600 dark:text-red-400">{setPwError}</p>
-                      )}
+                      {setPwError && <p className="text-xs text-red-600 dark:text-red-400">{setPwError}</p>}
                       <input
                         type="password"
                         placeholder={t('auth.newPassword')}

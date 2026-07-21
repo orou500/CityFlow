@@ -2,15 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { isNativePlatform } from '../utils/capacitor';
 import { setupDeepLinking, setNavigateFunction } from '../utils/deepLinks';
-import {
-  registerForPushNotifications,
-  setupPushNotificationListeners,
-} from '../utils/pushNotifications';
-import {
-  isBiometricEnabled,
-  isBiometricAvailable,
-  authenticateWithBiometric,
-} from '../utils/biometric';
+import { registerForPushNotifications, setupPushNotificationListeners } from '../utils/pushNotifications';
+import { isBiometricEnabled, isBiometricAvailable, authenticateWithBiometric } from '../utils/biometric';
 import { useAuthStore } from '../store/useAuthStore';
 
 export default function MobileInit() {
