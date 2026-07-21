@@ -7,6 +7,7 @@ import { useTheme } from './ThemeProvider';
 import UserSearch from './UserSearch';
 import { formatMoney } from '../utils/format';
 import CompactValue from './CompactValue';
+import AudioPlayer from './AudioPlayer';
 
 export default function Sidebar({ collapsed, onToggleCollapse }) {
   const { t, i18n } = useTranslation();
@@ -233,6 +234,10 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
               {themeIcon}
             </button>
           </div>
+        </div>
+
+        <div className={collapsed ? 'hidden' : ''}>
+          <AudioPlayer />
         </div>
 
         {user && (

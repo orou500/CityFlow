@@ -280,3 +280,23 @@ body[dir='rtl'] {
 .animate-badge-glow {
   animation: badge-glow 1.2s ease-in-out infinite;
 }
+
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-brand);
+  cursor: pointer;
+  border: 2px solid var(--color-card);
+}
+
+input[type='range']::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-brand);
+  cursor: pointer;
+  border: 2px solid var(--color-card);
+}
