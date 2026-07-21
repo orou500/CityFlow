@@ -39,6 +39,8 @@ import StockMarket from './pages/StockMarket';
 import CompanyPage from './pages/CompanyPage';
 import StockPortfolio from './pages/StockPortfolio';
 import IndexPage from './pages/IndexPage';
+import LeaderboardPage from './pages/LeaderboardPage';
+import CompetitiveEventsPage from './pages/CompetitiveEventsPage';
 import { useEffect } from 'react';
 import { useAuthStore } from './store/useAuthStore';
 import { useGameStore } from './store/useGameStore';
@@ -269,6 +271,8 @@ function AppRoutes() {
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/cookies" element={<CookiesPage />} />
+      <Route path="/leaderboards" element={<LeaderboardPage />} />
+      <Route path="/events" element={<CompetitiveEventsPage />} />
       <Route path="/seasons" element={<SeasonHistoryPage />} />
       <Route path="/contributors" element={<ContributorsPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />

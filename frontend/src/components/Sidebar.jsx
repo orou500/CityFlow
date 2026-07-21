@@ -89,6 +89,8 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
     { to: '/bank', icon: '\uD83C\uDFE6', label: t('nav.bank'), tour: 'bank' },
     { to: '/stocks', icon: '\uD83D\uDCC8', label: t('nav.stocks'), tour: 'stocks' },
     { to: '/dashboard', icon: '\uD83D\uDCCA', label: t('nav.portfolio'), tour: 'dashboard' },
+    { to: '/leaderboards', icon: '\uD83C\uDFC6', label: t('nav.leaderboards'), tour: 'leaderboards' },
+    { to: '/events', icon: '\uD83C\uDFAF', label: t('nav.events'), tour: 'events' },
   ];
 
   const userMenuItems = [

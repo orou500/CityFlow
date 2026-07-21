@@ -15,6 +15,8 @@ import StockTransaction from '../models/StockTransaction.js';
 import StockIndex from '../models/StockIndex.js';
 import IndexHolding from '../models/IndexHolding.js';
 import IndexTransaction from '../models/IndexTransaction.js';
+import LeaderboardSnapshot from '../models/LeaderboardSnapshot.js';
+import CompetitiveEvent from '../models/CompetitiveEvent.js';
 import { sendDiscordNotification } from '../services/discordBot.js';
 
 const CITIES_DATA = [
@@ -446,6 +448,8 @@ export async function resetWorld() {
     StockIndex.deleteMany({}),
     IndexHolding.deleteMany({}),
     IndexTransaction.deleteMany({}),
+    LeaderboardSnapshot.deleteMany({}),
+    CompetitiveEvent.deleteMany({}),
   ]);
 
   console.log('[SEASON] Cleared all game data');
