@@ -22,7 +22,7 @@ spec:
         - name: ghcr-pull
       containers:
         - name: frontend
-          image: ghcr.io/orou500/cityflow-frontend:a512e75d25af0fe1c606d483b079fe6fbb17a660
+          image: ghcr.io/orou500/cityflow-frontend:7d8592c4ebee2198b042f93e7f04f11193527d62
           ports:
             - containerPort: 80
               name: http
