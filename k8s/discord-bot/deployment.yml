@@ -24,7 +24,7 @@ spec:
         - name: ghcr-pull
       containers:
         - name: discord-bot
-          image: ghcr.io/orou500/cityflow-discord-bot:a278270cfa2ec40da0467fafe94f413c348f04a7
+          image: ghcr.io/orou500/cityflow-discord-bot:2c468068d63704a1ffb15c0aab8b886061a0673e
           ports:
             - name: api
               containerPort: 5001
