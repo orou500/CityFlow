@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { getApiBaseUrl } from '../utils/capacitor';
 
 export default function VerifyEmailPage() {
   const { t } = useTranslation();
@@ -16,7 +17,7 @@ export default function VerifyEmailPage() {
       return;
     }
 
-    fetch(`/api/auth/verify-email?token=${token}`)
+    fetch(`${getApiBaseUrl()}/auth/verify-email?token=${token}`)
       .then(async (res) => {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);

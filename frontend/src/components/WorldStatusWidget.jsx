@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { getApiBaseUrl } from '../utils/capacitor';
 
 function formatCountdown(ms) {
   if (ms <= 0) return '00:00:00';
@@ -33,12 +34,13 @@ function formatAge(cycleCount, t) {
 
 export default function WorldStatusWidget() {
   const { t } = useTranslation();
+  const API = getApiBaseUrl();
   const [status, setStatus] = useState(null);
   const [countdown, setCountdown] = useState('');
 
   const fetchStatus = useCallback(async () => {
     try {
-      const res = await fetch('/api/world/status');
+      const res = await fetch(`${API}/world/status`);
       if (res.ok) {
         const data = await res.json();
         setStatus(data);

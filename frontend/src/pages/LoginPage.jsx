@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
 import { translateError } from '../i18n/errors';
+import { getApiBaseUrl, isNativePlatform } from '../utils/capacitor';
 
 export default function LoginPage() {
   const { t } = useTranslation();
@@ -73,8 +74,9 @@ export default function LoginPage() {
 
   const handleResend = async () => {
     setResendLoading(true);
+    const API = getApiBaseUrl();
     try {
-      const res = await fetch('/api/auth/resend-verification', {
+      const res = await fetch(`${API}/auth/resend-verification`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: resendEmail.trim() }),
@@ -251,7 +253,7 @@ export default function LoginPage() {
               </button>
             </form>
 
-            {!isRegister && (
+            {!isRegister && !isNativePlatform() && (
               <>
                 <div className="relative my-4">
                   <div className="absolute inset-0 flex items-center">
@@ -262,7 +264,7 @@ export default function LoginPage() {
                   </div>
                 </div>
                 <a
-                  href="/api/auth/google"
+                  href={`${getApiBaseUrl()}/auth/google`}
                   className="w-full flex items-center justify-center gap-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2 rounded transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -286,7 +288,7 @@ export default function LoginPage() {
                   {t('auth.signInWithGoogle')}
                 </a>
                 <a
-                  href="/api/auth/discord"
+                  href={`${getApiBaseUrl()}/auth/discord`}
                   className="w-full flex items-center justify-center gap-2 bg-[#5865F2] hover:bg-[#4752C4] text-white py-2 rounded transition-colors"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">

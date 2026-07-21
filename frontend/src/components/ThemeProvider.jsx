@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { useAuthStore } from '../store/useAuthStore';
+import { getApiBaseUrl } from '../utils/capacitor';
 
 const ThemeContext = createContext();
 
@@ -48,7 +49,7 @@ export function ThemeProvider({ children }) {
       applyTheme(resolved);
 
       if (user) {
-        fetch('/api/users/theme', {
+        fetch(`${getApiBaseUrl()}/users/theme`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',

@@ -7,9 +7,12 @@ import { useTheme } from './ThemeProvider';
 import UserSearch from './UserSearch';
 import { formatMoney } from '../utils/format';
 import CompactValue from './CompactValue';
+import { getApiBaseUrl, getAvatarUrl } from '../utils/capacitor';
+import useNativeAvatarUrl from '../hooks/useNativeAvatarUrl';
 
 export default function Sidebar({ collapsed, onToggleCollapse }) {
   const { t, i18n } = useTranslation();
+  const API = getApiBaseUrl();
   const { user, logout } = useAuthStore();
   const location = useLocation();
   const navigate = useNavigate();
@@ -103,7 +106,7 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
     i18n.changeLanguage(newLang);
     document.body.dir = newLang === 'he' ? 'rtl' : 'ltr';
     if (user) {
-      fetch('/api/users/language', {
+      fetch(`${API}/users/language`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -117,7 +120,8 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
   const themeIcon = preference === 'light' ? '\u2600\uFE0F' : preference === 'dark' ? '\uD83C\uDF19' : '\uD83D\uDD04';
   const langLabel = i18n.language === 'en' ? 'HE' : 'EN';
   const userInitial = (user?.displayName || user?.username || '?').charAt(0).toUpperCase();
-  const avatarUrl = user?.avatar || null;
+  const rawAvatarUrl = getAvatarUrl(user?.avatar || null);
+  const avatarUrl = useNativeAvatarUrl(rawAvatarUrl);
 
   function linkClasses(active, opts = {}) {
     const base = 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors';

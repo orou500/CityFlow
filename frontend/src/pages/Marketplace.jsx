@@ -4,8 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
 import { translateError } from '../i18n/errors';
 import { formatMoney } from '../utils/format';
+import { getApiBaseUrl } from '../utils/capacitor';
 
-const API = '/api';
+const API = getApiBaseUrl();
 
 async function api(path, options = {}) {
   const token = localStorage.getItem('token');

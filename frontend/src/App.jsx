@@ -1,9 +1,12 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import OnboardingWrapper from './components/OnboardingWrapper';
 import ProtectedRoute from './components/ProtectedRoute';
 import GuestRoute from './components/GuestRoute';
 import ErrorBoundary from './components/ErrorBoundary';
+import OfflineBanner from './components/OfflineBanner';
+import MobileInit from './components/MobileInit';
+import MobileSettingsPage from './pages/MobileSettingsPage';
 import { ThemeProvider } from './components/ThemeProvider';
 import LandingPage from './pages/LandingPage';
 import MapPage from './pages/MapPage';
@@ -40,6 +43,10 @@ import { useEffect } from 'react';
 import { useAuthStore } from './store/useAuthStore';
 import { useGameStore } from './store/useGameStore';
 import { ToastProvider } from './components/Toast';
+import { isNativePlatform, loadToken } from './utils/capacitor';
+import { setupDeepLinking, setNavigateFunction } from './utils/deepLinks';
+import { registerForPushNotifications, setupPushNotificationListeners } from './utils/pushNotifications';
+import { isBiometricEnabled, authenticateWithBiometric, isBiometricAvailable } from './utils/biometric';
 import './i18n/index.js';
 
 const TERMS_PATH = '/auth/accept-terms';
@@ -210,6 +217,16 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/mobile-settings"
+        element={
+          <ErrorBoundary>
+            <ProtectedRoute>
+              <MobileSettingsPage />
+            </ProtectedRoute>
+          </ErrorBoundary>
+        }
+      />
+      <Route
         path="/stocks"
         element={
           <ErrorBoundary>
@@ -273,6 +290,17 @@ function AppRoutes() {
   );
 }
 
+function AppInner() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    setNavigateFunction(navigate);
+    setupDeepLinking();
+  }, [navigate]);
+
+  return null;
+}
+
 export default function App() {
   const fetchMe = useAuthStore((s) => s.fetchMe);
   const user = useAuthStore((s) => s.user);
@@ -282,11 +310,13 @@ export default function App() {
 
   useEffect(() => {
     fetchMaintenance();
-    if (localStorage.getItem('token')) {
-      fetchMe();
-    } else {
-      useAuthStore.setState({ loading: false });
-    }
+    loadToken().then((token) => {
+      if (token) {
+        fetchMe();
+      } else {
+        useAuthStore.setState({ loading: false });
+      }
+    });
   }, []);
 
   const isAdmin = user?.role === 'admin';
@@ -308,6 +338,7 @@ export default function App() {
   if (maintenance.enabled && !isAdmin && !isAllowedPath) {
     return (
       <ThemeProvider>
+        <OfflineBanner />
         <MaintenancePage message={maintenance.message} />
       </ThemeProvider>
     );
@@ -316,7 +347,10 @@ export default function App() {
   return (
     <ThemeProvider>
       <ToastProvider>
+        <OfflineBanner />
         <BrowserRouter>
+          <AppInner />
+          <MobileInit />
           {needsTerms ? (
             <AppRoutes />
           ) : (

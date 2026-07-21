@@ -8,9 +8,12 @@ import { useToast } from './Toast';
 import UserSearch from './UserSearch';
 import { formatMoney } from '../utils/format';
 import CompactValue from './CompactValue';
+import { isNativePlatform, getApiBaseUrl, getAvatarUrl } from '../utils/capacitor';
+import useNativeAvatarUrl from '../hooks/useNativeAvatarUrl';
 
 export default function Navbar() {
   const { t, i18n } = useTranslation();
+  const API = getApiBaseUrl();
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const unreadCount = useGameStore((s) => s.unreadCount);
@@ -89,7 +92,7 @@ export default function Navbar() {
     i18n.changeLanguage(newLang);
     document.body.dir = newLang === 'he' ? 'rtl' : 'ltr';
     if (user) {
-      fetch('/api/users/language', {
+      fetch(`${API}/users/language`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -117,7 +120,8 @@ export default function Navbar() {
   ];
 
   const userInitial = (user?.displayName || user?.username || '?').charAt(0).toUpperCase();
-  const avatarUrl = user?.avatar || null;
+  const rawAvatarUrl = getAvatarUrl(user?.avatar || null);
+  const avatarUrl = useNativeAvatarUrl(rawAvatarUrl);
 
   return (
     <nav className="bg-card border-b border-border px-4 py-3 flex items-center justify-between relative z-50">
@@ -293,6 +297,16 @@ export default function Navbar() {
                     <span className="text-base">{'\u2699\uFE0F'}</span>
                     <span>{t('nav.settings')}</span>
                   </Link>
+                  {isNativePlatform() && (
+                    <Link
+                      to="/mobile-settings"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                    >
+                      <span className="text-base">{'\uD83D\uDCF1'}</span>
+                      <span>{t('nav.mobileSettings', 'Mobile Settings')}</span>
+                    </Link>
+                  )}
                   <Link
                     to="/help"
                     onClick={(e) => {

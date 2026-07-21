@@ -2,8 +2,9 @@ import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } fr
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
+import { getApiBaseUrl } from '../utils/capacitor';
 
-const API = '/api';
+const API = getApiBaseUrl();
 
 async function api(path, options = {}) {
   const token = localStorage.getItem('token');

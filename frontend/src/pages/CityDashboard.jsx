@@ -6,8 +6,9 @@ import { useAuthStore } from '../store/useAuthStore';
 import { translateError } from '../i18n/errors';
 import { formatMoney, formatCompact } from '../utils/format';
 import CompactValue from '../components/CompactValue';
+import { getApiBaseUrl } from '../utils/capacitor';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API = getApiBaseUrl();
 
 async function api(path, options = {}) {
   const token = localStorage.getItem('token');

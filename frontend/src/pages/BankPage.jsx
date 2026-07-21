@@ -6,6 +6,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { translateError } from '../i18n/errors';
 import { formatMoney } from '../utils/format';
 import CompactValue from '../components/CompactValue';
+import { getApiBaseUrl } from '../utils/capacitor';
 
 function getScoreColor(score) {
   if (score >= 800) return 'text-emerald-500';
@@ -65,6 +66,7 @@ function getLoanTypeLabel(type, t) {
 export default function BankPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const API = getApiBaseUrl();
   const { user, fetchMe } = useAuthStore();
   const { loans, fetchLoans, fetchLoanOptions, applyLoan, repayLoan, fetchUserData } = useGameStore();
   const [summary, setSummary] = useState(null);
@@ -92,19 +94,19 @@ export default function BankPage() {
     fetchLoanOptions()
       .then(setOptions)
       .catch(() => {});
-    fetch('/api/bank/summary', {
+    fetch(`${API}/bank/summary`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     })
       .then((r) => r.json())
       .then(setSummary)
       .catch(() => {});
-    fetch('/api/bank/history', {
+    fetch(`${API}/bank/history`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     })
       .then((r) => r.json())
       .then(setLoanHistory)
       .catch(() => {});
-    fetch('/api/bank/credit-history', {
+    fetch(`${API}/bank/credit-history`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     })
       .then((r) => r.json())
@@ -113,7 +115,7 @@ export default function BankPage() {
   };
 
   const refreshSummary = () => {
-    fetch('/api/bank/summary', {
+    fetch(`${API}/bank/summary`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     })
       .then((r) => r.json())

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
 import { formatMoney } from '../utils/format';
 import CompactValue from '../components/CompactValue';
+import { getApiBaseUrl } from '../utils/capacitor';
 
 function getToken() {
   return useAuthStore.getState().token || localStorage.getItem('token');
@@ -11,6 +12,7 @@ function getToken() {
 
 export default function FriendsPage() {
   const { t } = useTranslation();
+  const API = getApiBaseUrl();
   const location = useLocation();
   const [friends, setFriends] = useState([]);
   const [incoming, setIncoming] = useState([]);
@@ -23,7 +25,7 @@ export default function FriendsPage() {
     const tok = getToken();
     if (!tok) return;
     try {
-      const res = await fetch('/api/friends', { headers: { Authorization: `Bearer ${tok}` } });
+      const res = await fetch(`${API}/friends`, { headers: { Authorization: `Bearer ${tok}` } });
       const data = await res.json();
       if (data.error) {
         setMsg(data.error);
@@ -40,7 +42,7 @@ export default function FriendsPage() {
     const tok = getToken();
     if (!tok) return;
     try {
-      const res = await fetch('/api/friends/requests', { headers: { Authorization: `Bearer ${tok}` } });
+      const res = await fetch(`${API}/friends/requests`, { headers: { Authorization: `Bearer ${tok}` } });
       const data = await res.json();
       if (data.error) {
         setMsg(data.error);
@@ -68,7 +70,7 @@ export default function FriendsPage() {
   async function acceptRequest(requestId) {
     const tok = getToken();
     try {
-      const res = await fetch(`/api/friends/accept/${requestId}`, {
+      const res = await fetch(`${API}/friends/accept/${requestId}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${tok}` },
       });
@@ -84,7 +86,7 @@ export default function FriendsPage() {
   async function declineRequest(requestId) {
     const tok = getToken();
     try {
-      const res = await fetch(`/api/friends/decline/${requestId}`, {
+      const res = await fetch(`${API}/friends/decline/${requestId}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${tok}` },
       });
@@ -100,7 +102,7 @@ export default function FriendsPage() {
   async function cancelRequest(requestId) {
     const tok = getToken();
     try {
-      const res = await fetch(`/api/friends/request/${requestId}`, {
+      const res = await fetch(`${API}/friends/request/${requestId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${tok}` },
       });
@@ -116,7 +118,7 @@ export default function FriendsPage() {
   async function removeFriend(friendId) {
     const tok = getToken();
     try {
-      const res = await fetch(`/api/friends/${friendId}`, {
+      const res = await fetch(`${API}/friends/${friendId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${tok}` },
       });

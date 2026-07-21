@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
+import { getApiBaseUrl } from '../utils/capacitor';
 
 function getToken() {
   return useAuthStore.getState().token || localStorage.getItem('token');
@@ -9,6 +10,7 @@ function getToken() {
 
 export default function UserSearch() {
   const { t } = useTranslation();
+  const API = getApiBaseUrl();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [open, setOpen] = useState(false);
@@ -32,7 +34,7 @@ export default function UserSearch() {
     try {
       const tok = getToken();
       if (!tok) return;
-      const res = await fetch(`/api/users/search?q=${encodeURIComponent(value)}`, {
+      const res = await fetch(`${API}/users/search?q=${encodeURIComponent(value)}`, {
         headers: { Authorization: `Bearer ${tok}` },
       });
       const data = await res.json();

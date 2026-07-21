@@ -964,7 +964,10 @@
     "linked": "Linked",
     "link": "Link",
     "unlink": "Unlink",
-    "noPasswordWarning": "Your account has no password set. Link a password to ensure you can always access your account."
+    "noPasswordWarning": "Your account has no password set. Link a password to ensure you can always access your account.",
+    "setPassword": "Set Password",
+    "setPasswordPrompt": "Add a password so you can also log in with email and password:",
+    "passwordSetSuccess": "Password set successfully. You can now log in with email and password."
   },
   "friends": {
     "title": "Friends",
@@ -1469,5 +1472,18 @@
     "price": "Price",
     "totalValue": "Total Value",
     "totalCost": "Total Cost"
+  },
+  "mobile": {
+    "settings": "Mobile Settings",
+    "pushNotifications": "Push Notifications",
+    "pushDesc": "Receive alerts for rent, sales, auctions",
+    "biometric": "Biometric Login",
+    "biometricDesc": "Quick login with biometrics",
+    "darkMode": "Dark Mode",
+    "darkModeDesc": "Switch between light and dark themes",
+    "dataSaver": "Data Saver",
+    "dataSaverDesc": "Reduce data usage on mobile networks",
+    "fingerprint": "Fingerprint",
+    "offlineMessage": "CityFlow is currently unavailable. Please try again later."
   }
 }

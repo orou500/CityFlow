@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { getApiBaseUrl } from '../utils/capacitor';
 
 export default function ForgotPasswordPage() {
   const { t } = useTranslation();
@@ -23,7 +24,7 @@ export default function ForgotPasswordPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/auth/forgot-password', {
+      const res = await fetch(`${getApiBaseUrl()}/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim() }),
