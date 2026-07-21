@@ -29,3 +29,15 @@ coverage/
 *.swp
 .DS_Store
 Thumbs.db
+
+# === Capacitor ===
+android/app/build/
+android/.gradle/
+android/build/
+android/capacitor-*
+ios/App/Pods/
+ios/App/build/
+ios/App/DerivedData/
+*.xcuserstate
+GoogleService-Info.plist
+google-services.json

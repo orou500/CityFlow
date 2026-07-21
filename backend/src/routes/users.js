@@ -209,4 +209,45 @@ router.put('/onboarding', authenticate, async (req, res) => {
   }
 });
 
+router.post('/push-token', authenticate, async (req, res) => {
+  try {
+    const { token, platform } = req.body;
+    if (!token || !platform) {
+      return res.status(400).json({ error: 'Token and platform are required' });
+    }
+    if (!['android', 'ios', 'web'].includes(platform)) {
+      return res.status(400).json({ error: 'Platform must be android, ios, or web' });
+    }
+
+    const user = await User.findById(req.user._id);
+    const exists = user.pushTokens.some((t) => t.token === token);
+    if (!exists) {
+      user.pushTokens.push({ token, platform });
+      if (user.pushTokens.length > 5) {
+        user.pushTokens = user.pushTokens.slice(-5);
+      }
+      await user.save({ validateBeforeSave: false });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/push-token', authenticate, async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ error: 'Token is required' });
+
+    await User.findByIdAndUpdate(req.user._id, {
+      $pull: { pushTokens: { token } },
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

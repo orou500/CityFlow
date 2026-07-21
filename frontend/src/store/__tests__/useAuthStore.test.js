@@ -20,9 +20,9 @@ describe('useAuthStore', () => {
     expect(state.error).toBeNull();
   });
 
-  it('logout clears user and token', () => {
+  it('logout clears user and token', async () => {
     useAuthStore.setState({ user: { username: 'test' }, token: 'abc' });
-    useAuthStore.getState().logout();
+    await useAuthStore.getState().logout();
     const state = useAuthStore.getState();
     expect(state.user).toBeNull();
     expect(state.token).toBeNull();

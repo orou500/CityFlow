@@ -1,0 +1,6 @@
+- [x] Fix all hardcoded `/api` paths
+    - [x] Update `LandingPage.jsx` statistics fetching
+    - [x] Update `LoginPage.jsx` resend and social links
+    - [x] Update `useGameStore.js` backup methods
+    - [x] Update `AdminPage.jsx` backup download
+- [ ] Verify build and sync

@@ -3,8 +3,9 @@ import { useParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { formatMoney, formatMoneyExact, formatCompact, formatCount } from '../utils/format';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { getApiBaseUrl } from '../utils/capacitor';
 
-const API = '/api';
+const API = getApiBaseUrl();
 
 async function api(path, options = {}) {
   const token = localStorage.getItem('token');

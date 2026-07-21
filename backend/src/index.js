@@ -30,6 +30,7 @@ import discordRoutes from './routes/discord.js';
 import companyRoutes from './routes/companies.js';
 import stockRoutes from './routes/stocks.js';
 import indexRoutes from './routes/indexes.js';
+import imageProxyRoutes from './routes/imageProxy.js';
 import { maintenanceCheck } from './middleware/maintenance.js';
 import { getMaintenanceInfo } from './models/GameState.js';
 import { createNewSeason } from './engine/seasonReset.js';
@@ -94,6 +95,7 @@ app.use('/auth', oauthRoutes);
 app.use('/companies', companyRoutes);
 app.use('/stocks', stockRoutes);
 app.use('/indexes', indexRoutes);
+app.use('/image-proxy', imageProxyRoutes);
 
 app.use((req, res) => {
   console.warn(`404 API Route: ${req.method} ${req.originalUrl}`);

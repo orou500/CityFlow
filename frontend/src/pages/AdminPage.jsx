@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useGameStore } from '../store/useGameStore';
 import { formatMoney } from '../utils/format';
+import { getApiBaseUrl } from '../utils/capacitor';
 
 function StatCard({ label, value }) {
   return (
@@ -301,8 +302,9 @@ export default function AdminPage() {
   }
 
   function handleDownloadBackup(id) {
+    const API = getApiBaseUrl();
     const token = localStorage.getItem('token');
-    fetch(`/api/admin/backups/${id}/download`, {
+    fetch(`${API}/admin/backups/${id}/download`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => {

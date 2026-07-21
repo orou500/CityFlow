@@ -1,29 +1,35 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { getApiBaseUrl, saveToken, loadToken, clearToken } from '../utils/capacitor';
 
-const API = '/api';
+function getApiBase() {
+  return getApiBaseUrl();
+}
+
+async function api(path, options = {}) {
+  const API = getApiBase();
+  const token = (await loadToken()) || localStorage.getItem('token');
+  const headers = { 'Content-Type': 'application/json', ...options.headers };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(`${API}${path}`, { ...options, headers });
+  console.log(`API Request: ${options.method || 'GET'} ${API}${path} - Status: ${res.status}`);
+  let data;
+  try {
+    data = await res.json();
+  } catch (err) {
+    console.error(`API Parse Error: ${API}${path}`, err);
+    throw new ApiError(`Server returned non-JSON response (${res.status})`, res.status);
+  }
+  if (!res.ok) throw new ApiError(data.error || 'Request failed', res.status);
+  return data;
+}
 
 class ApiError extends Error {
   constructor(message, status) {
     super(message);
     this.status = status;
   }
-}
-
-async function api(path, options = {}) {
-  const token = localStorage.getItem('token');
-  const headers = { 'Content-Type': 'application/json', ...options.headers };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-
-  const res = await fetch(`${API}${path}`, { ...options, headers });
-  let data;
-  try {
-    data = await res.json();
-  } catch {
-    throw new ApiError(`Server returned non-JSON response (${res.status})`, res.status);
-  }
-  if (!res.ok) throw new ApiError(data.error || 'Request failed', res.status);
-  return data;
 }
 
 export const useAuthStore = create(
@@ -41,7 +47,7 @@ export const useAuthStore = create(
             method: 'POST',
             body: JSON.stringify({ login, password }),
           });
-          localStorage.setItem('token', data.token);
+          await saveToken(data.token);
           set({ user: data.user, token: data.token, loading: false });
           return data;
         } catch (err) {
@@ -67,7 +73,7 @@ export const useAuthStore = create(
 
       fetchMe: async () => {
         try {
-          const rawToken = localStorage.getItem('token');
+          const rawToken = await loadToken();
           if (!rawToken) {
             set({ loading: false });
             return null;
@@ -85,8 +91,8 @@ export const useAuthStore = create(
         }
       },
 
-      logout: () => {
-        localStorage.removeItem('token');
+      logout: async () => {
+        await clearToken();
         localStorage.removeItem('cityflow-auth');
         set({ user: null, token: null });
       },

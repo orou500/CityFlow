@@ -5,6 +5,8 @@ import { useAuthStore } from '../store/useAuthStore';
 import { useGameStore } from '../store/useGameStore';
 import { formatMoney, formatCompact } from '../utils/format';
 import CompactValue from '../components/CompactValue';
+import { getApiBaseUrl, getAvatarUrl } from '../utils/capacitor';
+import useNativeAvatarUrl from '../hooks/useNativeAvatarUrl';
 
 function StatCard({ label, value, color }) {
   return (
@@ -21,6 +23,7 @@ function getToken() {
 
 export default function UserProfilePage() {
   const { t } = useTranslation();
+  const API = getApiBaseUrl();
   const { username } = useParams();
   const navigate = useNavigate();
   const { user: currentUser } = useAuthStore();
@@ -36,7 +39,14 @@ export default function UserProfilePage() {
   const [friendStatus, setFriendStatus] = useState(null);
   const [seasonHistory, setSeasonHistory] = useState([]);
   const [oauthStatus, setOauthStatus] = useState(null);
+  const [settingPassword, setSettingPassword] = useState(false);
+  const [setPwForm, setSetPwForm] = useState({ newPassword: '', confirmPassword: '' });
+  const [setPwError, setSetPwError] = useState('');
+  const [setPwSuccess, setSetPwSuccess] = useState(false);
   const fileRef = useRef(null);
+
+  const rawProfileAvatarUrl = getAvatarUrl(profile?.user?.avatar);
+  const profileAvatarUrl = useNativeAvatarUrl(rawProfileAvatarUrl);
 
   const targetUsername = username || currentUser?.username;
   const isOwner = !username || (currentUser && targetUsername === currentUser.username);
@@ -44,7 +54,7 @@ export default function UserProfilePage() {
 
   useEffect(() => {
     if (!targetUsername) return;
-    fetch(`/api/users/${encodeURIComponent(targetUsername)}`, {
+    fetch(`${API}/users/${encodeURIComponent(targetUsername)}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => r.json())
@@ -65,7 +75,7 @@ export default function UserProfilePage() {
       .catch(() => setError('Failed to load profile'));
 
     if (currentUser && username && username !== currentUser.username) {
-      fetch(`/api/friends/status/${encodeURIComponent(username)}`, {
+      fetch(`${API}/friends/status/${encodeURIComponent(username)}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
         .then((r) => r.json())
@@ -76,7 +86,7 @@ export default function UserProfilePage() {
 
   async function sendFriendRequest() {
     try {
-      const res = await fetch(`/api/friends/request/${encodeURIComponent(targetUsername)}`, {
+      const res = await fetch(`${API}/friends/request/${encodeURIComponent(targetUsername)}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -91,7 +101,7 @@ export default function UserProfilePage() {
   async function acceptFriendRequest() {
     if (!friendStatus?.requestId) return;
     try {
-      const res = await fetch(`/api/friends/accept/${friendStatus.requestId}`, {
+      const res = await fetch(`${API}/friends/accept/${friendStatus.requestId}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -106,7 +116,7 @@ export default function UserProfilePage() {
   async function declineFriendRequest() {
     if (!friendStatus?.requestId) return;
     try {
-      const res = await fetch(`/api/friends/decline/${friendStatus.requestId}`, {
+      const res = await fetch(`${API}/friends/decline/${friendStatus.requestId}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -121,7 +131,7 @@ export default function UserProfilePage() {
   async function cancelFriendRequest() {
     if (!friendStatus?.requestId) return;
     try {
-      const res = await fetch(`/api/friends/request/${friendStatus.requestId}`, {
+      const res = await fetch(`${API}/friends/request/${friendStatus.requestId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -135,7 +145,7 @@ export default function UserProfilePage() {
 
   useEffect(() => {
     if (!isOwner) return;
-    fetch('/api/auth/oauth/status', {
+    fetch(`${API}/auth/status`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => r.json())
@@ -146,7 +156,7 @@ export default function UserProfilePage() {
   async function handleUnlinkOAuth(provider) {
     if (!confirm(`Are you sure you want to unlink ${provider}?`)) return;
     try {
-      const res = await fetch('/api/auth/oauth/unlink', {
+      const res = await fetch(`${API}/auth/unlink`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ provider }),
@@ -165,11 +175,45 @@ export default function UserProfilePage() {
     }
   }
 
+  async function handleSetPassword(e) {
+    e.preventDefault();
+    setSetPwError('');
+    setSetPwSuccess(false);
+    if (setPwForm.newPassword.length < 8) {
+      setSetPwError(t('auth.passwordTooShort'));
+      return;
+    }
+    if (setPwForm.newPassword !== setPwForm.confirmPassword) {
+      setSetPwError(t('auth.passwordsDoNotMatch'));
+      return;
+    }
+    setSettingPassword(true);
+    try {
+      const res = await fetch(`${API}/auth/set-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ newPassword: setPwForm.newPassword }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        setSetPwError(data.error);
+      } else {
+        setSetPwSuccess(true);
+        setSetPwForm({ newPassword: '', confirmPassword: '' });
+        setOauthStatus((prev) => ({ ...prev, hasPassword: true }));
+      }
+    } catch {
+      setSetPwError('Failed to set password');
+    } finally {
+      setSettingPassword(false);
+    }
+  }
+
   async function handleSave(e) {
     e.preventDefault();
     setMsg('');
     try {
-      const res = await fetch('/api/users/settings', {
+      const res = await fetch(`${API}/users/settings`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -198,7 +242,7 @@ export default function UserProfilePage() {
       return;
     }
     try {
-      const res = await fetch('/api/users/password', {
+      const res = await fetch(`${API}/users/password`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ currentPassword: pwdForm.currentPassword, newPassword: pwdForm.newPassword }),
@@ -222,7 +266,7 @@ export default function UserProfilePage() {
     const fd = new FormData();
     fd.append('avatar', file);
     try {
-      const res = await fetch('/api/users/avatar', {
+      const res = await fetch(`${API}/users/avatar`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: fd,
@@ -278,7 +322,7 @@ export default function UserProfilePage() {
             <div className="relative">
               <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden flex items-center justify-center text-3xl">
                 {profileUser.avatar ? (
-                  <img src={profileUser.avatar} alt={displayName} className="w-full h-full object-cover" />
+                  <img src={profileAvatarUrl} alt={displayName} className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-gray-500 dark:text-gray-400">{displayName.charAt(0).toUpperCase()}</span>
                 )}
@@ -511,7 +555,10 @@ export default function UserProfilePage() {
                       )}
                     </div>
                   ) : (
-                    <a href="/api/auth/google" className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500">
+                    <a
+                      href={`${API}/auth/google`}
+                      className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500"
+                    >
                       {t('profile.link')}
                     </a>
                   )}
@@ -537,7 +584,7 @@ export default function UserProfilePage() {
                     </div>
                   ) : (
                     <a
-                      href="/api/auth/discord"
+                      href={`${API}/auth/discord`}
                       className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500"
                     >
                       {t('profile.link')}
@@ -546,7 +593,40 @@ export default function UserProfilePage() {
                 </div>
               </div>
               {!oauthStatus.hasPassword && (
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">{t('profile.noPasswordWarning')}</p>
+                <div className="mt-3 border-t border-gray-200 dark:border-gray-700 pt-3">
+                  {setPwSuccess ? (
+                    <p className="text-xs text-green-600 dark:text-green-400">{t('profile.passwordSetSuccess')}</p>
+                  ) : (
+                    <form onSubmit={handleSetPassword} className="space-y-2">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{t('profile.setPasswordPrompt')}</p>
+                      {setPwError && <p className="text-xs text-red-600 dark:text-red-400">{setPwError}</p>}
+                      <input
+                        type="password"
+                        placeholder={t('auth.newPassword')}
+                        value={setPwForm.newPassword}
+                        onChange={(e) => setSetPwForm({ ...setPwForm, newPassword: e.target.value })}
+                        className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-3 py-2 text-sm text-primary"
+                        required
+                        minLength={8}
+                      />
+                      <input
+                        type="password"
+                        placeholder={t('auth.confirmPassword')}
+                        value={setPwForm.confirmPassword}
+                        onChange={(e) => setSetPwForm({ ...setPwForm, confirmPassword: e.target.value })}
+                        className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-3 py-2 text-sm text-primary"
+                        required
+                      />
+                      <button
+                        type="submit"
+                        disabled={settingPassword}
+                        className="w-full bg-blue-600 hover:bg-blue-500 text-white text-sm py-1.5 rounded transition-colors disabled:opacity-50"
+                      >
+                        {settingPassword ? t('common.loading') : t('profile.setPassword')}
+                      </button>
+                    </form>
+                  )}
+                </div>
               )}
             </div>
           )}

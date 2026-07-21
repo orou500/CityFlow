@@ -1,16 +1,22 @@
 import { create } from 'zustand';
-
-const API = '/api';
+import { getApiBaseUrl, loadToken } from '../utils/capacitor';
 
 async function api(path, options = {}) {
-  const token = localStorage.getItem('token');
-  const headers = { 'Content-Type': 'application/json', ...options.headers };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const API = getApiBaseUrl();
+  try {
+    const token = await loadToken();
+    const headers = { 'Content-Type': 'application/json', ...options.headers };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(`${API}${path}`, { ...options, headers });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Request failed');
-  return data;
+    const res = await fetch(`${API}${path}`, { ...options, headers });
+    console.log(`Game API Request: ${options.method || 'GET'} ${API}${path} - Status: ${res.status}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Request failed');
+    return data;
+  } catch (err) {
+    console.error(`Game API Error: ${API}${path}`, err);
+    throw err;
+  }
 }
 
 export const useGameStore = create((set, get) => ({
@@ -475,8 +481,9 @@ export const useGameStore = create((set, get) => ({
 
   maintenance: { enabled: false, message: '' },
   fetchMaintenance: async () => {
+    const API = getApiBaseUrl();
     try {
-      const res = await fetch('/api/maintenance');
+      const res = await fetch(`${API}/maintenance`);
       const data = await res.json();
       set({ maintenance: { enabled: data.enabled, message: data.message || '' } });
       return data;
@@ -513,10 +520,11 @@ export const useGameStore = create((set, get) => ({
     return await api(`/admin/backups/${id}`, { method: 'DELETE' });
   },
   uploadBackupFile: async (file) => {
+    const API = getApiBaseUrl();
     const token = localStorage.getItem('token');
     const formData = new FormData();
     formData.append('backup', file);
-    const res = await fetch('/api/admin/backups/upload', {
+    const res = await fetch(`${API}/admin/backups/upload`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
       body: formData,
@@ -526,8 +534,9 @@ export const useGameStore = create((set, get) => ({
     return data;
   },
   downloadBackup: (id) => {
+    const API = getApiBaseUrl();
     const a = document.createElement('a');
-    a.href = `/api/admin/backups/${id}/download`;
+    a.href = `${API}/admin/backups/${id}/download`;
     a.target = '_blank';
     a.download = '';
     const authFrame = document.createElement('iframe');
@@ -535,10 +544,10 @@ export const useGameStore = create((set, get) => ({
     document.body.appendChild(authFrame);
     const form = authFrame.contentDocument.createElement('form');
     form.method = 'GET';
-    form.action = `/api/admin/backups/${id}/download`;
+    form.action = `${API}/admin/backups/${id}/download`;
     authFrame.contentDocument.body.appendChild(form);
     a.click();
-    window.open(`/api/admin/backups/${id}/download`, '_blank');
+    window.open(`${API}/admin/backups/${id}/download`, '_blank');
     document.body.removeChild(authFrame);
   },
 

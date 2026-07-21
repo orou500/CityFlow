@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
 import { formatDiff } from '../utils/format';
+import { getApiBaseUrl } from '../utils/capacitor';
 
 function formatCountdown(ms) {
   if (ms <= 0) return '00:00:00';
@@ -15,6 +16,7 @@ function formatCountdown(ms) {
 export default function PeriodBonusWidget({ onClaimed }) {
   const { t } = useTranslation();
   const fetchMe = useAuthStore((s) => s.fetchMe);
+  const API = getApiBaseUrl();
   const [status, setStatus] = useState(null);
   const [countdown, setCountdown] = useState('');
   const [claiming, setClaiming] = useState(false);
@@ -23,7 +25,7 @@ export default function PeriodBonusWidget({ onClaimed }) {
 
   const fetchStatus = useCallback(async () => {
     try {
-      const res = await fetch('/api/bonus/status', {
+      const res = await fetch(`${API}/bonus/status`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       if (res.ok) {
@@ -55,7 +57,7 @@ export default function PeriodBonusWidget({ onClaimed }) {
     setError(null);
     setResult(null);
     try {
-      const res = await fetch('/api/bonus/claim', {
+      const res = await fetch(`${API}/bonus/claim`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

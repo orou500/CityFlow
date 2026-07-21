@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
+import { getApiBaseUrl } from '../utils/capacitor';
 
 function TermsContent() {
   const { t } = useTranslation();
@@ -169,7 +170,7 @@ export default function OAuthAcceptTermsPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/auth/accept-terms', {
+      const res = await fetch(`${getApiBaseUrl()}/auth/accept-terms`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });

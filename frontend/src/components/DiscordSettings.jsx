@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
+import { getApiBaseUrl } from '../utils/capacitor';
 
 export default function DiscordSettings() {
   const { t } = useTranslation();
   const token = useAuthStore((s) => s.token);
+  const API = getApiBaseUrl();
   const [linkStatus, setLinkStatus] = useState({ linked: false });
   const [linkCode, setLinkCode] = useState('');
   const [verifyCode, setVerifyCode] = useState('');
@@ -20,7 +22,7 @@ export default function DiscordSettings() {
 
   async function fetchLinkStatus() {
     try {
-      const res = await fetch('/api/discord/link/status', {
+      const res = await fetch(`${API}/discord/link/status`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -33,7 +35,7 @@ export default function DiscordSettings() {
   async function fetchNotifSettings() {
     setNotifsLoading(true);
     try {
-      const res = await fetch('/api/discord/notifications/settings', {
+      const res = await fetch(`${API}/discord/notifications/settings`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -48,7 +50,7 @@ export default function DiscordSettings() {
     setLoading(true);
     setMsg('');
     try {
-      const res = await fetch('/api/discord/link/generate', {
+      const res = await fetch(`${API}/discord/link/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       });
@@ -66,7 +68,7 @@ export default function DiscordSettings() {
     setLoading(true);
     setMsg('');
     try {
-      const res = await fetch('/api/discord/link/verify', {
+      const res = await fetch(`${API}/discord/link/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ code: verifyCode }),
@@ -91,7 +93,7 @@ export default function DiscordSettings() {
     setLoading(true);
     setMsg('');
     try {
-      const res = await fetch('/api/discord/link', {
+      const res = await fetch(`${API}/discord/link`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -112,7 +114,7 @@ export default function DiscordSettings() {
     const updated = { ...notifSettings.preferences, [key]: value };
     setNotifSettings({ ...notifSettings, preferences: updated });
     try {
-      await fetch('/api/discord/notifications/settings', {
+      await fetch(`${API}/discord/notifications/settings`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ preferences: updated }),

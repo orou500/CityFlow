@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
 import { useTheme } from '../components/ThemeProvider';
+import { getApiBaseUrl } from '../utils/capacitor';
 import Footer from '../components/Footer';
 import { formatMoney } from '../utils/format';
 import CompactValue from '../components/CompactValue';
@@ -140,7 +141,8 @@ export default function LandingPage() {
   }, [user, loading, navigate]);
 
   useEffect(() => {
-    fetch('/api/stats')
+    const API = getApiBaseUrl();
+    fetch(`${API}/stats`)
       .then((r) => r.json())
       .then((data) => {
         setStats(data);
@@ -148,7 +150,7 @@ export default function LandingPage() {
         setActivity(data.recentActivity || []);
       })
       .catch(() => {});
-    fetch('/api/world/status')
+    fetch(`${API}/world/status`)
       .then((r) => r.json())
       .then((data) => setWorldAge(data))
       .catch(() => {});

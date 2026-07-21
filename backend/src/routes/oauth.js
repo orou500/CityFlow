@@ -7,6 +7,7 @@ import { authenticate } from '../middleware/auth.js';
 import { isMaintenanceMode } from '../models/GameState.js';
 import { sendEmail } from '../services/email.js';
 import emailTemplates from '../services/emailTemplates.js';
+import { downloadOAuthAvatar } from '../services/avatarDownload.js';
 
 const router = Router();
 
@@ -34,22 +35,26 @@ function generateToken(userId) {
   return jwt.sign({ userId }, config.jwtSecret, { expiresIn: '7d' });
 }
 
+function errorRedirect(error) {
+  return `${config.frontendUrl}/auth/callback?error=${encodeURIComponent(error)}`;
+}
+
 function getGoogleCallbackUrl(req) {
-  if (config.oauth.google.redirectUri) {
-    return config.oauth.google.redirectUri;
-  }
   const host = req.get('host');
   const isLocalDev = host.startsWith('localhost');
+  if (!isLocalDev && config.oauth.google.redirectUri) {
+    return config.oauth.google.redirectUri;
+  }
   const basePath = isLocalDev ? '' : '/api';
   return `${req.protocol}://${host}${basePath}/auth/google/callback`;
 }
 
 function getDiscordCallbackUrl(req) {
-  if (config.oauth.discord.redirectUri) {
-    return config.oauth.discord.redirectUri;
-  }
   const host = req.get('host');
   const isLocalDev = host.startsWith('localhost');
+  if (!isLocalDev && config.oauth.discord.redirectUri) {
+    return config.oauth.discord.redirectUri;
+  }
   const basePath = isLocalDev ? '' : '/api';
   return `${req.protocol}://${host}${basePath}/auth/discord/callback`;
 }
@@ -74,17 +79,33 @@ async function handleOAuthCallback({ provider, providerId, email, name, avatar }
       if (!alreadyLinked) {
         user.oauthProviders.push({ provider, providerId });
         if (avatar && !user.avatar) {
-          user.avatar = avatar;
+          const localPath = await downloadOAuthAvatar(user._id, avatar);
+          user.avatar = localPath || avatar;
         }
         await user.save({ validateBeforeSave: false });
       }
     } else {
       isNewUser = true;
-      const baseUsername = (name || email.split('@')[0])
+
+      const emailPrefix = email.split('@')[0] || '';
+      const sanitizedName = (name || '')
         .toLowerCase()
         .replace(/[^a-z0-9]/g, '')
         .slice(0, 20);
-      let username = baseUsername || 'user';
+
+      let baseUsername = emailPrefix
+        .toLowerCase()
+        .replace(/[^a-z0-9._-]/g, '')
+        .slice(0, 20);
+
+      if (!baseUsername && sanitizedName) {
+        baseUsername = sanitizedName;
+      }
+      if (!baseUsername) {
+        baseUsername = 'player';
+      }
+
+      let username = baseUsername;
       let suffix = 0;
       while (await User.findOne({ normalizedUsername: username + (suffix || '') })) {
         suffix++;
@@ -98,12 +119,20 @@ async function handleOAuthCallback({ provider, providerId, email, name, avatar }
         normalizedUsername: username.toLowerCase().trim(),
         email: email.toLowerCase(),
         oauthProviders: [{ provider, providerId }],
-        avatar: avatar || '',
+        avatar: '',
         emailVerified: true,
         emailVerifiedAt: now,
         acceptedTerms: false,
         acceptedPrivacy: false,
       });
+
+      if (avatar) {
+        const localAvatar = await downloadOAuthAvatar(user._id, avatar);
+        if (localAvatar) {
+          user.avatar = localAvatar;
+          await user.save({ validateBeforeSave: false });
+        }
+      }
 
       const welcomeTemplate = emailTemplates.welcome({ username: user.username });
       sendEmail({ to: user.email, ...welcomeTemplate }).catch((err) => {
@@ -116,11 +145,20 @@ async function handleOAuthCallback({ provider, providerId, email, name, avatar }
     return { redirect: `${config.frontendUrl}/auth/callback?error=account_banned` };
   }
 
+  if (user.avatar && (user.avatar.startsWith('http://') || user.avatar.startsWith('https://'))) {
+    const localPath = await downloadOAuthAvatar(user._id, user.avatar);
+    if (localPath) {
+      user.avatar = localPath;
+      await user.save({ validateBeforeSave: false });
+    }
+  }
+
   await User.updateOne({ _id: user._id }, { $set: { lastLoginAt: new Date() } });
 
   const token = generateToken(user._id);
   const params = new URLSearchParams({ token });
   if (isNewUser) params.set('new_user', '1');
+
   return { redirect: `${config.frontendUrl}/auth/callback?${params.toString()}` };
 }
 
@@ -150,16 +188,16 @@ router.get('/google/callback', async (req, res) => {
   const { code, state, error: googleError } = req.query;
 
   if (googleError) {
-    return res.redirect(`${config.frontendUrl}/auth/callback?error=${encodeURIComponent(googleError)}`);
+    return res.redirect(errorRedirect(googleError));
   }
 
   if (!code || !state) {
-    return res.redirect(`${config.frontendUrl}/auth/callback?error=missing_parameters`);
+    return res.redirect(errorRedirect('missing_parameters'));
   }
 
   const verified = verifyState(state);
   if (!verified || verified.provider !== 'google') {
-    return res.redirect(`${config.frontendUrl}/auth/callback?error=invalid_state`);
+    return res.redirect(errorRedirect('invalid_state'));
   }
 
   try {
@@ -179,7 +217,7 @@ router.get('/google/callback', async (req, res) => {
 
     if (!tokenResponse.ok) {
       console.error('[OAUTH] Google token exchange failed:', tokenData);
-      return res.redirect(`${config.frontendUrl}/auth/callback?error=token_exchange_failed`);
+      return res.redirect(errorRedirect('token_exchange_failed'));
     }
 
     const userInfoResponse = await fetch(GOOGLE_USERINFO_URL, {
@@ -190,7 +228,7 @@ router.get('/google/callback', async (req, res) => {
 
     if (!userInfoResponse.ok || !googleUser.email) {
       console.error('[OAUTH] Google userinfo failed:', googleUser);
-      return res.redirect(`${config.frontendUrl}/auth/callback?error=userinfo_failed`);
+      return res.redirect(errorRedirect('userinfo_failed'));
     }
 
     const result = await handleOAuthCallback({
@@ -204,7 +242,7 @@ router.get('/google/callback', async (req, res) => {
     res.redirect(result.redirect);
   } catch (err) {
     console.error('[OAUTH] Google callback error:', err);
-    res.redirect(`${config.frontendUrl}/auth/callback?error=internal_error`);
+    res.redirect(errorRedirect('internal_error'));
   }
 });
 
@@ -233,16 +271,16 @@ router.get('/discord/callback', async (req, res) => {
   const { code, state, error: discordError } = req.query;
 
   if (discordError) {
-    return res.redirect(`${config.frontendUrl}/auth/callback?error=${encodeURIComponent(discordError)}`);
+    return res.redirect(errorRedirect(discordError));
   }
 
   if (!code || !state) {
-    return res.redirect(`${config.frontendUrl}/auth/callback?error=missing_parameters`);
+    return res.redirect(errorRedirect('missing_parameters'));
   }
 
   const verified = verifyState(state);
   if (!verified || verified.provider !== 'discord') {
-    return res.redirect(`${config.frontendUrl}/auth/callback?error=invalid_state`);
+    return res.redirect(errorRedirect('invalid_state'));
   }
 
   try {
@@ -262,7 +300,7 @@ router.get('/discord/callback', async (req, res) => {
 
     if (!tokenResponse.ok) {
       console.error('[OAUTH] Discord token exchange failed:', tokenData);
-      return res.redirect(`${config.frontendUrl}/auth/callback?error=token_exchange_failed`);
+      return res.redirect(errorRedirect('token_exchange_failed'));
     }
 
     const userInfoResponse = await fetch(DISCORD_USERINFO_URL, {
@@ -273,7 +311,7 @@ router.get('/discord/callback', async (req, res) => {
 
     if (!userInfoResponse.ok || !discordUser.email) {
       console.error('[OAUTH] Discord userinfo failed:', discordUser);
-      return res.redirect(`${config.frontendUrl}/auth/callback?error=userinfo_failed`);
+      return res.redirect(errorRedirect('userinfo_failed'));
     }
 
     const avatar = discordUser.avatar
@@ -291,7 +329,7 @@ router.get('/discord/callback', async (req, res) => {
     res.redirect(result.redirect);
   } catch (err) {
     console.error('[OAUTH] Discord callback error:', err);
-    res.redirect(`${config.frontendUrl}/auth/callback?error=internal_error`);
+    res.redirect(errorRedirect('internal_error'));
   }
 });
 

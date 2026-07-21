@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { formatMoney, formatMoneyExact, formatPrice, formatCount } from '../utils/format';
+import { getApiBaseUrl } from '../utils/capacitor';
 
-const API = '/api';
+const API = getApiBaseUrl();
 
 async function api(path) {
   const token = localStorage.getItem('token');

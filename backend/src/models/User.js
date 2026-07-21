@@ -50,6 +50,14 @@ const userSchema = new mongoose.Schema(
     uncollectedRent: { type: Number, default: 0 },
     rentStorageStartedAt: { type: Date, default: null },
     discordId: { type: String, default: null, sparse: true },
+    pushTokens: [
+      {
+        token: { type: String, required: true },
+        platform: { type: String, enum: ['android', 'ios', 'web'], required: true },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+    pushNotificationsEnabled: { type: Boolean, default: true },
     level: { type: Number, default: 1 },
     xp: { type: Number, default: 0 },
     xpToNextLevel: { type: Number, default: 100 },
@@ -107,6 +115,7 @@ userSchema.methods.toJSON = function () {
   delete obj.verificationExpires;
   delete obj.passwordResetToken;
   delete obj.passwordResetExpires;
+  delete obj.pushTokens;
   if (obj.oauthProviders) {
     obj.oauthProviders = obj.oauthProviders.map((p) => ({ provider: p.provider }));
   }

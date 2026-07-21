@@ -8,6 +8,7 @@ import { isMaintenanceMode } from '../models/GameState.js';
 import { sendEmail } from '../services/email.js';
 import emailTemplates from '../services/emailTemplates.js';
 import { rateLimit } from '../middleware/rateLimit.js';
+import { downloadOAuthAvatar } from '../services/avatarDownload.js';
 import { validatePassword } from '../utils/validatePassword.js';
 import { awardXp } from '../utils/leveling.js';
 
@@ -39,6 +40,13 @@ const forgotPwLimiter = rateLimit({
   max: 3,
   keyPrefix: 'rl:fp',
   message: 'Too many password reset requests. Please try again in 15 minutes.',
+});
+
+const setPasswordLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  keyPrefix: 'rl:setpw',
+  message: 'Too many password set attempts. Please try again later.',
 });
 
 function generateToken(userId) {
@@ -128,6 +136,15 @@ router.post('/login', loginLimiter, async (req, res) => {
       }
     }
     await User.updateOne({ _id: user._id }, { $set: { lastLoginAt: new Date() } });
+
+    if (user.avatar && (user.avatar.startsWith('http://') || user.avatar.startsWith('https://'))) {
+      const localPath = await downloadOAuthAvatar(user._id, user.avatar);
+      if (localPath) {
+        user.avatar = localPath;
+        await user.save({ validateBeforeSave: false });
+      }
+    }
+
     const token = generateToken(user._id);
     res.json({ token, user });
   } catch (err) {
@@ -137,6 +154,13 @@ router.post('/login', loginLimiter, async (req, res) => {
 
 router.get('/me', authenticate, async (req, res) => {
   const user = await User.findById(req.user._id).populate('ownedProperties');
+  if (user.avatar && (user.avatar.startsWith('http://') || user.avatar.startsWith('https://'))) {
+    const localPath = await downloadOAuthAvatar(user._id, user.avatar);
+    if (localPath) {
+      user.avatar = localPath;
+      await user.save({ validateBeforeSave: false });
+    }
+  }
   res.json(user);
 });
 
@@ -251,6 +275,42 @@ router.post('/reset-password', async (req, res) => {
     await user.save();
 
     res.json({ success: true, message: 'Password has been reset successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/set-password', authenticate, setPasswordLimiter, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!newPassword) {
+      return res.status(400).json({ error: 'New password is required' });
+    }
+
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+      return res.status(400).json({ error: passwordError });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (user.password) {
+      if (!currentPassword) {
+        return res.status(400).json({ error: 'Current password is required to change password' });
+      }
+      const valid = await user.comparePassword(currentPassword);
+      if (!valid) {
+        return res.status(401).json({ error: 'Current password is incorrect' });
+      }
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    res.json({ success: true, message: 'Password set successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

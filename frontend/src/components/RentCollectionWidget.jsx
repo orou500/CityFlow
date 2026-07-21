@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
 import { formatMoney, formatDiff } from '../utils/format';
+import { getApiBaseUrl } from '../utils/capacitor';
 
 function formatCountdown(ms) {
   if (ms <= 0) return '00:00:00';
@@ -15,6 +16,7 @@ function formatCountdown(ms) {
 export default function RentCollectionWidget({ onCollected }) {
   const { t } = useTranslation();
   const fetchMe = useAuthStore((s) => s.fetchMe);
+  const API = getApiBaseUrl();
   const [status, setStatus] = useState(null);
   const [countdown, setCountdown] = useState('');
   const [collecting, setCollecting] = useState(false);
@@ -23,7 +25,7 @@ export default function RentCollectionWidget({ onCollected }) {
 
   const fetchStatus = useCallback(async () => {
     try {
-      const res = await fetch('/api/rent/status', {
+      const res = await fetch(`${API}/rent/status`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       if (res.ok) {
@@ -57,7 +59,7 @@ export default function RentCollectionWidget({ onCollected }) {
     setError(null);
     setResult(null);
     try {
-      const res = await fetch('/api/rent/collect', {
+      const res = await fetch(`${API}/rent/collect`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
