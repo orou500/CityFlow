@@ -75,6 +75,7 @@ cityflow/
 | **Maintenance Mode** | Admin-toggleable maintenance mode with custom message, 503 backend protection, logged-in user banner |
 | **Discord Bot** | 26-slash-command CityFlow bot with moderation, verification, tickets, suggestions, game integration, and anti-spam |
 | **Discord Community** | Official CityFlow Discord server with roles, channels, and bot integration |
+| **In-Game Music Player** | Built-in audio player in the sidebar with play/pause, next/prev, volume control, and auto-start toggle; supports MP3, WAV, OGG, FLAC, and M4A files |
 | **i18n** | Full English and Hebrew interface with proper RTL support across all components |
 | **Dark Mode** | Dark, Light, and System theme toggle |
 | **Database-Level Tick Lock** | Prevents duplicate tick execution in multi-replica deployments using MongoDB lock documents |
