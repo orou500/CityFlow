@@ -10,6 +10,7 @@ function formatTime(s) {
 
 export default function AudioPlayer() {
   const audioRef = useRef(null);
+  const playingRef = useRef(false);
   const [showVolume, setShowVolume] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -56,10 +57,10 @@ export default function AudioPlayer() {
   }, []);
 
   const handleCanPlay = useCallback(() => {
-    if (playing) {
+    if (playingRef.current) {
       audioRef.current?.play().catch(() => {});
     }
-  }, [playing]);
+  }, []);
 
   const seekTo = useCallback(
     (clientX) => {
@@ -133,19 +134,34 @@ export default function AudioPlayer() {
   }, [effectiveVolume]);
 
   useEffect(() => {
-    if (autoStart && !track.src) {
-      play();
-    }
-  }, [autoStart, play, track.src]);
+    playingRef.current = playing;
+  }, [playing]);
+
+  useEffect(() => {
+    const unsub = useAudioStore.persist.onFinishHydration(() => {
+      const state = useAudioStore.getState();
+      if (state.autoStart) {
+        state.play();
+      }
+    });
+    return unsub;
+  }, []);
 
   useEffect(() => {
     const el = audioRef.current;
     if (!el) return;
     if (playing) {
-      el.play().catch(() => {});
+      if (el.readyState >= 2) {
+        el.play().catch(() => {});
+      } else {
+        el.addEventListener('canplay', handleCanPlay, { once: true });
+      }
     } else {
       el.pause();
     }
+    return () => {
+      el.removeEventListener('canplay', handleCanPlay);
+    };
   }, [playing, currentTrackId]);
 
   useEffect(() => {
@@ -162,8 +178,8 @@ export default function AudioPlayer() {
         onEnded={nextTrack}
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
-        onCanPlay={handleCanPlay}
         preload="auto"
+        autoPlay={playing}
       />
 
       <div className="flex items-center gap-1.5 px-1">

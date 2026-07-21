@@ -87,13 +87,6 @@ export const useAudioStore = create(
         currentTrackId: state.currentTrackId,
         autoStart: state.autoStart,
       }),
-      onRehydrateStorage: () => {
-        return (state) => {
-          if (state && state.autoStart) {
-            state.playing = true;
-          }
-        };
-      },
     },
   ),
 );
