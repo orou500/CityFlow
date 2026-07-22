@@ -88,6 +88,8 @@ export default function AdminPage() {
     setUserBalance,
     toggleUserBan,
     setUserRole,
+    restoreUser,
+    permanentDeleteUser,
     fetchAdminProperties,
     createProperty,
     updateProperty,
@@ -428,6 +430,25 @@ export default function AdminPage() {
     try {
       const newRole = currentRole === 'admin' ? 'user' : 'admin';
       await setUserRole(userId, newRole);
+      await fetchAdminUsers();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function handleRestoreUser(userId) {
+    try {
+      await restoreUser(userId);
+      await fetchAdminUsers();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function handlePermanentDelete(userId, username) {
+    if (!confirm(`Permanently delete "${username}"? This cannot be undone.`)) return;
+    try {
+      await permanentDeleteUser(userId);
       await fetchAdminUsers();
     } catch (e) {
       console.error(e);
@@ -813,6 +834,63 @@ export default function AdminPage() {
                   </div>
                 )}
               </>
+            );
+          })()}
+
+          {(() => {
+            const deletedUsers = adminUsers.filter((u) => u.deletedAt);
+            if (deletedUsers.length === 0) return null;
+            return (
+              <div className="mt-6">
+                <h3 className="text-sm font-semibold text-red-600 dark:text-red-400 mb-3">
+                  {t('admin.deletedUsers')} ({deletedUsers.length})
+                </h3>
+                <div className="bg-red-50 dark:bg-red-900/10 rounded-lg border border-red-200 dark:border-red-800 overflow-hidden">
+                  <table className="w-full text-sm text-left">
+                    <thead>
+                      <tr className="border-b border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 uppercase text-xs">
+                        <th className="px-3 py-2 font-medium">{t('admin.username')}</th>
+                        <th className="px-3 py-2 font-medium">{t('admin.email')}</th>
+                        <th className="px-3 py-2 font-medium">{t('admin.deletedUsersDate')}</th>
+                        <th className="px-3 py-2 font-medium">{t('admin.actions')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {deletedUsers.map((u) => {
+                        const hoursAgo = Math.round((Date.now() - new Date(u.deletedAt).getTime()) / (1000 * 60 * 60));
+                        return (
+                          <tr key={u._id} className="border-b border-red-100 dark:border-red-900/50 hover:bg-red-100/50 dark:hover:bg-red-900/20">
+                            <td className="px-3 py-2 text-gray-900 dark:text-white">{u.username}</td>
+                            <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{u.email}</td>
+                            <td className="px-3 py-2 text-gray-500 dark:text-gray-400">
+                              {formatDate(u.deletedAt)}
+                              <span className="text-xs text-red-500 dark:text-red-400 ml-2">
+                                ({hoursAgo < 24 ? `${24 - hoursAgo}h left` : t('admin.expired')})
+                              </span>
+                            </td>
+                            <td className="px-3 py-2">
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleRestoreUser(u._id)}
+                                  className="text-xs text-green-600 dark:text-green-400 hover:text-green-500 dark:hover:text-green-300"
+                                >
+                                  {t('admin.restoreUser')}
+                                </button>
+                                <button
+                                  onClick={() => handlePermanentDelete(u._id, u.username)}
+                                  className="text-xs text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300"
+                                >
+                                  {t('admin.deletePermanently')}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             );
           })()}
         </>

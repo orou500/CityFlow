@@ -25,6 +25,8 @@ export default function LoginPage() {
     acceptedTerms: false,
     acceptedPrivacy: false,
   });
+  const [deletedAccount, setDeletedAccount] = useState(null);
+  const [restoring, setRestoring] = useState(false);
 
   useEffect(() => {
     if (cooldown > 0) {
@@ -69,7 +71,23 @@ export default function LoginPage() {
         await login(form.email.trim(), form.password);
         navigate('/');
       }
-    } catch {}
+    } catch (err) {
+      if (err?.deleted && err?.restoreToken) {
+        setDeletedAccount({ restoreToken: err.restoreToken });
+      }
+    }
+  };
+
+  const handleRestore = async () => {
+    setRestoring(true);
+    try {
+      await useAuthStore.getState().restoreAccount(deletedAccount.restoreToken);
+      navigate('/');
+    } catch {
+      setDeletedAccount(null);
+    } finally {
+      setRestoring(false);
+    }
   };
 
   const handleResend = async () => {
@@ -116,7 +134,7 @@ export default function LoginPage() {
               {isRegister ? t('auth.register') : t('auth.login')}
             </h1>
 
-            {error && (
+            {error && !deletedAccount && (
               <div className="bg-red-900/20 dark:bg-red-900 text-red-600 dark:text-red-300 p-3 rounded mb-4 text-sm">
                 {t(`errors.${error}`, { defaultValue: error })}
                 {isVerificationError && !resendSent && (
@@ -150,6 +168,30 @@ export default function LoginPage() {
                     <p className="text-xs text-green-400">{t('auth.verificationResent')}</p>
                   </div>
                 )}
+              </div>
+            )}
+
+            {deletedAccount && (
+              <div className="bg-yellow-900/20 dark:bg-yellow-900 text-yellow-600 dark:text-yellow-300 p-4 rounded mb-4 text-sm">
+                <p className="font-medium mb-2">{t('auth.accountDeleted')}</p>
+                <p className="text-xs mb-3">{t('auth.restoreAccountPrompt')}</p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDeletedAccount(null)}
+                    className="text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-white px-3 py-1 rounded"
+                  >
+                    {t('common.cancel')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRestore}
+                    disabled={restoring}
+                    className="text-xs bg-yellow-600 hover:bg-yellow-500 text-white px-3 py-1 rounded disabled:opacity-50"
+                  >
+                    {restoring ? t('common.loading') : t('auth.restoreAccount')}
+                  </button>
+                </div>
               </div>
             )}
 

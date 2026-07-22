@@ -117,7 +117,7 @@ router.post('/tick/run', async (req, res) => {
 router.get('/users', async (req, res) => {
   try {
     const [users, propCounts] = await Promise.all([
-      User.find().select('-password').sort({ createdAt: -1 }),
+      User.find().select('-password +deletedAt').sort({ createdAt: -1 }),
       Property.aggregate([{ $group: { _id: '$ownerId', count: { $sum: 1 } } }]),
     ]);
     const propCountMap = new Map(propCounts.map((p) => [p._id?.toString(), p.count]));
@@ -126,6 +126,30 @@ router.get('/users', async (req, res) => {
       propertyCount: propCountMap.get(u._id.toString()) || 0,
     }));
     res.json(usersWithStats);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/users/:id/restore', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user.deletedAt) return res.status(400).json({ error: 'Account is not deleted' });
+    user.deletedAt = null;
+    await user.save({ validateBeforeSave: false });
+    res.json({ success: true, message: 'Account restored' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/users/:id/permanent', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    await User.deleteOne({ _id: user._id });
+    res.json({ success: true, message: 'Account permanently deleted' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

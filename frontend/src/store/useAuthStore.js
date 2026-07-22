@@ -21,14 +21,15 @@ async function api(path, options = {}) {
     console.error(`API Parse Error: ${API}${path}`, err);
     throw new ApiError(`Server returned non-JSON response (${res.status})`, res.status);
   }
-  if (!res.ok) throw new ApiError(data.error || 'Request failed', res.status);
+  if (!res.ok) throw new ApiError(data.error || 'Request failed', res.status, data);
   return data;
 }
 
 class ApiError extends Error {
-  constructor(message, status) {
+  constructor(message, status, data) {
     super(message);
     this.status = status;
+    this.data = data;
   }
 }
 
@@ -46,6 +47,26 @@ export const useAuthStore = create(
           const data = await api('/auth/login', {
             method: 'POST',
             body: JSON.stringify({ login, password }),
+          });
+          await saveToken(data.token);
+          set({ user: data.user, token: data.token, loading: false });
+          return data;
+        } catch (err) {
+          if (err.status === 403 && err.data?.deleted) {
+            set({ loading: false });
+            throw { ...err, deleted: true, restoreToken: err.data.restoreToken };
+          }
+          set({ error: err.message, loading: false });
+          throw err;
+        }
+      },
+
+      restoreAccount: async (restoreToken) => {
+        set({ loading: true, error: null });
+        try {
+          const data = await api('/auth/restore-account', {
+            method: 'POST',
+            body: JSON.stringify({ restoreToken }),
           });
           await saveToken(data.token);
           set({ user: data.user, token: data.token, loading: false });

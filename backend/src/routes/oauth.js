@@ -145,6 +145,16 @@ async function handleOAuthCallback({ provider, providerId, email, name, avatar }
     return { redirect: `${config.frontendUrl}/auth/callback?error=account_banned` };
   }
 
+  if (user.deletedAt) {
+    const deletedAgo = Date.now() - user.deletedAt.getTime();
+    if (deletedAgo > 24 * 60 * 60 * 1000) {
+      await User.deleteOne({ _id: user._id });
+      return { redirect: `${config.frontendUrl}/auth/callback?error=account_permanently_deleted` };
+    }
+    const restoreToken = jwt.sign({ userId: user._id, restore: true }, config.jwtSecret, { expiresIn: '24h' });
+    return { redirect: `${config.frontendUrl}/auth/callback?deleted=true&restoreToken=${restoreToken}` };
+  }
+
   if (user.avatar && (user.avatar.startsWith('http://') || user.avatar.startsWith('https://'))) {
     const localPath = await downloadOAuthAvatar(user._id, user.avatar);
     if (localPath) {

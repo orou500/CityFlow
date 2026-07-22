@@ -185,7 +185,10 @@
     "acceptTermsPrompt": "לפני שמתחילים, אנא סקור וקבל את תנאי השירות ומדיניות הפרטיות שלנו.",
     "readFullDocs": "קרא את",
     "and": "ו",
-    "acceptAndContinue": "קבל והמשך"
+    "acceptAndContinue": "קבל והמשך",
+    "accountDeleted": "חשבון זה נמחק.",
+    "restoreAccountPrompt": "תוכל לשחזר את החשבון על ידי כניסה שוב. הנתונים שלך נשמרו.",
+    "restoreAccount": "שחזר חשבון"
   },
   "common": {
     "loading": "טוען...",
@@ -750,7 +753,12 @@
     "totalPopulation": "אוכלוסייה כוללת",
     "avgDemand": "ביקוש ממוצע",
     "totalImmigration": "הגירה כוללת",
-    "totalEmigration": "הגירת חוץ כוללת"
+    "totalEmigration": "הגירת חוץ כוללת",
+    "deletedUsers": "משתמשים שנמחקו",
+    "deletedUsersDate": "תאריך מחיקה",
+    "restoreUser": "שחזר",
+    "deletePermanently": "מחק לצמיתות",
+    "expired": "פג תוקף"
   },
   "onboarding": {
     "welcome": {
@@ -960,7 +968,13 @@
     "noPasswordWarning": "לחשבון שלך אין סיסמה. חבר סיסמה כדי להבטיח שתוכל לגשת לחשבון שלך תמיד.",
     "setPassword": "הגדר סיסמה",
     "setPasswordPrompt": "הוסף סיסמה כדי שתוכל להיכנס גם עם אימייל וסיסמה:",
-    "passwordSetSuccess": "הסיסמה הוגדרה בהצלחה. כעת תוכל להיכנס עם אימייל וסיסמה."
+    "passwordSetSuccess": "הסיסמה הוגדרה בהצלחה. כעת תוכל להיכנס עם אימייל וסיסמה.",
+    "dangerZone": "אזור מסוכן",
+    "deleteAccount": "מחק חשבון",
+    "deleteAccountConfirm": "האם אתה בטוח שברצונך למחוק את החשבון? ניתן לבטל פעולה זו תוך 24 שעות.",
+    "deleteAccountWarning": "נתוני החשבון ישמרו למשך 24 שעות. תוכל לשחזר את החשבון על ידי כניסה שוב במהלך הזמן הזה.",
+    "deleteAccountPlaceholder": "הקלד DELETE לאישור",
+    "confirmDelete": "מחק את החשבון שלי"
   },
   "friends": {
     "title": "חברים",
