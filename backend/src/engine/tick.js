@@ -13,6 +13,14 @@ import { processImprovements } from './improvementProcessing.js';
 import { processPropertyManagement } from './propertyManagement.js';
 import { updateCreditScores } from './creditScore.js';
 import { updateIntrinsicValues } from './propertyValuation.js';
+import {
+  computeLeaderboards,
+  updateCompetitiveEventProgress,
+  finalizeExpiredEvents,
+  generateCompetitiveEvents,
+  activateUpcomingEvents,
+  cleanupExpiredCompletedEvents,
+} from './leaderboard.js';
 import Event from '../models/Event.js';
 import { incrementTick } from '../models/GameState.js';
 import { endCurrentSeasonAndStartNew } from './seasonReset.js';
@@ -108,6 +116,24 @@ export async function executeTick() {
     console.log('[TICK] Sending rent expiry warnings...');
     const rentWarningsCount = await sendRentExpiryWarnings();
 
+    console.log('[TICK] Computing leaderboards...');
+    const leaderboardSnapshots = await computeLeaderboards(tickNumber);
+
+    console.log('[TICK] Activating upcoming events...');
+    const activatedEvents = await activateUpcomingEvents(tickNumber);
+
+    console.log('[TICK] Updating competitive event progress...');
+    await updateCompetitiveEventProgress(tickNumber);
+
+    console.log('[TICK] Finalizing expired events...');
+    const finalizedEvents = await finalizeExpiredEvents(tickNumber);
+
+    console.log('[TICK] Cleaning up old completed events...');
+    const cleanedUpEvents = await cleanupExpiredCompletedEvents(tickNumber);
+
+    console.log('[TICK] Generating competitive events...');
+    const newCompEvents = await generateCompetitiveEvents(tickNumber);
+
     const duration = Date.now() - startTime;
     console.log(`[TICK] World tick #${tickNumber} completed in ${duration}ms`);
     console.log(`[TICK] Cities simulated: ${cityResults.length}`);
@@ -128,6 +154,11 @@ export async function executeTick() {
     console.log(`[TICK] Expired events: ${expiredEvents.length}`);
     console.log(`[TICK] Expired uncollected rent: ${expiredRentCount} users`);
     console.log(`[TICK] Rent expiry warnings sent: ${rentWarningsCount} users`);
+    console.log(`[TICK] Leaderboard snapshots computed: ${leaderboardSnapshots.length}`);
+    console.log(`[TICK] Events activated: ${activatedEvents.length}`);
+    console.log(`[TICK] Events finalized: ${finalizedEvents.length}`);
+    console.log(`[TICK] Completed events cleaned up: ${cleanedUpEvents}`);
+    console.log(`[TICK] New competitive events: ${newCompEvents.length}`);
 
     if (tickNumber >= 720) {
       console.log(`[TICK] Tick #${tickNumber} reached 720 — ending season`);

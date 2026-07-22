@@ -31,6 +31,7 @@ import companyRoutes from './routes/companies.js';
 import stockRoutes from './routes/stocks.js';
 import indexRoutes from './routes/indexes.js';
 import imageProxyRoutes from './routes/imageProxy.js';
+import leaderboardRoutes from './routes/leaderboards.js';
 import { maintenanceCheck } from './middleware/maintenance.js';
 import { getMaintenanceInfo } from './models/GameState.js';
 import { createNewSeason } from './engine/seasonReset.js';
@@ -96,6 +97,7 @@ app.use('/companies', companyRoutes);
 app.use('/stocks', stockRoutes);
 app.use('/indexes', indexRoutes);
 app.use('/image-proxy', imageProxyRoutes);
+app.use('/leaderboards', leaderboardRoutes);
 
 app.use((req, res) => {
   console.warn(`404 API Route: ${req.method} ${req.originalUrl}`);
