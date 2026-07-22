@@ -9,6 +9,9 @@ import { sendDiscordNotification } from '../services/discordBot.js';
 
 const CATEGORIES = ['netWorth', 'properties', 'passiveIncome', 'dealVolume', 'cityInfluence'];
 
+const UPCOMING_LEAD_TICKS = 12;
+const COMPLETED_RETENTION_TICKS = 28;
+
 const EVENT_TEMPLATES = [
   {
     name: 'Wealth Championship',
@@ -67,7 +70,7 @@ const EVENT_TEMPLATES = [
     description: 'Accumulate the highest total deal volume to claim the crown.',
     type: 'wealth',
     metric: 'dealVolume',
-    durationTicks: 36,
+    durationTicks: 42,
     rewards: {
       first: { type: 'title', value: 'Deal Maker', bonus: { type: 'balance', value: 60000 } },
       second: { type: 'badge', value: 'Sharp Buyer', bonus: { type: 'balance', value: 30000 } },
@@ -80,7 +83,7 @@ const EVENT_TEMPLATES = [
     description: 'Quick sprint to acquire the most properties in a short time.',
     type: 'expansion',
     metric: 'propertiesAcquired',
-    durationTicks: 24,
+    durationTicks: 28,
     rewards: {
       first: { type: 'title', value: 'Empire Builder', bonus: { type: 'balance', value: 40000 } },
       second: { type: 'badge', value: 'Fast Tracker', bonus: { type: 'balance', value: 20000 } },
@@ -93,7 +96,7 @@ const EVENT_TEMPLATES = [
     description: 'Grow your net worth the most during this period.',
     type: 'wealth',
     metric: 'netWorth',
-    durationTicks: 36,
+    durationTicks: 42,
     rewards: {
       first: { type: 'title', value: 'Wealth Surge Champion', bonus: { type: 'balance', value: 50000 } },
       second: { type: 'badge', value: 'Rising Star', bonus: { type: 'balance', value: 25000 } },
@@ -122,7 +125,7 @@ export async function generateCompetitiveEvents(tickNumber) {
   if (available.length === 0) return [];
 
   const template = available[Math.floor(Math.random() * available.length)];
-  const startTick = tickNumber;
+  const startTick = tickNumber + UPCOMING_LEAD_TICKS;
   const endTick = startTick + template.durationTicks;
 
   let initialParticipants = [];
@@ -166,7 +169,7 @@ export async function generateCompetitiveEvents(tickNumber) {
     description: template.description,
     type: template.type,
     metric: template.metric,
-    status: 'active',
+    status: 'upcoming',
     startDate: new Date(),
     endDate: new Date(Date.now() + template.durationTicks * 30000),
     startTick,
@@ -174,18 +177,18 @@ export async function generateCompetitiveEvents(tickNumber) {
     rewards: template.rewards,
     participants: initialParticipants,
     snapshotInterval: Math.max(1, Math.floor(template.durationTicks / 10)),
-    lastSnapshotTick: tickNumber,
+    lastSnapshotTick: 0,
     createdFromSeason: seasonNumber,
   });
 
   console.log(
-    `[LEADERBOARD] Generated competitive event: "${template.name}" (ticks ${startTick}-${endTick}, ${initialParticipants.length} initial participants)`,
+    `[LEADERBOARD] Generated upcoming event: "${template.name}" (starts tick ${startTick}, ends tick ${endTick}, ${initialParticipants.length} initial participants)`,
   );
 
   sendDiscordNotification({
     type: 'announcements',
-    title: `New Event: ${template.name}`,
-    description: template.description,
+    title: `Upcoming Event: ${template.name}`,
+    description: `${template.description}\nStarts in ${UPCOMING_LEAD_TICKS} ticks.`,
     fields: [
       { name: 'Duration', value: `${template.durationTicks} ticks`, inline: true },
       { name: 'Participants', value: String(initialParticipants.length), inline: true },
@@ -193,6 +196,22 @@ export async function generateCompetitiveEvents(tickNumber) {
   }).catch(() => {});
 
   return [event];
+}
+
+export async function activateUpcomingEvents(tickNumber) {
+  const upcoming = await CompetitiveEvent.find({
+    status: 'upcoming',
+    startTick: { $lte: tickNumber },
+  });
+
+  for (const event of upcoming) {
+    event.status = 'active';
+    event.lastSnapshotTick = tickNumber;
+    await event.save();
+    console.log(`[LEADERBOARD] Activated event: "${event.name}" at tick ${tickNumber}`);
+  }
+
+  return upcoming;
 }
 
 async function computeNetWorthRankings() {
@@ -638,4 +657,20 @@ export async function finalizeExpiredEvents(tickNumber) {
   }
 
   return expired;
+}
+
+export async function cleanupExpiredCompletedEvents(tickNumber) {
+  const cutoff = tickNumber - COMPLETED_RETENTION_TICKS;
+  const result = await CompetitiveEvent.deleteMany({
+    status: 'completed',
+    endTick: { $lte: cutoff },
+  });
+
+  if (result.deletedCount > 0) {
+    console.log(
+      `[LEADERBOARD] Cleaned up ${result.deletedCount} completed events older than ${COMPLETED_RETENTION_TICKS} ticks`,
+    );
+  }
+
+  return result.deletedCount;
 }
