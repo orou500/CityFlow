@@ -859,7 +859,10 @@ export default function AdminPage() {
                       {deletedUsers.map((u) => {
                         const hoursAgo = Math.round((Date.now() - new Date(u.deletedAt).getTime()) / (1000 * 60 * 60));
                         return (
-                          <tr key={u._id} className="border-b border-red-100 dark:border-red-900/50 hover:bg-red-100/50 dark:hover:bg-red-900/20">
+                          <tr
+                            key={u._id}
+                            className="border-b border-red-100 dark:border-red-900/50 hover:bg-red-100/50 dark:hover:bg-red-900/20"
+                          >
                             <td className="px-3 py-2 text-gray-900 dark:text-white">{u.username}</td>
                             <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{u.email}</td>
                             <td className="px-3 py-2 text-gray-500 dark:text-gray-400">
