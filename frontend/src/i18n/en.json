@@ -185,7 +185,10 @@
     "acceptTermsPrompt": "Before you start, please review and accept our Terms of Service and Privacy Policy.",
     "readFullDocs": "Read the full",
     "and": "and",
-    "acceptAndContinue": "Accept & Continue"
+    "acceptAndContinue": "Accept & Continue",
+    "accountDeleted": "This account has been deleted.",
+    "restoreAccountPrompt": "You can restore your account by logging in again. Your data has been preserved.",
+    "restoreAccount": "Restore Account"
   },
   "common": {
     "loading": "Loading...",
@@ -759,7 +762,12 @@
     "totalPopulation": "Total Population",
     "avgDemand": "Avg. Demand",
     "totalImmigration": "Total Immigration",
-    "totalEmigration": "Total Emigration"
+    "totalEmigration": "Total Emigration",
+    "deletedUsers": "Deleted Users",
+    "deletedUsersDate": "Deleted At",
+    "restoreUser": "Restore",
+    "deletePermanently": "Delete Permanently",
+    "expired": "Expired"
   },
   "onboarding": {
     "welcome": {
@@ -969,7 +977,13 @@
     "noPasswordWarning": "Your account has no password set. Link a password to ensure you can always access your account.",
     "setPassword": "Set Password",
     "setPasswordPrompt": "Add a password so you can also log in with email and password:",
-    "passwordSetSuccess": "Password set successfully. You can now log in with email and password."
+    "passwordSetSuccess": "Password set successfully. You can now log in with email and password.",
+    "dangerZone": "Danger Zone",
+    "deleteAccount": "Delete Account",
+    "deleteAccountConfirm": "Are you sure you want to delete your account? This action can be undone within 24 hours.",
+    "deleteAccountWarning": "Your account data will be preserved for 24 hours. You can restore it by logging in again during that time.",
+    "deleteAccountPlaceholder": "Type DELETE to confirm",
+    "confirmDelete": "Delete My Account"
   },
   "friends": {
     "title": "Friends",

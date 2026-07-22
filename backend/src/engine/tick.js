@@ -25,6 +25,7 @@ import Event from '../models/Event.js';
 import { incrementTick } from '../models/GameState.js';
 import { endCurrentSeasonAndStartNew } from './seasonReset.js';
 import { sendDiscordNotification } from '../services/discordBot.js';
+import User from '../models/User.js';
 
 export async function executeTick() {
   const startTime = Date.now();
@@ -159,6 +160,12 @@ export async function executeTick() {
     console.log(`[TICK] Events finalized: ${finalizedEvents.length}`);
     console.log(`[TICK] Completed events cleaned up: ${cleanedUpEvents}`);
     console.log(`[TICK] New competitive events: ${newCompEvents.length}`);
+
+    const deletedCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const deletedResult = await User.deleteMany({ deletedAt: { $ne: null, $lte: deletedCutoff } });
+    if (deletedResult.deletedCount > 0) {
+      console.log(`[TICK] Permanently deleted ${deletedResult.deletedCount} accounts past 24h grace period`);
+    }
 
     if (tickNumber >= 720) {
       console.log(`[TICK] Tick #${tickNumber} reached 720 — ending season`);

@@ -215,6 +215,14 @@ export const useGameStore = create((set, get) => ({
     });
   },
 
+  restoreUser: async (userId) => {
+    return await api(`/admin/users/${userId}/restore`, { method: 'POST' });
+  },
+
+  permanentDeleteUser: async (userId) => {
+    return await api(`/admin/users/${userId}/permanent`, { method: 'DELETE' });
+  },
+
   fetchAdminProperties: async (page = 1) => {
     const data = await api(`/admin/properties?page=${page}&limit=200`);
     set({ adminProperties: data.properties });

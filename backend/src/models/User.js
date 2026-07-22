@@ -38,6 +38,7 @@ const userSchema = new mongoose.Schema(
     acceptedTermsAt: { type: Date, default: null },
     acceptedPrivacy: { type: Boolean, default: false },
     acceptedPrivacyAt: { type: Date, default: null },
+    deletedAt: { type: Date, default: null },
     emailVerified: { type: Boolean, default: false },
     emailVerifiedAt: { type: Date, default: null },
     verificationToken: { type: String, default: null },
@@ -111,6 +112,7 @@ userSchema.methods.createPasswordResetToken = function () {
 userSchema.methods.toJSON = function () {
   const obj = this.toObject();
   delete obj.password;
+  delete obj.deletedAt;
   delete obj.verificationToken;
   delete obj.verificationExpires;
   delete obj.passwordResetToken;

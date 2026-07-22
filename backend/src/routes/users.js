@@ -235,6 +235,22 @@ router.post('/push-token', authenticate, async (req, res) => {
   }
 });
 
+router.delete('/account', authenticate, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    user.deletedAt = new Date();
+    user.pushTokens = [];
+    user.discordId = null;
+    await user.save({ validateBeforeSave: false });
+
+    res.json({ success: true, message: 'Account deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.delete('/push-token', authenticate, async (req, res) => {
   try {
     const { token } = req.body;

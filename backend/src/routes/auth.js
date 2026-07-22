@@ -125,6 +125,10 @@ router.post('/login', loginLimiter, async (req, res) => {
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ error: 'Invalid username/email or password' });
     }
+    if (user.deletedAt) {
+      const restoreToken = jwt.sign({ userId: user._id, restore: true }, config.jwtSecret, { expiresIn: '24h' });
+      return res.status(403).json({ error: 'This account has been deleted', deleted: true, restoreToken });
+    }
     if (!user.emailVerified && user.role !== 'admin') {
       return res.status(403).json({ error: 'Please verify your email before logging in' });
     }
@@ -311,6 +315,41 @@ router.post('/set-password', authenticate, setPasswordLimiter, async (req, res) 
     await user.save();
 
     res.json({ success: true, message: 'Password set successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/restore-account', async (req, res) => {
+  try {
+    const { restoreToken } = req.body;
+    if (!restoreToken) return res.status(400).json({ error: 'Restore token is required' });
+
+    let decoded;
+    try {
+      decoded = jwt.verify(restoreToken, config.jwtSecret);
+    } catch {
+      return res.status(400).json({ error: 'Invalid or expired restore token' });
+    }
+
+    if (!decoded.restore) {
+      return res.status(400).json({ error: 'Invalid restore token' });
+    }
+
+    const user = await User.findOne({ _id: decoded.userId, deletedAt: { $ne: null } });
+    if (!user) return res.status(404).json({ error: 'No deleted account found' });
+
+    const deletedAgo = Date.now() - user.deletedAt.getTime();
+    if (deletedAgo > 24 * 60 * 60 * 1000) {
+      await User.deleteOne({ _id: user._id });
+      return res.status(404).json({ error: 'Account has been permanently deleted' });
+    }
+
+    user.deletedAt = null;
+    await user.save({ validateBeforeSave: false });
+
+    const token = generateToken(user._id);
+    res.json({ token, user });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
