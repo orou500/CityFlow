@@ -48,6 +48,9 @@ export const cacheKeys = {
   leaderboardPlayer: (userId) => `${prefix}:lb:player:${userId}`,
   leaderboardHistory: (category, season, limit) => `${prefix}:lb:history:${category}:${season}:${limit}`,
 
+  competitiveEvents: (status) => `${prefix}:events:comp:${status || 'all'}`,
+  competitiveEvent: (id) => `${prefix}:events:comp:${id}`,
+
   loanOptions: (companyId) => `${prefix}:company:${companyId}:loanOptions`,
 
   rentStatus: (userId) => `${prefix}:rent:status:${userId}`,

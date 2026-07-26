@@ -41,6 +41,7 @@ import {
 import { invalidateLeaderboardCache } from '../routes/leaderboards.js';
 import { cacheDelPattern, cacheDel } from '../utils/cache.js';
 import { cacheKeys } from '../utils/cacheKeys.js';
+import { invalidateCompetitiveEvents } from '../utils/cacheInvalidation.js';
 import { publish, CHANNELS } from '../utils/pubsub.js';
 import { emitToAll } from '../socket/index.js';
 import { SOCKET_EVENTS } from '../socket/events.js';
@@ -198,6 +199,10 @@ export async function executeTick() {
 
     console.log('[TICK] Generating competitive events...');
     const newCompEvents = await generateCompetitiveEvents(tickNumber);
+
+    if (activatedEvents.length > 0 || finalizedEvents.length > 0 || newCompEvents.length > 0 || cleanedUpEvents > 0) {
+      await invalidateCompetitiveEvents();
+    }
 
     const duration = Date.now() - startTime;
     console.log(`[TICK] World tick #${tickNumber} completed in ${duration}ms`);

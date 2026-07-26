@@ -185,3 +185,7 @@ export async function onDevelopmentStarted(userId, companyId) {
   if (companyId) promises.push(invalidateCompany(companyId));
   await Promise.all(promises);
 }
+
+export async function invalidateCompetitiveEvents() {
+  await cacheDelPattern('cf:events:comp:*');
+}

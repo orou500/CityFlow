@@ -117,10 +117,16 @@ const EVENT_TEMPLATES = [
 
 export async function generateCompetitiveEvents(tickNumber) {
   const activeEvents = await CompetitiveEvent.countDocuments({ status: 'active' });
-  if (activeEvents >= 3) return [];
+  if (activeEvents >= 3) {
+    console.log(`[LEADERBOARD] generateCompetitiveEvents skipped: ${activeEvents} active (limit 3)`);
+    return [];
+  }
 
   const upcomingEvents = await CompetitiveEvent.countDocuments({ status: 'upcoming' });
-  if (upcomingEvents >= 2) return [];
+  if (upcomingEvents >= 2) {
+    console.log(`[LEADERBOARD] generateCompetitiveEvents skipped: ${upcomingEvents} upcoming (limit 2)`);
+    return [];
+  }
 
   const activeSeason = await Season.findOne({ status: 'active' });
   const seasonNumber = activeSeason ? activeSeason.number : 1;
@@ -130,10 +136,21 @@ export async function generateCompetitiveEvents(tickNumber) {
     .limit(10);
   const recentNames = recentEvents.map((e) => e.name);
 
-  const available = EVENT_TEMPLATES.filter((t) => !recentNames.includes(t.name));
-  if (available.length === 0) return [];
+  const usedTemplates = recentNames;
+  const available = EVENT_TEMPLATES.filter((t) => !usedTemplates.includes(t.name));
 
-  const template = available[Math.floor(Math.random() * available.length)];
+  let template;
+  if (available.length === 0) {
+    console.log(`[LEADERBOARD] All ${EVENT_TEMPLATES.length} templates recently used, recycling least recent`);
+    const usedOrder = EVENT_TEMPLATES.map((t) => ({
+      template: t,
+      lastUsed: recentEvents.find((e) => e.name === t.name)?.createdAt || new Date(0),
+    })).sort((a, b) => a.lastUsed - b.lastUsed);
+    template = usedOrder[0].template;
+  } else {
+    template = available[Math.floor(Math.random() * available.length)];
+  }
+
   const startTick = tickNumber + UPCOMING_LEAD_TICKS;
   const endTick = startTick + template.durationTicks;
 
@@ -212,6 +229,16 @@ export async function activateUpcomingEvents(tickNumber) {
     status: 'upcoming',
     startTick: { $lte: tickNumber },
   });
+
+  console.log(`[LEADERBOARD] activateUpcomingEvents: ${upcoming.length} events to activate at tick ${tickNumber}`);
+
+  if (upcoming.length === 0) {
+    const totalUpcoming = await CompetitiveEvent.countDocuments({ status: 'upcoming' });
+    if (totalUpcoming > 0) {
+      const next = await CompetitiveEvent.findOne({ status: 'upcoming' }).sort({ startTick: 1 });
+      console.log(`[LEADERBOARD] Next upcoming event "${next?.name}" starts at tick ${next?.startTick} (current: ${tickNumber})`);
+    }
+  }
 
   for (const event of upcoming) {
     event.status = 'active';
@@ -640,6 +667,7 @@ export async function updateCompetitiveEventProgress(tickNumber) {
     endTick: { $gt: tickNumber },
   });
 
+  let updatedCount = 0;
   for (const event of events) {
     if (tickNumber - event.lastSnapshotTick < event.snapshotInterval) continue;
 
@@ -679,9 +707,14 @@ export async function updateCompetitiveEventProgress(tickNumber) {
       });
       event.lastSnapshotTick = tickNumber;
       await event.save();
+      updatedCount++;
     } catch (err) {
       console.error(`[LEADERBOARD] Error updating event ${event.name}:`, err.message);
     }
+  }
+
+  if (events.length > 0) {
+    console.log(`[LEADERBOARD] updateCompetitiveEventProgress: ${updatedCount}/${events.length} events updated at tick ${tickNumber}`);
   }
 }
 
@@ -691,7 +724,18 @@ export async function finalizeExpiredEvents(tickNumber) {
     endTick: { $lte: tickNumber },
   });
 
+  if (expired.length > 0) {
+    console.log(`[LEADERBOARD] finalizeExpiredEvents: ${expired.length} events to finalize at tick ${tickNumber}`);
+  } else {
+    const activeCount = await CompetitiveEvent.countDocuments({ status: 'active' });
+    if (activeCount > 0) {
+      const earliest = await CompetitiveEvent.findOne({ status: 'active' }).sort({ endTick: 1 });
+      console.log(`[LEADERBOARD] No expired events. Earliest active "${earliest?.name}" ends at tick ${earliest?.endTick} (current: ${tickNumber})`);
+    }
+  }
+
   for (const event of expired) {
+    event.status = 'completed';
     event.status = 'completed';
     const sorted = [...event.participants].sort((a, b) => b.value - a.value);
     sorted.forEach((p, i) => {
