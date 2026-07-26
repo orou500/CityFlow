@@ -5,12 +5,13 @@ import Transaction from '../models/Transaction.js';
 import CreditScoreHistory from '../models/CreditScoreHistory.js';
 
 export async function processLoans() {
-  const activeLoans = await Loan.find({ active: true });
+  const activeLoans = await Loan.find({ active: true, companyId: null });
   const results = [];
 
   for (const loan of activeLoans) {
     const user = await User.findById(loan.userId);
     if (!user) continue;
+    if (user.deletedAt) continue;
 
     const payment = loan.paymentPerTick;
     const interestPortion = Math.round(loan.remainingBalance * (loan.interestRate / loan.durationTicks));

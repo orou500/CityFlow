@@ -12,7 +12,20 @@ router.get('/rankings/:category', async (req, res) => {
     const { category } = req.params;
     const { season, limit = 50, offset = 0 } = req.query;
 
-    const validCategories = ['netWorth', 'properties', 'passiveIncome', 'dealVolume', 'cityInfluence'];
+    const ALL_CATEGORIES = [
+      'netWorth',
+      'properties',
+      'passiveIncome',
+      'dealVolume',
+      'cityInfluence',
+      'companyNetWorth',
+      'companyProperties',
+      'companyIncome',
+      'companyReputation',
+      'companyGrowth',
+    ];
+    const PLAYER_CATEGORIES = ['netWorth', 'properties', 'passiveIncome', 'dealVolume', 'cityInfluence'];
+    const validCategories = ALL_CATEGORIES;
     if (!validCategories.includes(category)) {
       return res.status(400).json({ error: 'Invalid category' });
     }
@@ -54,7 +67,19 @@ router.get('/my-rank', authenticate, async (req, res) => {
     const { category } = req.query;
     const userId = req.user.id;
 
-    const validCategories = ['netWorth', 'properties', 'passiveIncome', 'dealVolume', 'cityInfluence'];
+    const ALL_CATEGORIES = [
+      'netWorth',
+      'properties',
+      'passiveIncome',
+      'dealVolume',
+      'cityInfluence',
+      'companyNetWorth',
+      'companyProperties',
+      'companyIncome',
+      'companyReputation',
+      'companyGrowth',
+    ];
+    const validCategories = ALL_CATEGORIES;
     const categories = category && validCategories.includes(category) ? [category] : validCategories;
 
     const activeSeason = await Season.findOne({ status: 'active' });
@@ -93,7 +118,19 @@ router.get('/history/:category', async (req, res) => {
     const { category } = req.params;
     const { season, limit = 20 } = req.query;
 
-    const validCategories = ['netWorth', 'properties', 'passiveIncome', 'dealVolume', 'cityInfluence'];
+    const ALL_CATEGORIES = [
+      'netWorth',
+      'properties',
+      'passiveIncome',
+      'dealVolume',
+      'cityInfluence',
+      'companyNetWorth',
+      'companyProperties',
+      'companyIncome',
+      'companyReputation',
+      'companyGrowth',
+    ];
+    const validCategories = ALL_CATEGORIES;
     if (!validCategories.includes(category)) {
       return res.status(400).json({ error: 'Invalid category' });
     }
@@ -246,7 +283,19 @@ router.get('/summary', async (req, res) => {
     const seasonNumber = activeSeason ? activeSeason.number : 1;
 
     const summary = {};
-    for (const cat of ['netWorth', 'properties', 'passiveIncome', 'dealVolume', 'cityInfluence']) {
+    const allCats = [
+      'netWorth',
+      'properties',
+      'passiveIncome',
+      'dealVolume',
+      'cityInfluence',
+      'companyNetWorth',
+      'companyProperties',
+      'companyIncome',
+      'companyReputation',
+      'companyGrowth',
+    ];
+    for (const cat of allCats) {
       const snapshot = await LeaderboardSnapshot.findOne({
         category: cat,
         seasonNumber,

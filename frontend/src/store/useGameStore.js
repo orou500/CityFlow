@@ -173,6 +173,7 @@ export const useGameStore = create((set, get) => ({
   adminUsers: [],
   adminProperties: [],
   adminEvents: [],
+  adminCompanies: [],
 
   fetchAdminOverview: async () => {
     const data = await api('/admin/overview');
@@ -245,6 +246,40 @@ export const useGameStore = create((set, get) => ({
 
   deleteProperty: async (id) => {
     return await api(`/admin/properties/${id}`, { method: 'DELETE' });
+  },
+
+  fetchAdminCompanies: async () => {
+    const data = await api('/admin/real-estate-companies');
+    set({ adminCompanies: data });
+    return data;
+  },
+
+  fetchAdminCompany: async (id) => {
+    return await api(`/admin/real-estate-companies/${id}`);
+  },
+
+  updateAdminCompany: async (id, data) => {
+    return await api(`/admin/real-estate-companies/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteAdminCompany: async (id) => {
+    return await api(`/admin/real-estate-companies/${id}`, { method: 'DELETE' });
+  },
+
+  updateAdminCompanyMemberRole: async (companyId, userId, role) => {
+    return await api(`/admin/real-estate-companies/${companyId}/members/${userId}/role`, {
+      method: 'PUT',
+      body: JSON.stringify({ role }),
+    });
+  },
+
+  removeAdminCompanyMember: async (companyId, userId) => {
+    return await api(`/admin/real-estate-companies/${companyId}/members/${userId}`, {
+      method: 'DELETE',
+    });
   },
 
   updateCity: async (id, data) => {

@@ -1,0 +1,2848 @@
+import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { useCompanyStore } from '../store/useCompanyStore';
+import { useAuthStore } from '../store/useAuthStore';
+import { formatMoney } from '../utils/format';
+
+const TABS = [
+  'overview',
+  'members',
+  'applications',
+  'treasury',
+  'properties',
+  'loans',
+  'contracts',
+  'investments',
+  'audit',
+];
+
+function normalizeId(id) {
+  if (!id) return '';
+  if (typeof id === 'object') {
+    return (id._id || id.id || id)?.toString();
+  }
+  return id.toString();
+}
+
+function formatAuditDetails(log, t) {
+  const d = log.details;
+  if (!d || Object.keys(d).length === 0) return null;
+
+  switch (log.action) {
+    case 'company_created':
+      return t('companies.auditDetailCreated', { name: d.name, fee: formatMoney(d.fee || 0) });
+    case 'member_joined':
+      return t('companies.auditDetailJoined', { user: d.username });
+    case 'member_left':
+      return t('companies.auditDetailLeft', { role: d.role });
+    case 'member_removed':
+      return t('companies.auditDetailRemoved', { user: d.targetUsername });
+    case 'member_invited':
+      return t('companies.auditDetailInvited', { user: d.targetUsername });
+    case 'role_changed':
+      return t('companies.auditDetailRoleChanged', { role: d.newRole });
+    case 'treasury_deposit':
+      return t('companies.auditDetailDeposit', {
+        amount: formatMoney(d.amount || 0),
+        balance: formatMoney(d.balance || 0),
+      });
+    case 'treasury_withdrawal':
+      return t('companies.auditDetailWithdrawal', { amount: formatMoney(d.amount || 0), recipient: d.recipient || '' });
+    case 'property_purchased':
+      return t('companies.auditDetailPropertyBought', { name: d.propertyName, price: formatMoney(d.price || 0) });
+    case 'property_sold':
+      return t('companies.auditDetailPropertySold', { name: d.propertyName, price: formatMoney(d.price || 0) });
+    case 'loan_taken':
+      return t('companies.auditDetailLoanTaken', { amount: formatMoney(d.principal || 0) });
+    case 'loan_payment':
+      return t('companies.auditDetailLoanPayment', { amount: formatMoney(d.amount || 0) });
+    case 'settings_updated':
+      return t('companies.auditDetailSettingsUpdated');
+    case 'level_up':
+      return t('companies.auditDetailLevelUp', { level: d.newLevel, members: d.maxMembers });
+    case 'application_submitted':
+      return t('companies.auditDetailAppSubmitted', { user: d.username });
+    case 'application_approved':
+      return t('companies.auditDetailAppApproved', { user: d.username });
+    case 'application_rejected':
+      return t('companies.auditDetailAppRejected');
+    case 'invitation_declined':
+      return t('companies.auditDetailInvitationDeclined');
+    case 'property_purchase_requested':
+      return t('companies.auditDetailPropertyPurchaseRequested', {
+        name: d.propertyName,
+        price: formatMoney(d.price || 0),
+      });
+    case 'property_purchase_vote_cast':
+      return t('companies.auditDetailPropertyPurchaseVote', { vote: d.vote });
+    case 'loan_requested':
+      return t('companies.auditDetailLoanRequested', { amount: formatMoney(d.principal || 0) });
+    case 'loan_vote_cast':
+      return t('companies.auditDetailLoanVote', { vote: d.vote });
+    case 'loan_approved':
+      return t('companies.auditDetailLoanApproved', { amount: formatMoney(d.principal || 0) });
+    case 'loan_rejected':
+      return t('companies.auditDetailLoanRejected');
+    case 'ipo_listed':
+      return t('companies.auditDetailIPO', { ticker: d.ticker, price: formatMoney(d.sharePrice || 0) });
+    case 'investment_created':
+      return t('companies.auditDetailInvestmentCreated', { name: d.name, principal: formatMoney(d.principal || 0) });
+    case 'investment_proposed':
+      return t('companies.auditDetailInvestmentProposed', { name: d.name, principal: formatMoney(d.principal || 0) });
+    case 'investment_vote_cast':
+      return t('companies.auditDetailInvestmentVoteCast', { name: d.name, vote: d.vote });
+    case 'investment_approved':
+      return t('companies.auditDetailInvestmentApproved', { name: d.name, principal: formatMoney(d.principal || 0) });
+    case 'investment_cancelled':
+      return t('companies.auditDetailInvestmentCancelled', { name: d.name });
+    case 'investment_returned':
+      return t('companies.auditDetailInvestmentReturned', {
+        name: d.name,
+        value: formatMoney(d.currentValue || 0),
+        profit: formatMoney(d.profit || 0),
+      });
+    case 'contract_proposed':
+      return t('companies.auditDetailContractProposed', { name: d.name, cost: formatMoney(d.cost || 0) });
+    case 'contract_vote_cast':
+      return t('companies.auditDetailContractVoteCast', { name: d.name, vote: d.vote });
+    case 'contract_approved':
+      return t('companies.auditDetailContractApproved', { name: d.name, cost: formatMoney(d.cost || 0) });
+    case 'contract_rejected':
+      return t('companies.auditDetailContractRejected', { name: d.name });
+    case 'contract_completed':
+      return t('companies.auditDetailContractCompleted', { name: d.name, reward: formatMoney(d.reward || 0) });
+    case 'development_requested':
+      return t('companies.auditDetailDevelopmentRequested', { name: d.propertyName, type: d.projectType });
+    case 'development_vote_cast':
+      return t('companies.auditDetailDevelopmentVoteCast', { name: d.propertyName, vote: d.vote });
+    case 'development_executed':
+      return t('companies.auditDetailDevelopmentExecuted', { name: d.propertyName, type: d.projectType });
+    case 'development_rejected':
+      return t('companies.auditDetailDevelopmentRejected', { name: d.propertyName });
+    case 'development_failed':
+      return t('companies.auditDetailDevelopmentFailed', { name: d.propertyName, error: d.error || '' });
+    case 'milestone_completed':
+      return t('companies.auditDetailMilestoneCompleted', {
+        name: d.name,
+        xp: d.xpReward,
+        reputation: d.reputationReward,
+        treasury: formatMoney(d.treasuryReward || 0),
+      });
+    default:
+      return JSON.stringify(d);
+  }
+}
+
+export default function CompanyDetailPage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { t } = useTranslation();
+  const user = useAuthStore((s) => s.user);
+  const {
+    selectedCompany: company,
+    companyProperties,
+    companyPropertiesPage,
+    companyPropertiesTotalPages,
+    companyLoans,
+    companyAuditLogs,
+    companyAuditTotal,
+    companyAuditPage,
+    companyAuditTotalPages,
+    companyStats,
+    loading,
+    fetchCompany,
+    fetchCompanyStats,
+    fetchCompanyAudit,
+    depositTreasury,
+    withdrawTreasury,
+    inviteMember,
+    removeMember,
+    changeRole,
+    leaveCompany,
+    repayCompanyLoan,
+    sellCompanyProperty,
+    clearSelectedCompany,
+    applyToCompany,
+    fetchApplications,
+    approveApplication,
+    rejectApplication,
+    cancelApplication,
+    createLoanRequest,
+    fetchLoanRequests,
+    voteLoanRequest,
+    executeLoanRequest,
+    takeDirectLoan,
+    initiateIPO,
+    createPropertyPurchaseRequest,
+    fetchPropertyPurchaseRequests,
+    votePropertyPurchaseRequest,
+    fetchContracts,
+    acceptContract,
+    proposeContract,
+    voteContractProposal,
+    fetchContractHistory,
+    fetchInvestmentProducts,
+    fetchInvestments,
+    fetchInvestmentPerformance,
+    createInvestment,
+    voteInvestmentProposal,
+    cancelInvestmentProposal,
+    fetchCompanyLoans,
+    fetchCompanyLoanOptions,
+    fetchCompanyProperties,
+  } = useCompanyStore();
+
+  const [tab, setTab] = useState(searchParams.get('tab') || 'overview');
+  const [depositAmount, setDepositAmount] = useState('');
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [inviteUserId, setInviteUserId] = useState('');
+  const [inviteError, setInviteError] = useState('');
+  const [repayAmounts, setRepayAmounts] = useState({});
+  const [applications, setApplications] = useState([]);
+  const [loanRequests, setLoanRequests] = useState([]);
+  const [applyMessage, setApplyMessage] = useState('');
+  const [loanReqAmount, setLoanReqAmount] = useState('');
+  const [loanReqDuration, setLoanReqDuration] = useState('');
+  const [loanReqType, setLoanReqType] = useState('business');
+  const [loanReqError, setLoanReqError] = useState('');
+  const [directLoanAmount, setDirectLoanAmount] = useState('');
+  const [directLoanDuration, setDirectLoanDuration] = useState('');
+  const [directLoanProduct, setDirectLoanProduct] = useState('');
+  const [directLoanOptions, setDirectLoanOptions] = useState(null);
+  const [directLoanError, setDirectLoanError] = useState('');
+  const [directLoanLoading, setDirectLoanLoading] = useState(false);
+  const [ipoLoading, setIpoLoading] = useState(false);
+  const [applySuccess, setApplySuccess] = useState(false);
+  const [applyError, setApplyError] = useState('');
+  const [propertyPurchaseRequests, setPropertyPurchaseRequests] = useState([]);
+  const [contracts, setContracts] = useState([]);
+  const [contractHistory, setContractHistory] = useState([]);
+  const [investments, setInvestments] = useState([]);
+  const [investmentProducts, setInvestmentProducts] = useState([]);
+  const [investmentPerformance, setInvestmentPerformance] = useState(null);
+  const [investAmount, setInvestAmount] = useState('');
+  const [selectedInvestmentProduct, setSelectedInvestmentProduct] = useState('');
+  const [investmentError, setInvestmentError] = useState('');
+  const [investmentLoading, setInvestmentLoading] = useState(false);
+  const [contractSubTab, setContractSubTab] = useState('active');
+  const [investmentSubTab, setInvestmentSubTab] = useState('active');
+  const [propertiesPage, setPropertiesPage] = useState(1);
+  const [auditPage, setAuditPage] = useState(1);
+  const [auditLimit] = useState(30);
+  const [transactionsPage, setTransactionsPage] = useState(1);
+  const [transactionsLimit] = useState(10);
+
+  const handleSetTab = (t2) => {
+    setTab(t2);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (t2 === 'overview') {
+        next.delete('tab');
+      } else {
+        next.set('tab', t2);
+      }
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    fetchCompany(id);
+    fetchCompanyStats(id);
+    return () => clearSelectedCompany();
+  }, [id]);
+
+  useEffect(() => {
+    if (tab === 'audit') fetchCompanyAudit(id, auditPage, auditLimit);
+    const canViewApplications = user?.role === 'admin' || ['ceo', 'director', 'officer'].includes(company?.memberRole);
+    if (tab === 'applications' && company && canViewApplications) {
+      fetchApplications(id)
+        .then(setApplications)
+        .catch(() => {});
+    }
+    if (tab === 'overview' || tab === 'loans') {
+      fetchCompanyLoans(id).catch(() => {});
+      fetchLoanRequests(id)
+        .then(setLoanRequests)
+        .catch(() => {});
+    }
+    if (tab === 'overview' || tab === 'properties') {
+      fetchPropertyPurchaseRequests(id)
+        .then(setPropertyPurchaseRequests)
+        .catch(() => {});
+    }
+    if (tab === 'properties') {
+      fetchCompanyProperties(id, propertiesPage);
+    }
+    if (tab === 'loans') {
+      fetchCompanyLoans(id).catch(() => {});
+      fetchLoanRequests(id)
+        .then(setLoanRequests)
+        .catch(() => {});
+      if (company?.memberRole === 'ceo' || user?.role === 'admin') {
+        fetchCompanyLoanOptions(id)
+          .then(setDirectLoanOptions)
+          .catch(() => {});
+      }
+    }
+    if (tab === 'contracts') {
+      fetchContracts(id)
+        .then(setContracts)
+        .catch(() => {});
+      fetchContractHistory(id)
+        .then(setContractHistory)
+        .catch(() => {});
+    }
+    if (tab === 'investments') {
+      fetchInvestments(id)
+        .then(setInvestments)
+        .catch(() => {});
+      fetchInvestmentProducts(id)
+        .then(setInvestmentProducts)
+        .catch(() => {});
+      fetchInvestmentPerformance(id)
+        .then(setInvestmentPerformance)
+        .catch(() => {});
+    }
+  }, [tab, id, propertiesPage, auditPage, company?.memberRole, user?.role]);
+
+  if (loading || !company) {
+    return <div className="max-w-6xl mx-auto px-4 py-8 text-center text-gray-500">{t('common.loading')}</div>;
+  }
+
+  const isMemberFromMembers = company.members?.some((m) => {
+    const uid = m.userId?._id || m.userId;
+    return normalizeId(uid) === normalizeId(user?._id);
+  });
+  const isMember = company.isMember || isMemberFromMembers || false;
+  const memberRole =
+    company.memberRole || company.members?.find((m) => normalizeId(m.userId) === normalizeId(user?._id))?.role || null;
+  const isAdmin = user?.role === 'admin';
+  const isFounder =
+    company.founderId &&
+    user?._id &&
+    (typeof company.founderId === 'object' ? company.founderId._id : company.founderId)?.toString() ===
+      user._id.toString();
+  const isCEO = memberRole === 'ceo' || isFounder;
+  const isDirector = memberRole === 'director' || isCEO || isAdmin || isFounder;
+  const isOfficer = memberRole === 'officer' || isDirector || isAdmin || isFounder;
+  const myMember = company.members?.find((m) => {
+    const uid = m.userId?._id || m.userId;
+    return uid?.toString() === user?._id?.toString();
+  });
+
+  const handleDeposit = async () => {
+    const amt = parseFloat(depositAmount);
+    if (!amt || amt <= 0) return;
+    try {
+      await depositTreasury(id, amt);
+      setDepositAmount('');
+      fetchCompanyStats(id);
+    } catch {}
+  };
+
+  const handleWithdraw = async () => {
+    const amt = parseFloat(withdrawAmount);
+    if (!amt || amt <= 0) return;
+    try {
+      await withdrawTreasury(id, amt);
+      setWithdrawAmount('');
+      fetchCompanyStats(id);
+    } catch {}
+  };
+
+  const handleInvite = async () => {
+    if (!inviteUserId.trim()) return;
+    setInviteError('');
+    try {
+      await inviteMember(id, inviteUserId.trim());
+      setInviteUserId('');
+    } catch (err) {
+      setInviteError(err.message);
+    }
+  };
+
+  const handleRepay = async (loanId) => {
+    const amt = parseFloat(repayAmounts[loanId]) || 0;
+    try {
+      await repayCompanyLoan(id, loanId, amt || undefined);
+      setRepayAmounts((prev) => ({ ...prev, [loanId]: '' }));
+      fetchCompanyStats(id);
+      fetchCompanyLoans(id);
+    } catch {}
+  };
+
+  const handleApply = async () => {
+    setApplyError('');
+    setApplySuccess(false);
+    try {
+      await applyToCompany(id, applyMessage);
+      setApplyMessage('');
+      setApplySuccess(true);
+      fetchCompany(id);
+    } catch (err) {
+      setApplyError(err.message);
+    }
+  };
+
+  const handleCancelApplication = async () => {
+    const pendingApp = company.applications?.find(
+      (a) => (a.userId?._id || a.userId)?.toString() === user?._id?.toString() && a.status === 'pending',
+    );
+    if (!pendingApp) return;
+    try {
+      await cancelApplication(id, pendingApp._id);
+      setApplySuccess(false);
+      fetchCompany(id);
+    } catch (err) {
+      setApplyError(err.message);
+    }
+  };
+
+  const handleApproveApp = async (appId) => {
+    try {
+      await approveApplication(id, appId);
+      const apps = await fetchApplications(id);
+      setApplications(apps);
+    } catch {}
+  };
+
+  const handleRejectApp = async (appId) => {
+    try {
+      await rejectApplication(id, appId);
+      const apps = await fetchApplications(id);
+      setApplications(apps);
+    } catch {}
+  };
+
+  const handleLoanRequest = async () => {
+    const amt = parseFloat(loanReqAmount);
+    const dur = parseInt(loanReqDuration);
+    if (!amt || !dur) return;
+    setLoanReqError('');
+    try {
+      await createLoanRequest(id, amt, dur, loanReqType);
+      setLoanReqAmount('');
+      setLoanReqDuration('');
+      const reqs = await fetchLoanRequests(id);
+      setLoanRequests(reqs);
+    } catch (err) {
+      setLoanReqError(err.message || t('common.error'));
+    }
+  };
+
+  const selectedProduct = investmentProducts.find((p) => (p._id || p.type) === selectedInvestmentProduct);
+
+  const handleInvest = async () => {
+    const amt = parseFloat(investAmount);
+    if (!amt || !selectedProduct) return;
+    setInvestmentError('');
+    setInvestmentLoading(true);
+    try {
+      const isOpportunity = selectedProduct.isOpportunity;
+      await createInvestment(id, selectedProduct.type, amt, isOpportunity ? selectedProduct._id : undefined);
+      setInvestAmount('');
+      setSelectedInvestmentProduct('');
+      const [invList, perf] = await Promise.all([fetchInvestments(id), fetchInvestmentPerformance(id)]);
+      setInvestments(invList);
+      setInvestmentPerformance(perf);
+    } catch (err) {
+      setInvestmentError(err.message || t('common.error'));
+    } finally {
+      setInvestmentLoading(false);
+    }
+  };
+
+  const handleDirectLoan = async () => {
+    const amt = parseFloat(directLoanAmount);
+    const dur = parseInt(directLoanDuration);
+    const productId = directLoanProduct || directLoanOptions?.products?.[0]?.id;
+    if (!amt || !dur || !productId) return;
+    setDirectLoanError('');
+    setDirectLoanLoading(true);
+    try {
+      await takeDirectLoan(id, amt, dur, productId);
+      setDirectLoanAmount('');
+      setDirectLoanDuration('');
+      await fetchCompanyLoans(id);
+      await fetchCompanyLoanOptions(id).then(setDirectLoanOptions);
+      const reqs = await fetchLoanRequests(id);
+      setLoanRequests(reqs);
+    } catch (err) {
+      setDirectLoanError(err.message || t('common.error'));
+    } finally {
+      setDirectLoanLoading(false);
+    }
+  };
+
+  const handleVoteLoan = async (reqId, vote) => {
+    try {
+      await voteLoanRequest(id, reqId, vote);
+      const reqs = await fetchLoanRequests(id);
+      setLoanRequests(reqs);
+    } catch {}
+  };
+
+  const handleExecuteLoan = async (reqId) => {
+    try {
+      await executeLoanRequest(id, reqId);
+      const reqs = await fetchLoanRequests(id);
+      setLoanRequests(reqs);
+      fetchCompanyStats(id);
+    } catch {}
+  };
+
+  const handleVotePropertyPurchase = async (reqId, vote) => {
+    try {
+      await votePropertyPurchaseRequest(id, reqId, vote);
+      const reqs = await fetchPropertyPurchaseRequests(id);
+      setPropertyPurchaseRequests(reqs);
+    } catch {}
+  };
+
+  const handleIPO = async () => {
+    setIpoLoading(true);
+    try {
+      await initiateIPO(id);
+      fetchCompanyStats(id);
+    } catch {}
+    setIpoLoading(false);
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6 overflow-hidden">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <Link
+            to="/real-estate-companies"
+            className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-xs sm:text-sm shrink-0"
+          >
+            {t('companies.backToList')}
+          </Link>
+          <div className="w-9 h-9 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-base sm:text-lg shrink-0">
+            {company.name.charAt(0)}
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate">{company.name}</h1>
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">
+              Lv.{company.level} · {company.xp || 0}/{company.xpToNextLevel || 500} XP · {company.reputation}{' '}
+              {t('companies.reputation')} · {company.members?.length || 0}/{company.maxMembers} {t('companies.members')}
+            </p>
+          </div>
+        </div>
+        {isMember && (
+          <button
+            onClick={() => {
+              leaveCompany(id);
+              navigate('/real-estate-companies');
+            }}
+            className="px-3 py-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50"
+          >
+            {t('companies.leaveCompany')}
+          </button>
+        )}
+      </div>
+
+      <div className="flex gap-0.5 overflow-x-auto border-b border-gray-200 dark:border-gray-700 -mx-3 sm:-mx-4 px-3 sm:px-4">
+        {TABS.map((t2) => {
+          const pendingCount =
+            t2 === 'properties'
+              ? propertyPurchaseRequests.filter((r) => r.status === 'pending').length
+              : t2 === 'loans'
+                ? loanRequests.filter((r) => r.status === 'pending').length
+                : 0;
+          return (
+            <button
+              key={t2}
+              onClick={() => handleSetTab(t2)}
+              className={`flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${tab === t2 ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
+            >
+              {t(`companies.tab${t2.charAt(0).toUpperCase() + t2.slice(1)}`)}
+              {pendingCount > 0 && (
+                <span className="px-1.5 py-0.5 text-[10px] bg-red-500 text-white rounded-full min-w-[1.25rem] text-center">
+                  {pendingCount}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {tab === 'overview' && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+          {[
+            {
+              label: t('companies.netWorth'),
+              value: formatMoney(companyStats?.netWorth || company.stats?.netWorth || 0),
+              color: 'blue',
+            },
+            { label: t('companies.treasury'), value: formatMoney(company.treasury?.balance || 0), color: 'green' },
+            {
+              label: t('companies.properties'),
+              value: companyStats?.propertiesOwned || company.stats?.propertiesOwned || 0,
+              color: 'purple',
+            },
+            {
+              label: t('companies.rentalIncome'),
+              value: formatMoney(companyStats?.totalRentalIncome || company.stats?.totalRentalIncome || 0),
+              color: 'yellow',
+            },
+            {
+              label: t('companies.members'),
+              value: `${company.members?.length || 0}/${company.maxMembers}`,
+              color: 'indigo',
+            },
+            { label: t('companies.activeLoans'), value: companyLoans.filter((l) => l.active).length, color: 'red' },
+            { label: t('companies.reputation'), value: company.reputation, color: 'amber' },
+            { label: t('companies.level'), value: company.level, color: 'cyan' },
+          ].map((stat) => (
+            <div
+              key={stat.label}
+              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2.5 sm:p-4"
+            >
+              <div className="text-xs sm:text-xs text-gray-500 dark:text-gray-400">{stat.label}</div>
+              <div className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mt-1 truncate">
+                {stat.value}
+              </div>
+            </div>
+          ))}
+          {company.shareBreakdown && (
+            <div className="col-span-2 md:col-span-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{t('companies.ownership')}</h3>
+              <div className="space-y-2">
+                {company.shareBreakdown.map((s) => (
+                  <div key={s.userId} className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-gray-700 dark:text-gray-300 truncate min-w-0">
+                      {typeof s.userId === 'object' && s.userId?.username ? s.userId.username : 'Unknown'}
+                    </span>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="w-20 sm:w-32 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${s.percentage}%` }} />
+                      </div>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 w-12 text-right">{s.percentage}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {company.levelBenefits && (() => {
+            const xpInLevel = company.xpInCurrentLevel ?? Math.max(0, (company.xp || 0) - (company.xpForCurrentLevel || 0));
+            const xpNeeded = company.xpNeededForLevel ?? Math.max(1, (company.xpToNextLevel || 500) - (company.xpForCurrentLevel || 0));
+            const progressPct = Math.min(100, (xpInLevel / xpNeeded) * 100);
+            return (
+            <div className="col-span-2 md:col-span-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('companies.progression')}</h3>
+                {company.level < 50 && (
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {Math.round(xpInLevel)} / {Math.round(xpNeeded)} XP
+                  </span>
+                )}
+              </div>
+
+              {company.level < 50 && (
+                <div className="mb-3">
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                    <div
+                      className="bg-gradient-to-r from-cyan-500 to-blue-500 h-3 rounded-full transition-all duration-500"
+                      style={{ width: `${progressPct}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between mt-1">
+                    <span className="text-[10px] text-gray-400">Lv.{company.level}</span>
+                    <span className="text-[10px] text-gray-400">
+                      {company.level < 50
+                        ? `${Math.round(progressPct)}%`
+                        : 'MAX'}
+                    </span>
+                    <span className="text-[10px] text-gray-400">Lv.{Math.min(50, company.level + 1)}</span>
+                  </div>
+                </div>
+              )}
+
+              {company.level >= 50 && (
+                <div className="mb-3 text-center">
+                  <span className="text-sm font-bold text-yellow-500 dark:text-yellow-400">
+                    {t('companies.maxLevel') || 'MAX LEVEL'}
+                  </span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
+                <div className="text-center">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{t('companies.maxMembers')}</div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-white">
+                    {company.levelBenefits.maxMembers}
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{t('companies.maxLoanAmount')}</div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-white">
+                    {formatMoney(company.levelBenefits.maxLoanAmount)}
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{t('companies.loanInterestDiscount')}</div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-white">
+                    {(company.levelBenefits.loanInterestDiscount * 100).toFixed(1)}%
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{t('companies.treasuryCapacity')}</div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-white">
+                    {company.levelBenefits.treasuryCapacity === Infinity
+                      ? '∞'
+                      : formatMoney(company.levelBenefits.treasuryCapacity)}
+                  </div>
+                </div>
+                {company.levelBenefits.canTakeContracts && (
+                  <div className="text-center">
+                    <div className="text-xs text-green-600 dark:text-green-400">
+                      ✓ {t('companies.contracts') || 'Contracts'}
+                    </div>
+                    <div className="text-xs text-gray-400">Lv.3+</div>
+                  </div>
+                )}
+                {company.levelBenefits.canStartProjects && (
+                  <div className="text-center">
+                    <div className="text-xs text-green-600 dark:text-green-400">
+                      ✓ {t('companies.projects') || 'Projects'}
+                    </div>
+                    <div className="text-xs text-gray-400">Lv.5+</div>
+                  </div>
+                )}
+                {company.levelBenefits.premiumContracts && (
+                  <div className="text-center">
+                    <div className="text-xs text-green-600 dark:text-green-400">
+                      ✓ {t('companies.premiumContracts') || 'Premium'}
+                    </div>
+                    <div className="text-xs text-gray-400">Lv.10+</div>
+                  </div>
+                )}
+                {company.levelBenefits.advancedGovernance && (
+                  <div className="text-center">
+                    <div className="text-xs text-green-600 dark:text-green-400">
+                      ✓ {t('companies.advancedGovernance') || 'Gov+'}
+                    </div>
+                    <div className="text-xs text-gray-400">Lv.15+</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )})()}
+
+          {(loanRequests.some((r) => r.status === 'pending') ||
+            propertyPurchaseRequests.some((r) => r.status === 'pending')) && (
+            <div className="col-span-2 md:col-span-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('companies.pendingVotes')}</h3>
+                <span className="text-xs px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded-lg">
+                  {loanRequests.filter((r) => r.status === 'pending').length +
+                    propertyPurchaseRequests.filter((r) => r.status === 'pending').length}{' '}
+                  {t('companies.pendingVotes')}
+                </span>
+              </div>
+              <div className="space-y-2">
+                {propertyPurchaseRequests
+                  .filter((r) => r.status === 'pending')
+                  .map((req) => {
+                    const prop = req.propertyId;
+                    const totalVoters = Math.max(1, (company.members?.length || 1) - 1);
+                    const yesVotes = (req.votes || []).filter((v) => v.vote === 'yes').length;
+                    const myVote = (req.votes || []).find((v) => normalizeId(v.userId) === normalizeId(user?._id));
+                    const requesterId = normalizeId(req.requestedBy);
+                    const isProposer = requesterId && requesterId === normalizeId(user?._id);
+                    const canVote = isMember && !myVote && !isProposer;
+                    return (
+                      <div
+                        key={req._id}
+                        className="flex items-center justify-between gap-2 p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                              🏠 {t('companies.propertyPurchase')}: {prop?.name || t('companies.unknown')}
+                            </span>
+                            {isProposer && (
+                              <span className="text-xs px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded">
+                                {t('companies.proposedByYou')}
+                              </span>
+                            )}
+                            {myVote && (
+                              <span className="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded">
+                                {t('companies.youVoted')} {t(`companies.${myVote.vote}`)}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {formatMoney(prop?.currentPrice || 0)} · {yesVotes}/{totalVoters} {t('companies.yes')}
+                          </div>
+                        </div>
+                        {canVote ? (
+                          <div className="flex gap-2 shrink-0">
+                            <button
+                              onClick={() => handleVotePropertyPurchase(req._id, 'yes')}
+                              className="px-3 py-1 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700"
+                            >
+                              {t('companies.yes')}
+                            </button>
+                            <button
+                              onClick={() => handleVotePropertyPurchase(req._id, 'no')}
+                              className="px-3 py-1 text-xs bg-red-600 text-white rounded-lg hover:bg-red-700"
+                            >
+                              {t('companies.no')}
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => handleSetTab('properties')}
+                            className="px-3 py-1 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                          >
+                            {t('companies.view')}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                {loanRequests
+                  .filter((r) => r.status === 'pending')
+                  .map((req) => {
+                    const totalVoters = Math.max(1, (company.members?.length || 1) - 1);
+                    const yesVotes = (req.votes || []).filter((v) => v.vote === 'yes').length;
+                    const myVote = (req.votes || []).find((v) => normalizeId(v.userId) === normalizeId(user?._id));
+                    const requesterId = normalizeId(req.requestedBy);
+                    const isProposer = requesterId && requesterId === normalizeId(user?._id);
+                    const canVote = isMember && !myVote && !isProposer;
+                    return (
+                      <div
+                        key={req._id}
+                        className="flex items-center justify-between gap-2 p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                              🏦 {t('companies.loan')}: {formatMoney(req.principal)}
+                            </span>
+                            {isProposer && (
+                              <span className="text-xs px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded">
+                                {t('companies.proposedByYou')}
+                              </span>
+                            )}
+                            {myVote && (
+                              <span className="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded">
+                                {t('companies.youVoted')} {t(`companies.${myVote.vote}`)}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {req.durationTicks} {t('companies.months')} · {yesVotes}/{totalVoters} {t('companies.yes')}
+                          </div>
+                        </div>
+                        {canVote ? (
+                          <div className="flex gap-2 shrink-0">
+                            <button
+                              onClick={() => handleVoteLoan(req._id, 'yes')}
+                              className="px-3 py-1 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700"
+                            >
+                              {t('companies.yes')}
+                            </button>
+                            <button
+                              onClick={() => handleVoteLoan(req._id, 'no')}
+                              className="px-3 py-1 text-xs bg-red-600 text-white rounded-lg hover:bg-red-700"
+                            >
+                              {t('companies.no')}
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => handleSetTab('loans')}
+                            className="px-3 py-1 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                          >
+                            {t('companies.view')}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          )}
+
+          {company.ipo?.listed ? (
+            <div className="col-span-2 md:col-span-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 sm:p-4">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <h3 className="text-sm font-semibold text-green-800 dark:text-green-300">
+                    {t('companies.publiclyListed')}
+                  </h3>
+                  <div className="text-xs text-green-600 dark:text-green-400 mt-1 truncate">
+                    {t('companies.ticker')}: {company.ipo.ticker} · {t('companies.sharePrice')}: $
+                    {company.ipo.sharePrice}
+                  </div>
+                </div>
+                <span className="text-2xl">📈</span>
+              </div>
+            </div>
+          ) : (
+            isCEO && (
+              <div className="col-span-2 md:col-span-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('companies.goPublic')}</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
+                      {t('companies.ipoFee')}: $10,000,000 · {t('companies.ipoRequirements')}
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleIPO}
+                    disabled={ipoLoading}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 disabled:opacity-50"
+                  >
+                    {ipoLoading ? t('common.loading') : t('companies.initiateIPO')}
+                  </button>
+                </div>
+              </div>
+            )
+          )}
+
+          {!isMember && !company.ipo?.listed && (
+            <div className="col-span-2 md:col-span-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4">
+              {user?.companyId ? (
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">ℹ️</span>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                      {t('companies.alreadyInCompany')}
+                    </h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('companies.leaveFirstToApply')}</p>
+                  </div>
+                </div>
+              ) : applySuccess || company.hasPendingApplication ? (
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-2xl shrink-0">⏳</span>
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-semibold text-yellow-700 dark:text-yellow-400">
+                        {t('companies.applicationPending')}
+                      </h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {t('companies.waitingForApproval')}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleCancelApplication}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700"
+                  >
+                    {t('companies.cancelApplication')}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                      {t('companies.applyToJoin')}
+                    </h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('companies.applyDescription')}</p>
+                  </div>
+                  <button
+                    onClick={handleApply}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
+                  >
+                    {t('companies.apply')}
+                  </button>
+                </div>
+              )}
+              {applyError && <p className="text-xs text-red-600 dark:text-red-400 mt-2">{applyError}</p>}
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'members' && (
+        <div className="space-y-3 sm:space-y-4">
+          {isOfficer && (
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('companies.inviteMember')}</h3>
+                <span
+                  className={`text-xs px-2 py-1 rounded-lg ${(company.members?.length || 0) >= company.maxMembers ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'}`}
+                >
+                  {t('companies.memberCount', { count: company.members?.length || 0, max: company.maxMembers })}
+                </span>
+              </div>
+              {(company.members?.length || 0) >= company.maxMembers ? (
+                <p className="text-sm text-red-600 dark:text-red-400">{t('companies.maxMembersReached')}</p>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    value={inviteUserId}
+                    onChange={(e) => setInviteUserId(e.target.value)}
+                    placeholder={t('companies.userIdPlaceholder')}
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                  />
+                  <button
+                    onClick={handleInvite}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
+                  >
+                    {t('companies.invite')}
+                  </button>
+                </div>
+              )}
+              {inviteError && <p className="text-sm text-red-600 dark:text-red-400 mt-2">{inviteError}</p>}
+            </div>
+          )}
+          <div className="space-y-2">
+            {company.members?.map((member) => {
+              const memberUser = member.userId;
+              const uid = memberUser?._id || memberUser;
+              const isSelf = uid?.toString() === user?._id?.toString();
+              return (
+                <div
+                  key={member._id}
+                  className="flex items-center justify-between bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center text-sm font-medium text-gray-600 dark:text-gray-300 shrink-0">
+                      {typeof memberUser === 'object' && memberUser?.username
+                        ? memberUser.username.charAt(0).toUpperCase()
+                        : '?'}
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-sm font-medium text-gray-900 dark:text-white truncate block">
+                        {typeof memberUser === 'object' && memberUser?.username ? memberUser.username : 'Unknown'}
+                        {isSelf && ' (You)'}
+                      </span>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        {t(`companies.role${member.role.charAt(0).toUpperCase() + member.role.slice(1)}`)} ·{' '}
+                        {member.shares} shares
+                      </div>
+                    </div>
+                  </div>
+                  {isCEO && !isSelf && (
+                    <div className="flex gap-2">
+                      {member.role === 'recruit' && (
+                        <button
+                          onClick={() => changeRole(id, uid, 'member')}
+                          className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                        >
+                          {t('companies.promote')}
+                        </button>
+                      )}
+                      {member.role === 'member' && (
+                        <>
+                          <button
+                            onClick={() => changeRole(id, uid, 'officer')}
+                            className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                          >
+                            {t('companies.promote')}
+                          </button>
+                          <button
+                            onClick={() => changeRole(id, uid, 'recruit')}
+                            className="text-xs text-yellow-600 dark:text-yellow-400 hover:underline"
+                          >
+                            {t('companies.demote')}
+                          </button>
+                        </>
+                      )}
+                      {member.role === 'officer' && (
+                        <>
+                          <button
+                            onClick={() => changeRole(id, uid, 'director')}
+                            className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                          >
+                            {t('companies.promote')}
+                          </button>
+                          <button
+                            onClick={() => changeRole(id, uid, 'member')}
+                            className="text-xs text-yellow-600 dark:text-yellow-400 hover:underline"
+                          >
+                            {t('companies.demote')}
+                          </button>
+                        </>
+                      )}
+                      {member.role === 'director' && (
+                        <button
+                          onClick={() => changeRole(id, uid, 'officer')}
+                          className="text-xs text-yellow-600 dark:text-yellow-400 hover:underline"
+                        >
+                          {t('companies.demote')}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => removeMember(id, uid)}
+                        className="text-xs text-red-600 dark:text-red-400 hover:underline"
+                      >
+                        {t('companies.remove')}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {isMember && !isCEO && (
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                {t('companies.leaveCompany')}
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">{t('companies.leaveCompanyDescription')}</p>
+              <button
+                onClick={() => {
+                  leaveCompany(id);
+                  navigate('/real-estate-companies');
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700"
+              >
+                {t('companies.leaveCompany')}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'applications' && (
+        <div className="space-y-3 sm:space-y-4">
+          {isOfficer || user?.role === 'admin' ? (
+            <>
+              {applications.length === 0 ? (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  <div className="text-3xl mb-2">📋</div>
+                  <p>{t('companies.noApplications')}</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {applications.map((app) => {
+                    const applicant = app.userId;
+                    return (
+                      <div
+                        key={app._id}
+                        className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center text-sm font-medium text-gray-600 dark:text-gray-300 shrink-0">
+                              {typeof applicant === 'object' && applicant?.username
+                                ? applicant.username.charAt(0).toUpperCase()
+                                : '?'}
+                            </div>
+                            <div className="min-w-0">
+                              <span className="text-sm font-medium text-gray-900 dark:text-white block truncate">
+                                {typeof applicant === 'object' && applicant?.username ? applicant.username : 'Unknown'}
+                                {typeof applicant === 'object' && applicant?.level ? ` (Lv.${applicant.level})` : ''}
+                              </span>
+                              {app.message && (
+                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                                  {app.message}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`text-xs px-2 py-1 rounded-lg ${app.status === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' : app.status === 'approved' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}
+                            >
+                              {t(`companies.appStatus${app.status.charAt(0).toUpperCase() + app.status.slice(1)}`)}
+                            </span>
+                            {app.status === 'pending' && (isOfficer || user?.role === 'admin') && (
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleApproveApp(app._id)}
+                                  className="px-3 py-1 bg-green-600 text-white rounded-lg text-xs hover:bg-green-700"
+                                >
+                                  {t('companies.approve')}
+                                </button>
+                                <button
+                                  onClick={() => handleRejectApp(app._id)}
+                                  className="px-3 py-1 bg-red-600 text-white rounded-lg text-xs hover:bg-red-700"
+                                >
+                                  {t('companies.reject')}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">{t('companies.noPermission')}</div>
+          )}
+        </div>
+      )}
+
+      {tab === 'treasury' &&
+        (() => {
+          const allTxs = company.treasury?.transactions || [];
+          const totalTransactionPages = Math.max(1, Math.ceil(allTxs.length / transactionsLimit));
+          const currentTxPage = Math.min(transactionsPage, totalTransactionPages);
+          const txs = [...allTxs]
+            .reverse()
+            .slice((currentTxPage - 1) * transactionsLimit, currentTxPage * transactionsLimit);
+          const incomeTypes = [
+            'deposit',
+            'capital_contribution',
+            'rent_income',
+            'property_sale',
+            'loan_disbursement',
+            'contract_reward',
+            'investment_return',
+            'operating_fee',
+          ];
+          const expenseTypes = ['withdrawal', 'loan_payment', 'property_purchase'];
+          const totalIncome = txs.filter((tx) => incomeTypes.includes(tx.type)).reduce((sum, tx) => sum + tx.amount, 0);
+          const totalExpenses = txs
+            .filter((tx) => expenseTypes.includes(tx.type))
+            .reduce((sum, tx) => sum + tx.amount, 0);
+          const cashFlow = totalIncome - totalExpenses;
+          return (
+            <div className="space-y-3 sm:space-y-4">
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 sm:p-4">
+                <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300">
+                  {t('companies.treasuryDescription')}
+                </p>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2.5 sm:p-4">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{t('companies.treasuryBalance')}</div>
+                  <div className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mt-1 truncate">
+                    {formatMoney(company.treasury?.balance || 0)}
+                  </div>
+                </div>
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2.5 sm:p-4">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{t('companies.totalIncome')}</div>
+                  <div className="text-base sm:text-lg font-bold text-green-600 dark:text-green-400 mt-1 truncate">
+                    {formatMoney(totalIncome)}
+                  </div>
+                </div>
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2.5 sm:p-4">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{t('companies.totalExpenses')}</div>
+                  <div className="text-base sm:text-lg font-bold text-red-600 dark:text-red-400 mt-1 truncate">
+                    {formatMoney(totalExpenses)}
+                  </div>
+                </div>
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2.5 sm:p-4">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{t('companies.monthlyCashFlow')}</div>
+                  <div
+                    className={`text-base sm:text-lg font-bold mt-1 truncate ${cashFlow >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}
+                  >
+                    {cashFlow >= 0 ? '+' : ''}
+                    {formatMoney(cashFlow)}
+                  </div>
+                </div>
+              </div>
+              {isMember && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+                      {t('companies.deposit')}
+                    </h3>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        value={depositAmount}
+                        onChange={(e) => setDepositAmount(e.target.value)}
+                        placeholder="$"
+                        className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                      />
+                      <button
+                        onClick={handleDeposit}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700"
+                      >
+                        {t('companies.contribute')}
+                      </button>
+                    </div>
+                  </div>
+                  {isDirector && (
+                    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4">
+                      <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+                        {t('companies.withdraw')}
+                      </h3>
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          value={withdrawAmount}
+                          onChange={(e) => setWithdrawAmount(e.target.value)}
+                          placeholder="$"
+                          className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                        />
+                        <button
+                          onClick={handleWithdraw}
+                          className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700"
+                        >
+                          {t('companies.withdraw')}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                  {t('companies.transactionHistory')}
+                </h3>
+                {txs.length > 0 ? (
+                  <div className="space-y-2">
+                    {txs.map((tx) => {
+                      const isIncome = incomeTypes.includes(tx.type);
+                      const typeIcons = {
+                        deposit: '💰',
+                        capital_contribution: '💰',
+                        rent_income: '🏠',
+                        property_sale: '🏷️',
+                        loan_disbursement: '🏦',
+                        contract_reward: '📋',
+                        investment_return: '📈',
+                        withdrawal: '💸',
+                        loan_payment: '💳',
+                        property_purchase: '🏢',
+                        operating_fee: '⚙️',
+                      };
+                      return (
+                        <div
+                          key={tx._id}
+                          className="flex items-center justify-between gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span className="text-lg shrink-0">{typeIcons[tx.type] || '📄'}</span>
+                            <div className="min-w-0">
+                              <span className="text-sm text-gray-900 dark:text-white block truncate">
+                                {tx.description}
+                              </span>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                {tx.type.replace(/_/g, ' ')}
+                              </div>
+                            </div>
+                          </div>
+                          <span
+                            className={`text-sm font-medium shrink-0 ${isIncome ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}
+                          >
+                            {isIncome ? '+' : '-'}${tx.amount.toLocaleString()}
+                          </span>
+                        </div>
+                      );
+                    })}
+                    {totalTransactionPages > 1 && (
+                      <div className="flex justify-center items-center gap-2 pt-2">
+                        <button
+                          onClick={() => setTransactionsPage((p) => Math.max(1, p - 1))}
+                          disabled={currentTxPage <= 1}
+                          className="px-3 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40"
+                        >
+                          {t('marketplace.previous')}
+                        </button>
+                        <span className="px-3 py-1 text-xs text-gray-500 dark:text-gray-400">
+                          {currentTxPage}/{totalTransactionPages}
+                        </span>
+                        <button
+                          onClick={() => setTransactionsPage((p) => Math.min(totalTransactionPages, p + 1))}
+                          disabled={currentTxPage >= totalTransactionPages}
+                          className="px-3 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40"
+                        >
+                          {t('marketplace.next')}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <div className="text-3xl mb-2">💰</div>
+                    <p>{t('companies.noTransactions')}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
+      {tab === 'properties' && (
+        <div className="space-y-3 sm:space-y-4">
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300">
+              {t('companies.propertiesDescription')}
+            </p>
+          </div>
+
+          {propertyPurchaseRequests.filter((r) => r.status === 'pending').length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('companies.pendingPurchases')}</h3>
+              {propertyPurchaseRequests
+                .filter((r) => r.status === 'pending')
+                .map((req) => {
+                  const prop = req.propertyId;
+                  const totalVoters = Math.max(1, (company.members?.length || 1) - 1);
+                  const yesVotes = (req.votes || []).filter((v) => v.vote === 'yes').length;
+                  const noVotes = (req.votes || []).filter((v) => v.vote === 'no').length;
+                  const myVote = (req.votes || []).find((v) => normalizeId(v.userId) === normalizeId(user?._id));
+                  const requesterId = normalizeId(req.requestedBy);
+                  const isProposer = requesterId && requesterId === normalizeId(user?._id);
+                  const canVote = isMember && !myVote && !isProposer;
+                  const progress = totalVoters > 0 ? (yesVotes / totalVoters) * 100 : 0;
+                  const thresholdMet = yesVotes / totalVoters >= 0.5;
+
+                  return (
+                    <div
+                      key={req._id}
+                      className="bg-white dark:bg-gray-800 border-l-4 border-purple-500 border-y border-r border-gray-200 dark:border-gray-700 rounded-lg p-3"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-medium text-gray-900 dark:text-white block truncate">
+                              {prop?.name || t('companies.unknown')}
+                            </span>
+                            <span className="text-xs px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded-lg">
+                              {t('companies.pending')}
+                            </span>
+                            {isProposer && (
+                              <span className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-lg">
+                                {t('companies.proposedByYou')}
+                              </span>
+                            )}
+                            {myVote && (
+                              <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg">
+                                {t('companies.youVoted')} {t(`companies.${myVote.vote}`)}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {formatMoney(prop?.currentPrice || 0)} · {prop?.type} · {t('companies.proposedBy')}{' '}
+                            {typeof req.requestedBy === 'object' ? req.requestedBy.username : t('companies.unknown')}
+                          </div>
+                          <div className="mt-2">
+                            <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+                              <span>
+                                {t('companies.votes')}: {yesVotes}/{totalVoters} {t('companies.yes')}
+                                {noVotes > 0 && `, ${noVotes} ${t('companies.no')}`}
+                              </span>
+                              <span>{Math.round(progress)}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                              <div
+                                className={`h-2 rounded-full transition-all ${thresholdMet ? 'bg-green-500' : 'bg-purple-500'}`}
+                                style={{ width: `${Math.min(100, progress)}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="shrink-0">
+                          {canVote ? (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleVotePropertyPurchase(req._id, 'yes')}
+                                className="px-3 py-1 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700"
+                              >
+                                {t('companies.yes')}
+                              </button>
+                              <button
+                                onClick={() => handleVotePropertyPurchase(req._id, 'no')}
+                                className="px-3 py-1 text-xs bg-red-600 text-white rounded-lg hover:bg-red-700"
+                              >
+                                {t('companies.no')}
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-500 dark:text-gray-400 italic">
+                              {isProposer
+                                ? t('companies.waitingForVotes')
+                                : myVote
+                                  ? t('companies.voteRecorded')
+                                  : t('companies.membersOnly')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          )}
+
+          {companyProperties.length === 0 ? (
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+              <div className="text-3xl mb-2">🏠</div>
+              <p>{t('companies.noProperties')}</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('companies.properties')}</h3>
+              {companyProperties.map((prop) => (
+                <div
+                  key={prop._id}
+                  className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <span className="text-sm font-medium text-gray-900 dark:text-white block truncate">
+                        {prop.name}
+                      </span>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {prop.type} · {prop.cityId?.name || 'Unknown'} · {t('properties.rent')}:{' '}
+                        {formatMoney(prop.rent || 0)} · {t('properties.occupancy')}: {prop.occupancy || 0}%
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        {formatMoney(prop.currentPrice)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-2 flex items-center gap-2 flex-wrap">
+                    <Link
+                      to={`/property/${prop._id}`}
+                      className="px-3 py-1 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    >
+                      {t('properties.manage')}
+                    </Link>
+                    {prop.type !== 'land' && isDirector && (
+                      <Link
+                        to={`/development?tab=improvements&propertyId=${prop._id}`}
+                        className="px-3 py-1 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700"
+                      >
+                        {t('properties.improve')}
+                      </Link>
+                    )}
+                    {prop.type === 'land' && isDirector && prop.developmentLevel === 0 && (
+                      <Link
+                        to={`/development?tab=construction&propertyId=${prop._id}`}
+                        className="px-3 py-1 text-xs bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                      >
+                        {t('companies.startProject')}
+                      </Link>
+                    )}
+                    {isDirector && (
+                      <button
+                        onClick={() => sellCompanyProperty(id, prop._id)}
+                        className="px-3 py-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50"
+                      >
+                        {t('companies.sellProperty')}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {companyPropertiesTotalPages > 1 && (
+                <div className="flex justify-center gap-2 pt-2">
+                  <button
+                    onClick={() => setPropertiesPage((p) => Math.max(1, p - 1))}
+                    disabled={companyPropertiesPage <= 1}
+                    className="px-3 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40"
+                  >
+                    {t('marketplace.previous')}
+                  </button>
+                  <span className="px-3 py-1 text-xs text-gray-500 dark:text-gray-400">
+                    {companyPropertiesPage}/{companyPropertiesTotalPages}
+                  </span>
+                  <button
+                    onClick={() => setPropertiesPage((p) => Math.min(companyPropertiesTotalPages, p + 1))}
+                    disabled={companyPropertiesPage >= companyPropertiesTotalPages}
+                    className="px-3 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40"
+                  >
+                    {t('marketplace.next')}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+          {company.levelBenefits?.canStartProjects && (
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+                {t('companies.developmentProjects')}
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                {t('companies.developmentProjectsDescription')}
+              </p>
+              <button
+                onClick={() => window.open('/development', '_blank')}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700"
+              >
+                {t('companies.startProject')}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'loans' && (
+        <div className="space-y-3 sm:space-y-4">
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300">{t('companies.loansDescription')}</p>
+          </div>
+
+          {isCEO && (
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg">🏦</span>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                  {t('companies.companyBankLoan')}
+                </h3>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                {t('companies.companyBankLoanDescription')}
+              </p>
+
+              {directLoanOptions && (
+                <div className="mb-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded p-2">
+                    <div className="text-gray-500 dark:text-gray-400">{t('companies.companyNetWorth')}</div>
+                    <div className="font-medium text-gray-900 dark:text-white">
+                      {formatMoney(directLoanOptions.netWorth)}
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded p-2">
+                    <div className="text-gray-500 dark:text-gray-400">{t('companies.maxDebt')}</div>
+                    <div className="font-medium text-gray-900 dark:text-white">
+                      {formatMoney(directLoanOptions.maxDebt)}
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded p-2">
+                    <div className="text-gray-500 dark:text-gray-400">{t('companies.reputation')}</div>
+                    <div className="font-medium text-gray-900 dark:text-white">{directLoanOptions.reputation}</div>
+                  </div>
+                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded p-2">
+                    <div className="text-gray-500 dark:text-gray-400">{t('companies.level')}</div>
+                    <div className="font-medium text-gray-900 dark:text-white">{directLoanOptions.level}</div>
+                  </div>
+                </div>
+              )}
+
+              {directLoanOptions?.products?.length === 0 ? (
+                <p className="text-xs text-gray-500 dark:text-gray-400">{t('companies.noLoanProducts')}</p>
+              ) : (
+                <>
+                  <div className="space-y-2 mb-3">
+                    {(directLoanOptions?.products || []).map((product) => (
+                      <div
+                        key={product.id}
+                        onClick={() => {
+                          setDirectLoanProduct(product.id);
+                          setDirectLoanAmount('');
+                        }}
+                        className={`cursor-pointer border rounded-lg p-3 transition-colors ${
+                          directLoanProduct === product.id
+                            ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
+                            : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                              {product.name}
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                              {product.description}
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <div className="text-sm font-bold text-purple-600 dark:text-purple-400">
+                              {(product.interestRate * 100).toFixed(1)}%
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              {t('companies.interestRate')}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-400">
+                          <span>
+                            {t('companies.loanRange')}: {formatMoney(product.minPrincipal)} -{' '}
+                            {formatMoney(product.maxPrincipal)}
+                          </span>
+                          <span>
+                            · {t('companies.durations')}:{' '}
+                            {product.durations.map((d) => `${d} ${t('companies.months')}`).join(', ')}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {directLoanProduct && (
+                    <div className="space-y-3 border-t border-gray-200 dark:border-gray-700 pt-3">
+                      <div className="flex flex-wrap gap-2">
+                        <input
+                          type="number"
+                          value={directLoanAmount}
+                          onChange={(e) => setDirectLoanAmount(e.target.value)}
+                          placeholder={t('companies.amount')}
+                          className="w-full sm:flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                        />
+                        <select
+                          value={directLoanDuration}
+                          onChange={(e) => setDirectLoanDuration(e.target.value)}
+                          className="w-full sm:w-auto px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                        >
+                          <option value=""> {t('companies.selectDuration')}</option>
+                          {(directLoanOptions?.products.find((p) => p.id === directLoanProduct)?.durations || []).map(
+                            (d) => (
+                              <option key={d} value={d}>
+                                {d} {t('companies.months')}
+                              </option>
+                            ),
+                          )}
+                        </select>
+                        <button
+                          onClick={handleDirectLoan}
+                          disabled={directLoanLoading || !directLoanAmount || !directLoanDuration}
+                          className="w-full sm:w-auto px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 disabled:opacity-50"
+                        >
+                          {directLoanLoading ? t('common.loading') : t('companies.takeLoan')}
+                        </button>
+                      </div>
+
+                      {(() => {
+                        const product = directLoanOptions?.products.find((p) => p.id === directLoanProduct);
+                        const principal = parseFloat(directLoanAmount) || 0;
+                        const ticks = parseInt(directLoanDuration) || 0;
+                        if (!product || !principal || !ticks) return null;
+                        const interest = Math.round(principal * product.interestRate);
+                        const total = principal + interest;
+                        const payment = Math.ceil(total / ticks);
+                        return (
+                          <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3 text-xs">
+                            <div className="font-medium text-purple-800 dark:text-purple-300 mb-1">
+                              {t('companies.loanTermsPreview')}
+                            </div>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                              <div>
+                                <div className="text-gray-500 dark:text-gray-400">{t('companies.principal')}</div>
+                                <div className="font-medium text-gray-900 dark:text-white">
+                                  {formatMoney(principal)}
+                                </div>
+                              </div>
+                              <div>
+                                <div className="text-gray-500 dark:text-gray-400">{t('companies.totalInterest')}</div>
+                                <div className="font-medium text-gray-900 dark:text-white">{formatMoney(interest)}</div>
+                              </div>
+                              <div>
+                                <div className="text-gray-500 dark:text-gray-400">{t('companies.totalRepayment')}</div>
+                                <div className="font-medium text-gray-900 dark:text-white">{formatMoney(total)}</div>
+                              </div>
+                              <div>
+                                <div className="text-gray-500 dark:text-gray-400">{t('companies.paymentPerTick')}</div>
+                                <div className="font-medium text-gray-900 dark:text-white">{formatMoney(payment)}</div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </>
+              )}
+              {directLoanError && <p className="text-xs text-red-600 dark:text-red-400 mt-2">{directLoanError}</p>}
+            </div>
+          )}
+
+          {isDirector && (
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+                {t('companies.requestLoanVote')}
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                <input
+                  type="number"
+                  value={loanReqAmount}
+                  onChange={(e) => setLoanReqAmount(e.target.value)}
+                  placeholder={t('companies.amount')}
+                  className="w-full sm:flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                />
+                <select
+                  value={loanReqDuration}
+                  onChange={(e) => setLoanReqDuration(e.target.value)}
+                  className="w-1/3 sm:w-auto px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                >
+                  <option value="">{t('companies.durationMonths')}</option>
+                  {[6, 12, 24, 36, 48, 60].map((d) => (
+                    <option key={d} value={d}>
+                      {d} {t('companies.months')}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={loanReqType}
+                  onChange={(e) => setLoanReqType(e.target.value)}
+                  className="w-1/3 sm:flex-none px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                >
+                  <option value="business">{t('companies.loanTypeBusiness')}</option>
+                  <option value="expansion">{t('companies.loanTypeExpansion')}</option>
+                </select>
+                <button
+                  onClick={handleLoanRequest}
+                  className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
+                >
+                  {t('companies.requestVote')}
+                </button>
+              </div>
+              {(() => {
+                const principal = parseFloat(loanReqAmount) || 0;
+                const ticks = parseInt(loanReqDuration) || 0;
+                if (!principal || !ticks) return null;
+                const reputation = company.reputation || 0;
+                const reputationDiscount = Math.min(0.02, reputation * 0.0001);
+                const levelDiscount = company.levelBenefits?.loanInterestDiscount || 0;
+                const baseRate = 0.08 - reputationDiscount - levelDiscount;
+                const rate = Math.max(0.03, baseRate);
+                const interest = Math.round(principal * rate);
+                const total = principal + interest;
+                const payment = Math.ceil(total / ticks);
+                return (
+                  <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 text-xs">
+                    <div className="font-medium text-blue-800 dark:text-blue-300 mb-1">
+                      {t('companies.loanTermsPreview')}
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      <div>
+                        <div className="text-gray-500 dark:text-gray-400">{t('companies.principal')}</div>
+                        <div className="font-medium text-gray-900 dark:text-white">{formatMoney(principal)}</div>
+                      </div>
+                      <div>
+                        <div className="text-gray-500 dark:text-gray-400">{t('companies.interestRate')}</div>
+                        <div className="font-medium text-gray-900 dark:text-white">{(rate * 100).toFixed(1)}%</div>
+                      </div>
+                      <div>
+                        <div className="text-gray-500 dark:text-gray-400">{t('companies.totalRepayment')}</div>
+                        <div className="font-medium text-gray-900 dark:text-white">{formatMoney(total)}</div>
+                      </div>
+                      <div>
+                        <div className="text-gray-500 dark:text-gray-400">{t('companies.paymentPerTick')}</div>
+                        <div className="font-medium text-gray-900 dark:text-white">{formatMoney(payment)}</div>
+                      </div>
+                    </div>
+                    <div className="mt-1 text-gray-500 dark:text-gray-400">
+                      {t('companies.totalInterest')}: {formatMoney(interest)} · {ticks} {t('companies.months')}
+                    </div>
+                  </div>
+                );
+              })()}
+              {loanReqError && <p className="text-xs text-red-600 dark:text-red-400 mt-2">{loanReqError}</p>}
+            </div>
+          )}
+
+          {loanRequests.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('companies.loanRequests')}</h3>
+              {loanRequests.map((req) => {
+                const totalVoters = Math.max(1, (company.members?.length || 1) - 1);
+                const yesVotes = (req.votes || []).filter((v) => v.vote === 'yes').length;
+                const noVotes = (req.votes || []).filter((v) => v.vote === 'no').length;
+                const myVote = (req.votes || []).find((v) => normalizeId(v.userId) === normalizeId(user?._id));
+                const requesterId = normalizeId(req.requestedBy);
+                const isProposer = requesterId && requesterId === normalizeId(user?._id);
+                const canVote = isMember && !myVote && !isProposer && req.status === 'pending';
+                const canExecute = isCEO && req.status === 'approved';
+                const progress = totalVoters > 0 ? (yesVotes / totalVoters) * 100 : 0;
+                const thresholdMet = yesVotes / totalVoters >= 0.5;
+
+                return (
+                  <div
+                    key={req._id}
+                    className="bg-white dark:bg-gray-800 border-l-4 border-purple-500 border-y border-r border-gray-200 dark:border-gray-700 rounded-lg p-3"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-medium text-gray-900 dark:text-white block truncate">
+                            {formatMoney(req.principal)} {req.loanType} {t('companies.loan')}
+                          </span>
+                          <span
+                            className={`text-xs px-2 py-0.5 rounded-lg ${
+                              req.status === 'pending'
+                                ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
+                                : req.status === 'approved'
+                                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                                  : req.status === 'executed'
+                                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                                    : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                            }`}
+                          >
+                            {t(`companies.loanReqStatus${req.status.charAt(0).toUpperCase() + req.status.slice(1)}`)}
+                          </span>
+                          {isProposer && (
+                            <span className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-lg">
+                              {t('companies.proposedByYou')}
+                            </span>
+                          )}
+                          {myVote && (
+                            <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg">
+                              {t('companies.youVoted')} {t(`companies.${myVote.vote}`)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {t('companies.by')}{' '}
+                          {typeof req.requestedBy === 'object' ? req.requestedBy.username : t('companies.unknown')} ·{' '}
+                          {req.durationTicks} {t('companies.months')}
+                        </div>
+                        <div className="mt-2">
+                          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+                            <span>
+                              {t('companies.votes')}: {yesVotes}/{totalVoters} {t('companies.yes')}
+                              {noVotes > 0 && `, ${noVotes} ${t('companies.no')}`}
+                            </span>
+                            <span>{Math.round(progress)}%</span>
+                          </div>
+                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            <div
+                              className={`h-2 rounded-full transition-all ${thresholdMet ? 'bg-green-500' : 'bg-purple-500'}`}
+                              style={{ width: `${Math.min(100, progress)}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="shrink-0">
+                        {canVote ? (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleVoteLoan(req._id, 'yes')}
+                              className="px-3 py-1 bg-green-600 text-white rounded-lg text-xs hover:bg-green-700"
+                            >
+                              {t('companies.yes')}
+                            </button>
+                            <button
+                              onClick={() => handleVoteLoan(req._id, 'no')}
+                              className="px-3 py-1 bg-red-600 text-white rounded-lg text-xs hover:bg-red-700"
+                            >
+                              {t('companies.no')}
+                            </button>
+                          </div>
+                        ) : canExecute ? (
+                          <button
+                            onClick={() => handleExecuteLoan(req._id)}
+                            className="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-700"
+                          >
+                            {t('companies.executeLoan')}
+                          </button>
+                        ) : (
+                          <span className="text-xs text-gray-500 dark:text-gray-400 italic">
+                            {isProposer
+                              ? t('companies.waitingForVotes')
+                              : myVote
+                                ? t('companies.voteRecorded')
+                                : t('companies.membersOnly')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {(() => {
+            const activeLoans = companyLoans.filter((l) => l.active);
+            return (
+              <>
+                {activeLoans.length === 0 && loanRequests.length === 0 && (
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <div className="text-3xl mb-2">🏦</div>
+                    <p>{t('companies.noLoans')}</p>
+                  </div>
+                )}
+                {activeLoans.length > 0 && (
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                      {t('companies.activeLoans')}
+                    </h3>
+                    {activeLoans.map((loan) => {
+                      const loanDuration = loan.durationTicks || loan.ticksRemaining || 0;
+                      const remaining = Math.max(0, loan.ticksRemaining || 0);
+                      const paidTicks = Math.max(0, loanDuration - remaining);
+                      const progress = loanDuration > 0 ? (paidTicks / loanDuration) * 100 : 0;
+                      return (
+                        <div
+                          key={loan._id}
+                          className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2.5 sm:p-3"
+                        >
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <div className="min-w-0">
+                              <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white truncate">
+                                {loan.type} {t('companies.loan')}
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                {t('companies.principal')}: ${loan.principal.toLocaleString()} ·{' '}
+                                {t('companies.interest')}: {(loan.interestRate * 100).toFixed(1)}%
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span
+                                className={`text-xs px-2 py-1 rounded-lg ${loan.active ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-500'}`}
+                              >
+                                {loan.active ? t('companies.active') : t('companies.paid')}
+                              </span>
+                              {loan.active && isDirector && (
+                                <div className="flex gap-1 shrink-0">
+                                  <input
+                                    type="number"
+                                    value={repayAmounts[loan._id] || ''}
+                                    onChange={(e) =>
+                                      setRepayAmounts((prev) => ({ ...prev, [loan._id]: e.target.value }))
+                                    }
+                                    placeholder={t('companies.repayAmount')}
+                                    className="w-20 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-xs"
+                                  />
+                                  <button
+                                    onClick={() => handleRepay(loan._id)}
+                                    className="px-3 py-1 bg-green-600 text-white rounded-lg text-xs hover:bg-green-700"
+                                  >
+                                    {t('companies.repay')}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                            {t('companies.paymentPerTick')}: $
+                            {loan.paymentPerTick?.toLocaleString?.() || loan.paymentPerTick || 0} ·{' '}
+                            {t('companies.remaining')}: $
+                            {loan.remainingBalance?.toLocaleString?.() || loan.remainingBalance || 0}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                            {t('common.remaining')}: {remaining} {t('companies.months')} / {t('companies.duration')}:{' '}
+                            {loanDuration} {t('companies.months')}
+                          </div>
+                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            <div
+                              className="bg-blue-600 h-2 rounded-full transition-all"
+                              style={{ width: `${Math.min(100, progress)}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </div>
+      )}
+
+      {tab === 'contracts' && (
+        <div className="space-y-3 sm:space-y-4">
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300">{t('companies.contractsDescription')}</p>
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {['active', 'available', 'proposed', 'history'].map((st) => (
+              <button
+                key={st}
+                onClick={() => setContractSubTab(st)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap ${
+                  contractSubTab === st
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                }`}
+              >
+                {t(`companies.contractSubTab${st.charAt(0).toUpperCase() + st.slice(1)}`)}
+              </button>
+            ))}
+          </div>
+          {contractSubTab === 'available' && (
+            <ContractAvailableList
+              contracts={contracts}
+              company={company}
+              isDirector={isDirector}
+              t={t}
+              id={id}
+              setContracts={setContracts}
+              fetchContracts={fetchContracts}
+              proposeContract={proposeContract}
+            />
+          )}
+          {contractSubTab === 'proposed' && (
+            <ContractProposalList
+              contracts={contracts}
+              company={company}
+              user={user}
+              t={t}
+              id={id}
+              setContracts={setContracts}
+              fetchContracts={fetchContracts}
+              voteContractProposal={voteContractProposal}
+              fetchCompany={fetchCompany}
+            />
+          )}
+          {contractSubTab === 'active' && <ContractActiveList contracts={contracts} t={t} />}
+          {contractSubTab === 'history' && <ContractHistoryList contracts={contractHistory} t={t} />}
+        </div>
+      )}
+
+      {tab === 'investments' && (
+        <div className="space-y-3 sm:space-y-4">
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300">
+              {t('companies.investmentsDescription')}
+            </p>
+          </div>
+
+          {investmentPerformance && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                <div className="text-xs text-gray-500 dark:text-gray-400">{t('companies.totalInvested')}</div>
+                <div className="text-sm font-bold text-gray-900 dark:text-white">
+                  {formatMoney(investmentPerformance.totalInvested)}
+                </div>
+              </div>
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                <div className="text-xs text-gray-500 dark:text-gray-400">{t('companies.currentValue')}</div>
+                <div className="text-sm font-bold text-gray-900 dark:text-white">
+                  {formatMoney(investmentPerformance.currentValue)}
+                </div>
+              </div>
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                <div className="text-xs text-gray-500 dark:text-gray-400">{t('companies.unrealizedProfit')}</div>
+                <div
+                  className={`text-sm font-bold ${investmentPerformance.unrealizedProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}
+                >
+                  {investmentPerformance.unrealizedProfit >= 0 ? '+' : ''}
+                  {formatMoney(investmentPerformance.unrealizedProfit)}
+                </div>
+              </div>
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                <div className="text-xs text-gray-500 dark:text-gray-400">{t('companies.maturedProfit')}</div>
+                <div
+                  className={`text-sm font-bold ${investmentPerformance.maturedProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}
+                >
+                  {investmentPerformance.maturedProfit >= 0 ? '+' : ''}
+                  {formatMoney(investmentPerformance.maturedProfit)}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {['active', 'opportunities', 'proposals', 'history'].map((st) => (
+              <button
+                key={st}
+                onClick={() => setInvestmentSubTab(st)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap ${
+                  investmentSubTab === st
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                }`}
+              >
+                {t(`companies.investmentSubTab${st.charAt(0).toUpperCase() + st.slice(1)}`)}
+              </button>
+            ))}
+          </div>
+
+          {investmentSubTab === 'opportunities' && (
+            <InvestmentOpportunitiesList
+              products={investmentProducts}
+              isDirector={isDirector}
+              t={t}
+              selectedInvestmentProduct={selectedInvestmentProduct}
+              setSelectedInvestmentProduct={setSelectedInvestmentProduct}
+              investAmount={investAmount}
+              setInvestAmount={setInvestAmount}
+              handleInvest={handleInvest}
+              investmentLoading={investmentLoading}
+              investmentError={investmentError}
+            />
+          )}
+
+          {investmentSubTab === 'proposals' && (
+            <InvestmentProposalList
+              investments={investments}
+              company={company}
+              user={user}
+              t={t}
+              id={id}
+              setInvestments={setInvestments}
+              setInvestmentPerformance={setInvestmentPerformance}
+              fetchInvestments={fetchInvestments}
+              fetchInvestmentPerformance={fetchInvestmentPerformance}
+              voteInvestmentProposal={voteInvestmentProposal}
+              cancelInvestmentProposal={cancelInvestmentProposal}
+              fetchCompany={fetchCompany}
+            />
+          )}
+
+          {investmentSubTab === 'active' && <InvestmentActiveList investments={investments} t={t} />}
+
+          {investmentSubTab === 'history' && <InvestmentHistoryList investments={investments} t={t} />}
+        </div>
+      )}
+
+      {tab === 'audit' && (
+        <div className="space-y-2">
+          {companyAuditLogs.length === 0 ? (
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+              <div className="text-3xl mb-2">📋</div>
+              <p>{t('companies.noAuditLogs')}</p>
+            </div>
+          ) : (
+            <>
+              {companyAuditLogs.map((log) => (
+                <div
+                  key={log._id}
+                  className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <span className="text-sm text-gray-900 dark:text-white">
+                        {typeof log.userId === 'object' && log.userId?.username ? log.userId.username : 'System'}
+                      </span>
+                      <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
+                        {t(
+                          `companies.audit${log.action
+                            .split('_')
+                            .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                            .join('')}`,
+                        )}
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">
+                      {new Date(log.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  {log.details &&
+                    Object.keys(log.details).length > 0 &&
+                    (() => {
+                      const detail = formatAuditDetails(log, t);
+                      return detail ? (
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 break-words">{detail}</div>
+                      ) : null;
+                    })()}
+                </div>
+              ))}
+              {companyAuditTotalPages > 1 && (
+                <div className="flex justify-center gap-2 pt-2">
+                  <button
+                    onClick={() => setAuditPage((p) => Math.max(1, p - 1))}
+                    disabled={companyAuditPage <= 1}
+                    className="px-3 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40"
+                  >
+                    {t('marketplace.previous')}
+                  </button>
+                  <span className="px-3 py-1 text-xs text-gray-500 dark:text-gray-400">
+                    {companyAuditPage}/{companyAuditTotalPages}
+                  </span>
+                  <button
+                    onClick={() => setAuditPage((p) => Math.min(companyAuditTotalPages, p + 1))}
+                    disabled={companyAuditPage >= companyAuditTotalPages}
+                    className="px-3 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40"
+                  >
+                    {t('marketplace.next')}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ContractAvailableList({
+  contracts,
+  company,
+  isDirector,
+  t,
+  id,
+  setContracts,
+  fetchContracts,
+  proposeContract,
+}) {
+  const [proposeError, setProposeError] = useState('');
+  const available = contracts.filter((c) => c.status === 'available');
+  return (
+    <div className="space-y-2">
+      {proposeError && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm text-red-700 dark:text-red-300 flex items-center justify-between">
+          <span>{proposeError}</span>
+          <button onClick={() => setProposeError('')} className="text-red-500 hover:text-red-700 font-bold ml-2">
+            ×
+          </button>
+        </div>
+      )}
+      {available.length === 0 ? (
+        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+          <div className="text-3xl mb-2">📋</div>
+          <p>{t('companies.noAvailableContracts')}</p>
+        </div>
+      ) : (
+        available.map((contract) => {
+          const hasInsufficientFunds = company.treasury?.balance < (contract.requiredTreasury || 0);
+          const canPropose = company.level >= contract.requiredLevel && isDirector && !hasInsufficientFunds;
+          return (
+            <div
+              key={contract._id}
+              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">{contract.name}</span>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{contract.description}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    {t('companies.reward')}: {formatMoney(contract.reward)} · {t('companies.cost')}:{' '}
+                    {formatMoney(contract.cost)} · {t('companies.duration')}: {contract.durationTicks}{' '}
+                    {t('companies.months')}
+                  </div>
+                  {contract.requiredLevel > 1 && (
+                    <div className="text-xs text-orange-600 dark:text-orange-400 mt-0.5">
+                      {t('companies.requiredLevel')}: {contract.requiredLevel}
+                    </div>
+                  )}
+                  {hasInsufficientFunds && (
+                    <div className="text-xs text-red-600 dark:text-red-400 mt-0.5">
+                      {t('companies.insufficientTreasury') || 'Insufficient treasury balance'}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {canPropose && (
+                    <button
+                      onClick={async () => {
+                        setProposeError('');
+                        try {
+                          await proposeContract(id, contract._id);
+                          const list = await fetchContracts(id);
+                          setContracts(list);
+                        } catch (err) {
+                          setProposeError(err.message || t('common.error'));
+                        }
+                      }}
+                      className="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-700"
+                    >
+                      {t('companies.propose')}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+function ContractProposalList({
+  contracts,
+  company,
+  user,
+  t,
+  id,
+  setContracts,
+  fetchContracts,
+  voteContractProposal,
+  fetchCompany,
+}) {
+  const proposed = contracts.filter((c) => c.status === 'proposed');
+  return (
+    <div className="space-y-2">
+      {proposed.length === 0 ? (
+        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+          <div className="text-3xl mb-2">🗳️</div>
+          <p>{t('companies.noProposedContracts')}</p>
+        </div>
+      ) : (
+        proposed.map((contract) => {
+          const proposal = contract.proposal || {};
+          const totalVoters = Math.max(1, (company.members?.length || 1) - 1);
+          const yesVotes = (proposal.votes || []).filter((v) => v.vote === 'yes').length;
+          const noVotes = (proposal.votes || []).filter((v) => v.vote === 'no').length;
+          const userVoted = (proposal.votes || []).some(
+            (v) => (v.userId?._id || v.userId)?.toString() === user?._id?.toString(),
+          );
+          const isProposer = (proposal.proposedBy?._id || proposal.proposedBy)?.toString() === user?._id?.toString();
+          return (
+            <div
+              key={contract._id}
+              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">{contract.name}</span>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{contract.description}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    {t('companies.reward')}: {formatMoney(contract.reward)} · {t('companies.cost')}:{' '}
+                    {formatMoney(contract.cost)} · {t('companies.duration')}: {contract.durationTicks}{' '}
+                    {t('companies.months')}
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    {t('companies.votes')}: {yesVotes}/{totalVoters} {t('companies.yes')} · {noVotes}{' '}
+                    {t('companies.no')}
+                    {proposal.expiresAtTick && (
+                      <span className="ml-2">
+                        · {t('companies.expiresIn')}:{' '}
+                        {Math.max(0, proposal.expiresAtTick - (contract.currentTick || 0))} {t('companies.months')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {!isProposer && !userVoted && (
+                    <>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await voteContractProposal(id, contract._id, 'yes');
+                            const list = await fetchContracts(id);
+                            setContracts(list);
+                            await fetchCompany(id);
+                          } catch {}
+                        }}
+                        className="px-3 py-1 bg-green-600 text-white rounded-lg text-xs hover:bg-green-700"
+                      >
+                        {t('companies.yes')}
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await voteContractProposal(id, contract._id, 'no');
+                            const list = await fetchContracts(id);
+                            setContracts(list);
+                            await fetchCompany(id);
+                          } catch {}
+                        }}
+                        className="px-3 py-1 bg-red-600 text-white rounded-lg text-xs hover:bg-red-700"
+                      >
+                        {t('companies.no')}
+                      </button>
+                    </>
+                  )}
+                  {userVoted && (
+                    <span className="text-xs px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                      {t('companies.voted')}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+function ContractActiveList({ contracts, t }) {
+  const active = contracts.filter((c) => c.status === 'active');
+  return (
+    <div className="space-y-2">
+      {active.length === 0 ? (
+        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+          <div className="text-3xl mb-2">🚧</div>
+          <p>{t('companies.noActiveContracts')}</p>
+        </div>
+      ) : (
+        active.map((contract) => {
+          const progress =
+            contract.endTick > contract.startTick
+              ? Math.min(
+                  100,
+                  Math.round(
+                    (((contract.currentTick || 0) - (contract.startTick || 0)) /
+                      (contract.endTick - contract.startTick)) *
+                      100,
+                  ),
+                )
+              : 0;
+          return (
+            <div
+              key={contract._id}
+              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+            >
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="min-w-0">
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">{contract.name}</span>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{contract.description}</div>
+                </div>
+                <span className="text-xs px-2 py-1 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400">
+                  {t('companies.active')}
+                </span>
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                {t('companies.reward')}: {formatMoney(contract.reward)} · {t('companies.cost')}:{' '}
+                {formatMoney(contract.cost)} · {t('companies.completionIn')}:{' '}
+                {Math.max(0, (contract.endTick || 0) - (contract.currentTick || 0))} {t('companies.months')}
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div className="bg-yellow-500 h-2 rounded-full transition-all" style={{ width: `${progress}%` }} />
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-right">{progress}%</div>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+function ContractHistoryList({ contracts, t }) {
+  return (
+    <div className="space-y-2">
+      {contracts.length === 0 ? (
+        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+          <div className="text-3xl mb-2">📜</div>
+          <p>{t('companies.noContractHistory')}</p>
+        </div>
+      ) : (
+        contracts.map((contract) => (
+          <div
+            key={contract._id}
+            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <span className="text-sm font-medium text-gray-900 dark:text-white">{contract.name}</span>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{contract.description}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  {t('companies.reward')}: {formatMoney(contract.reward)} · {t('companies.cost')}:{' '}
+                  {formatMoney(contract.cost)}
+                </div>
+              </div>
+              <span
+                className={`text-xs px-2 py-1 rounded-lg ${
+                  contract.status === 'completed'
+                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                    : contract.status === 'failed'
+                      ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                }`}
+              >
+                {t(`companies.contractStatus${contract.status.charAt(0).toUpperCase() + contract.status.slice(1)}`)}
+              </span>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+function InvestmentOpportunitiesList({
+  products,
+  isDirector,
+  t,
+  selectedInvestmentProduct,
+  setSelectedInvestmentProduct,
+  investAmount,
+  setInvestAmount,
+  handleInvest,
+  investmentLoading,
+  investmentError,
+}) {
+  return (
+    <div className="space-y-2">
+      {products.length === 0 ? (
+        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+          <div className="text-3xl mb-2">📈</div>
+          <p>{t('companies.noOpportunities')}</p>
+        </div>
+      ) : (
+        <>
+          <div className="space-y-2">
+            {products.map((product) => (
+              <div
+                key={product._id || product.type}
+                onClick={() => {
+                  if (!isDirector) return;
+                  setSelectedInvestmentProduct(product._id || product.type);
+                  setInvestAmount('');
+                }}
+                className={`border rounded-lg p-3 transition-colors ${
+                  !isDirector
+                    ? 'border-gray-200 dark:border-gray-700 opacity-70'
+                    : selectedInvestmentProduct === (product._id || product.type)
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 cursor-pointer'
+                      : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-gray-900 dark:text-white truncate">{product.name}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{product.description}</div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                      {((product.currentAnnualReturnRate || product.annualReturnRate) * 100).toFixed(1)}%
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{t('companies.return')}</div>
+                  </div>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-400">
+                  <span>
+                    {t('companies.minInvestment')}: {formatMoney(product.minInvestment)}
+                  </span>
+                  <span>
+                    · {t('companies.maxInvestment')}: {formatMoney(product.maxInvestment)}
+                  </span>
+                  <span>
+                    · {t('companies.duration')}: {product.durationTicks} {t('companies.months')}
+                  </span>
+                  <span>
+                    · {t('companies.risk')}: {product.risk}
+                  </span>
+                  {product.economyState && (
+                    <span>
+                      · {t('companies.economyState')}: {product.economyState}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {isDirector && selectedInvestmentProduct && (
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4">
+              <div className="flex flex-wrap gap-2">
+                <input
+                  type="number"
+                  value={investAmount}
+                  onChange={(e) => setInvestAmount(e.target.value)}
+                  placeholder={t('companies.amount')}
+                  className="w-full sm:flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                />
+                <button
+                  onClick={handleInvest}
+                  disabled={investmentLoading || !investAmount}
+                  className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {investmentLoading ? t('common.loading') : t('companies.invest')}
+                </button>
+              </div>
+              {investmentError && <p className="text-xs text-red-600 dark:text-red-400 mt-2">{investmentError}</p>}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function InvestmentProposalList({
+  investments,
+  company,
+  user,
+  t,
+  id,
+  setInvestments,
+  setInvestmentPerformance,
+  fetchInvestments,
+  fetchInvestmentPerformance,
+  voteInvestmentProposal,
+  cancelInvestmentProposal,
+  fetchCompany,
+}) {
+  const proposed = investments.filter((inv) => inv.status === 'proposed');
+  return (
+    <div className="space-y-2">
+      {proposed.length === 0 ? (
+        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+          <div className="text-3xl mb-2">🗳️</div>
+          <p>{t('companies.noInvestmentProposals')}</p>
+        </div>
+      ) : (
+        proposed.map((inv) => {
+          const proposal = inv.proposal || {};
+          const totalVoters = Math.max(1, (company.members?.length || 1) - 1);
+          const yesVotes = (proposal.votes || []).filter((v) => v.vote === 'yes').length;
+          const noVotes = (proposal.votes || []).filter((v) => v.vote === 'no').length;
+          const userVoted = (proposal.votes || []).some(
+            (v) => (v.userId?._id || v.userId)?.toString() === user?._id?.toString(),
+          );
+          const isProposer = (proposal.proposedBy?._id || proposal.proposedBy)?.toString() === user?._id?.toString();
+          return (
+            <div
+              key={inv._id}
+              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">{inv.name}</span>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                    {t('companies.principal')}: {formatMoney(inv.principal)} · {t('companies.return')}:{' '}
+                    {((inv.annualReturnRate || 0) * 100).toFixed(1)}% · {t('companies.risk')}: {inv.risk}
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    {t('companies.votes')}: {yesVotes}/{totalVoters} {t('companies.yes')} · {noVotes}{' '}
+                    {t('companies.no')}
+                    {proposal.expiresAtTick && (
+                      <span className="ml-2">
+                        · {t('companies.expiresIn')}: {Math.max(0, proposal.expiresAtTick - (inv.currentTick || 0))}{' '}
+                        {t('companies.months')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {!isProposer && !userVoted && (
+                    <>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await voteInvestmentProposal(id, inv._id, 'yes');
+                            const [list, perf] = await Promise.all([
+                              fetchInvestments(id),
+                              fetchInvestmentPerformance(id),
+                            ]);
+                            setInvestments(list);
+                            setInvestmentPerformance(perf);
+                            await fetchCompany(id);
+                          } catch {}
+                        }}
+                        className="px-3 py-1 bg-green-600 text-white rounded-lg text-xs hover:bg-green-700"
+                      >
+                        {t('companies.yes')}
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await voteInvestmentProposal(id, inv._id, 'no');
+                            const [list, perf] = await Promise.all([
+                              fetchInvestments(id),
+                              fetchInvestmentPerformance(id),
+                            ]);
+                            setInvestments(list);
+                            setInvestmentPerformance(perf);
+                            await fetchCompany(id);
+                          } catch {}
+                        }}
+                        className="px-3 py-1 bg-red-600 text-white rounded-lg text-xs hover:bg-red-700"
+                      >
+                        {t('companies.no')}
+                      </button>
+                    </>
+                  )}
+                  {isProposer && (
+                    <button
+                      onClick={async () => {
+                        try {
+                          await cancelInvestmentProposal(id, inv._id);
+                          const [list, perf] = await Promise.all([
+                            fetchInvestments(id),
+                            fetchInvestmentPerformance(id),
+                          ]);
+                          setInvestments(list);
+                          setInvestmentPerformance(perf);
+                          await fetchCompany(id);
+                        } catch {}
+                      }}
+                      className="px-3 py-1 bg-red-600 text-white rounded-lg text-xs hover:bg-red-700"
+                    >
+                      {t('common.cancel')}
+                    </button>
+                  )}
+                  {userVoted && (
+                    <span className="text-xs px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                      {t('companies.voted')}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+function InvestmentActiveList({ investments, t }) {
+  const active = investments.filter((inv) => inv.status === 'active');
+  return (
+    <div className="space-y-2">
+      {active.length === 0 ? (
+        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+          <div className="text-3xl mb-2">📊</div>
+          <p>{t('companies.noActiveInvestments')}</p>
+        </div>
+      ) : (
+        active.map((inv) => {
+          const progress =
+            inv.maturityTick > inv.startTick
+              ? Math.min(
+                  100,
+                  Math.round(
+                    (((inv.currentTick || 0) - (inv.startTick || 0)) / (inv.maturityTick - inv.startTick)) * 100,
+                  ),
+                )
+              : 0;
+          const returnPct = inv.principal > 0 ? ((inv.currentValue - inv.principal) / inv.principal) * 100 : 0;
+          return (
+            <div
+              key={inv._id}
+              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+            >
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="min-w-0">
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">{inv.name}</span>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    {t('companies.principal')}: {formatMoney(inv.principal)} · {t('companies.currentValue')}:{' '}
+                    {formatMoney(inv.currentValue)} · {t('companies.risk')}: {inv.risk}
+                  </div>
+                </div>
+                <span
+                  className={`text-xs px-2 py-1 rounded-lg ${returnPct >= 0 ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}
+                >
+                  {returnPct >= 0 ? '+' : ''}
+                  {returnPct.toFixed(1)}%
+                </span>
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                {t('companies.maturityIn')}: {Math.max(0, (inv.maturityTick || 0) - (inv.currentTick || 0))}{' '}
+                {t('companies.months')}
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div className="bg-blue-500 h-2 rounded-full transition-all" style={{ width: `${progress}%` }} />
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-right">{progress}%</div>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+function InvestmentHistoryList({ investments, t }) {
+  const history = investments.filter(
+    (inv) => inv.status === 'matured' || inv.status === 'withdrawn' || inv.status === 'rejected',
+  );
+  return (
+    <div className="space-y-2">
+      {history.length === 0 ? (
+        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+          <div className="text-3xl mb-2">📜</div>
+          <p>{t('companies.noInvestmentHistory')}</p>
+        </div>
+      ) : (
+        history.map((inv) => {
+          const returnPct = inv.principal > 0 ? ((inv.currentValue - inv.principal) / inv.principal) * 100 : 0;
+          return (
+            <div
+              key={inv._id}
+              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">{inv.name}</span>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    {t('companies.principal')}: {formatMoney(inv.principal)} · {t('companies.finalValue')}:{' '}
+                    {formatMoney(inv.currentValue)} · {t('companies.risk')}: {inv.risk}
+                  </div>
+                </div>
+                <span
+                  className={`text-xs px-2 py-1 rounded-lg ${inv.status === 'matured' && returnPct >= 0 ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : inv.status === 'rejected' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
+                >
+                  {t(`companies.investmentStatus${inv.status.charAt(0).toUpperCase() + inv.status.slice(1)}`)}
+                </span>
+              </div>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}

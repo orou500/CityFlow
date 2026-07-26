@@ -4,9 +4,12 @@ import City from '../models/City.js';
 import User from '../models/User.js';
 import ConstructionProject from '../models/ConstructionProject.js';
 import Transaction from '../models/Transaction.js';
+import RealEstateCompany from '../models/RealEstateCompany.js';
 import { authenticate } from '../middleware/auth.js';
 import { getGameState } from '../models/GameState.js';
+import { addTreasuryTransaction } from '../engine/companyProcessing.js';
 import { awardXp } from '../utils/leveling.js';
+import { collectOperatingFee } from '../utils/companyFees.js';
 import {
   DEVELOPMENT_PROJECTS,
   calculateProjectCost,
@@ -30,6 +33,22 @@ import {
 const router = Router();
 
 router.use(authenticate);
+
+async function isAuthorizedForProperty(property, userId) {
+  if (property.ownerId && property.ownerId.toString() === userId.toString()) {
+    return true;
+  }
+  if (property.companyId) {
+    const company = await RealEstateCompany.findById(property.companyId);
+    if (company) {
+      const member = company.members.find((m) => m.userId?.toString() === userId.toString());
+      if (member && ['ceo', 'director'].includes(member.role)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
 
 router.get('/options', async (req, res) => {
   try {
@@ -188,6 +207,8 @@ router.post('/start', async (req, res) => {
     user.balance -= totalCost;
     await user.save();
 
+    collectOperatingFee(user._id, totalCost, 'construction');
+
     await Transaction.create({
       buyerId: user._id,
       propertyId: land._id,
@@ -270,7 +291,7 @@ router.get('/upgrades/:propertyId', async (req, res) => {
   try {
     const property = await Property.findById(req.params.propertyId);
     if (!property) return res.status(404).json({ error: 'Property not found' });
-    if (!property.ownerId || property.ownerId.toString() !== req.user._id.toString()) {
+    if (!(await isAuthorizedForProperty(property, req.user._id))) {
       return res.status(403).json({ error: 'You do not own this property' });
     }
     if (property.type === 'land') {
@@ -286,12 +307,14 @@ router.get('/upgrades/:propertyId', async (req, res) => {
       return getUpgradePreview(type, currentValue, currentRent, currentLevel);
     });
 
-    const user = await User.findById(req.user._id);
+    const treasury = property.companyId ? (await RealEstateCompany.findById(property.companyId))?.treasury : null;
+    const balance = treasury ? treasury.balance : (await User.findById(req.user._id))?.balance || 0;
+
     res.json({
       upgrades,
       propertyValue: currentValue,
       currentRent,
-      balance: user.balance,
+      balance,
       upgradeLevel: property.upgradeLevel || 0,
     });
   } catch (err) {
@@ -330,6 +353,8 @@ router.post('/upgrade', async (req, res) => {
 
     user.balance -= cost;
     await user.save();
+
+    collectOperatingFee(user._id, cost, 'property_upgrade');
 
     if (effects.valueBoost) {
       property.currentPrice = Math.round(property.currentPrice * (1 + effects.valueBoost));
@@ -508,7 +533,7 @@ router.get('/improvements/available/:propertyId', async (req, res) => {
   try {
     const property = await Property.findById(req.params.propertyId);
     if (!property) return res.status(404).json({ error: 'Property not found' });
-    if (!property.ownerId || property.ownerId.toString() !== req.user._id.toString()) {
+    if (!(await isAuthorizedForProperty(property, req.user._id))) {
       return res.status(403).json({ error: 'You do not own this property' });
     }
     if (property.type === 'land') {
@@ -546,7 +571,7 @@ router.get('/improvements/status/:propertyId', async (req, res) => {
   try {
     const property = await Property.findById(req.params.propertyId);
     if (!property) return res.status(404).json({ error: 'Property not found' });
-    if (!property.ownerId || property.ownerId.toString() !== req.user._id.toString()) {
+    if (!(await isAuthorizedForProperty(property, req.user._id))) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
@@ -586,7 +611,7 @@ router.post('/improvements/start', async (req, res) => {
 
     const property = await Property.findById(propertyId);
     if (!property) return res.status(404).json({ error: 'Property not found' });
-    if (!property.ownerId || property.ownerId.toString() !== req.user._id.toString()) {
+    if (!(await isAuthorizedForProperty(property, req.user._id))) {
       return res.status(403).json({ error: 'You do not own this property' });
     }
     if (property.type === 'land') {
@@ -629,6 +654,8 @@ router.post('/improvements/start', async (req, res) => {
     user.balance -= cost;
     await user.save();
 
+    collectOperatingFee(user._id, cost, 'property_improvement');
+
     await Transaction.create({
       buyerId: user._id,
       propertyId: property._id,
@@ -662,6 +689,110 @@ router.post('/improvements/start', async (req, res) => {
       balance: user.balance,
       completionPeriod: currentPeriod + improvement.constructionPeriods,
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/company/start', async (req, res) => {
+  try {
+    const { landId, projectType, companyId } = req.body;
+
+    const land = await Property.findById(landId).populate('cityId');
+    if (!land) return res.status(404).json({ error: 'Land not found' });
+    if (land.type !== 'land') return res.status(400).json({ error: 'Property is not land' });
+    if (!land.companyId || land.companyId.toString() !== companyId) {
+      return res.status(400).json({ error: 'Company does not own this land' });
+    }
+    if (land.developmentLevel > 0) {
+      return res.status(400).json({ error: 'This land already has a building' });
+    }
+
+    const company = await RealEstateCompany.findById(companyId);
+    if (!company) return res.status(404).json({ error: 'Company not found' });
+
+    const member = company.members.find((m) => m.userId?.toString() === req.user._id.toString());
+    if (!member || !['ceo', 'director'].includes(member.role)) {
+      return res.status(403).json({ error: 'Only CEO/Director can start company projects' });
+    }
+
+    const existingProject = await ConstructionProject.findOne({
+      landId: land._id,
+      status: { $in: ['planning', 'under_construction'] },
+    });
+    if (existingProject) {
+      return res.status(400).json({ error: 'A construction project already exists for this land' });
+    }
+
+    const allProjects = getAllProjects();
+    const project = allProjects.find((p) => p.id === projectType);
+    if (!project) return res.status(400).json({ error: 'Invalid project type' });
+
+    const totalCost = calculateProjectCost(project, land.cityId, land.location);
+    const gameState = await getGameState();
+    const currentPeriod = gameState.tickNumber;
+
+    if (company.treasury.balance < totalCost) {
+      return res.status(400).json({
+        error: `Insufficient treasury. Required: $${totalCost.toLocaleString()}, Balance: $${company.treasury.balance.toLocaleString()}`,
+        required: totalCost,
+        balance: company.treasury.balance,
+        shortfall: totalCost - company.treasury.balance,
+      });
+    }
+
+    company.treasury.balance -= totalCost;
+    addTreasuryTransaction(
+      company,
+      {
+        type: 'construction',
+        amount: totalCost,
+        userId: req.user._id,
+        description: `Construction started: ${project.name}`,
+      },
+      currentPeriod,
+    );
+
+    await company.save();
+
+    const constructionProject = await ConstructionProject.create({
+      companyId: company._id,
+      landId: land._id,
+      cityId: land.cityId._id,
+      projectType: project.id,
+      projectName: project.name,
+      category: project.category,
+      totalCost,
+      investedAmount: totalCost,
+      progress: 0,
+      constructionPeriods: project.constructionPeriods,
+      startPeriod: currentPeriod,
+      completionPeriod: currentPeriod + project.constructionPeriods,
+      status: 'under_construction',
+    });
+
+    land.developmentLevel = 1;
+    land.forSale = false;
+    await land.save();
+
+    res.status(201).json({
+      project: constructionProject,
+      treasury: company.treasury,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/company/projects', async (req, res) => {
+  try {
+    const { companyId } = req.query;
+    if (!companyId) return res.status(400).json({ error: 'companyId required' });
+
+    const projects = await ConstructionProject.find({ companyId })
+      .populate('landId', 'name location size')
+      .sort({ createdAt: -1 });
+    res.json(projects);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

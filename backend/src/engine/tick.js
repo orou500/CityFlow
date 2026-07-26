@@ -26,6 +26,24 @@ import { incrementTick } from '../models/GameState.js';
 import { endCurrentSeasonAndStartNew } from './seasonReset.js';
 import { sendDiscordNotification } from '../services/discordBot.js';
 import User from '../models/User.js';
+import Property from '../models/Property.js';
+import Loan from '../models/Loan.js';
+import ConstructionProject from '../models/ConstructionProject.js';
+import {
+  processCompanyRent,
+  processCompanyLoans,
+  processCompanyLevelUp,
+  processCompanyLoanRequests,
+  processCompanyDevelopmentRequests,
+  pruneCompanyTreasuryTransactions,
+} from './companyProcessing.js';
+import {
+  generateCityContracts,
+  processCityContracts,
+  processContractProposals,
+  expireAvailableContracts,
+} from './cityContracts.js';
+import { generateInvestmentOpportunities, processCompanyInvestments } from './treasuryInvestments.js';
 
 export async function executeTick() {
   const startTime = Date.now();
@@ -117,6 +135,42 @@ export async function executeTick() {
     console.log('[TICK] Sending rent expiry warnings...');
     const rentWarningsCount = await sendRentExpiryWarnings();
 
+    console.log('[TICK] Processing company rent...');
+    const companyRentResults = await processCompanyRent(tickNumber);
+
+    console.log('[TICK] Processing company loans...');
+    const companyLoanResults = await processCompanyLoans(tickNumber);
+
+    console.log('[TICK] Processing company loan requests...');
+    const loanRequestResults = await processCompanyLoanRequests(tickNumber);
+
+    console.log('[TICK] Processing company development requests...');
+    const devRequestResults = await processCompanyDevelopmentRequests(tickNumber);
+
+    console.log('[TICK] Processing company levels...');
+    const companyLevelUps = await processCompanyLevelUp(tickNumber);
+
+    console.log('[TICK] Pruning company treasury transactions...');
+    const prunedTransactions = await pruneCompanyTreasuryTransactions(tickNumber);
+
+    console.log('[TICK] Generating city contracts...');
+    const newContracts = await generateCityContracts(tickNumber);
+
+    console.log('[TICK] Processing city contracts...');
+    const contractResults = await processCityContracts(tickNumber);
+
+    console.log('[TICK] Processing contract proposals...');
+    const contractProposalResults = await processContractProposals(tickNumber);
+
+    console.log('[TICK] Expiring available contracts...');
+    const expiredContracts = await expireAvailableContracts(tickNumber);
+
+    console.log('[TICK] Generating investment opportunities...');
+    const investmentOpportunities = await generateInvestmentOpportunities(tickNumber);
+
+    console.log('[TICK] Processing company investments...');
+    const investmentResults = await processCompanyInvestments(tickNumber);
+
     console.log('[TICK] Computing leaderboards...');
     const leaderboardSnapshots = await computeLeaderboards(tickNumber);
 
@@ -151,6 +205,26 @@ export async function executeTick() {
     console.log(`[TICK] New properties: ${propertyGeneration.reduce((s, r) => s + r.generated, 0)}`);
     console.log(`[TICK] Construction processed: ${constructionResults.length}`);
     console.log(`[TICK] Improvements processed: ${improvementResults.length}`);
+    console.log(`[TICK] Company rent processed: ${companyRentResults.length}`);
+    console.log(`[TICK] Company loans processed: ${companyLoanResults.length}`);
+    console.log(
+      `[TICK] Company loan requests: ${loanRequestResults.autoVoted} auto-voted, ${loanRequestResults.autoExecuted} auto-executed, ${loanRequestResults.expired} expired`,
+    );
+    console.log(
+      `[TICK] Company development requests: ${devRequestResults.autoVoted} auto-voted, ${devRequestResults.expired} expired`,
+    );
+    console.log(`[TICK] Company level ups: ${companyLevelUps}`);
+    console.log(`[TICK] Pruned treasury transactions: ${prunedTransactions}`);
+    console.log(`[TICK] New contracts generated: ${newContracts}`);
+    console.log(`[TICK] Contracts processed: ${contractResults.length}`);
+    console.log(
+      `[TICK] Investment opportunities: ${investmentOpportunities.generated} generated, ${investmentOpportunities.expired} expired`,
+    );
+    console.log(`[TICK] Investments processed: ${investmentResults.length}`);
+    console.log(
+      `[TICK] Contract proposals: ${contractProposalResults.autoVoted} auto-voted, ${contractProposalResults.approved} approved, ${contractProposalResults.rejected} rejected, ${contractProposalResults.expired} expired`,
+    );
+    console.log(`[TICK] Expired available contracts: ${expiredContracts}`);
     console.log(`[TICK] New events: ${newEvents.length}`);
     console.log(`[TICK] Expired events: ${expiredEvents.length}`);
     console.log(`[TICK] Expired uncollected rent: ${expiredRentCount} users`);
@@ -162,8 +236,19 @@ export async function executeTick() {
     console.log(`[TICK] New competitive events: ${newCompEvents.length}`);
 
     const deletedCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const deletedResult = await User.deleteMany({ deletedAt: { $ne: null, $lte: deletedCutoff } });
-    if (deletedResult.deletedCount > 0) {
+    const usersToDelete = await User.find({ deletedAt: { $ne: null, $lte: deletedCutoff } }).select('_id');
+    if (usersToDelete.length > 0) {
+      const userIds = usersToDelete.map((u) => u._id);
+      await Property.updateMany({ ownerId: { $in: userIds } }, { $set: { ownerId: null, forSale: true } });
+      await Loan.updateMany(
+        { userId: { $in: userIds }, active: true },
+        { $set: { active: false, remainingBalance: 0, ticksRemaining: 0 } },
+      );
+      await ConstructionProject.updateMany(
+        { ownerId: { $in: userIds }, status: 'under_construction' },
+        { $set: { status: 'cancelled' } },
+      );
+      const deletedResult = await User.deleteMany({ _id: { $in: userIds } });
       console.log(`[TICK] Permanently deleted ${deletedResult.deletedCount} accounts past 24h grace period`);
     }
 

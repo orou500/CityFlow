@@ -1,0 +1,68 @@
+import mongoose from 'mongoose';
+
+const companyAuditLogSchema = new mongoose.Schema(
+  {
+    companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'RealEstateCompany', required: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    action: {
+      type: String,
+      enum: [
+        'company_created',
+        'member_joined',
+        'member_left',
+        'member_removed',
+        'member_invited',
+        'invitation_accepted',
+        'invitation_declined',
+        'role_changed',
+        'treasury_deposit',
+        'treasury_withdrawal',
+        'property_purchased',
+        'property_sold',
+        'loan_taken',
+        'loan_payment',
+        'construction_started',
+        'construction_completed',
+        'settings_updated',
+        'reputation_changed',
+        'level_up',
+        'application_submitted',
+        'application_approved',
+        'application_rejected',
+        'loan_requested',
+        'loan_vote_cast',
+        'loan_approved',
+        'loan_rejected',
+        'ipo_listed',
+        'property_purchase_requested',
+        'property_purchase_vote_cast',
+        'investment_created',
+        'investment_proposed',
+        'investment_vote_cast',
+        'investment_approved',
+        'investment_cancelled',
+        'investment_returned',
+        'contract_proposed',
+        'contract_vote_cast',
+        'contract_approved',
+        'contract_rejected',
+        'contract_completed',
+        'development_requested',
+        'development_vote_cast',
+        'development_executed',
+        'development_rejected',
+        'development_failed',
+        'milestone_completed',
+      ],
+      required: true,
+    },
+    details: { type: mongoose.Schema.Types.Mixed, default: {} },
+    tick: { type: Number, default: 0 },
+  },
+  { timestamps: true },
+);
+
+companyAuditLogSchema.index({ companyId: 1, createdAt: -1 });
+companyAuditLogSchema.index({ companyId: 1, action: 1 });
+
+export default mongoose.model('CompanyAuditLog', companyAuditLogSchema);

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useGameStore } from '../store/useGameStore';
 import { useAuthStore } from '../store/useAuthStore';
+import { useCompanyStore } from '../store/useCompanyStore';
 import { translateError } from '../i18n/errors';
 import { formatMoney, formatMoneyExact, formatCompact } from '../utils/format';
 import CompactValue from '../components/CompactValue';
@@ -233,6 +234,14 @@ export default function PropertyPage() {
   const navigate = useNavigate();
   const { user, fetchMe } = useAuthStore();
   const { fetchUserData, createOffer } = useGameStore();
+  const {
+    myCompanies,
+    fetchMyCompanies,
+    createPropertyPurchaseRequest,
+    createDevelopmentRequest,
+    fetchDevelopmentRequests,
+    voteDevelopmentRequest,
+  } = useCompanyStore();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -250,6 +259,14 @@ export default function PropertyPage() {
   const [rentInput, setRentInput] = useState('');
   const [maintenanceMsg, setMaintenanceMsg] = useState(null);
   const [rentMsg, setRentMsg] = useState(null);
+  const [devRequests, setDevRequests] = useState([]);
+  const [devOptions, setDevOptions] = useState(null);
+  const [showAllConstruction, setShowAllConstruction] = useState(false);
+  const [showDevModal, setShowDevModal] = useState(false);
+  const [devModalType, setDevModalType] = useState('');
+  const [devModalData, setDevModalData] = useState(null);
+  const [devLoading, setDevLoading] = useState(false);
+  const [currentPeriod, setCurrentPeriod] = useState(null);
   const UNITS_PER_PAGE = 5;
 
   const load = async () => {
@@ -257,12 +274,16 @@ export default function PropertyPage() {
     try {
       const res = await api(`/properties/${id}/detail`);
       setData(res);
-      if (res.property?.ownerId?._id === user?._id) {
+      const prop = res.property;
+      const isDirectOwner = prop?.ownerId?._id === user?._id;
+      const isCompanyProp = !!prop?.companyId;
+      const shouldLoadManagement = isDirectOwner || isCompanyProp;
+      if (shouldLoadManagement) {
         try {
           const improvementRes = await api(`/development/improvements/status/${id}`);
           setImprovementStatus(improvementRes);
         } catch {
-          /* not owner or error */
+          /* not owner/not authorized */
         }
         try {
           const mgmtRes = await api(`/management/${id}`);
@@ -275,9 +296,12 @@ export default function PropertyPage() {
             /* no history yet */
           }
         } catch {
-          /* not owner or error */
+          /* not owner/not authorized */
         }
       }
+      api('/world/status')
+        .then((s) => setCurrentPeriod(s.currentCycle))
+        .catch(() => {});
     } catch (err) {
       setError(err.message);
     }
@@ -291,6 +315,55 @@ export default function PropertyPage() {
     }
   }, [id]);
 
+  useEffect(() => {
+    if (user) fetchMyCompanies();
+  }, [user]);
+
+  useEffect(() => {
+    const propCompany = data?.property?.companyId;
+    const companyId = typeof propCompany === 'object' ? propCompany?._id : propCompany;
+    if (companyId && data?.property) {
+      fetchDevelopmentRequests(companyId)
+        .then((requests) => {
+          const propId = data.property._id?.toString?.() || data.property._id;
+          setDevRequests(
+            (requests || []).filter((r) => {
+              const rPropId = r.propertyId?._id?.toString?.() || r.propertyId?.toString?.() || r.propertyId;
+              return rPropId === propId;
+            }),
+          );
+        })
+        .catch(() => {});
+      const loadOptions = async () => {
+        try {
+          const prop = data.property;
+          if (prop.type === 'land' && prop.cityId) {
+            const cityId = prop.cityId._id || prop.cityId;
+            const locationParam = prop.location ? `?location=${encodeURIComponent(prop.location)}` : '';
+            const options = await api(`/development/options/city/${cityId}${locationParam}`);
+            const allProjects = options.flatMap((c) => c.projects);
+            if (allProjects.length > 0) {
+              setDevOptions({ type: 'construction', options: allProjects });
+            }
+          } else if (prop.type !== 'land') {
+            const [upgrades, improvements] = await Promise.all([
+              api(`/development/upgrades/${id}`).catch(() => null),
+              api(`/development/improvements/available/${id}`).catch(() => null),
+            ]);
+            setDevOptions({
+              type: 'development',
+              upgrades: upgrades?.upgrades || [],
+              improvements: improvements?.available || [],
+            });
+          }
+        } catch {
+          /* not authorized */
+        }
+      };
+      loadOptions();
+    }
+  }, [data?.property?.companyId, data?.property?._id]);
+
   const handleBuy = async () => {
     try {
       const res = await api('/properties/buy', {
@@ -301,6 +374,29 @@ export default function PropertyPage() {
       load();
       fetchMe();
       fetchUserData();
+    } catch (err) {
+      setActionMsg({ type: 'error', text: translateError(err, t) });
+    }
+  };
+
+  const ceoCompanies = myCompanies.filter((c) => {
+    const member = c.members?.find((m) => {
+      const uid = m.userId?._id || m.userId;
+      return uid?.toString() === user?._id?.toString();
+    });
+    return (
+      member?.role === 'ceo' ||
+      c.founderId?._id?.toString() === user?._id?.toString() ||
+      c.founderId?.toString() === user?._id?.toString()
+    );
+  });
+
+  const handleProposeCompanyPurchase = async () => {
+    const companyId = ceoCompanies[0]?._id;
+    if (!companyId) return;
+    try {
+      await createPropertyPurchaseRequest(companyId, id);
+      setActionMsg({ type: 'success', text: t('propertyDetail.companyPurchaseProposed') });
     } catch (err) {
       setActionMsg({ type: 'error', text: translateError(err, t) });
     }
@@ -394,6 +490,68 @@ export default function PropertyPage() {
     }
   };
 
+  const propCompany = data?.property?.companyId;
+  const ownedCompanyId = typeof propCompany === 'object' ? propCompany?._id : propCompany;
+  const owningCompany = ownedCompanyId
+    ? myCompanies.find((c) => {
+        const cid = c._id?.toString?.() || c._id;
+        return cid === ownedCompanyId?.toString?.();
+      })
+    : null;
+
+  const handleOpenDevProposal = (type, option) => {
+    setDevModalType(type);
+    setDevModalData(option);
+    setShowDevModal(true);
+  };
+
+  const handleCreateDevProposal = async () => {
+    if (!ownedCompanyId || !devModalType) return;
+    setDevLoading(true);
+    try {
+      let actionType, actionData;
+      if (devModalType === 'upgrade') {
+        actionType = 'upgrade';
+        actionData = { upgradeType: devModalData.type };
+      } else if (devModalType === 'improvement') {
+        actionType = 'improvement';
+        actionData = { improvementId: devModalData.id };
+      } else if (devModalType === 'construction') {
+        actionType = 'construction';
+        actionData = { projectType: devModalData.id };
+      }
+      await createDevelopmentRequest(ownedCompanyId, id, actionType, actionData);
+      setActionMsg({ type: 'success', text: t('companyDevelopment.proposalCreated') });
+      setShowDevModal(false);
+      const requests = await fetchDevelopmentRequests(ownedCompanyId);
+      setDevRequests(
+        (requests || []).filter((r) => {
+          const rPropId = r.propertyId?._id?.toString?.() || r.propertyId?.toString?.() || r.propertyId;
+          return rPropId === id;
+        }),
+      );
+    } catch (err) {
+      setActionMsg({ type: 'error', text: translateError(err, t) });
+    }
+    setDevLoading(false);
+  };
+
+  const handleVoteDevRequest = async (reqId, vote) => {
+    if (!ownedCompanyId) return;
+    try {
+      await voteDevelopmentRequest(ownedCompanyId, reqId, vote);
+      const requests = await fetchDevelopmentRequests(ownedCompanyId);
+      setDevRequests(
+        (requests || []).filter((r) => {
+          const rPropId = r.propertyId?._id?.toString?.() || r.propertyId?.toString?.() || r.propertyId;
+          return rPropId === id;
+        }),
+      );
+    } catch (err) {
+      setActionMsg({ type: 'error', text: translateError(err, t) });
+    }
+  };
+
   if (loading && !data) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -414,8 +572,23 @@ export default function PropertyPage() {
 
   const { property, totalRentEarned, totalInvestment, investmentHistory, intrinsicValue, unrealizedGain, roi } = data;
   const isOwner = user && property.ownerId?._id === user._id;
-  const isBankOwned = !property?.ownerId;
-  const canOffer = user && !isOwner && !isBankOwned && property?.ownerId;
+  const isCompanyOwned = !!property.companyId;
+  const isCompanyMember =
+    isCompanyOwned &&
+    myCompanies.some((c) => {
+      const cid = c._id?.toString?.() || c._id;
+      const propCid = typeof property.companyId === 'object' ? property.companyId?._id : property.companyId;
+      return (
+        cid === propCid?.toString?.() &&
+        c.members?.some((m) => {
+          const uid = m.userId?._id || m.userId;
+          return uid?.toString?.() === user?._id?.toString?.() && ['ceo', 'director'].includes(m.role);
+        })
+      );
+    });
+  const hasManageAccess = isOwner || isCompanyMember;
+  const isBankOwned = !property?.ownerId && !isCompanyOwned;
+  const canOffer = user && !hasManageAccess && !isBankOwned && (property?.ownerId || isCompanyOwned);
 
   return (
     <div className="flex-1 p-4 overflow-y-auto">
@@ -575,7 +748,7 @@ export default function PropertyPage() {
             </div>
           )}
 
-          {isOwner && managementData && property?.type !== 'land' && (
+          {hasManageAccess && managementData && property?.type !== 'land' && (
             <div className="bg-white dark:bg-gray-900 rounded-lg p-6">
               <h2 className="text-lg font-bold mb-4">{t('propertyManagement.title')}</h2>
 
@@ -762,7 +935,7 @@ export default function PropertyPage() {
         <div className="space-y-6">
           <div className="bg-white dark:bg-gray-900 rounded-lg p-6">
             <h2 className="text-lg font-bold mb-4">{t('propertyDetail.ownership')}</h2>
-            {isOwner ? (
+            {hasManageAccess ? (
               <div className="space-y-3">
                 <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
                   <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.owner')}</p>
@@ -805,7 +978,7 @@ export default function PropertyPage() {
             )}
           </div>
 
-          {isOwner && investmentHistory && investmentHistory.length > 0 && (
+          {hasManageAccess && investmentHistory && investmentHistory.length > 0 && (
             <div className="bg-white dark:bg-gray-900 rounded-lg p-6">
               <h2 className="text-lg font-bold mb-4">{t('propertyDetail.investments')}</h2>
               <div className="space-y-3">
@@ -908,12 +1081,20 @@ export default function PropertyPage() {
                   {t('propertyDetail.navToCity')}
                 </button>
               )}
-              {user && !isOwner && property.forSale && (
+              {user && !hasManageAccess && property.forSale && (
                 <button
                   onClick={handleBuy}
                   className="w-full bg-orange-500 hover:bg-orange-400 text-gray-900 dark:text-white text-sm py-2 rounded transition-colors"
                 >
                   {t('propertyDetail.buyProperty')} — {formatMoney(property.currentPrice)}
+                </button>
+              )}
+              {user && !hasManageAccess && property.forSale && ceoCompanies.length > 0 && (
+                <button
+                  onClick={handleProposeCompanyPurchase}
+                  className="w-full bg-purple-600 hover:bg-purple-500 text-white text-sm py-2 rounded transition-colors"
+                >
+                  {t('propertyDetail.proposeCompanyPurchase')}
                 </button>
               )}
               {canOffer && (
@@ -924,7 +1105,7 @@ export default function PropertyPage() {
                   {t('propertyDetail.makeOffer')}
                 </button>
               )}
-              {user && isOwner && (
+              {user && hasManageAccess && (
                 <button
                   onClick={handleSell}
                   className="w-full bg-yellow-600 hover:bg-yellow-500 text-gray-900 dark:text-white text-sm py-2 rounded transition-colors"
@@ -932,7 +1113,7 @@ export default function PropertyPage() {
                   {t('propertyDetail.sellProperty')} — {formatMoney(property.currentPrice)}
                 </button>
               )}
-              {user && isOwner && improvementStatus && property?.type !== 'land' && (
+              {user && hasManageAccess && improvementStatus && property?.type !== 'land' && !isCompanyOwned && (
                 <button
                   onClick={() => navigate(`/development?tab=improvements&propertyId=${id}`)}
                   className="w-full bg-blue-600 hover:bg-blue-500 text-white text-sm py-2 rounded transition-colors"
@@ -940,7 +1121,91 @@ export default function PropertyPage() {
                   {t('propertyDetail.viewImprovements')}
                 </button>
               )}
-              {user && isOwner && improvementStatus && improvementStatus.activeImprovement && (
+              {user &&
+                hasManageAccess &&
+                isCompanyOwned &&
+                devOptions?.type === 'development' &&
+                !property.companyId?.activeImprovement &&
+                devOptions.improvements.length > 0 && (
+                  <div className="space-y-1">
+                    {devOptions.improvements.slice(0, 3).map((imp) => (
+                      <button
+                        key={imp.id}
+                        onClick={() => handleOpenDevProposal('improvement', imp)}
+                        className="w-full bg-blue-600 hover:bg-blue-500 text-white text-sm py-2 rounded transition-colors flex justify-between items-center px-3"
+                      >
+                        <span>{imp.name}</span>
+                        <span className="text-blue-200 text-xs">
+                          {formatMoney(Math.round(property.currentPrice * imp.baseCostPercent))}
+                        </span>
+                      </button>
+                    ))}
+                    {devOptions.improvements.length > 3 && (
+                      <button
+                        onClick={() => navigate(`/development?tab=improvements&propertyId=${id}`)}
+                        className="w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-xs py-1.5 rounded transition-colors"
+                      >
+                        +{devOptions.improvements.length - 3} {t('common.more')}
+                      </button>
+                    )}
+                  </div>
+                )}
+              {user &&
+                hasManageAccess &&
+                isCompanyOwned &&
+                devOptions?.type === 'development' &&
+                devOptions.upgrades.length > 0 && (
+                  <div className="space-y-1">
+                    {devOptions.upgrades
+                      .filter((u) => u.cost > 0)
+                      .slice(0, 3)
+                      .map((upg) => (
+                        <button
+                          key={upg.type}
+                          onClick={() => handleOpenDevProposal('upgrade', upg)}
+                          className="w-full bg-purple-600 hover:bg-purple-500 text-white text-sm py-2 rounded transition-colors flex justify-between items-center px-3"
+                        >
+                          <span>
+                            {upg.name} Lv.{upg.level}
+                          </span>
+                          <span className="text-purple-200 text-xs">{formatMoney(upg.cost)}</span>
+                        </button>
+                      ))}
+                  </div>
+                )}
+              {user && hasManageAccess && isCompanyOwned && devOptions?.type === 'construction' && (
+                <div className="space-y-1">
+                  {(showAllConstruction ? devOptions.options : devOptions.options.slice(0, 4)).map((proj) => (
+                    <button
+                      key={proj.id}
+                      onClick={() => handleOpenDevProposal('construction', proj)}
+                      className="w-full bg-green-600 hover:bg-green-500 text-white text-sm py-2 rounded transition-colors flex justify-between items-center px-3"
+                    >
+                      <div className="flex flex-col items-start">
+                        <span>{proj.name}</span>
+                        <span className="text-green-200 text-xs">
+                          {proj.unitsGenerated} {t('companyDevelopment.units')} · {proj.constructionPeriods}{' '}
+                          {t('companyDevelopment.months') || 'mo'}
+                        </span>
+                      </div>
+                      <span className="text-green-200 text-xs">
+                        {formatMoney(proj.estimatedCost || proj.baseCost || 0)}
+                      </span>
+                    </button>
+                  ))}
+                  {devOptions.options.length > 4 && (
+                    <button
+                      onClick={() => setShowAllConstruction(!showAllConstruction)}
+                      className="text-xs text-gray-400 dark:text-gray-500 text-center w-full hover:text-gray-600 dark:hover:text-gray-300 transition-colors py-1"
+                    >
+                      {showAllConstruction
+                        ? t('common.showLess')
+                        : `+${devOptions.options.length - 4} ${t('common.more')}`}
+                    </button>
+                  )}
+                </div>
+              )}
+              {user && hasManageAccess && improvementStatus && improvementStatus.activeImprovement && (
                 <div className="w-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-sm py-2 rounded text-center space-y-0.5">
                   <div className="font-medium">🔨 {t('development.improvementInProgress')}</div>
                   <div className="text-xs">
@@ -962,8 +1227,235 @@ export default function PropertyPage() {
               )}
             </div>
           </div>
+
+          {isCompanyOwned && devRequests.length > 0 && (
+            <div className="bg-white dark:bg-gray-900 rounded-lg p-6 mt-4">
+              <h2 className="text-lg font-bold mb-4">{t('companyDevelopment.pendingProposals')}</h2>
+              <div className="space-y-3">
+                {devRequests.map((dr) => {
+                  const totalVoters = (owningCompany?.members?.length || 1) - 1;
+                  const yesVotes = dr.votes?.filter((v) => v.vote === 'yes').length || 0;
+                  const noVotes = dr.votes?.filter((v) => v.vote === 'no').length || 0;
+                  const hasVoted = dr.votes?.some((v) => {
+                    const uid = v.userId?._id || v.userId;
+                    return uid?.toString() === user?._id?.toString();
+                  });
+                  const isProposer =
+                    dr.requestedBy?._id?.toString?.() === user?._id?.toString() ||
+                    dr.requestedBy?.toString?.() === user?._id?.toString();
+                  const actionLabel =
+                    dr.actionType === 'upgrade'
+                      ? `Upgrade: ${devOptions?.upgrades?.find((u) => (u.type || u.id) === dr.actionData?.upgradeType)?.name || dr.actionData?.upgradeType}`
+                      : dr.actionType === 'improvement'
+                        ? `Improvement: ${devOptions?.improvements?.find((i) => i.id === dr.actionData?.improvementId)?.name || dr.actionData?.improvementId}`
+                        : `Construction: ${devOptions?.options?.find((p) => p.id === dr.actionData?.projectType)?.name || dr.actionData?.projectType}`;
+
+                  return (
+                    <div
+                      key={dr._id}
+                      className={`border rounded-lg p-3 ${
+                        dr.status === 'executed'
+                          ? 'border-green-500/30 bg-green-50 dark:bg-green-900/10'
+                          : dr.status === 'rejected' || dr.status === 'failed'
+                            ? 'border-red-500/30 bg-red-50 dark:bg-red-900/10'
+                            : 'border-purple-500/30 bg-purple-50 dark:bg-purple-900/10'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <div className="font-medium text-sm text-gray-900 dark:text-white">{actionLabel}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {formatMoney(dr.estimatedCost)}
+                            {dr.estimatedValueIncrease > 0 && (
+                              <span className="ml-2 text-green-500">
+                                +{formatMoney(dr.estimatedValueIncrease)} value
+                              </span>
+                            )}
+                          </div>
+                          {dr.actionType === 'construction' && dr.actionData?.projectType && (
+                            <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                              {(() => {
+                                const proj = devOptions?.options?.find((p) => p.id === dr.actionData.projectType);
+                                if (proj) {
+                                  return `${proj.unitsGenerated || '—'} ${t('companyDevelopment.units')} · ${proj.constructionPeriods || '—'} ${t('companyDevelopment.months') || 'mo'}`;
+                                }
+                                return null;
+                              })()}
+                            </div>
+                          )}
+                          {dr.requestedBy && (
+                            <div className="text-xs text-gray-400 mt-1">
+                              {isProposer
+                                ? t('companyDevelopment.proposedByYou')
+                                : t('companyDevelopment.proposedBy', { name: dr.requestedBy.username || 'Unknown' })}
+                            </div>
+                          )}
+                        </div>
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded ${
+                            dr.status === 'pending'
+                              ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
+                              : dr.status === 'executed'
+                                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                                : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                          }`}
+                        >
+                          {t(`companyDevelopment.${dr.status}`)}
+                        </span>
+                      </div>
+
+                      {dr.status === 'pending' && totalVoters > 0 && (
+                        <div className="mt-2">
+                          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-1">
+                            <span>
+                              {yesVotes}/{totalVoters} {t('companyDevelopment.yesVotes')}
+                            </span>
+                            <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                              <div
+                                className="bg-green-500 h-1.5 rounded-full"
+                                style={{ width: `${Math.min(100, (yesVotes / totalVoters) * 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                          {!isProposer && !hasVoted && user && (
+                            <div className="flex gap-2 mt-2">
+                              <button
+                                onClick={() => handleVoteDevRequest(dr._id, 'yes')}
+                                className="flex-1 px-3 py-1 bg-green-600 hover:bg-green-500 text-white text-xs rounded transition-colors"
+                              >
+                                {t('companyDevelopment.approve')}
+                              </button>
+                              <button
+                                onClick={() => handleVoteDevRequest(dr._id, 'no')}
+                                className="flex-1 px-3 py-1 bg-red-600 hover:bg-red-500 text-white text-xs rounded transition-colors"
+                              >
+                                {t('companyDevelopment.reject')}
+                              </button>
+                            </div>
+                          )}
+                          {hasVoted && (
+                            <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                              {t('companyDevelopment.alreadyVoted')}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {dr.status === 'executed' && dr.actionType === 'construction' && dr.constructionProjectId && (
+                        <div className="mt-2">
+                          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+                            <span>
+                              {t('companyDevelopment.constructionProgress') || 'Construction'}:{' '}
+                              {dr.constructionProjectId.progress || 0}%
+                            </span>
+                            {dr.constructionProjectId.completionPeriod &&
+                              dr.constructionProjectId.startPeriod != null && (
+                                <span className="text-gray-400 dark:text-gray-500">
+                                  {Math.max(0, dr.constructionProjectId.completionPeriod - (currentPeriod || 0))}{' '}
+                                  {t('companyDevelopment.months') || 'mo'} {t('development.left') || 'left'}
+                                </span>
+                              )}
+                          </div>
+                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            <div
+                              className="bg-green-500 h-2 rounded-full transition-all duration-500"
+                              style={{ width: `${Math.min(100, dr.constructionProjectId.progress || 0)}%` }}
+                            />
+                          </div>
+                          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                            {dr.constructionProjectId.status === 'under_construction'
+                              ? t('companyDevelopment.underConstruction') || 'Under Construction'
+                              : dr.constructionProjectId.status === 'completed'
+                                ? t('companyDevelopment.completed') || 'Completed'
+                                : dr.constructionProjectId.status}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      {showDevModal && devModalData && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 w-full max-w-sm">
+            <h3 className="text-gray-900 dark:text-white font-semibold mb-2">
+              {t('companyDevelopment.confirmProposal')}
+            </h3>
+            <div className="space-y-2 mb-4 text-sm">
+              <div className="text-gray-500 dark:text-gray-400">{t('companyDevelopment.property')}:</div>
+              <div className="font-medium text-gray-900 dark:text-white">{property?.name}</div>
+              <div className="text-gray-500 dark:text-gray-400">{t('companyDevelopment.action')}:</div>
+              <div className="font-medium text-gray-900 dark:text-white">
+                {devModalType === 'upgrade' && `${devModalData.name} (Level ${devModalData.level})`}
+                {devModalType === 'improvement' && devModalData.name}
+                {devModalType === 'construction' && devModalData.name}
+              </div>
+              <div className="text-gray-500 dark:text-gray-400">{t('companyDevelopment.cost')}:</div>
+              <div className="font-medium text-orange-500 dark:text-orange-400">
+                {formatMoney(
+                  devModalType === 'upgrade'
+                    ? devModalData.cost
+                    : devModalType === 'improvement'
+                      ? Math.round(property?.currentPrice * devModalData.baseCostPercent)
+                      : devModalData.estimatedCost || devModalData.baseCost || 0,
+                )}
+              </div>
+              {devModalData.rentIncrease != null && (
+                <>
+                  <div className="text-gray-500 dark:text-gray-400">
+                    {t('companyDevelopment.estimatedRentIncrease')}:
+                  </div>
+                  <div className="font-medium text-green-500 dark:text-green-400">
+                    +{formatMoney(devModalData.rentIncrease)}/mo
+                  </div>
+                </>
+              )}
+              {devModalData.projectedValue != null && (
+                <>
+                  <div className="text-gray-500 dark:text-gray-400">
+                    {t('companyDevelopment.estimatedValueIncrease')}:
+                  </div>
+                  <div className="font-medium text-green-500 dark:text-green-400">
+                    +{formatMoney(devModalData.projectedValue - (property?.currentPrice || 0))}
+                  </div>
+                </>
+              )}
+              {devModalType === 'construction' && devModalData.unitsGenerated && (
+                <>
+                  <div className="text-gray-500 dark:text-gray-400">{t('companyDevelopment.units')}:</div>
+                  <div className="font-medium text-gray-900 dark:text-white">{devModalData.unitsGenerated}</div>
+                  <div className="text-gray-500 dark:text-gray-400">{t('companyDevelopment.constructionTime')}:</div>
+                  <div className="font-medium text-gray-900 dark:text-white">
+                    {devModalData.constructionPeriods} {t('development.periodsRemaining') || 'months'}
+                  </div>
+                </>
+              )}
+              <div className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                {t('companyDevelopment.membersWillVote')}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleCreateDevProposal}
+                disabled={devLoading}
+                className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-gray-200 dark:disabled:bg-gray-600 text-white text-sm rounded transition-colors"
+              >
+                {devLoading ? t('common.loading') : t('companyDevelopment.submitProposal')}
+              </button>
+              <button
+                onClick={() => setShowDevModal(false)}
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-900 dark:text-white text-sm rounded transition-colors"
+              >
+                {t('common.cancel')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showOfferModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">

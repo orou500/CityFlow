@@ -6,7 +6,7 @@ import Notification from '../models/Notification.js';
 const RENT_STORAGE_DURATION_MS = 24 * 60 * 60 * 1000;
 
 export async function processRent() {
-  const properties = await Property.find({ ownerId: { $ne: null } })
+  const properties = await Property.find({ ownerId: { $ne: null }, companyId: null })
     .populate('cityId')
     .lean();
   if (properties.length === 0) return [];
@@ -165,6 +165,7 @@ export async function expireUncollectedRent() {
   const expired = await User.find({
     uncollectedRent: { $gt: 0 },
     rentStorageStartedAt: { $lte: expiryThreshold },
+    deletedAt: null,
   }).select('_id username uncollectedRent rentStorageStartedAt');
 
   if (expired.length === 0) return 0;
@@ -197,6 +198,7 @@ export async function sendRentExpiryWarnings() {
   const users = await User.find({
     uncollectedRent: { $gt: 0 },
     rentStorageStartedAt: { $lte: warningThreshold, $gt: expiryThreshold },
+    deletedAt: null,
   }).select('_id username uncollectedRent rentStorageStartedAt');
 
   if (users.length === 0) return 0;

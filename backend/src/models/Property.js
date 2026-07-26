@@ -18,6 +18,7 @@ const propertySchema = new mongoose.Schema(
   {
     cityId: { type: mongoose.Schema.Types.ObjectId, ref: 'City', required: true },
     ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'RealEstateCompany', default: null },
     type: {
       type: String,
       enum: ['apartment', 'house', 'commercial', 'land'],

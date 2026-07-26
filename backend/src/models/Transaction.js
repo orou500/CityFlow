@@ -5,6 +5,7 @@ const transactionSchema = new mongoose.Schema(
     propertyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Property' },
     buyerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'RealEstateCompany', default: null },
     price: { type: Number, required: true },
     type: {
       type: String,
@@ -21,6 +22,7 @@ const transactionSchema = new mongoose.Schema(
         'upgrade',
         'grade_upgrade',
         'improvement',
+        'development',
       ],
       required: true,
     },

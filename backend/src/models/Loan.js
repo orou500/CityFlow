@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 const loanSchema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'RealEstateCompany', default: null },
     type: {
       type: String,
       enum: ['personal', 'mortgage', 'business', 'line_of_credit'],

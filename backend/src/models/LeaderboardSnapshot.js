@@ -2,7 +2,8 @@ import mongoose from 'mongoose';
 
 const rankingEntrySchema = new mongoose.Schema(
   {
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'RealEstateCompany', default: null },
     username: { type: String, required: true },
     displayName: { type: String, default: '' },
     avatar: { type: String, default: '' },
@@ -18,7 +19,18 @@ const leaderboardSnapshotSchema = new mongoose.Schema(
   {
     category: {
       type: String,
-      enum: ['netWorth', 'properties', 'passiveIncome', 'dealVolume', 'cityInfluence'],
+      enum: [
+        'netWorth',
+        'properties',
+        'passiveIncome',
+        'dealVolume',
+        'cityInfluence',
+        'companyNetWorth',
+        'companyProperties',
+        'companyIncome',
+        'companyReputation',
+        'companyGrowth',
+      ],
       required: true,
       index: true,
     },

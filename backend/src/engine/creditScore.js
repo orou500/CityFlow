@@ -58,9 +58,10 @@ function calculateCreditScore(user, activeLoans, propertyCount, completedLoanCou
 }
 
 export async function updateCreditScores(tickNumber) {
-  const users = await User.find({ creditScoreUpdatedTick: { $lt: tickNumber - UPDATE_INTERVAL } }).select(
-    '_id creditScore balance ownedProperties lifetimeStats',
-  );
+  const users = await User.find({
+    creditScoreUpdatedTick: { $lt: tickNumber - UPDATE_INTERVAL },
+    deletedAt: null,
+  }).select('_id creditScore balance ownedProperties lifetimeStats');
 
   const results = [];
 
