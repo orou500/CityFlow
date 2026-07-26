@@ -388,7 +388,8 @@
     "propertyRating": "דירוג נכס",
     "viewImprovements": "צפה בשדרוגים",
     "improvementsDescription": "שדרג את הנכס שלך כדי להגדיל את הדירוג והשווי שלו.",
-    "goToDevelopment": "לך לפיתוח"
+    "goToDevelopment": "לך לפיתוח",
+    "riskExplanation": "סיכון משפיע על מידת התנודתיות של ערך הנכס לאורך זמן. סיכון גבוה יכול ליצור הזדמנויות גדולות יותר אך גם הפסדים גדולים יותר. סיכון נמוך מספק תשואות יציבות וצפויות יותר."
   },
   "propertyManagement": {
     "title": "ניהול נכס",
@@ -1945,5 +1946,64 @@
     "maturityIn": "בשלות בעוד",
     "finalValue": "ערך סופי",
     "investmentStatusRejected": "נדחתה"
+  },
+  "propertyRisk": {
+    "title": "פרופיל סיכון נכס",
+    "riskScore": "ציון סיכון",
+    "riskLevel": "רמת סיכון",
+    "growthPotential": "פוטנציאל צמיחה",
+    "activeHazards": "סיכונים פעילים",
+    "noActiveHazards": "אין סיכונים פעילים",
+    "potentialHazards": "סיכונים פוטנציאליים",
+    "riskHistory": "היסטוריית סיכון",
+    "recentEvents": "אירועי סיכון אחרונים",
+    "noRecentEvents": "אין אירועי סיכון אחרונים",
+    "expectedGrowth": "עלייה שנתית צפויה",
+    "veryLowGrowth": "2-5%",
+    "lowGrowth": "5-10%",
+    "moderateGrowth": "8-15%",
+    "highGrowth": "10-25%",
+    "veryHighGrowth": "15-40%",
+    "locationRisk": "סיכון מיקום",
+    "economicRisk": "סיכון כלכלי",
+    "conditionRisk": "סיכון מצב",
+    "diversificationTip": "טיפ לגיוון",
+    "diversificationTipText": "שקול להחזיק נכסים בערים ובמיקומים שונים כדי להפחית את הסיכון הכולל של התיק.",
+    "riskFactors": "גורמי סיכון",
+    "howToReduce": "איך להפחית סיכון",
+    "severity": "חומרה",
+    "remainingTicks": "חודשים נותרו",
+    "conditionDamage": "נזק למצב",
+    "scoreLow": "סיכון נמוך מאוד",
+    "scoreLowDesc": "השקעה בטוחה עם תשואות יציבות",
+    "scoreModerate": "סיכון בינוני",
+    "scoreModerateDesc": "איזון בין סיכון לתגמול",
+    "scoreHigh": "סיכון גבוה",
+    "scoreHighDesc": "פוטנציאל תשואה גבוה יותר עם אי-ודאות מוגברת",
+    "scoreVeryHigh": "סיכון גבוה מאוד",
+    "scoreVeryHighDesc": "השקעה ספקולטיבית עם תנודתיות משמעותית",
+    "hazard": {
+      "hurricane": "הוריקן",
+      "flood": "הצפה",
+      "earthquake": "רעידת אדמה",
+      "wildfire": "שריפה",
+      "storm": "נזקי סערה"
+    },
+    "event": {
+      "tourismBoom": "פריחת תיירות",
+      "corporateInvestment": "השקעה תאגידית",
+      "infrastructureExpansion": "הרחבת תשתית",
+      "floodDamage": "נזקי הצפה",
+      "employerClosure": "סגירת מעסיק מרכזי",
+      "tourismCollapse": "קריסת תיירות",
+      "insuranceHike": "העלאת פרמיית ביטוח"
+    },
+    "level": {
+      "veryLow": "נמוך מאוד",
+      "low": "נמוך",
+      "moderate": "בינוני",
+      "high": "גבוה",
+      "veryHigh": "גבוה מאוד"
+    }
   }
 }

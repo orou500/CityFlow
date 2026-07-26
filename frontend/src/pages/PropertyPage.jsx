@@ -7,6 +7,7 @@ import { useCompanyStore } from '../store/useCompanyStore';
 import { translateError } from '../i18n/errors';
 import { formatMoney, formatMoneyExact, formatCompact } from '../utils/format';
 import CompactValue from '../components/CompactValue';
+import RiskDashboard from '../components/RiskDashboard';
 import { getApiBaseUrl } from '../utils/capacitor';
 
 const API = getApiBaseUrl();
@@ -664,6 +665,15 @@ export default function PropertyPage() {
               </div>
             </div>
           </div>
+
+          {data?.riskProfile && (
+            <div className="bg-white dark:bg-gray-900 rounded-lg p-6">
+              <div className="mb-3 bg-blue-900/20 border border-blue-800 rounded p-3 text-xs text-blue-300">
+                {t('propertyDetail.riskExplanation')}
+              </div>
+              <RiskDashboard riskProfile={data.riskProfile} />
+            </div>
+          )}
 
           {property.units && property.units.length > 0 && (
             <div className="bg-white dark:bg-gray-900 rounded-lg p-6">

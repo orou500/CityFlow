@@ -117,6 +117,41 @@ const propertySchema = new mongoose.Schema(
       },
     ],
     intrinsicValue: { type: Number, default: 0 },
+
+    riskScore: { type: Number, default: 20, min: 0, max: 100 },
+    hazards: [
+      {
+        hazardType: { type: String, enum: ['hurricane', 'flood', 'earthquake', 'wildfire', 'storm'], required: true },
+        severity: { type: Number, min: 0, max: 100, default: 0 },
+        active: { type: Boolean, default: false },
+        startedAt: { type: Number },
+        remainingTicks: { type: Number, default: 0 },
+        conditionDamage: { type: Number, default: 0 },
+      },
+    ],
+    riskHistory: [
+      {
+        tick: { type: Number },
+        riskScore: { type: Number },
+        cityDemand: { type: Number },
+        cityEconomic: { type: String },
+      },
+    ],
+    riskEvents: [
+      {
+        eventType: { type: String, required: true },
+        hazardType: { type: String },
+        severity: { type: Number },
+        tick: { type: Number },
+        description: { type: String },
+        effect: {
+          conditionDelta: { type: Number },
+          rentDelta: { type: Number },
+          valueDelta: { type: Number },
+          costDelta: { type: Number },
+        },
+      },
+    ],
   },
   { timestamps: true },
 );

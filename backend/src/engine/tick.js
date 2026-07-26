@@ -10,6 +10,7 @@ import { generateProperties } from './propertyGeneration.js';
 import { generateEvents, tickEvents } from './events.js';
 import { processConstruction } from './constructionProcessing.js';
 import { processImprovements } from './improvementProcessing.js';
+import { processPropertyRisks } from './propertyRisk.js';
 import { processPropertyManagement } from './propertyManagement.js';
 import { updateCreditScores } from './creditScore.js';
 import { updateIntrinsicValues } from './propertyValuation.js';
@@ -99,6 +100,9 @@ export async function executeTick() {
 
     console.log('[TICK] Processing improvements...');
     const improvementResults = await processImprovements();
+
+    console.log('[TICK] Processing property risks...');
+    const riskResults = await processPropertyRisks(tickNumber);
 
     console.log('[TICK] Processing event lifecycles...');
     const expiredEvents = await tickEvents();
@@ -288,6 +292,7 @@ export async function executeTick() {
       loansProcessed: loanResults.length,
       constructionProcessed: constructionResults.length,
       improvementsProcessed: improvementResults.length,
+      propertiesAffectedByRisks: riskResults,
       newProperties: propertyGeneration,
       newEvents,
       expiredEvents,

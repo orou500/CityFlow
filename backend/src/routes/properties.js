@@ -10,6 +10,7 @@ import { enqueueNotification } from '../utils/notificationQueue.js';
 import { cacheGetOrSet } from '../utils/cache.js';
 import { cacheKeys, cacheTTL } from '../utils/cacheKeys.js';
 import { onPropertyPurchased, onPropertySold, onPropertyUpgraded } from '../utils/cacheInvalidation.js';
+import { getPropertyRiskProfile } from '../engine/propertyRisk.js';
 import { trackEvent, EVENTS } from '../utils/analytics.js';
 import {
   GRADE_NAMES,
@@ -164,6 +165,7 @@ router.get('/:id/detail', authenticate, async (req, res) => {
           intrinsicValue,
           unrealizedGain,
           roi,
+          riskProfile: getPropertyRiskProfile(property, property.cityId),
         };
       },
       cacheTTL.medium,

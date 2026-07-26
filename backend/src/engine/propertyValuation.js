@@ -110,7 +110,10 @@ export function calculateIntrinsicValue(property, currentTick, city) {
   const cityData = city || (property.cityId && typeof property.cityId === 'object' ? property.cityId : null);
   const cityMultiplier = calculateCityFundamentalsMultiplier(cityData);
 
-  const intrinsicValue = Math.round((rawIntrinsic + investmentValue) * cityMultiplier);
+  let intrinsicValue = Math.round((rawIntrinsic + investmentValue) * cityMultiplier);
+
+  const conditionPenalty = 0.5 + ((property.condition || 100) / 100) * 0.5;
+  intrinsicValue = Math.round(intrinsicValue * conditionPenalty);
 
   return Math.max(1, intrinsicValue);
 }

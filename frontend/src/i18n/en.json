@@ -388,7 +388,8 @@
     "propertyRating": "Property Rating",
     "viewImprovements": "View Improvements",
     "improvementsDescription": "Improve your property to increase its rating and value.",
-    "goToDevelopment": "Go to Development"
+    "goToDevelopment": "Go to Development",
+    "riskExplanation": "Risk affects how much this property's value can fluctuate over time. Higher risk can create bigger opportunities but also bigger losses. Lower risk provides more stable and predictable returns."
   },
   "propertyManagement": {
     "title": "Property Management",
@@ -1954,5 +1955,64 @@
     "maturityIn": "Maturity in",
     "finalValue": "Final Value",
     "investmentStatusRejected": "Rejected"
+  },
+  "propertyRisk": {
+    "title": "Property Risk Profile",
+    "riskScore": "Risk Score",
+    "riskLevel": "Risk Level",
+    "growthPotential": "Growth Potential",
+    "activeHazards": "Active Hazards",
+    "noActiveHazards": "No active hazards",
+    "potentialHazards": "Potential Hazards",
+    "riskHistory": "Risk History",
+    "recentEvents": "Recent Risk Events",
+    "noRecentEvents": "No recent risk events",
+    "expectedGrowth": "Expected Annual Appreciation",
+    "veryLowGrowth": "2-5%",
+    "lowGrowth": "5-10%",
+    "moderateGrowth": "8-15%",
+    "highGrowth": "10-25%",
+    "veryHighGrowth": "15-40%",
+    "locationRisk": "Location Risk",
+    "economicRisk": "Economic Risk",
+    "conditionRisk": "Condition Risk",
+    "diversificationTip": "Diversification Tip",
+    "diversificationTipText": "Consider owning properties in different cities and locations to reduce overall portfolio risk.",
+    "riskFactors": "Risk Factors",
+    "howToReduce": "How to Reduce Risk",
+    "severity": "Severity",
+    "remainingTicks": "Remaining Months",
+    "conditionDamage": "Condition Damage",
+    "scoreLow": "Very Low Risk",
+    "scoreLowDesc": "Safe investment with stable returns",
+    "scoreModerate": "Moderate Risk",
+    "scoreModerateDesc": "Balanced risk and reward potential",
+    "scoreHigh": "High Risk",
+    "scoreHighDesc": "Higher potential returns with increased uncertainty",
+    "scoreVeryHigh": "Very High Risk",
+    "scoreVeryHighDesc": "Speculative investment with significant volatility",
+    "hazard": {
+      "hurricane": "Hurricane",
+      "flood": "Flood",
+      "earthquake": "Earthquake",
+      "wildfire": "Wildfire",
+      "storm": "Storm Damage"
+    },
+    "event": {
+      "tourismBoom": "Tourism Boom",
+      "corporateInvestment": "Corporate Investment",
+      "infrastructureExpansion": "Infrastructure Expansion",
+      "floodDamage": "Flood Damage",
+      "employerClosure": "Major Employer Closure",
+      "tourismCollapse": "Tourism Collapse",
+      "insuranceHike": "Insurance Premium Increase"
+    },
+    "level": {
+      "veryLow": "Very Low",
+      "low": "Low",
+      "moderate": "Moderate",
+      "high": "High",
+      "veryHigh": "Very High"
+    }
   }
 }
