@@ -139,11 +139,16 @@ export default function RiskDashboard({ riskProfile }) {
       {recentEvents && recentEvents.length > 0 && (
         <div className="mb-4">
           <h4 className="text-sm font-semibold text-gray-300 mb-2">{t('propertyRisk.recentEvents')}</h4>
-          {recentEvents.slice(-3).reverse().map((e, i) => (
-            <div key={i} className="bg-gray-750 border border-gray-700 rounded p-2 mb-1 text-xs text-gray-400">
-              <div>Month {e.tick}: {e.description}</div>
-            </div>
-          ))}
+          {recentEvents
+            .slice(-3)
+            .reverse()
+            .map((e, i) => (
+              <div key={i} className="bg-gray-750 border border-gray-700 rounded p-2 mb-1 text-xs text-gray-400">
+                <div>
+                  Month {e.tick}: {e.description}
+                </div>
+              </div>
+            ))}
         </div>
       )}
 

@@ -70,8 +70,14 @@ describe('calculateBaseRisk', () => {
   });
 
   it('clamps score between 0 and 100', () => {
-    const veryLow = calculateBaseRisk(mockProperty({ location: 'Residential', condition: 100, maintenanceLevel: 'premium' }), mockCity({ economicCondition: 'boom', demandIndex: 1.5 }));
-    const veryHigh = calculateBaseRisk(mockProperty({ location: 'Coastal', type: 'land', condition: 10, maintenanceLevel: 'none' }), mockCity({ economicCondition: 'recession', demandIndex: 0.3 }));
+    const veryLow = calculateBaseRisk(
+      mockProperty({ location: 'Residential', condition: 100, maintenanceLevel: 'premium' }),
+      mockCity({ economicCondition: 'boom', demandIndex: 1.5 }),
+    );
+    const veryHigh = calculateBaseRisk(
+      mockProperty({ location: 'Coastal', type: 'land', condition: 10, maintenanceLevel: 'none' }),
+      mockCity({ economicCondition: 'recession', demandIndex: 0.3 }),
+    );
     expect(veryLow).toBeGreaterThanOrEqual(0);
     expect(veryHigh).toBeLessThanOrEqual(100);
   });

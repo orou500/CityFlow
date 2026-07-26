@@ -1,7 +1,17 @@
 export const HAZARD_TYPES = {
-  HURRICANE: { id: 'hurricane', label: 'Hurricane', labelKey: 'propertyRisk.hazard.hurricane', severityRange: [0.3, 0.8] },
+  HURRICANE: {
+    id: 'hurricane',
+    label: 'Hurricane',
+    labelKey: 'propertyRisk.hazard.hurricane',
+    severityRange: [0.3, 0.8],
+  },
   FLOOD: { id: 'flood', label: 'Flood', labelKey: 'propertyRisk.hazard.flood', severityRange: [0.2, 0.7] },
-  EARTHQUAKE: { id: 'earthquake', label: 'Earthquake', labelKey: 'propertyRisk.hazard.earthquake', severityRange: [0.4, 0.9] },
+  EARTHQUAKE: {
+    id: 'earthquake',
+    label: 'Earthquake',
+    labelKey: 'propertyRisk.hazard.earthquake',
+    severityRange: [0.4, 0.9],
+  },
   WILDFIRE: { id: 'wildfire', label: 'Wildfire', labelKey: 'propertyRisk.hazard.wildfire', severityRange: [0.3, 0.8] },
   STORM: { id: 'storm', label: 'Storm Damage', labelKey: 'propertyRisk.hazard.storm', severityRange: [0.1, 0.5] },
 };
@@ -22,8 +32,16 @@ export const RISK_EVENT_TYPES = {
   },
   NEGATIVE: {
     FLOOD_DAMAGE: { id: 'flood_damage', labelKey: 'propertyRisk.event.floodDamage', effect: 'condition_decrease' },
-    EMPLOYER_CLOSURE: { id: 'employer_closure', labelKey: 'propertyRisk.event.employerClosure', effect: 'demand_decrease' },
-    TOURISM_COLLAPSE: { id: 'tourism_collapse', labelKey: 'propertyRisk.event.tourismCollapse', effect: 'rent_decrease' },
+    EMPLOYER_CLOSURE: {
+      id: 'employer_closure',
+      labelKey: 'propertyRisk.event.employerClosure',
+      effect: 'demand_decrease',
+    },
+    TOURISM_COLLAPSE: {
+      id: 'tourism_collapse',
+      labelKey: 'propertyRisk.event.tourismCollapse',
+      effect: 'rent_decrease',
+    },
     INSURANCE_HIKE: { id: 'insurance_hike', labelKey: 'propertyRisk.event.insuranceHike', effect: 'cost_increase' },
   },
 };
@@ -37,7 +55,14 @@ export const RISK_LEVELS = [
     color: '#22c55e',
     growthMultiplier: 0.5,
   },
-  { id: 'low', labelKey: 'propertyRisk.level.low', minScore: 21, maxScore: 40, color: '#84cc16', growthMultiplier: 0.8 },
+  {
+    id: 'low',
+    labelKey: 'propertyRisk.level.low',
+    minScore: 21,
+    maxScore: 40,
+    color: '#84cc16',
+    growthMultiplier: 0.8,
+  },
   {
     id: 'moderate',
     labelKey: 'propertyRisk.level.moderate',
@@ -46,7 +71,14 @@ export const RISK_LEVELS = [
     color: '#eab308',
     growthMultiplier: 1.0,
   },
-  { id: 'high', labelKey: 'propertyRisk.level.high', minScore: 61, maxScore: 80, color: '#f97316', growthMultiplier: 1.5 },
+  {
+    id: 'high',
+    labelKey: 'propertyRisk.level.high',
+    minScore: 61,
+    maxScore: 80,
+    color: '#f97316',
+    growthMultiplier: 1.5,
+  },
   {
     id: 'very_high',
     labelKey: 'propertyRisk.level.veryHigh',

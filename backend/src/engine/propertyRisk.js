@@ -230,15 +230,34 @@ function getRiskFactorBreakdown(property, city) {
   const factors = [];
 
   const locationInfo = {
-    Waterfront: 55, Coastal: 60, Lakeside: 40, Industrial: 35,
-    Hills: 25, Mountains: 30, Downtown: 25, 'City Center': 30,
-    'Business District': 20, Suburban: 20, Rural: 20, Residential: 15,
+    Waterfront: 55,
+    Coastal: 60,
+    Lakeside: 40,
+    Industrial: 35,
+    Hills: 25,
+    Mountains: 30,
+    Downtown: 25,
+    'City Center': 30,
+    'Business District': 20,
+    Suburban: 20,
+    Rural: 20,
+    Residential: 15,
   };
   const locationScore = locationInfo[property.location] || 20;
   if (locationScore >= 50) {
-    factors.push({ factor: 'location', severity: 'high', label: `High-risk location (${property.location})`, icon: '\u{1F3D4}' });
+    factors.push({
+      factor: 'location',
+      severity: 'high',
+      label: `High-risk location (${property.location})`,
+      icon: '\u{1F3D4}',
+    });
   } else if (locationScore >= 30) {
-    factors.push({ factor: 'location', severity: 'moderate', label: `Moderate-risk location (${property.location})`, icon: '\u{1F3D4}' });
+    factors.push({
+      factor: 'location',
+      severity: 'moderate',
+      label: `Moderate-risk location (${property.location})`,
+      icon: '\u{1F3D4}',
+    });
   }
 
   if (city.economicCondition === 'recession') {
@@ -262,7 +281,12 @@ function getRiskFactorBreakdown(property, city) {
   }
 
   if (property.type === 'commercial') {
-    factors.push({ factor: 'type', severity: 'moderate', label: 'Commercial property (economic sensitivity)', icon: '\u{1F3E2}' });
+    factors.push({
+      factor: 'type',
+      severity: 'moderate',
+      label: 'Commercial property (economic sensitivity)',
+      icon: '\u{1F3E2}',
+    });
   } else if (property.type === 'land') {
     factors.push({ factor: 'type', severity: 'moderate', label: 'Undeveloped land (speculative)', icon: '\u{1F3D4}' });
   }
