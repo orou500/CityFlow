@@ -28,10 +28,7 @@ export async function initSocketIO(httpServer) {
   if (isRedisConnected()) {
     try {
       const { default: Redis } = await import('ioredis');
-      const redisOpts = {
-        host: config.redis.host,
-        port: config.redis.port,
-        password: config.redis.password || undefined,
+      const opts = {
         maxRetriesPerRequest: null,
         lazyConnect: true,
         retryStrategy(times) {
@@ -39,8 +36,8 @@ export async function initSocketIO(httpServer) {
           return Math.min(times * 200, 2000);
         },
       };
-      pubClient = new Redis(redisOpts);
-      subClient = new Redis(redisOpts);
+      pubClient = config.redis.url ? new Redis(config.redis.url, opts) : new Redis({ ...opts, host: config.redis.host, port: config.redis.port, password: config.redis.password || undefined });
+      subClient = config.redis.url ? new Redis(config.redis.url, opts) : new Redis({ ...opts, host: config.redis.host, port: config.redis.port, password: config.redis.password || undefined });
       pubClient.on('error', (err) => console.warn('[SOCKET.IO] pubClient error:', err.message));
       subClient.on('error', (err) => console.warn('[SOCKET.IO] subClient error:', err.message));
 
@@ -53,8 +50,8 @@ export async function initSocketIO(httpServer) {
       console.log('[SOCKET.IO] Redis adapter connected');
     } catch (err) {
       console.warn('[SOCKET.IO] Redis adapter failed, using default adapter:', err.message);
-      if (pubClient) pubClient.disconnect().catch(() => {});
-      if (subClient) subClient.disconnect().catch(() => {});
+      try { if (pubClient) pubClient.disconnect(); } catch (_) {}
+      try { if (subClient) subClient.disconnect(); } catch (_) {}
       pubClient = null;
       subClient = null;
     }
