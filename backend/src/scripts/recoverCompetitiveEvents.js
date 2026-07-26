@@ -5,25 +5,50 @@ async function recoverCompetitiveEvents() {
   await mongoose.connect(config.mongodbUri);
   console.log('Connected to MongoDB');
 
-  const CompetitiveEvent = mongoose.model('CompetitiveEvent', new mongoose.Schema(
-    {
-      name: String, description: String, type: String, metric: String,
-      status: { type: String, enum: ['upcoming', 'active', 'completed'], default: 'upcoming' },
-      startDate: Date, endDate: Date, startTick: Number, endTick: Number,
-      minLevel: Number, maxParticipants: Number, participants: Array,
-      rewards: mongoose.Schema.Types.Mixed, snapshotInterval: Number,
-      lastSnapshotTick: Number, createdFromSeason: Number,
-    },
-    { timestamps: true },
-  ));
+  const CompetitiveEvent = mongoose.model(
+    'CompetitiveEvent',
+    new mongoose.Schema(
+      {
+        name: String,
+        description: String,
+        type: String,
+        metric: String,
+        status: { type: String, enum: ['upcoming', 'active', 'completed'], default: 'upcoming' },
+        startDate: Date,
+        endDate: Date,
+        startTick: Number,
+        endTick: Number,
+        minLevel: Number,
+        maxParticipants: Number,
+        participants: Array,
+        rewards: mongoose.Schema.Types.Mixed,
+        snapshotInterval: Number,
+        lastSnapshotTick: Number,
+        createdFromSeason: Number,
+      },
+      { timestamps: true },
+    ),
+  );
 
-  const Season = mongoose.model('Season', new mongoose.Schema({
-    number: Number, name: String, status: String, startDate: Date, endDate: Date,
-  }));
+  const Season = mongoose.model(
+    'Season',
+    new mongoose.Schema({
+      number: Number,
+      name: String,
+      status: String,
+      startDate: Date,
+      endDate: Date,
+    }),
+  );
 
-  const GameState = mongoose.model('GameState', new mongoose.Schema({
-    key: String, tickNumber: Number, lastTickAt: Date,
-  }));
+  const GameState = mongoose.model(
+    'GameState',
+    new mongoose.Schema({
+      key: String,
+      tickNumber: Number,
+      lastTickAt: Date,
+    }),
+  );
 
   const activeSeason = await Season.findOne({ status: 'active' });
   const seasonNumber = activeSeason ? activeSeason.number : 1;
@@ -38,7 +63,9 @@ async function recoverCompetitiveEvents() {
   console.log(`Total events this season: ${allEvents.length}\n`);
 
   for (const event of allEvents) {
-    console.log(`  [${event.status.padEnd(9)}] "${event.name}" tick ${event.startTick}->${event.endTick} (current: ${currentTick})`);
+    console.log(
+      `  [${event.status.padEnd(9)}] "${event.name}" tick ${event.startTick}->${event.endTick} (current: ${currentTick})`,
+    );
 
     let changed = false;
 
@@ -53,7 +80,9 @@ async function recoverCompetitiveEvents() {
       event.status = 'completed';
 
       const sorted = [...(event.participants || [])].sort((a, b) => (b.value || 0) - (a.value || 0));
-      sorted.forEach((p, i) => { p.rank = i + 1; });
+      sorted.forEach((p, i) => {
+        p.rank = i + 1;
+      });
       event.participants = sorted;
 
       const assignReward = (participant, tier) => {
@@ -89,9 +118,7 @@ async function recoverCompetitiveEvents() {
     }
   }
 
-  const counts = await CompetitiveEvent.aggregate([
-    { $group: { _id: '$status', count: { $sum: 1 } } },
-  ]);
+  const counts = await CompetitiveEvent.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]);
   console.log('\nEvent status distribution:');
   for (const c of counts) {
     console.log(`  ${c._id}: ${c.count}`);

@@ -236,7 +236,9 @@ export async function activateUpcomingEvents(tickNumber) {
     const totalUpcoming = await CompetitiveEvent.countDocuments({ status: 'upcoming' });
     if (totalUpcoming > 0) {
       const next = await CompetitiveEvent.findOne({ status: 'upcoming' }).sort({ startTick: 1 });
-      console.log(`[LEADERBOARD] Next upcoming event "${next?.name}" starts at tick ${next?.startTick} (current: ${tickNumber})`);
+      console.log(
+        `[LEADERBOARD] Next upcoming event "${next?.name}" starts at tick ${next?.startTick} (current: ${tickNumber})`,
+      );
     }
   }
 
@@ -714,7 +716,9 @@ export async function updateCompetitiveEventProgress(tickNumber) {
   }
 
   if (events.length > 0) {
-    console.log(`[LEADERBOARD] updateCompetitiveEventProgress: ${updatedCount}/${events.length} events updated at tick ${tickNumber}`);
+    console.log(
+      `[LEADERBOARD] updateCompetitiveEventProgress: ${updatedCount}/${events.length} events updated at tick ${tickNumber}`,
+    );
   }
 }
 
@@ -730,7 +734,9 @@ export async function finalizeExpiredEvents(tickNumber) {
     const activeCount = await CompetitiveEvent.countDocuments({ status: 'active' });
     if (activeCount > 0) {
       const earliest = await CompetitiveEvent.findOne({ status: 'active' }).sort({ endTick: 1 });
-      console.log(`[LEADERBOARD] No expired events. Earliest active "${earliest?.name}" ends at tick ${earliest?.endTick} (current: ${tickNumber})`);
+      console.log(
+        `[LEADERBOARD] No expired events. Earliest active "${earliest?.name}" ends at tick ${earliest?.endTick} (current: ${tickNumber})`,
+      );
     }
   }
 
