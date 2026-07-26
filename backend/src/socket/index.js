@@ -1,6 +1,6 @@
 import { Server } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
-import { getRedis, isRedisConnected } from '../config/redis.js';
+import { isRedisConnected } from '../config/redis.js';
 import { config } from '../config/index.js';
 import { SOCKET_EVENTS, companyRoom, userRoom } from './events.js';
 import { setOnline, setOffline, heartbeat } from '../utils/presence.js';
@@ -53,8 +53,8 @@ export async function initSocketIO(httpServer) {
       console.log('[SOCKET.IO] Redis adapter connected');
     } catch (err) {
       console.warn('[SOCKET.IO] Redis adapter failed, using default adapter:', err.message);
-      if (pubClient) { try { pubClient.disconnect(); } catch {} }
-      if (subClient) { try { subClient.disconnect(); } catch {} }
+      if (pubClient) pubClient.disconnect().catch(() => {});
+      if (subClient) subClient.disconnect().catch(() => {});
       pubClient = null;
       subClient = null;
     }
