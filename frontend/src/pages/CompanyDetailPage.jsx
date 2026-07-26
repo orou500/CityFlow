@@ -628,111 +628,118 @@ export default function CompanyDetailPage() {
             </div>
           )}
 
-          {company.levelBenefits && (() => {
-            const xpInLevel = company.xpInCurrentLevel ?? Math.max(0, (company.xp || 0) - (company.xpForCurrentLevel || 0));
-            const xpNeeded = company.xpNeededForLevel ?? Math.max(1, (company.xpToNextLevel || 500) - (company.xpForCurrentLevel || 0));
-            const progressPct = Math.min(100, (xpInLevel / xpNeeded) * 100);
-            return (
-            <div className="col-span-2 md:col-span-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('companies.progression')}</h3>
-                {company.level < 50 && (
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    {Math.round(xpInLevel)} / {Math.round(xpNeeded)} XP
-                  </span>
-                )}
-              </div>
+          {company.levelBenefits &&
+            (() => {
+              const xpInLevel =
+                company.xpInCurrentLevel ?? Math.max(0, (company.xp || 0) - (company.xpForCurrentLevel || 0));
+              const xpNeeded =
+                company.xpNeededForLevel ??
+                Math.max(1, (company.xpToNextLevel || 500) - (company.xpForCurrentLevel || 0));
+              const progressPct = Math.min(100, (xpInLevel / xpNeeded) * 100);
+              return (
+                <div className="col-span-2 md:col-span-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                      {t('companies.progression')}
+                    </h3>
+                    {company.level < 50 && (
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {Math.round(xpInLevel)} / {Math.round(xpNeeded)} XP
+                      </span>
+                    )}
+                  </div>
 
-              {company.level < 50 && (
-                <div className="mb-3">
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                    <div
-                      className="bg-gradient-to-r from-cyan-500 to-blue-500 h-3 rounded-full transition-all duration-500"
-                      style={{ width: `${progressPct}%` }}
-                    />
-                  </div>
-                  <div className="flex justify-between mt-1">
-                    <span className="text-[10px] text-gray-400">Lv.{company.level}</span>
-                    <span className="text-[10px] text-gray-400">
-                      {company.level < 50
-                        ? `${Math.round(progressPct)}%`
-                        : 'MAX'}
-                    </span>
-                    <span className="text-[10px] text-gray-400">Lv.{Math.min(50, company.level + 1)}</span>
-                  </div>
-                </div>
-              )}
+                  {company.level < 50 && (
+                    <div className="mb-3">
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                        <div
+                          className="bg-gradient-to-r from-cyan-500 to-blue-500 h-3 rounded-full transition-all duration-500"
+                          style={{ width: `${progressPct}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between mt-1">
+                        <span className="text-[10px] text-gray-400">Lv.{company.level}</span>
+                        <span className="text-[10px] text-gray-400">
+                          {company.level < 50 ? `${Math.round(progressPct)}%` : 'MAX'}
+                        </span>
+                        <span className="text-[10px] text-gray-400">Lv.{Math.min(50, company.level + 1)}</span>
+                      </div>
+                    </div>
+                  )}
 
-              {company.level >= 50 && (
-                <div className="mb-3 text-center">
-                  <span className="text-sm font-bold text-yellow-500 dark:text-yellow-400">
-                    {t('companies.maxLevel') || 'MAX LEVEL'}
-                  </span>
-                </div>
-              )}
+                  {company.level >= 50 && (
+                    <div className="mb-3 text-center">
+                      <span className="text-sm font-bold text-yellow-500 dark:text-yellow-400">
+                        {t('companies.maxLevel') || 'MAX LEVEL'}
+                      </span>
+                    </div>
+                  )}
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
-                <div className="text-center">
-                  <div className="text-xs text-gray-500 dark:text-gray-400">{t('companies.maxMembers')}</div>
-                  <div className="text-sm font-medium text-gray-900 dark:text-white">
-                    {company.levelBenefits.maxMembers}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
+                    <div className="text-center">
+                      <div className="text-xs text-gray-500 dark:text-gray-400">{t('companies.maxMembers')}</div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                        {company.levelBenefits.maxMembers}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs text-gray-500 dark:text-gray-400">{t('companies.maxLoanAmount')}</div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                        {formatMoney(company.levelBenefits.maxLoanAmount)}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {t('companies.loanInterestDiscount')}
+                      </div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                        {(company.levelBenefits.loanInterestDiscount * 100).toFixed(1)}%
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs text-gray-500 dark:text-gray-400">{t('companies.treasuryCapacity')}</div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                        {company.levelBenefits.treasuryCapacity === Infinity
+                          ? '∞'
+                          : formatMoney(company.levelBenefits.treasuryCapacity)}
+                      </div>
+                    </div>
+                    {company.levelBenefits.canTakeContracts && (
+                      <div className="text-center">
+                        <div className="text-xs text-green-600 dark:text-green-400">
+                          ✓ {t('companies.contracts') || 'Contracts'}
+                        </div>
+                        <div className="text-xs text-gray-400">Lv.3+</div>
+                      </div>
+                    )}
+                    {company.levelBenefits.canStartProjects && (
+                      <div className="text-center">
+                        <div className="text-xs text-green-600 dark:text-green-400">
+                          ✓ {t('companies.projects') || 'Projects'}
+                        </div>
+                        <div className="text-xs text-gray-400">Lv.5+</div>
+                      </div>
+                    )}
+                    {company.levelBenefits.premiumContracts && (
+                      <div className="text-center">
+                        <div className="text-xs text-green-600 dark:text-green-400">
+                          ✓ {t('companies.premiumContracts') || 'Premium'}
+                        </div>
+                        <div className="text-xs text-gray-400">Lv.10+</div>
+                      </div>
+                    )}
+                    {company.levelBenefits.advancedGovernance && (
+                      <div className="text-center">
+                        <div className="text-xs text-green-600 dark:text-green-400">
+                          ✓ {t('companies.advancedGovernance') || 'Gov+'}
+                        </div>
+                        <div className="text-xs text-gray-400">Lv.15+</div>
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div className="text-center">
-                  <div className="text-xs text-gray-500 dark:text-gray-400">{t('companies.maxLoanAmount')}</div>
-                  <div className="text-sm font-medium text-gray-900 dark:text-white">
-                    {formatMoney(company.levelBenefits.maxLoanAmount)}
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-xs text-gray-500 dark:text-gray-400">{t('companies.loanInterestDiscount')}</div>
-                  <div className="text-sm font-medium text-gray-900 dark:text-white">
-                    {(company.levelBenefits.loanInterestDiscount * 100).toFixed(1)}%
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-xs text-gray-500 dark:text-gray-400">{t('companies.treasuryCapacity')}</div>
-                  <div className="text-sm font-medium text-gray-900 dark:text-white">
-                    {company.levelBenefits.treasuryCapacity === Infinity
-                      ? '∞'
-                      : formatMoney(company.levelBenefits.treasuryCapacity)}
-                  </div>
-                </div>
-                {company.levelBenefits.canTakeContracts && (
-                  <div className="text-center">
-                    <div className="text-xs text-green-600 dark:text-green-400">
-                      ✓ {t('companies.contracts') || 'Contracts'}
-                    </div>
-                    <div className="text-xs text-gray-400">Lv.3+</div>
-                  </div>
-                )}
-                {company.levelBenefits.canStartProjects && (
-                  <div className="text-center">
-                    <div className="text-xs text-green-600 dark:text-green-400">
-                      ✓ {t('companies.projects') || 'Projects'}
-                    </div>
-                    <div className="text-xs text-gray-400">Lv.5+</div>
-                  </div>
-                )}
-                {company.levelBenefits.premiumContracts && (
-                  <div className="text-center">
-                    <div className="text-xs text-green-600 dark:text-green-400">
-                      ✓ {t('companies.premiumContracts') || 'Premium'}
-                    </div>
-                    <div className="text-xs text-gray-400">Lv.10+</div>
-                  </div>
-                )}
-                {company.levelBenefits.advancedGovernance && (
-                  <div className="text-center">
-                    <div className="text-xs text-green-600 dark:text-green-400">
-                      ✓ {t('companies.advancedGovernance') || 'Gov+'}
-                    </div>
-                    <div className="text-xs text-gray-400">Lv.15+</div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )})()}
+              );
+            })()}
 
           {(loanRequests.some((r) => r.status === 'pending') ||
             propertyPurchaseRequests.some((r) => r.status === 'pending')) && (
