@@ -74,6 +74,16 @@ const userSchema = new mongoose.Schema(
       totalConstructionStarted: { type: Number, default: 0 },
       totalSeasonsCompleted: { type: Number, default: 0 },
     },
+    supporter: {
+      badge: { type: String, enum: ['none', 'supporter', 'early_supporter', 'founding_supporter'], default: 'none' },
+      title: { type: String, default: '' },
+      isAnonymous: { type: Boolean, default: false },
+    },
+    donationStats: {
+      totalDonated: { type: Number, default: 0 },
+      donorSince: { type: Date, default: null },
+      donationCount: { type: Number, default: 0 },
+    },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } },
 );

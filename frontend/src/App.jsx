@@ -28,6 +28,8 @@ import PrivacyPage from './pages/PrivacyPage';
 import CookiesPage from './pages/CookiesPage';
 import SeasonHistoryPage from './pages/SeasonHistoryPage';
 import ContributorsPage from './pages/ContributorsPage';
+import DonationsPage from './pages/DonationsPage';
+import SupporterRecognitionPage from './pages/SupporterRecognitionPage';
 import MaintenancePage from './pages/MaintenancePage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
@@ -277,6 +279,8 @@ function AppRoutes() {
       <Route path="/events" element={<CompetitiveEventsPage />} />
       <Route path="/seasons" element={<SeasonHistoryPage />} />
       <Route path="/contributors" element={<ContributorsPage />} />
+      <Route path="/donate" element={<DonationsPage />} />
+      <Route path="/supporters" element={<SupporterRecognitionPage />} />
       <Route
         path="/real-estate-companies"
         element={

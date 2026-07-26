@@ -25,7 +25,8 @@
     "stocks": "Stocks",
     "leaderboards": "Leaderboards",
     "events": "Events",
-    "companies": "Companies"
+    "companies": "Companies",
+    "donate": "Donate"
   },
   "map": {
     "title": "World Map",
@@ -2014,5 +2015,39 @@
       "high": "High",
       "veryHigh": "Very High"
     }
+  },
+  "donations": {
+    "title": "Support CityFlow",
+    "subtitle": "Help us keep the servers running and continue developing new features.",
+    "whyDonate": "Why Donate?",
+    "serverHosting": "Server hosting and infrastructure costs",
+    "databaseCosts": "Database and data storage costs",
+    "developmentTime": "Development time and new features",
+    "infrastructure": "Infrastructure scaling and performance",
+    "communityFeatures": "Community features and Discord bot",
+    "rewards": "Supporter Rewards",
+    "rewardBadge": "Exclusive supporter badge on your profile",
+    "rewardTitle": "Unique cosmetic title",
+    "rewardProfile": "Profile customization options",
+    "rewardRecognition": "Recognition on the supporters page",
+    "noPayToWin": "Donations are cosmetic only — no gameplay advantages are ever granted.",
+    "selectAmount": "Select Donation Amount",
+    "custom": "Custom",
+    "donate": "Donate",
+    "processing": "Processing...",
+    "minimumError": "Minimum donation is $5 USD",
+    "success": "Thank you for supporting CityFlow!",
+    "terms": "By donating, you agree that donations are non-refundable and support the ongoing development of CityFlow.",
+    "history": "Donation History",
+    "statusPending": "Pending",
+    "statusCompleted": "Completed",
+    "statusFailed": "Failed",
+    "statusRefunded": "Refunded",
+    "anonymousDonation": "Donate anonymously (hide from public list)",
+    "notConfigured": "PayPal is not configured yet. Donations are currently unavailable.",
+    "supporters": "Supporters",
+    "supportersDescription": "Thank you to everyone who supports CityFlow development!",
+    "totalRaised": "Total Raised",
+    "noSupporters": "No supporters yet. Be the first!"
   }
 }

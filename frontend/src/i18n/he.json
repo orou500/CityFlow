@@ -25,7 +25,8 @@
     "stocks": "בורסה",
     "leaderboards": "טבלאות מובילים",
     "events": "אירועים",
-    "companies": "חברות"
+    "companies": "חברות",
+    "donate": "תרומות"
   },
   "map": {
     "title": "מפת העולם",
@@ -2005,5 +2006,39 @@
       "high": "גבוה",
       "veryHigh": "גבוה מאוד"
     }
+  },
+  "donations": {
+    "title": "תמכו ב-CityFlow",
+    "subtitle": "עזרו לנו לשמור על השרתים פועלים ולהמשיך לפתח תכונות חדשות.",
+    "whyDonate": "למה לתרום?",
+    "serverHosting": "עלויות אחסון שרתים ותשתית",
+    "databaseCosts": "עלויות מסד נתונים ואחסון",
+    "developmentTime": "זמן פיתוח ותכונות חדשות",
+    "infrastructure": "הרחבת תשתית וביצועים",
+    "communityFeatures": "תכונות קהילתיות ובוט דיסקורד",
+    "rewards": "פרסים לתומכים",
+    "rewardBadge": "תג תומך ייחודי בפרופיל שלך",
+    "rewardTitle": "תואר קוסמטי ייחודי",
+    "rewardProfile": "אפשרויות עיצוב פרופיל",
+    "rewardRecognition": "הכרה בדף התומכים",
+    "noPayToWin": "התרומות הן קוסמטיות בלבד — אין יתרונות משחק.",
+    "selectAmount": "בחר סכום תרומה",
+    "custom": "מותאם אישית",
+    "donate": "תרום",
+    "processing": "מעבד...",
+    "minimumError": "תרומה מינימלית היא $5 דולר",
+    "success": "תודה שתמכתם ב-CityFlow!",
+    "terms": "בתרומה, אתה מסכים שתרומות אינן ניתנות להחזר ותומכות בפיתוח השוטף של CityFlow.",
+    "history": "היסטוריית תרומות",
+    "statusPending": "ממתין",
+    "statusCompleted": "הושלם",
+    "statusFailed": "נכשל",
+    "statusRefunded": "הוחזר",
+    "anonymousDonation": "תרום בעילום שם (הסתר מהרשימה הציבורית)",
+    "notConfigured": "PayPal עדיין לא מוגדר. תרומות לא זמינות כרגע.",
+    "supporters": "תומכים",
+    "supportersDescription": "תודה לכל מי שתומך בפיתוח CityFlow!",
+    "totalRaised": "סך הכל נתרם",
+    "noSupporters": "עדיין אין תומכים. היה הראשון!"
   }
 }
