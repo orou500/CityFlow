@@ -1,5 +1,12 @@
 import { useEffect, useRef } from 'react';
-import { connectSocket, disconnectSocket, onSocketEvent, sendHeartbeat, joinCompanyRoom, leaveCompanyRoom } from '../utils/socket';
+import {
+  connectSocket,
+  disconnectSocket,
+  onSocketEvent,
+  sendHeartbeat,
+  joinCompanyRoom,
+  leaveCompanyRoom,
+} from '../utils/socket';
 import { useAuthStore } from '../store/useAuthStore';
 
 const HEARTBEAT_INTERVAL = 20000;

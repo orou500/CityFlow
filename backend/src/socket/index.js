@@ -28,7 +28,11 @@ export async function initSocketIO(httpServer) {
   if (isRedisConnected()) {
     try {
       const { default: Redis } = await import('ioredis');
-      const redisOpts = { host: config.redis.host, port: config.redis.port, password: config.redis.password || undefined };
+      const redisOpts = {
+        host: config.redis.host,
+        port: config.redis.port,
+        password: config.redis.password || undefined,
+      };
       pubClient = new Redis(redisOpts);
       subClient = new Redis(redisOpts);
       io.adapter(createAdapter(pubClient, subClient));
