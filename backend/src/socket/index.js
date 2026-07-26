@@ -32,13 +32,31 @@ export async function initSocketIO(httpServer) {
         host: config.redis.host,
         port: config.redis.port,
         password: config.redis.password || undefined,
+        maxRetriesPerRequest: null,
+        lazyConnect: true,
+        retryStrategy(times) {
+          if (times > 5) return null;
+          return Math.min(times * 200, 2000);
+        },
       };
       pubClient = new Redis(redisOpts);
       subClient = new Redis(redisOpts);
+      pubClient.on('error', (err) => console.warn('[SOCKET.IO] pubClient error:', err.message));
+      subClient.on('error', (err) => console.warn('[SOCKET.IO] subClient error:', err.message));
+
+      await Promise.race([
+        Promise.all([pubClient.connect(), subClient.connect()]),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000)),
+      ]);
+
       io.adapter(createAdapter(pubClient, subClient));
       console.log('[SOCKET.IO] Redis adapter connected');
     } catch (err) {
       console.warn('[SOCKET.IO] Redis adapter failed, using default adapter:', err.message);
+      if (pubClient) { try { pubClient.disconnect(); } catch {} }
+      if (subClient) { try { subClient.disconnect(); } catch {} }
+      pubClient = null;
+      subClient = null;
     }
   } else {
     console.log('[SOCKET.IO] Redis not available, using in-memory adapter');
