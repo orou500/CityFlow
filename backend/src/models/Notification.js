@@ -14,6 +14,7 @@ const notificationSchema = new mongoose.Schema(
         'construction_complete',
         'friend_request',
         'system',
+        'company_vote',
       ],
       required: true,
     },

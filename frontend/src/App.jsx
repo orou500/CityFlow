@@ -41,6 +41,8 @@ import StockPortfolio from './pages/StockPortfolio';
 import IndexPage from './pages/IndexPage';
 import LeaderboardPage from './pages/LeaderboardPage';
 import CompetitiveEventsPage from './pages/CompetitiveEventsPage';
+import CompaniesListPage from './pages/CompaniesListPage';
+import CompanyDetailPage from './pages/CompanyDetailPage';
 import { useEffect } from 'react';
 import { useAuthStore } from './store/useAuthStore';
 import { useGameStore } from './store/useGameStore';
@@ -275,6 +277,26 @@ function AppRoutes() {
       <Route path="/events" element={<CompetitiveEventsPage />} />
       <Route path="/seasons" element={<SeasonHistoryPage />} />
       <Route path="/contributors" element={<ContributorsPage />} />
+      <Route
+        path="/real-estate-companies"
+        element={
+          <ErrorBoundary>
+            <ProtectedRoute>
+              <CompaniesListPage />
+            </ProtectedRoute>
+          </ErrorBoundary>
+        }
+      />
+      <Route
+        path="/real-estate-companies/:id"
+        element={
+          <ErrorBoundary>
+            <ProtectedRoute>
+              <CompanyDetailPage />
+            </ProtectedRoute>
+          </ErrorBoundary>
+        }
+      />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />

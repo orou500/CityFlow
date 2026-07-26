@@ -12,6 +12,7 @@ const TYPE_CONFIG = {
   offer_expired: { icon: '⏰', color: 'text-gray-500', route: '/marketplace' },
   construction_complete: { icon: '🏗️', color: 'text-blue-500', route: '/development' },
   friend_request: { icon: '👤', color: 'text-blue-500', route: '/friends' },
+  company_vote: { icon: '🏢', color: 'text-purple-500' },
 };
 
 function timeAgo(dateStr, t) {
@@ -54,6 +55,10 @@ export default function NotificationsPage() {
       await fetchUnreadCount();
     }
     const cfg = TYPE_CONFIG[notification.type];
+    if (notification.type === 'company_vote' && notification.relatedId) {
+      navigate(`/real-estate-companies/${notification.relatedId}`);
+      return;
+    }
     if (cfg?.route) navigate(cfg.route);
   };
 

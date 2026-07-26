@@ -14,10 +14,20 @@ export async function processPropertyManagement(currentTick) {
     ownerId: { $ne: null },
   }).populate('cityId', 'demandIndex supplyIndex growthRate');
 
+  const ownerIds = [...new Set(properties.map((p) => p.ownerId?.toString()).filter(Boolean))];
+  let deletedOwnerIds = new Set();
+  if (ownerIds.length > 0) {
+    const ownerDocs = await User.find({ _id: { $in: ownerIds }, deletedAt: { $ne: null } })
+      .select('_id')
+      .lean();
+    deletedOwnerIds = new Set(ownerDocs.map((u) => u._id.toString()));
+  }
+
   const cityCache = new Map();
 
   for (const property of properties) {
     try {
+      if (deletedOwnerIds.has(property.ownerId?.toString())) continue;
       const city = property.cityId;
       if (!city || typeof city === 'string') continue;
 

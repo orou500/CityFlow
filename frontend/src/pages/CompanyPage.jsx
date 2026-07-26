@@ -113,9 +113,9 @@ export default function CompanyPage() {
   const priceChangeColor = company.dayChangePercent >= 0 ? 'text-green-500' : 'text-red-500';
 
   return (
-    <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
+    <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6 overflow-hidden">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           <span className="text-3xl">{INDUSTRY_ICONS[company.industry]}</span>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{company.name}</h1>
@@ -310,7 +310,7 @@ export default function CompanyPage() {
         </div>
       </div>
 
-      <div className="flex gap-1 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex gap-1 overflow-x-auto border-b border-gray-200 dark:border-gray-700">
         {['overview', 'history', 'events'].map((t2) => (
           <button
             key={t2}

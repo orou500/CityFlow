@@ -5,12 +5,21 @@ import Transaction from '../models/Transaction.js';
 import LeaderboardSnapshot from '../models/LeaderboardSnapshot.js';
 import CompetitiveEvent from '../models/CompetitiveEvent.js';
 import Season from '../models/Season.js';
+import RealEstateCompany from '../models/RealEstateCompany.js';
 import { sendDiscordNotification } from '../services/discordBot.js';
 
 const CATEGORIES = ['netWorth', 'properties', 'passiveIncome', 'dealVolume', 'cityInfluence'];
+const COMPANY_CATEGORIES = [
+  'companyNetWorth',
+  'companyProperties',
+  'companyIncome',
+  'companyReputation',
+  'companyGrowth',
+];
 
 const UPCOMING_LEAD_TICKS = 12;
 const COMPLETED_RETENTION_TICKS = 28;
+const TICK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 const EVENT_TEMPLATES = [
   {
@@ -170,8 +179,8 @@ export async function generateCompetitiveEvents(tickNumber) {
     type: template.type,
     metric: template.metric,
     status: 'upcoming',
-    startDate: new Date(),
-    endDate: new Date(Date.now() + template.durationTicks * 30000),
+    startDate: new Date(Date.now() + UPCOMING_LEAD_TICKS * TICK_INTERVAL_MS),
+    endDate: new Date(Date.now() + (UPCOMING_LEAD_TICKS + template.durationTicks) * TICK_INTERVAL_MS),
     startTick,
     endTick,
     rewards: template.rewards,
@@ -451,6 +460,103 @@ async function computeCityInfluenceRankings() {
   return scored;
 }
 
+async function computeCompanyNetWorth() {
+  const companies = await RealEstateCompany.find({ active: true })
+    .populate('founderId', 'username displayName avatar')
+    .select('name logo founderId stats reputation level');
+
+  const companyIds = companies.map((c) => c._id);
+  const properties =
+    companyIds.length > 0
+      ? await Property.find({ companyId: { $in: companyIds } }).select('companyId currentPrice')
+      : [];
+
+  const propertyValueMap = new Map();
+  for (const p of properties) {
+    const key = p.companyId?.toString();
+    if (key) propertyValueMap.set(key, (propertyValueMap.get(key) || 0) + (p.currentPrice || 0));
+  }
+
+  return companies
+    .map((c) => {
+      const propertyValue = propertyValueMap.get(c._id.toString()) || 0;
+      const netWorth = (c.treasury?.balance || 0) + propertyValue;
+      return {
+        companyId: c._id,
+        username: c.name,
+        displayName: c.name,
+        avatar: c.logo || '',
+        value: netWorth,
+      };
+    })
+    .filter((r) => r.value > 0)
+    .sort((a, b) => b.value - a.value);
+}
+
+async function computeCompanyProperties() {
+  const companies = await RealEstateCompany.find({ active: true }).select('name logo stats');
+
+  return companies
+    .map((c) => ({
+      companyId: c._id,
+      username: c.name,
+      displayName: c.name,
+      avatar: c.logo || '',
+      value: c.stats?.propertiesOwned || 0,
+    }))
+    .filter((r) => r.value > 0)
+    .sort((a, b) => b.value - a.value);
+}
+
+async function computeCompanyIncome() {
+  const companies = await RealEstateCompany.find({ active: true }).select('name logo stats');
+
+  return companies
+    .map((c) => ({
+      companyId: c._id,
+      username: c.name,
+      displayName: c.name,
+      avatar: c.logo || '',
+      value: c.stats?.totalRentalIncome || 0,
+    }))
+    .filter((r) => r.value > 0)
+    .sort((a, b) => b.value - a.value);
+}
+
+async function computeCompanyReputation() {
+  const companies = await RealEstateCompany.find({ active: true }).select('name logo reputation');
+
+  return companies
+    .map((c) => ({
+      companyId: c._id,
+      username: c.name,
+      displayName: c.name,
+      avatar: c.logo || '',
+      value: c.reputation || 0,
+    }))
+    .filter((r) => r.value > 0)
+    .sort((a, b) => b.value - a.value);
+}
+
+async function computeCompanyGrowth() {
+  const companies = await RealEstateCompany.find({ active: true }).select('name logo level xp reputation stats');
+
+  return companies
+    .map((c) => {
+      const growthScore =
+        (c.level - 1) * 100 + (c.xp || 0) * 0.1 + (c.reputation || 0) * 0.5 + (c.stats?.propertiesOwned || 0) * 50;
+      return {
+        companyId: c._id,
+        username: c.name,
+        displayName: c.name,
+        avatar: c.logo || '',
+        value: Math.round(growthScore),
+      };
+    })
+    .filter((r) => r.value > 0)
+    .sort((a, b) => b.value - a.value);
+}
+
 async function getPreviousSnapshot(category, currentTick) {
   return LeaderboardSnapshot.findOne({
     category,
@@ -490,11 +596,17 @@ export async function computeLeaderboards(currentTick) {
     passiveIncome: computePassiveIncomeRankings,
     dealVolume: computeDealVolumeRankings,
     cityInfluence: computeCityInfluenceRankings,
+    companyNetWorth: computeCompanyNetWorth,
+    companyProperties: computeCompanyProperties,
+    companyIncome: computeCompanyIncome,
+    companyReputation: computeCompanyReputation,
+    companyGrowth: computeCompanyGrowth,
   };
 
+  const allCategories = [...CATEGORIES, ...COMPANY_CATEGORIES];
   const snapshots = [];
 
-  for (const category of CATEGORIES) {
+  for (const category of allCategories) {
     try {
       const rawRankings = await computeFns[category]();
       const previousSnapshot = await getPreviousSnapshot(category, currentTick);

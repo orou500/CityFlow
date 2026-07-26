@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import Property from '../models/Property.js';
 import GameState from '../models/GameState.js';
+import RealEstateCompany from '../models/RealEstateCompany.js';
 import {
   MAINTENANCE_TIERS,
   RENT_BOUNDS,
@@ -11,6 +12,22 @@ import {
 } from '../config/propertyManagement.js';
 
 const router = Router();
+
+async function isAuthorizedForProperty(property, userId) {
+  if (property.ownerId && property.ownerId.toString() === userId.toString()) {
+    return true;
+  }
+  if (property.companyId) {
+    const company = await RealEstateCompany.findById(property.companyId);
+    if (company) {
+      const member = company.members.find((m) => m.userId?.toString() === userId.toString());
+      if (member && ['ceo', 'director'].includes(member.role)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
 
 router.get('/:propertyId', authenticate, async (req, res) => {
   try {
@@ -23,7 +40,7 @@ router.get('/:propertyId', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Property not found' });
     }
 
-    if (!property.ownerId || property.ownerId.toString() !== req.user.id) {
+    if (!(await isAuthorizedForProperty(property, req.user._id))) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
@@ -88,7 +105,7 @@ router.get('/:propertyId/history', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Property not found' });
     }
 
-    if (!property.ownerId || property.ownerId.toString() !== req.user.id) {
+    if (!(await isAuthorizedForProperty(property, req.user._id))) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
@@ -114,7 +131,7 @@ router.post('/:propertyId/rent', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Property not found' });
     }
 
-    if (!property.ownerId || property.ownerId.toString() !== req.user.id) {
+    if (!(await isAuthorizedForProperty(property, req.user._id))) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
@@ -164,7 +181,7 @@ router.post('/:propertyId/maintenance', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Property not found' });
     }
 
-    if (!property.ownerId || property.ownerId.toString() !== req.user.id) {
+    if (!(await isAuthorizedForProperty(property, req.user._id))) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 

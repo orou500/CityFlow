@@ -36,6 +36,7 @@ const competitiveEventSchema = new mongoose.Schema(
         'passiveIncome',
         'cityInfluence',
         'dealVolume',
+        'biggestDeal',
       ],
       required: true,
     },

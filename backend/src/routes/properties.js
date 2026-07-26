@@ -6,6 +6,7 @@ import Transaction from '../models/Transaction.js';
 import Notification from '../models/Notification.js';
 import { authenticate } from '../middleware/auth.js';
 import { awardXp } from '../utils/leveling.js';
+import { collectOperatingFee } from '../utils/companyFees.js';
 import {
   GRADE_NAMES,
   MAX_GRADE,
@@ -222,6 +223,8 @@ router.post('/buy', authenticate, async (req, res) => {
     buyer.ownedProperties.push(property._id);
     await buyer.save();
 
+    collectOperatingFee(buyer._id, price, 'property_purchase');
+
     property.ownerId = buyer._id;
     property.forSale = false;
     property.lastPurchasePrice = price;
@@ -288,6 +291,8 @@ router.post('/sell', authenticate, async (req, res) => {
     seller.balance += salePrice;
     seller.ownedProperties = seller.ownedProperties.filter((p) => p.toString() !== propertyId);
     await seller.save();
+
+    collectOperatingFee(seller._id, salePrice, 'property_sale');
 
     property.ownerId = null;
     property.forSale = true;
@@ -394,6 +399,8 @@ router.post('/grade/upgrade', authenticate, async (req, res) => {
 
     user.balance -= cost;
     await user.save();
+
+    collectOperatingFee(user._id, cost, 'property_upgrade');
 
     const newGrade = currentGrade + 1;
     const oneTimeBoost = 0.01;

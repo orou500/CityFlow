@@ -1,4 +1,4 @@
-﻿import { Router } from 'express';
+import { Router } from 'express';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
@@ -336,8 +336,13 @@ router.post('/restore-account', async (req, res) => {
       return res.status(400).json({ error: 'Invalid restore token' });
     }
 
-    const user = await User.findOne({ _id: decoded.userId, deletedAt: { $ne: null } });
-    if (!user) return res.status(404).json({ error: 'No deleted account found' });
+    const user = await User.findById(decoded.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    if (!user.deletedAt) {
+      const token = generateToken(user._id);
+      return res.json({ token, user });
+    }
 
     const deletedAgo = Date.now() - user.deletedAt.getTime();
     if (deletedAgo > 24 * 60 * 60 * 1000) {

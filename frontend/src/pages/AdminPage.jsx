@@ -81,6 +81,7 @@ export default function AdminPage() {
     adminUsers,
     adminProperties,
     adminEvents,
+    adminCompanies,
     fetchAdminOverview,
     fetchAdminTicks,
     runTicks,
@@ -115,6 +116,12 @@ export default function AdminPage() {
     restoreBackup,
     deleteBackup,
     uploadBackupFile,
+    fetchAdminCompanies,
+    fetchAdminCompany,
+    updateAdminCompany,
+    deleteAdminCompany,
+    updateAdminCompanyMemberRole,
+    removeAdminCompanyMember,
   } = useGameStore();
 
   const [tab, setTab] = useState('overview');
@@ -137,6 +144,12 @@ export default function AdminPage() {
   const [newEventDuration, setNewEventDuration] = useState(3);
   const [newEventCities, setNewEventCities] = useState('');
   const [eventError, setEventError] = useState(null);
+
+  const [companySearch, setCompanySearch] = useState('');
+  const [selectedCompany, setSelectedCompany] = useState(null);
+  const [companyDetail, setCompanyDetail] = useState(null);
+  const [companyEdit, setCompanyEdit] = useState(null);
+  const [companyLoading, setCompanyLoading] = useState(false);
 
   const [editPropId, setEditPropId] = useState(null);
   const [editPropData, setEditPropData] = useState({});
@@ -207,6 +220,7 @@ export default function AdminPage() {
         fetchAdminProperties(),
         fetchAdminEvents(),
         fetchCities(),
+        fetchAdminCompanies(),
       ]);
       const info = await fetchAdminTicks();
       setTickInfo(info);
@@ -586,6 +600,9 @@ export default function AdminPage() {
         </TabButton>
         <TabButton active={tab === 'events'} onClick={() => setTab('events')}>
           {t('admin.events')}
+        </TabButton>
+        <TabButton active={tab === 'companies'} onClick={() => setTab('companies')}>
+          {t('admin.companies')}
         </TabButton>
         <TabButton active={tab === 'seasons'} onClick={() => setTab('seasons')}>
           {t('admin.seasons')}
@@ -1477,6 +1494,242 @@ export default function AdminPage() {
               </>
             );
           })()}
+        </div>
+      )}
+
+      {tab === 'companies' && (
+        <div className="space-y-6">
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('admin.companies')}</h3>
+              <input
+                value={companySearch}
+                onChange={(e) => setCompanySearch(e.target.value)}
+                placeholder={t('admin.searchCompanies')}
+                className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              />
+            </div>
+            {(() => {
+              const filtered = (adminCompanies || []).filter((c) => {
+                const term = companySearch.toLowerCase();
+                return c.name?.toLowerCase().includes(term) || c.founderId?.username?.toLowerCase().includes(term);
+              });
+              return (
+                <Table
+                  headers={[
+                    { key: 'name', label: t('admin.companyName') },
+                    { key: 'founder', label: t('admin.companyFounder') },
+                    { key: 'level', label: t('admin.companyLevel') },
+                    { key: 'members', label: t('admin.companyMembers') },
+                    { key: 'treasury', label: t('admin.companyTreasury') },
+                    { key: 'actions', label: t('admin.actions') },
+                  ]}
+                  rows={filtered}
+                  renderRow={(c) => (
+                    <>
+                      <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">{c.name}</td>
+                      <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
+                        {c.founderId?.username || 'Unknown'}
+                      </td>
+                      <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{c.level}</td>
+                      <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
+                        {c.members?.length || 0}/{c.maxMembers}
+                      </td>
+                      <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
+                        {formatMoney(c.treasury?.balance || 0)}
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={async () => {
+                              setCompanyLoading(true);
+                              const detail = await fetchAdminCompany(c._id);
+                              setCompanyDetail(detail);
+                              setCompanyEdit({
+                                name: detail.name,
+                                description: detail.description,
+                                reputation: detail.reputation,
+                                level: detail.level,
+                                treasuryBalance: detail.treasury?.balance || 0,
+                                maxMembers: detail.maxMembers,
+                              });
+                              setCompanyLoading(false);
+                            }}
+                            className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                          >
+                            {t('admin.editCompany')}
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (!window.confirm(t('admin.confirmDisbandCompany', { name: c.name }))) return;
+                              await deleteAdminCompany(c._id);
+                              fetchAdminCompanies();
+                            }}
+                            className="text-xs text-red-600 dark:text-red-400 hover:underline"
+                          >
+                            {t('admin.disbandCompany')}
+                          </button>
+                        </div>
+                      </td>
+                    </>
+                  )}
+                />
+              );
+            })()}
+          </div>
+
+          {companyDetail && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                  {t('admin.editCompany')}: {companyDetail.name}
+                </h3>
+                <button
+                  onClick={() => {
+                    setCompanyDetail(null);
+                    setCompanyEdit(null);
+                  }}
+                  className="text-xs text-gray-500 dark:text-gray-400 hover:underline"
+                >
+                  {t('common.close')}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">
+                    {t('admin.companyName')}
+                  </label>
+                  <input
+                    value={companyEdit?.name || ''}
+                    onChange={(e) => setCompanyEdit((prev) => ({ ...prev, name: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">
+                    {t('admin.companyLevel')}
+                  </label>
+                  <input
+                    type="number"
+                    value={companyEdit?.level || ''}
+                    onChange={(e) => setCompanyEdit((prev) => ({ ...prev, level: Number(e.target.value) }))}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">
+                    {t('admin.companyReputation')}
+                  </label>
+                  <input
+                    type="number"
+                    value={companyEdit?.reputation || ''}
+                    onChange={(e) => setCompanyEdit((prev) => ({ ...prev, reputation: Number(e.target.value) }))}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">
+                    {t('admin.companyTreasury')}
+                  </label>
+                  <input
+                    type="number"
+                    value={companyEdit?.treasuryBalance || ''}
+                    onChange={(e) => setCompanyEdit((prev) => ({ ...prev, treasuryBalance: Number(e.target.value) }))}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">
+                    {t('admin.companyMaxMembers')}
+                  </label>
+                  <input
+                    type="number"
+                    value={companyEdit?.maxMembers || ''}
+                    onChange={(e) => setCompanyEdit((prev) => ({ ...prev, maxMembers: Number(e.target.value) }))}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">
+                  {t('admin.companyDescription')}
+                </label>
+                <textarea
+                  value={companyEdit?.description || ''}
+                  onChange={(e) => setCompanyEdit((prev) => ({ ...prev, description: e.target.value }))}
+                  rows={2}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={async () => {
+                    await updateAdminCompany(companyDetail._id, companyEdit);
+                    fetchAdminCompanies();
+                    setCompanyDetail(null);
+                    setCompanyEdit(null);
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+                >
+                  {t('common.save')}
+                </button>
+              </div>
+
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <h4 className="text-xs font-semibold text-gray-900 dark:text-white mb-2">
+                  {t('admin.companyMembers')}
+                </h4>
+                <div className="space-y-2">
+                  {(companyDetail.members || []).map((m) => {
+                    const memberUser = m.userId;
+                    const uid = memberUser?._id || memberUser;
+                    return (
+                      <div
+                        key={uid}
+                        className="flex items-center justify-between bg-gray-50 dark:bg-gray-700/50 rounded p-2"
+                      >
+                        <div className="text-sm text-gray-900 dark:text-white">
+                          {typeof memberUser === 'object' ? memberUser.username : 'Unknown'} · {m.role}
+                        </div>
+                        <div className="flex gap-2">
+                          <select
+                            value={m.role}
+                            onChange={async (e) => {
+                              await updateAdminCompanyMemberRole(companyDetail._id, uid, e.target.value);
+                              const detail = await fetchAdminCompany(companyDetail._id);
+                              setCompanyDetail(detail);
+                            }}
+                            className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                          >
+                            <option value="ceo">CEO</option>
+                            <option value="director">Director</option>
+                            <option value="officer">Officer</option>
+                            <option value="member">Member</option>
+                            <option value="recruit">Recruit</option>
+                          </select>
+                          <button
+                            onClick={async () => {
+                              if (!window.confirm(t('admin.confirmRemoveMember'))) return;
+                              await removeAdminCompanyMember(companyDetail._id, uid);
+                              const detail = await fetchAdminCompany(companyDetail._id);
+                              setCompanyDetail(detail);
+                              fetchAdminCompanies();
+                            }}
+                            className="text-xs text-red-600 dark:text-red-400 hover:underline px-2"
+                          >
+                            {t('common.remove')}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 const constructionProjectSchema = new mongoose.Schema(
   {
     ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'RealEstateCompany', default: null },
     landId: { type: mongoose.Schema.Types.ObjectId, ref: 'Property', required: true },
     cityId: { type: mongoose.Schema.Types.ObjectId, ref: 'City', required: true },
     projectType: { type: String, required: true },

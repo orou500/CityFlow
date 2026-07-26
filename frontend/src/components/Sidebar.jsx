@@ -91,6 +91,7 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
     { to: '/dashboard', icon: '\uD83D\uDCCA', label: t('nav.portfolio'), tour: 'dashboard' },
     { to: '/leaderboards', icon: '\uD83C\uDFC6', label: t('nav.leaderboards'), tour: 'leaderboards' },
     { to: '/events', icon: '\uD83C\uDFAF', label: t('nav.events'), tour: 'events' },
+    { to: '/real-estate-companies', icon: '\uD83C\uDFE2', label: t('nav.companies'), tour: 'companies' },
   ];
 
   const userMenuItems = [

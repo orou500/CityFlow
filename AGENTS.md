@@ -1,0 +1,374 @@
+# CityFlow AI Development Guide
+
+## Project Overview
+
+CityFlow is a multiplayer real estate simulation game.
+
+Players:
+
+- Buy properties
+- Collect rent
+- Upgrade buildings
+- Build companies
+- Compete on leaderboards
+- Participate in a dynamic economy
+
+The project aims to become a realistic economic simulator rather than a casual tycoon game.
+
+---
+
+## Tech Stack
+
+Frontend
+
+- React
+- Vite
+- Zustand
+- React Router
+- i18next
+
+Backend
+
+- Node.js
+- Express
+- MongoDB
+- Mongoose
+- Redis (planned)
+
+Infrastructure
+
+- Docker
+- Kubernetes (k3s)
+- ArgoCD
+- GitHub Actions
+
+---
+
+## Development Philosophy
+
+Always prefer:
+
+- Realism
+- Scalability
+- Multiplayer-first design
+- Clean architecture
+- Backward compatibility
+
+Avoid:
+
+- Hardcoded values
+- Fake data
+- Client-side authority
+- Duplicate business logic
+
+---
+
+## Game Philosophy
+
+CityFlow is NOT a clicker game.
+
+It is a long-term economic simulation.
+
+Players should:
+
+- Think strategically
+- Invest carefully
+- Manage risk
+- Cooperate through companies
+
+Late-game progression is important.
+
+---
+
+## Existing Major Systems
+
+- Property Market
+- Dynamic Pricing Engine
+- Property Improvements
+- Development Projects
+- Loans
+- Market Events
+- Companies (Stock Market)
+- Real Estate Companies (Player-created guilds/clans)
+- Leaderboards
+- Competitive Events
+- OAuth
+- Notifications
+
+---
+
+## Coding Rules
+
+Never break existing APIs.
+
+Always create migrations if database changes.
+
+Always support EN + HE translations.
+
+Always write reusable components.
+
+Never remove existing functionality unless requested.
+
+---
+
+## Before Every Task
+
+Understand the existing architecture.
+
+Search before creating new code.
+
+Reuse existing components.
+
+Maintain backward compatibility.
+
+Think about future scalability.
+
+## Long-Term Vision
+
+Future systems include:
+
+- Public Companies (IPO)
+
+- Stock Market
+
+- Population Simulation
+
+- Neighborhood Control
+
+- Risk System
+
+- Missions
+
+- Auctions
+
+- Banking Expansion
+
+- Discord Integration
+
+Every new feature should integrate naturally with these systems whenever possible.
+
+---
+
+## Commands
+
+### Backend
+
+```bash
+cd backend
+npm run dev          # Start dev server (port 5000)
+npm run test         # Run all tests (Vitest, serial, no parallelism)
+npm run test:coverage # Run with coverage
+npm run lint         # ESLint check
+npm run lint:fix     # Auto-fix lint
+npm run format       # Prettier check
+npm run format:fix   # Auto-fix formatting
+```
+
+### Frontend
+
+```bash
+cd frontend
+npm run dev          # Start dev server (port 3000)
+npm run build        # Production build
+npm run test         # Run tests
+npm run lint         # ESLint check
+npm run format       # Prettier check
+```
+
+### Discord Bot
+
+```bash
+cd discord-bot
+npm run start        # Start bot
+npm run dev          # Start with file watching
+npm run deploy       # Register slash commands with Discord
+npm run setup        # Auto-create guild roles and channels
+```
+
+---
+
+## Project Structure
+
+```
+cityflow/
+├── backend/              # Node.js/Express API + simulation engine
+│   └── src/
+│       ├── config/       # Environment, DB, simulation constants
+│       ├── engine/       # Tick-based simulation logic (22 files)
+│       ├── middleware/    # JWT auth, admin, maintenance, rate limiting
+│       ├── models/       # Mongoose schemas (25 models)
+│       ├── routes/       # Express routes (27 files)
+│       ├── services/     # Email, push notifications, Discord bot API
+│       ├── test/         # Vitest setup, helpers, MongoDB Memory Server
+│       └── utils/        # Leveling, password validation
+├── frontend/             # React/Vite SPA + Capacitor mobile
+│   └── src/
+│       ├── components/   # Reusable UI (25 files)
+│       ├── hooks/        # Custom hooks
+│       ├── i18n/         # EN + HE translation files + error translation
+│       ├── pages/        # Route-level components (38 pages)
+│       ├── store/        # Zustand stores (5 stores)
+│       └── utils/        # Platform detection, formatting, biometric
+├── discord-bot/          # Discord.js bot (31 slash commands)
+│   └── src/
+│       ├── commands/     # Slash commands (game, moderation, staff)
+│       ├── events/       # Discord event handlers
+│       ├── models/       # Mongoose schemas for bot data
+│       └── utils/        # Command/event loaders, logger
+├── k8s/                  # Kubernetes manifests (Kustomize)
+└── .github/workflows/    # CI/CD (ci.yml, cd.yml, mobile.yml)
+```
+
+---
+
+## Key Architecture Facts
+
+### Tick-Based Simulation
+
+- **1 tick = 6 real-life hours**
+- Ticks run at 00:00, 06:00, 12:00, 18:00 (every 6 hours)
+- **24 hours = 4 ticks**, 48 hours = 8 ticks
+- Seasons last 720 ticks (~180 days), then world resets
+- When user says "24h", they mean 4 ticks
+- All time-sensitive game logic should use tick numbers, not wall-clock time
+
+### Backend Engine
+
+- 22 engine files execute simulation phases each tick
+- `tick.js` is the master orchestrator (25+ phases)
+- Engine processes are ordered: e.g., for company loans: auto-vote → auto-execution → expiration
+- Use `bulkWrite()` with 500-document batches for performance
+- Distributed tick locking via MongoDB prevents duplicate execution
+
+### Dual Company Systems
+
+- **RealEstateCompany**: Player-created companies with treasury, voting, shares, members
+- **Company**: Auto-generated stock market companies for player trading
+- These are separate systems with separate models and routes
+
+#### Real Estate Company Details
+
+- **Model**: `backend/src/models/RealEstateCompany.js` (embedded subdocuments: members, invitations, applications, loanRequests, propertyPurchaseRequests, treasury)
+- **Routes**: `backend/src/routes/realEstateCompanies.js` (~1800 lines, all endpoints under `/real-estate-companies`)
+- **Engine**: `backend/src/engine/companyProcessing.js` (rent, loan payments, level-up, loan request processing)
+- **Frontend**: `frontend/src/pages/CompanyDetailPage.jsx` (7 tabs: overview, members, applications, treasury, properties, loans, audit)
+- **Store**: `frontend/src/store/useCompanyStore.js` (~448 lines, 30+ functions)
+
+**Role hierarchy**: ceo > director > officer > member > recruit
+
+**Permission system** (`hasPermission()` in routes file):
+- **ceo**: ALL permissions (short-circuits to true)
+- **director**: invite_members, manage_properties, initiate_investments, view_treasury, manage_treasury, manage_settings, manage_applications, manage_loan_requests, remove_members
+- **officer**: invite_members, view_treasury, manage_applications
+- **member/recruit**: view_company, contribute_funds
+
+**Voting system** (used for both loans and property purchases):
+- Any member (excluding proposer) can vote yes/no
+- Threshold: 50% of `totalVoters` (members.length - 1)
+- Minimum 2 members required for a vote
+- CEO auto-votes YES after 4 ticks of inactivity (loan requests only)
+- Requests expire after 8 ticks without resolution (loan requests only)
+- Property purchase requests: auto-execute when threshold met (no CEO execute step)
+- Loan requests: CEO must manually execute after approval
+
+**Application flow**:
+- Player applies via `POST /:id/apply` (checks: not in another company, no existing pending application)
+- Application stored in `company.applications` subdocument array with status 'pending'
+- Notifications sent to founder + directors + officers (using company member roles, NOT User.role)
+- Officers+ approve/reject via `POST /:id/applications/:appId/approve|reject`
+- On approval: new member added as 'recruit', applicant's `companyId` set
+
+**Treasury operations**:
+- Any member can deposit (transfers personal balance to company treasury)
+- Directors+ can withdraw (transfers company treasury to personal balance)
+- Transaction types: deposit, withdrawal, rent_income, loan_disbursement, loan_payment, property_purchase, property_sale, construction, contract_reward, investment_withdrawal, investment_return, development
+- Treasury transactions are retained for 4 ticks (24 hours) plus a createdAt fallback for legacy entries, then pruned each tick to keep the DB light
+- In-memory hard cap of 100 transactions still applies before pruning
+
+### i18n (Internationalization)
+
+- **Two languages**: English (`en.json`) and Hebrew (`he.json`)
+- **Always update both files** when adding new UI strings
+- RTL support is built-in for Hebrew
+- Error translation uses regex patterns in `frontend/src/i18n/errors.js`
+- Dynamic keys like `companies.audit${CamelCaseAction}` require exact key naming
+
+### Mobile (Capacitor)
+
+- Full native Android/iOS support via Capacitor 8
+- Push notifications (FCM), biometric auth, deep linking
+- Platform detection: `isNativePlatform()`, `isAndroid()`, `isIOS()`, `isWeb()`
+- Token storage: dual-synced (Capacitor Preferences + localStorage)
+
+---
+
+## Coding Conventions
+
+### API Design
+
+- All routes return JSON
+- Use `authenticate` middleware from `middleware/auth.js` for protected routes
+- Use `requireAdmin` middleware for admin-only routes
+- Rate limiting applied via `middleware/rateLimit.js` factory
+
+### Database
+
+- Mongoose models with embedded subdocuments where appropriate (e.g., `RealEstateCompany` has nested members, invitations, loan requests)
+- Use `bulkWrite()` for batch operations in engine files
+- All models use `{ timestamps: true }` for `createdAt`/`updatedAt`
+- Indexes defined explicitly on models
+
+### Testing
+
+- Vitest with `mongodb-memory-server` for backend tests
+- Tests run serially (`fileParallelism: false`)
+- Test timeout: 30 seconds
+- Global setup creates in-memory MongoDB, per-file setup connects/disconnects
+- Backend uses `supertest` for HTTP testing
+- Frontend uses `@testing-library/react`
+
+### Code Style
+
+- ESLint flat config (no `.eslintrc`)
+- Prettier for formatting
+- ES modules (`"type": "module"` in all packages)
+- Unused vars: warn with `argsIgnorePattern: "^_"`
+
+---
+
+## Deployment
+
+### GitOps Flow
+
+1. Push to `main` triggers CI (lint + test + build)
+2. CD pipeline builds Docker images, pushes to GHCR
+3. CD updates `k8s/*/deployment.yml` with new image tags
+4. ArgoCD detects Git changes and auto-syncs K8s cluster
+
+### Services
+
+- **Frontend**: React/Nginx, 2 replicas, port 80
+- **Backend**: Node.js/Express, 2 replicas, port 5000
+- **Discord Bot**: Discord.js, 1 replica (Recreate strategy), port 5001
+- **MongoDB**: Mongo 7 StatefulSet, 1 replica, port 27017
+
+### Environment
+
+- Domain: `cityflow.sizops.co.il`
+- TLS: Let's Encrypt via Traefik
+- Secrets: K8s Secrets (not committed to Git)
+
+---
+
+## Common Pitfalls
+
+1. **Tick timing**: Always use tick numbers for game logic timing, not `Date.now()` or wall-clock time
+2. **i18n sync**: Every new UI string needs both `en.json` and `he.json` entries
+3. **Engine ordering**: Simulation phases in `tick.js` execute in a specific order; changing order can cause bugs
+4. **Company systems**: Don't confuse `RealEstateCompany` (player companies) with `Company` (stock market)
+5. **Mobile platform**: Always check `isNativePlatform()` before using web-only APIs
+6. **Test isolation**: Tests use in-memory MongoDB; each test file gets a fresh connection
+7. **API backward compatibility**: Never break existing API contracts; add new fields, don't remove old ones
+8. **User.role vs company member role**: The User model's `role` field (`user`/`admin`) is different from company member roles (`ceo`/`director`/`officer`/`member`/`recruit`). When querying permissions within a company, always use the member's role from `company.members[]`, never query `User.role`
+9. **Company permissions**: The `hasPermission()` function defines per-role permissions. Always verify new endpoints use the correct permission name and that it's granted to the intended roles
+10. **Voting threshold**: For company votes, `totalVoters = members.length - 1` (excludes the proposer). Threshold is 50% of totalVoters

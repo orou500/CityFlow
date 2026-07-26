@@ -14,6 +14,8 @@ import { DEVELOPMENT_PROJECTS } from '../config/developmentProjects.js';
 import { getCurrentSeason, endCurrentSeasonAndStartNew, createNewSeason } from '../engine/seasonReset.js';
 import { setMaintenanceMode, getMaintenanceInfo } from '../models/GameState.js';
 import Notification from '../models/Notification.js';
+import RealEstateCompany from '../models/RealEstateCompany.js';
+import { xpRequiredForLevel, xpRequiredForNextLevel } from '../config/companyProgression.js';
 import { sendEmail, verifyConnection } from '../services/email.js';
 import emailTemplates from '../services/emailTemplates.js';
 import { sendDiscordNotification } from '../services/discordBot.js';
@@ -117,16 +119,22 @@ router.post('/tick/run', async (req, res) => {
 router.get('/users', async (req, res) => {
   try {
     const [users, propCounts] = await Promise.all([
-      User.find().select('-password +deletedAt').sort({ createdAt: -1 }),
+      User.find().select('+deletedAt').sort({ createdAt: -1 }),
       Property.aggregate([{ $group: { _id: '$ownerId', count: { $sum: 1 } } }]),
     ]);
     const propCountMap = new Map(propCounts.map((p) => [p._id?.toString(), p.count]));
-    const usersWithStats = users.map((u) => ({
-      ...u.toObject(),
-      propertyCount: propCountMap.get(u._id.toString()) || 0,
-    }));
+    const usersWithStats = users.map((u) => {
+      const obj = u.toObject();
+      delete obj.password;
+      delete obj.passwordResetToken;
+      delete obj.passwordResetExpires;
+      delete obj.verificationToken;
+      delete obj.verificationExpires;
+      return { ...obj, propertyCount: propCountMap.get(u._id.toString()) || 0 };
+    });
     res.json(usersWithStats);
   } catch (err) {
+    console.error('[Admin Users] Error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -622,6 +630,103 @@ router.get('/email/status', async (req, res) => {
       port: config.smtp.port,
       from: config.emailFrom,
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/real-estate-companies', async (req, res) => {
+  try {
+    const companies = await RealEstateCompany.find({ active: true })
+      .populate('founderId', 'username')
+      .populate('members.userId', 'username')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json(companies);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/real-estate-companies/:id', async (req, res) => {
+  try {
+    const company = await RealEstateCompany.findById(req.params.id)
+      .populate('founderId', 'username')
+      .populate('members.userId', 'username avatar')
+      .populate('applications.userId', 'username')
+      .populate('loanRequests.requestedBy', 'username')
+      .lean();
+
+    if (!company) return res.status(404).json({ error: 'Company not found' });
+    res.json(company);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.put('/real-estate-companies/:id', async (req, res) => {
+  try {
+    const { name, description, reputation, level, treasuryBalance, maxMembers } = req.body;
+    const company = await RealEstateCompany.findById(req.params.id);
+    if (!company) return res.status(404).json({ error: 'Company not found' });
+
+    if (name !== undefined) company.name = name;
+    if (description !== undefined) company.description = description;
+    if (reputation !== undefined) company.reputation = reputation;
+    if (level !== undefined) {
+      company.level = level;
+      company.xp = xpRequiredForLevel(level);
+      company.xpToNextLevel = xpRequiredForNextLevel(level);
+    }
+    if (treasuryBalance !== undefined) company.treasury.balance = treasuryBalance;
+    if (maxMembers !== undefined) company.maxMembers = maxMembers;
+
+    await company.save();
+    res.json({ success: true, company });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/real-estate-companies/:id', async (req, res) => {
+  try {
+    const company = await RealEstateCompany.findById(req.params.id);
+    if (!company) return res.status(404).json({ error: 'Company not found' });
+
+    company.active = false;
+    await company.save();
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.put('/real-estate-companies/:id/members/:userId/role', async (req, res) => {
+  try {
+    const { role } = req.body;
+    const company = await RealEstateCompany.findById(req.params.id);
+    if (!company) return res.status(404).json({ error: 'Company not found' });
+
+    const member = company.members.find((m) => m.userId?.toString() === req.params.userId);
+    if (!member) return res.status(404).json({ error: 'Member not found' });
+
+    member.role = role;
+    await company.save();
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/real-estate-companies/:id/members/:userId', async (req, res) => {
+  try {
+    const company = await RealEstateCompany.findById(req.params.id);
+    if (!company) return res.status(404).json({ error: 'Company not found' });
+
+    company.members = company.members.filter((m) => m.userId?.toString() !== req.params.userId);
+    await company.save();
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
