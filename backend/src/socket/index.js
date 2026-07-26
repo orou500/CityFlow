@@ -50,8 +50,6 @@ export async function initSocketIO(httpServer) {
       console.log('[SOCKET.IO] Redis adapter connected');
     } catch (err) {
       console.warn('[SOCKET.IO] Redis adapter failed, using default adapter:', err.message);
-      try { if (pubClient) pubClient.disconnect(); } catch (_) {}
-      try { if (subClient) subClient.disconnect(); } catch (_) {}
       pubClient = null;
       subClient = null;
     }
