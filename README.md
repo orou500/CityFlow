@@ -4,7 +4,7 @@
 
 # CityFlow – Global Real Estate Simulation
 
-A full-stack real-time multiplayer simulation game where players buy, sell, develop, and manage properties across a dynamic global market. Features a living economy with demographics, a stock market, banking with credit scores, an interactive world map, and cooperative real estate companies. Built with Node.js, Express, MongoDB, and React. Available as a web app and native Android/iOS via Capacitor. Deployed on Kubernetes with ArgoCD, Let's Encrypt SSL, and automated CI/CD.
+A full-stack real-time multiplayer simulation game where players buy, sell, develop, and manage properties across a dynamic global market. Features a living economy with demographics, a stock market, banking with credit scores, an interactive world map, and cooperative real estate companies. Built with Node.js, Express, MongoDB, Redis, and React. Available as a web app and native Android/iOS via Capacitor. Deployed on Kubernetes with ArgoCD, Let's Encrypt SSL, and automated CI/CD.
 
 **[See CityFlow on itch.io](https://orou500.itch.io/cityflow)** · **[Join CityFlow Discord](https://discord.gg/vTav6WYQdQ)**
 
@@ -14,24 +14,26 @@ A full-stack real-time multiplayer simulation game where players buy, sell, deve
 cityflow/
 ├── backend/
 │   └── src/
-│       ├── config/          # DB connection, env vars, scheduler, backup, demographics config
-│       ├── engine/          # Simulation logic (tick, market, season reset, property generation, property valuation, credit score, company processing, city contracts, treasury investments)
-│       ├── middleware/       # JWT auth, admin guards, rate limiter, maintenance
-│       ├── models/          # Mongoose schemas (User, Property, City, Season, GameState, Company, RealEstateCompany, CompanyAuditLog, CompanyInvestment, CityContract, StockIndex, Loan, etc.)
-│       ├── routes/          # REST API endpoints (27 route files)
+│       ├── config/          # DB connection, env vars, Redis client, scheduler, demographics config
+│       ├── engine/          # Simulation logic (tick, market, season reset, property generation, valuation, credit score, company processing, city contracts, treasury investments)
+│       ├── middleware/       # JWT auth, admin guards, Redis rate limiter, maintenance
+│       ├── models/          # Mongoose schemas (User, Property, City, Season, GameState, Company, RealEstateCompany, etc.)
+│       ├── routes/          # REST API endpoints (29 route files)
 │       ├── services/        # Email (Brevo SMTP), push notifications (Firebase), avatar download, HTML templates
+│       ├── socket/          # Socket.IO server, Redis adapter, event constants, room management
 │       ├── test/            # Test setup, helpers, and MongoDB Memory Server config
-│       ├── utils/           # Validation, leveling, utility functions
+│       ├── utils/           # Redis cache, cache keys, cache invalidation, idempotent lock, job queue (BullMQ),
+│       │                   # job processors, notification queue, presence tracking, pub/sub, delayed jobs, analytics
 │       ├── seed.js          # Database initializer
-│       └── index.js         # Express app entry point
+│       └── index.js         # Express + Socket.IO + job processor entry point
 ├── frontend/
 │   └── src/
 │       ├── components/      # Reusable UI (Navbar, Sidebar, WorldMap, OnboardingWrapper, Toast, etc.)
-│       ├── hooks/           # Custom hooks (useNativeAvatarUrl)
+│       ├── hooks/           # Custom hooks (useSocket, useCompanySocket, useSocketEvent, useNativeAvatarUrl)
 │       ├── i18n/            # Internationalization (en, he)
 │       ├── pages/           # 38 route-level page components
-│       ├── store/           # Zustand state management (auth, game)
-│       └── utils/           # Format utilities, Capacitor platform utils, push/biometric/network/deep link helpers
+│       ├── store/           # Zustand state management (auth, game, company, leaderboard, audio)
+│       └── utils/           # Socket.IO client, format utilities, Capacitor platform utils, push/biometric/network/deep link helpers
 ├── discord-bot/             # CityFlow Discord bot (Node.js, Discord.js 14, MongoDB, 31 slash commands)
 │   └── src/
 │       ├── commands/        # Slash commands (moderation, staff, game)
@@ -46,76 +48,85 @@ cityflow/
 
 ## Features
 
-| Feature                        | Description                                                                                                                                                                  |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Dynamic Market**             | City demand/supply indices fluctuate each tick, driving property price changes with 6 market regimes (bull, bear, stable, recovery, correction, boom)                        |
-| **Living Demographics**        | Population birth/death rates, migration, economic conditions (boom/growth/stable/slowdown/recession) affecting demand, rent, and growth                                      |
-| **Property Generation**        | New properties are automatically created each tick based on population, development rate, and demand                                                                         |
-| **Property Valuation Engine**  | Intrinsic value calculated from upgrades, improvements, quality, investments, and city fundamentals; investment caps by property type                                        |
-| **Anti-Monopoly**              | No player can own more than 5% of a city's total properties                                                                                                                  |
-| **Rent Collection Pool**       | Rent is deposited into a collectible pool based on city avg rent and property rating; 24-hour timer; players must manually collect or forfeit                                |
-| **Maintenance Costs**          | Ongoing costs based on improvement level: none (0%), basic (10%), standard (25%), premium (40%) of rent income                                                               |
-| **Banking & Credit Score**     | 300-850 credit score system with 6 tiers; 4 loan products (personal, mortgage, business, line of credit); interest rates adjusted by credit tier                             |
-| **Stock Market**               | Buy/sell shares in companies across 8 industries; real-time price tracking with performance history                                                                          |
-| **Stock Indexes**              | Trade index ETFs (world, industry, city types); diversified investment vehicles                                                                                              |
-| **Player-to-Player Offers**    | Negotiate property purchases via offers, counter-offers, accept/reject (min 70% of market value)                                                                             |
+| Feature                        | Description                                                                                                                                                                                                                             |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Dynamic Market**             | City demand/supply indices fluctuate each tick, driving property price changes with 6 market regimes (bull, bear, stable, recovery, correction, boom)                                                                                   |
+| **Living Demographics**        | Population birth/death rates, migration, economic conditions (boom/growth/stable/slowdown/recession) affecting demand, rent, and growth                                                                                                 |
+| **Property Generation**        | New properties are automatically created each tick based on population, development rate, and demand                                                                                                                                    |
+| **Property Valuation Engine**  | Intrinsic value calculated from upgrades, improvements, quality, investments, and city fundamentals; investment caps by property type                                                                                                   |
+| **Anti-Monopoly**              | No player can own more than 5% of a city's total properties                                                                                                                                                                             |
+| **Rent Collection Pool**       | Rent is deposited into a collectible pool based on city avg rent and property rating; 24-hour timer; players must manually collect or forfeit                                                                                           |
+| **Maintenance Costs**          | Ongoing costs based on improvement level: none (0%), basic (10%), standard (25%), premium (40%) of rent income                                                                                                                          |
+| **Banking & Credit Score**     | 300-850 credit score system with 6 tiers; 4 loan products (personal, mortgage, business, line of credit); interest rates adjusted by credit tier                                                                                        |
+| **Stock Market**               | Buy/sell shares in companies across 8 industries; real-time price tracking with performance history                                                                                                                                     |
+| **Stock Indexes**              | Trade index ETFs (world, industry, city types); diversified investment vehicles                                                                                                                                                         |
+| **Player-to-Player Offers**    | Negotiate property purchases via offers, counter-offers, accept/reject (min 70% of market value)                                                                                                                                        |
 | **Real Estate Companies**      | Form companies with friends: share properties, treasury, loans, and revenue; role-based access (CEO/Director/Officer/Member/Recruit); shares system; application system; level progression with XP; 24 milestones; company leaderboards |
-| **City Contracts**             | Companies take on city contracts (renovation, housing, infrastructure); member vote to approve; earn reward + XP + reputation on completion                                                                                                 |
-| **Company Investments**        | Invest company treasury in bonds, REITs, and funds; small investments instant, large require member vote; maturity-based returns with economic modifiers                                                                                     |
-| **Development Requests**       | Propose upgrades, improvements, or construction for company properties; member vote to approve; auto-executed on threshold                                                                                                                   |
-| **Account Deletion**           | Self-service account deletion with 24-hour restore window; admin panel restore/permanent-delete controls                                                                     |
-| **Construction & Development** | Buy land, build from 8 project types (residential, commercial, hospitality), upgrade buildings with 4 upgrade types                                                          |
-| **Property Improvements**      | 7 improvement types (renovation, interior, parking, landscaping, energy, security, luxury) with progress tracking                                                            |
-| **World Map**                  | Interactive Leaflet map with 18 cities, demand-colored pins, active event markers, and World Status Widget                                                                   |
-| **World Events**               | Dynamic events (Boom, Recession, Disaster, Policy) affect local or global markets with real-time impact                                                                      |
-| **Seasons**                    | Game runs in 720-month seasons with automatic resets, 50% net worth starting balance, full archive of rankings                                                               |
-| **Season Leaderboards**        | View past season champions, top-20 player rankings, city statistics, and economic data                                                                                       |
-| **Company Leaderboards**       | 5 company categories: Net Worth, Properties, Income, Reputation, Growth; tracked alongside player rankings                                                                   |
-| **Player Season History**      | Each profile shows the player's rank and stats across all completed seasons                                                                                                  |
-| **Player Leveling**            | XP-based progression system with lifetime stats; earn XP for buying, selling, loans, construction, and more                                                                  |
-| **Month Login Bonus**          | Claim $250-$1,000 cash + 10-50 XP every 6 hours from the dashboard                                                                                                           |
-| **Notifications**              | Real-time alerts for offers, trades, construction, and friend requests; toast popups and bell animations; auto-cleanup after 24h                                             |
-| **Friends**                    | Add, accept, decline, and remove friends; view friends' net worth and portfolios                                                                                             |
-| **User Profiles**              | Customizable avatars, display names, bio, portfolio visibility, season history, level badge, and achievements                                                                |
-| **Email Verification**         | Required before login; verification emails sent on registration; password reset via email                                                                                    |
-| **OAuth Login**                | Sign in with Google or Discord (web-only; OAuth disabled on mobile)                                                                                                          |
-| **OAuth Password Set**         | OAuth users can set a password to enable email/password login; status endpoint tracks password state                                                                         |
-| **Compact Formatting**         | Smart number display: `$1.25M`, `1.5K`, `$9.50` with tooltips for full values                                                                                                |
-| **Mobile App**                 | Native Android/iOS via Capacitor 8 with push notifications, biometric auth, deep linking, offline detection                                                                  |
-| **Rate Limiting**              | Per-IP rate limiting on registration, login, and email-sending endpoints                                                                                                     |
-| **Strong Password Policy**     | Enforced 8+ characters with uppercase, lowercase, and number requirements                                                                                                    |
-| **Legal & Compliance**         | Terms of Service, Privacy Policy, Cookie Policy pages with registration acceptance                                                                                           |
-| **Onboarding**                 | 12-step guided tour for new players covering all game features                                                                                                               |
-| **Admin Panel**                | Full control over simulation, users, properties, cities, events, seasons, email testing, manual tick execution; sortable user tables                                         |
-| **Backup & Restore**           | Admin-only database backup/restore with gzip-compressed exports, upload/download, auto-retention, and full-fidelity restore                                                  |
-| **Maintenance Mode**           | Admin-toggleable maintenance mode with custom message, 503 backend protection, logged-in user banner                                                                         |
-| **Discord Bot**                | 31-slash-command CityFlow bot with moderation, verification, tickets, suggestions, game integration, and anti-spam                                                          |
-| **Discord Community**          | Official CityFlow Discord server with roles, channels, and bot integration                                                                                                   |
-| **In-Game Music Player**       | Built-in audio player in the sidebar with play/pause, next/prev, volume control, and auto-start toggle; supports MP3, WAV, OGG, FLAC, and M4A files                          |
-| **i18n**                       | Full English and Hebrew interface with proper RTL support across all components                                                                                              |
-| **Dark Mode**                  | Dark, Light, and System theme toggle                                                                                                                                         |
-| **Database-Level Tick Lock**   | Prevents duplicate tick execution in multi-replica deployments using MongoDB lock documents                                                                                  |
-| **Image Proxy**                | Server-side image proxy for OAuth avatars with redirect following and browser-like headers                                                                                   |
+| **City Contracts**             | Companies take on city contracts (renovation, housing, infrastructure); member vote to approve; earn reward + XP + reputation on completion                                                                                             |
+| **Company Investments**        | Invest company treasury in bonds, REITs, and funds; small investments instant, large require member vote; maturity-based returns with economic modifiers                                                                                |
+| **Development Requests**       | Propose upgrades, improvements, or construction for company properties; member vote to approve; auto-executed on threshold                                                                                                              |
+| **Account Deletion**           | Self-service account deletion with 24-hour restore window; admin panel restore/permanent-delete controls                                                                                                                                |
+| **Construction & Development** | Buy land, build from 8 project types (residential, commercial, hospitality), upgrade buildings with 4 upgrade types                                                                                                                     |
+| **Property Improvements**      | 7 improvement types (renovation, interior, parking, landscaping, energy, security, luxury) with progress tracking                                                                                                                       |
+| **World Map**                  | Interactive Leaflet map with 18 cities, demand-colored pins, active event markers, and World Status Widget                                                                                                                              |
+| **World Events**               | Dynamic events (Boom, Recession, Disaster, Policy) affect local or global markets with real-time impact                                                                                                                                 |
+| **Seasons**                    | Game runs in 720-month seasons with automatic resets, 50% net worth starting balance, full archive of rankings                                                                                                                          |
+| **Season Leaderboards**        | View past season champions, top-20 player rankings, city statistics, and economic data                                                                                                                                                  |
+| **Company Leaderboards**       | 5 company categories: Net Worth, Properties, Income, Reputation, Growth; tracked alongside player rankings                                                                                                                              |
+| **Player Season History**      | Each profile shows the player's rank and stats across all completed seasons                                                                                                                                                             |
+| **Player Leveling**            | XP-based progression system with lifetime stats; earn XP for buying, selling, loans, construction, and more                                                                                                                             |
+| **Month Login Bonus**          | Claim $250-$1,000 cash + 10-50 XP every 6 hours from the dashboard                                                                                                                                                                      |
+| **Notifications**              | Real-time alerts for offers, trades, construction, and friend requests; toast popups and bell animations; auto-cleanup after 24h                                                                                                        |
+| **Friends**                    | Add, accept, decline, and remove friends; view friends' net worth and portfolios                                                                                                                                                        |
+| **User Profiles**              | Customizable avatars, display names, bio, portfolio visibility, season history, level badge, and achievements                                                                                                                           |
+| **Email Verification**         | Required before login; verification emails sent on registration; password reset via email                                                                                                                                               |
+| **OAuth Login**                | Sign in with Google or Discord (web-only; OAuth disabled on mobile)                                                                                                                                                                     |
+| **OAuth Password Set**         | OAuth users can set a password to enable email/password login; status endpoint tracks password state                                                                                                                                    |
+| **Compact Formatting**         | Smart number display: `$1.25M`, `1.5K`, `$9.50` with tooltips for full values                                                                                                                                                           |
+| **Mobile App**                 | Native Android/iOS via Capacitor 8 with push notifications, biometric auth, deep linking, offline detection                                                                                                                             |
+| **Rate Limiting**              | Per-IP rate limiting on registration, login, and email-sending endpoints                                                                                                                                                                |
+| **Strong Password Policy**     | Enforced 8+ characters with uppercase, lowercase, and number requirements                                                                                                                                                               |
+| **Legal & Compliance**         | Terms of Service, Privacy Policy, Cookie Policy pages with registration acceptance                                                                                                                                                      |
+| **Onboarding**                 | 12-step guided tour for new players covering all game features                                                                                                                                                                          |
+| **Admin Panel**                | Full control over simulation, users, properties, cities, events, seasons, email testing, manual tick execution; sortable user tables                                                                                                    |
+| **Backup & Restore**           | Admin-only database backup/restore with gzip-compressed exports, upload/download, auto-retention, and full-fidelity restore                                                                                                             |
+| **Maintenance Mode**           | Admin-toggleable maintenance mode with custom message, 503 backend protection, logged-in user banner                                                                                                                                    |
+| **Discord Bot**                | 31-slash-command CityFlow bot with moderation, verification, tickets, suggestions, game integration, and anti-spam                                                                                                                      |
+| **Discord Community**          | Official CityFlow Discord server with roles, channels, and bot integration                                                                                                                                                              |
+| **In-Game Music Player**       | Built-in audio player in the sidebar with play/pause, next/prev, volume control, and auto-start toggle; supports MP3, WAV, OGG, FLAC, and M4A files                                                                                     |
+| **i18n**                       | Full English and Hebrew interface with proper RTL support across all components                                                                                                                                                         |
+| **Dark Mode**                  | Dark, Light, and System theme toggle                                                                                                                                                                                                    |
+| **Redis Caching**              | Redis-backed cache layer with automatic invalidation on all data mutations; hit-rate tracking via /metrics                                                                                                                              |
+| **Socket.IO Real-Time**        | Redis-adapter-powered Socket.IO for instant push updates; company rooms with member presence tracking                                                                                                                                   |
+| **BullMQ Delayed Jobs**        | Event-driven job processing for vote expirations, contract completions, investment maturities, and offer expirations — no tick polling needed                                                                                           |
+| **Redis Presence System**      | Real-time online/idle/offline tracking with 20-second heartbeat; batch user status queries                                                                                                                                              |
+| **Redis Pub/Sub**              | 14 channels for broadcasting game events across backend instances (tick, market, property, company, contract, investment, loan, development)                                                                                            |
+| **Redis Distributed Lock**     | Multiple backend replicas safely coordinate tick execution via Redis SET NX EX, falling back to MongoDB when Redis is unavailable                                                                                                       |
+| **Redis Notification Queue**   | Async notification processing via Redis lists, drained every minute; 22 notification sites switched from direct DB writes                                                                                                               |
+| **Live Notifications**         | New notifications, votes, treasury changes, contract completions, and investment maturities pushed instantly via Socket.IO to connected clients                                                                                         |
+| **Image Proxy**                | Server-side image proxy for OAuth avatars with redirect following and browser-like headers                                                                                                                                              |
 
 ## Tech Stack
 
-| Layer      | Technology                                                              |
-| ---------- | ----------------------------------------------------------------------- |
-| Backend    | Node.js 20, Express, Mongoose                                           |
-| Database   | MongoDB 7                                                               |
-| Frontend   | React 18, React Router, Zustand, Tailwind CSS, Recharts                 |
-| Mobile     | Capacitor 8 (Android + iOS), Firebase Cloud Messaging, Native Biometric |
-| Maps       | Leaflet + react-leaflet                                                 |
-| i18n       | react-i18next with JSON translation files (EN, HE)                      |
-| Auth       | JWT (jsonwebtoken + bcryptjs), Google OAuth, Discord OAuth              |
-| Scheduling | node-cron (fixed schedule: 00:00, 06:00, 12:00, 18:00)                  |
-| Charts     | Recharts (stock/index price history), custom SVG                        |
-| Email      | Brevo SMTP with 8 HTML templates                                        |
-| Push       | Firebase Admin SDK (FCM)                                                |
-| SSL        | Let's Encrypt via Traefik ACME (TLS-ALPN challenge)                     |
-| CI/CD      | GitHub Actions + ArgoCD on K3s                                          |
-| Containers | Docker multi-stage builds, GHCR                                         |
-| Play Store | gradle-play-publisher (auto-publish on tag push)                        |
+| Layer         | Technology                                                              |
+| ------------- | ----------------------------------------------------------------------- |
+| Backend       | Node.js 20, Express, Mongoose                                           |
+| Database      | MongoDB 7                                                               |
+| Cache & Queue | Redis 7 (ioredis + BullMQ for delayed jobs)                             |
+| Real-Time     | Socket.IO + @socket.io/redis-adapter                                    |
+| Frontend      | React 18, React Router, Zustand, Tailwind CSS, Recharts                 |
+| Mobile        | Capacitor 8 (Android + iOS), Firebase Cloud Messaging, Native Biometric |
+| Maps          | Leaflet + react-leaflet                                                 |
+| i18n          | react-i18next with JSON translation files (EN, HE)                      |
+| Auth          | JWT (jsonwebtoken + bcryptjs), Google OAuth, Discord OAuth              |
+| Scheduling    | node-cron + BullMQ delayed jobs                                         |
+| Charts        | Recharts (stock/index price history), custom SVG                        |
+| Email         | Brevo SMTP with 8 HTML templates                                        |
+| Push          | Firebase Admin SDK (FCM)                                                |
+| SSL           | Let's Encrypt via Traefik ACME (TLS-ALPN challenge)                     |
+| CI/CD         | GitHub Actions + ArgoCD on K3s                                          |
+| Containers    | Docker multi-stage builds, GHCR                                         |
+| Play Store    | gradle-play-publisher (auto-publish on tag push)                        |
 
 ## Getting Started
 
@@ -123,6 +134,7 @@ cityflow/
 
 - Node.js 20+
 - MongoDB 6+ (or Docker)
+- Redis 7+ (or Docker)
 - npm
 
 ### 1. Clone & Install
@@ -154,13 +166,14 @@ ADMIN_PASSWORD=change-this-password
 FRONTEND_URL=http://localhost:3000
 ```
 
-### 3. Start MongoDB
+### 3. Start Infrastructure
 
 ```bash
-# Option A: Local MongoDB
-mongod
+# Option A: Docker Compose (recommended)
+docker compose up -d redis mongodb
 
-# Option B: Docker
+# Option B: Individual containers
+docker run -d -p 6379:6379 --name cityflow-redis redis:7-alpine
 docker run -d -p 27017:27017 --name cityflow-mongo mongo:7
 ```
 
@@ -272,7 +285,9 @@ The simulation advances in discrete **ticks** (displayed to players as **months*
 29. Hard-deletes expired user accounts (>24h grace period)
 30. Season reset (at tick 720)
 
-Ticks run automatically at fixed times: **00:00, 06:00, 12:00, 18:00** (every 6 hours). Manual tick execution from the admin panel does not shift the schedule. A database-level lock prevents duplicate execution across multiple backend replicas.
+Ticks run automatically at fixed times: **00:00, 06:00, 12:00, 18:00** (every 6 hours). Manual tick execution from the admin panel does not shift the schedule. A Redis-backed distributed lock prevents duplicate execution across multiple backend replicas, falling back to MongoDB when Redis is unavailable.
+
+**Event-Driven Jobs (BullMQ):** Vote expirations, contract completions, and investment maturities use **BullMQ delayed jobs** instead of tick polling. When a vote is created, a delayed job fires exactly 8 ticks later to expire it. When a contract starts, a job fires at its duration to complete it. This eliminates the need to check every single pending item during each tick.
 
 ### Demographics & Population
 
@@ -380,17 +395,17 @@ The stock market features companies across 8 industries and tradeable index ETFs
 
 Companies earn XP through activities and level up (1-50), unlocking benefits:
 
-| Activity                | XP Formula                                      |
-| ----------------------- | ----------------------------------------------- |
-| Property purchased      | `max(50, price × 0.0005)`                       |
-| Property sold           | `max(25, price × 0.0003)`                       |
-| Development executed    | `max(40, cost × 0.005)`                         |
-| Construction completed  | `max(60, totalCost × 0.003)`                    |
-| Contract completed      | Contract's xpReward or 100                      |
-| Loan repaid             | `max(20, principal × 0.0005)`                   |
-| Vote completed          | 3                                               |
-| Rent collected          | `max(1, rentIncome × 0.00005)`                  |
-| Investment matured      | `max(15, profit × 0.002)`                       |
+| Activity               | XP Formula                     |
+| ---------------------- | ------------------------------ |
+| Property purchased     | `max(50, price × 0.0005)`      |
+| Property sold          | `max(25, price × 0.0003)`      |
+| Development executed   | `max(40, cost × 0.005)`        |
+| Construction completed | `max(60, totalCost × 0.003)`   |
+| Contract completed     | Contract's xpReward or 100     |
+| Loan repaid            | `max(20, principal × 0.0005)`  |
+| Vote completed         | 3                              |
+| Rent collected         | `max(1, rentIncome × 0.00005)` |
+| Investment matured     | `max(15, profit × 0.002)`      |
 
 **Level Benefits (examples):**
 
@@ -432,12 +447,14 @@ Credit score is evaluated every 10 ticks based on: on-time payments, completed l
 
 ## API Endpoints
 
-### Health
+### Health & Metrics
 
-| Method | Path      | Description                     |
-| ------ | --------- | ------------------------------- |
-| GET    | `/health` | Server health check             |
-| GET    | `/ready`  | Readiness check (DB connection) |
+| Method | Path           | Description                                             |
+| ------ | -------------- | ------------------------------------------------------- |
+| GET    | `/health`      | Server health check                                     |
+| GET    | `/ready`       | Readiness check (DB, Redis, Socket.IO connection)       |
+| GET    | `/metrics`     | Cache hit rate, Pub/Sub stats, BullMQ queues, WebSocket |
+| GET    | `/maintenance` | Maintenance mode status                                 |
 
 ### Authentication (`/api/auth`)
 
@@ -498,63 +515,63 @@ All routes except `GET /` require authentication.
 
 ### Real Estate Companies (`/api/real-estate-companies`)
 
-| Method | Path                                       | Description                                             |
-| ------ | ------------------------------------------ | ------------------------------------------------------- |
-| GET    | `/`                                        | List all companies (search, sort, pagination)           |
-| GET    | `/my`                                      | User's companies                                        |
-| GET    | `/invitations`                             | Pending invitations                                     |
-| POST   | `/`                                        | Create a company ($500K fee)                            |
-| GET    | `/:id`                                     | Company detail                                          |
-| PUT    | `/:id`                                     | Update company settings (CEO only)                      |
-| POST   | `/:id/invite`                              | Invite a member                                         |
-| POST   | `/:id/invite/:invitationId/accept`         | Accept invitation                                       |
-| POST   | `/:id/invite/:invitationId/decline`        | Decline invitation                                      |
-| POST   | `/:id/leave`                               | Leave company                                           |
-| DELETE | `/:id/members/:userId`                     | Remove a member                                         |
-| PUT    | `/:id/members/:userId/role`                | Change member role (CEO only)                           |
-| POST   | `/:id/treasury/deposit`                    | Deposit funds to treasury                               |
-| POST   | `/:id/treasury/withdraw`                   | Withdraw funds from treasury (directors+)               |
-| GET    | `/:id/treasury/transactions`               | Treasury transaction history (paginated, 4-tick prune)  |
-| POST   | `/:id/properties/purchase`                 | Purchase a property for the company                     |
-| POST   | `/:id/properties/:propertyId/sell`         | Sell a company property                                 |
-| GET    | `/:id/properties`                          | List company properties                                 |
-| POST   | `/:id/apply`                               | Apply to join a company                                 |
-| GET    | `/:id/applications`                        | List applications (officers+)                           |
-| POST   | `/:id/applications/:appId/approve`         | Approve an application (officers+)                      |
-| POST   | `/:id/applications/:appId/reject`          | Reject an application (officers+)                       |
-| POST   | `/:id/applications/:appId/cancel`          | Cancel own application                                  |
-| POST   | `/:id/loan-requests`                       | Create a loan request (member vote)                     |
-| GET    | `/:id/loan-requests`                       | List all loan requests                                  |
-| POST   | `/:id/loan-requests/:reqId/vote`           | Vote on a loan request                                  |
-| POST   | `/:id/loan-requests/:reqId/execute`        | Execute an approved loan request (CEO only)             |
-| GET    | `/:id/loan-options`                        | Get available loan products (CEO only)                  |
-| POST   | `/:id/direct-loan`                         | Take a direct loan (CEO only, no vote)                  |
-| POST   | `/:id/property-purchase-requests`          | Propose a property purchase (member vote)               |
-| GET    | `/:id/property-purchase-requests`          | List property purchase requests                         |
-| POST   | `/:id/property-purchase-requests/:reqId/vote` | Vote on property purchase request                   |
-| POST   | `/:id/development-requests`                | Propose a development (upgrade/improvement/construction)|
-| GET    | `/:id/development-requests`                | List development requests                               |
-| POST   | `/:id/development-requests/:reqId/vote`    | Vote on a development request                           |
-| GET    | `/:id/investments/products`                | Get available investment products                       |
-| GET    | `/:id/investments`                         | List all company investments                            |
-| GET    | `/:id/investments/performance`             | Get investment performance summary                      |
-| POST   | `/:id/investments`                         | Create an investment (small=instant, large=voted)       |
-| POST   | `/:id/investments/:invId/vote`             | Vote on a large investment proposal                     |
-| POST   | `/:id/investments/:invId/cancel`           | Cancel a proposed investment                            |
-| POST   | `/:id/ipo`                                 | Initiate IPO — list on stock market (CEO only)          |
-| GET    | `/:id/progression`                         | Get progression data (level, XP, benefits, milestones) |
-| GET    | `/:id/milestones`                          | Get all milestones with completion status               |
-| GET    | `/:id/audit`                               | Company audit log (paginated, filterable)               |
-| GET    | `/:id/stats`                               | Company statistics                                      |
+| Method | Path                                          | Description                                              |
+| ------ | --------------------------------------------- | -------------------------------------------------------- |
+| GET    | `/`                                           | List all companies (search, sort, pagination)            |
+| GET    | `/my`                                         | User's companies                                         |
+| GET    | `/invitations`                                | Pending invitations                                      |
+| POST   | `/`                                           | Create a company ($500K fee)                             |
+| GET    | `/:id`                                        | Company detail                                           |
+| PUT    | `/:id`                                        | Update company settings (CEO only)                       |
+| POST   | `/:id/invite`                                 | Invite a member                                          |
+| POST   | `/:id/invite/:invitationId/accept`            | Accept invitation                                        |
+| POST   | `/:id/invite/:invitationId/decline`           | Decline invitation                                       |
+| POST   | `/:id/leave`                                  | Leave company                                            |
+| DELETE | `/:id/members/:userId`                        | Remove a member                                          |
+| PUT    | `/:id/members/:userId/role`                   | Change member role (CEO only)                            |
+| POST   | `/:id/treasury/deposit`                       | Deposit funds to treasury                                |
+| POST   | `/:id/treasury/withdraw`                      | Withdraw funds from treasury (directors+)                |
+| GET    | `/:id/treasury/transactions`                  | Treasury transaction history (paginated, 4-tick prune)   |
+| POST   | `/:id/properties/purchase`                    | Purchase a property for the company                      |
+| POST   | `/:id/properties/:propertyId/sell`            | Sell a company property                                  |
+| GET    | `/:id/properties`                             | List company properties                                  |
+| POST   | `/:id/apply`                                  | Apply to join a company                                  |
+| GET    | `/:id/applications`                           | List applications (officers+)                            |
+| POST   | `/:id/applications/:appId/approve`            | Approve an application (officers+)                       |
+| POST   | `/:id/applications/:appId/reject`             | Reject an application (officers+)                        |
+| POST   | `/:id/applications/:appId/cancel`             | Cancel own application                                   |
+| POST   | `/:id/loan-requests`                          | Create a loan request (member vote)                      |
+| GET    | `/:id/loan-requests`                          | List all loan requests                                   |
+| POST   | `/:id/loan-requests/:reqId/vote`              | Vote on a loan request                                   |
+| POST   | `/:id/loan-requests/:reqId/execute`           | Execute an approved loan request (CEO only)              |
+| GET    | `/:id/loan-options`                           | Get available loan products (CEO only)                   |
+| POST   | `/:id/direct-loan`                            | Take a direct loan (CEO only, no vote)                   |
+| POST   | `/:id/property-purchase-requests`             | Propose a property purchase (member vote)                |
+| GET    | `/:id/property-purchase-requests`             | List property purchase requests                          |
+| POST   | `/:id/property-purchase-requests/:reqId/vote` | Vote on property purchase request                        |
+| POST   | `/:id/development-requests`                   | Propose a development (upgrade/improvement/construction) |
+| GET    | `/:id/development-requests`                   | List development requests                                |
+| POST   | `/:id/development-requests/:reqId/vote`       | Vote on a development request                            |
+| GET    | `/:id/investments/products`                   | Get available investment products                        |
+| GET    | `/:id/investments`                            | List all company investments                             |
+| GET    | `/:id/investments/performance`                | Get investment performance summary                       |
+| POST   | `/:id/investments`                            | Create an investment (small=instant, large=voted)        |
+| POST   | `/:id/investments/:invId/vote`                | Vote on a large investment proposal                      |
+| POST   | `/:id/investments/:invId/cancel`              | Cancel a proposed investment                             |
+| POST   | `/:id/ipo`                                    | Initiate IPO — list on stock market (CEO only)           |
+| GET    | `/:id/progression`                            | Get progression data (level, XP, benefits, milestones)   |
+| GET    | `/:id/milestones`                             | Get all milestones with completion status                |
+| GET    | `/:id/audit`                                  | Company audit log (paginated, filterable)                |
+| GET    | `/:id/stats`                                  | Company statistics                                       |
 
 ### City Contracts (`/api/real-estate-companies/:id/contracts`)
 
-| Method | Path                                        | Description                                     |
-| ------ | ------------------------------------------- | ----------------------------------------------- |
-| GET    | `/:id/contracts`                            | List available/proposed/active contracts         |
-| GET    | `/:id/contracts/history`                    | List completed/failed/rejected contracts (last 50) |
-| POST   | `/:id/contracts/:contractId/propose`        | Propose a contract (directors/CEO)              |
-| POST   | `/:id/contracts/:contractId/vote`           | Vote on a contract proposal                     |
+| Method | Path                                 | Description                                        |
+| ------ | ------------------------------------ | -------------------------------------------------- |
+| GET    | `/:id/contracts`                     | List available/proposed/active contracts           |
+| GET    | `/:id/contracts/history`             | List completed/failed/rejected contracts (last 50) |
+| POST   | `/:id/contracts/:contractId/propose` | Propose a contract (directors/CEO)                 |
+| POST   | `/:id/contracts/:contractId/vote`    | Vote on a contract proposal                        |
 
 ### Stock Indexes (`/api/indexes`)
 
@@ -691,6 +708,13 @@ All routes except `GET /` require authentication.
 | GET    | `/`               | List completed seasons with rankings (public)        |
 | GET    | `/player/:userId` | Player's season history across all completed seasons |
 | GET    | `/:id`            | Full season detail with archive data                 |
+
+### Presence (`/api/presence`)
+
+| Method | Path             | Description                                    |
+| ------ | ---------------- | ---------------------------------------------- |
+| GET    | `/:userId`       | Get user online status (online/idle/offline)   |
+| GET    | `/batch?ids=...` | Batch status for multiple user IDs (comma-sep) |
 
 ### Image Proxy
 
@@ -879,32 +903,32 @@ All routes except `GET /` require authentication.
 
 ### RealEstateCompany
 
-| Field               | Type                                                              | Description                                                                                                       |
-| ------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `name`              | String                                                            | Company name (unique)                                                                                             |
-| `description`       | String                                                            | Company description                                                                                               |
-| `logo`              | String                                                            | Company logo URL                                                                                                  |
-| `founderId`         | ObjectId                                                          | Reference to User (company creator)                                                                               |
-| `members`           | [{userId, role, shares, joinedAt, invitedBy}]                     | Members with roles (CEO/Director/Officer/Member/Recruit) and share allocation                                     |
-| `totalShares`       | Number                                                            | Total shares (default 100)                                                                                        |
-| `invitations`       | [{userId, invitedBy, status, createdAt}]                          | Pending/accepted/declined invitations                                                                             |
-| `applications`      | [{userId, message, status, reviewedBy, reviewedAt}]               | Player applications to join                                                                                       |
-| `loanRequests`      | [{requestedBy, principal, durationTicks, status, votes, ...}]     | Loan proposals with member voting                                                                                 |
-| `propertyPurchaseRequests` | [{requestedBy, propertyId, status, votes, ...}]            | Property purchase proposals with member voting                                                                    |
-| `developmentRequests` | [{requestedBy, propertyId, actionType, actionData, status, votes, ...}] | Development proposals (upgrade/improvement/construction) with voting                                      |
-| `milestones`        | [{milestoneId, name, xpReward, treasuryReward, completedAt, ...}] | Completed milestones with rewards                                                                                 |
-| `treasury`          | {balance, transactions}                                           | Shared treasury with typed transaction log (4-tick retention)                                                     |
-| `properties`        | [ObjectId]                                                        | References to Property                                                                                            |
-| `ipo`               | {listed, stockCompanyId, ticker, sharePrice, sharesOutstanding, ...} | IPO status for stock market listing                                                                             |
-| `stats`             | Object                                                            | netWorth, propertiesOwned, totalRentalIncome, totalTreasuryDeposits, activeProjects, totalLoanBalance, totalDevelopments, contractsCompleted, loansRepaid, totalVotes, ticksExisted |
-| `reputation`        | Number                                                            | Company reputation score (0-1000)                                                                                 |
-| `level`             | Number                                                            | Company level (derived from total XP, 1-50)                                                                       |
-| `xp`                | Number                                                            | Total accumulated XP (level derived via `getLevelFromTotalXP()`)                                                   |
-| `xpToNextLevel`     | Number                                                            | XP threshold for next level                                                                                       |
-| `maxMembers`        | Number                                                            | Maximum members (10 + 1.2 per level, capped at 50)                                                                |
-| `active`            | Boolean                                                           | Whether company is active                                                                                         |
-| `foundedTick`       | Number                                                            | Tick when company was created                                                                                     |
-| `creationFee`       | Number                                                            | Fee paid to create the company                                                                                     |
+| Field                      | Type                                                                    | Description                                                                                                                                                                         |
+| -------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                     | String                                                                  | Company name (unique)                                                                                                                                                               |
+| `description`              | String                                                                  | Company description                                                                                                                                                                 |
+| `logo`                     | String                                                                  | Company logo URL                                                                                                                                                                    |
+| `founderId`                | ObjectId                                                                | Reference to User (company creator)                                                                                                                                                 |
+| `members`                  | [{userId, role, shares, joinedAt, invitedBy}]                           | Members with roles (CEO/Director/Officer/Member/Recruit) and share allocation                                                                                                       |
+| `totalShares`              | Number                                                                  | Total shares (default 100)                                                                                                                                                          |
+| `invitations`              | [{userId, invitedBy, status, createdAt}]                                | Pending/accepted/declined invitations                                                                                                                                               |
+| `applications`             | [{userId, message, status, reviewedBy, reviewedAt}]                     | Player applications to join                                                                                                                                                         |
+| `loanRequests`             | [{requestedBy, principal, durationTicks, status, votes, ...}]           | Loan proposals with member voting                                                                                                                                                   |
+| `propertyPurchaseRequests` | [{requestedBy, propertyId, status, votes, ...}]                         | Property purchase proposals with member voting                                                                                                                                      |
+| `developmentRequests`      | [{requestedBy, propertyId, actionType, actionData, status, votes, ...}] | Development proposals (upgrade/improvement/construction) with voting                                                                                                                |
+| `milestones`               | [{milestoneId, name, xpReward, treasuryReward, completedAt, ...}]       | Completed milestones with rewards                                                                                                                                                   |
+| `treasury`                 | {balance, transactions}                                                 | Shared treasury with typed transaction log (4-tick retention)                                                                                                                       |
+| `properties`               | [ObjectId]                                                              | References to Property                                                                                                                                                              |
+| `ipo`                      | {listed, stockCompanyId, ticker, sharePrice, sharesOutstanding, ...}    | IPO status for stock market listing                                                                                                                                                 |
+| `stats`                    | Object                                                                  | netWorth, propertiesOwned, totalRentalIncome, totalTreasuryDeposits, activeProjects, totalLoanBalance, totalDevelopments, contractsCompleted, loansRepaid, totalVotes, ticksExisted |
+| `reputation`               | Number                                                                  | Company reputation score (0-1000)                                                                                                                                                   |
+| `level`                    | Number                                                                  | Company level (derived from total XP, 1-50)                                                                                                                                         |
+| `xp`                       | Number                                                                  | Total accumulated XP (level derived via `getLevelFromTotalXP()`)                                                                                                                    |
+| `xpToNextLevel`            | Number                                                                  | XP threshold for next level                                                                                                                                                         |
+| `maxMembers`               | Number                                                                  | Maximum members (10 + 1.2 per level, capped at 50)                                                                                                                                  |
+| `active`                   | Boolean                                                                 | Whether company is active                                                                                                                                                           |
+| `foundedTick`              | Number                                                                  | Tick when company was created                                                                                                                                                       |
+| `creationFee`              | Number                                                                  | Fee paid to create the company                                                                                                                                                      |
 
 ### CompanyAuditLog
 
@@ -918,40 +942,40 @@ All routes except `GET /` require authentication.
 
 ### CompanyInvestment
 
-| Field               | Type       | Description                                                                              |
-| ------------------- | ---------- | ---------------------------------------------------------------------------------------- |
-| `companyId`         | ObjectId   | Reference to RealEstateCompany                                                           |
-| `investmentType`    | String     | government_bond, corporate_bond, reit_fund, fixed_term, infrastructure_fund, etc.       |
-| `name`              | String     | Investment name                                                                          |
-| `principal`         | Number     | Initial investment amount                                                                |
-| `currentValue`      | Number     | Current value (updated each tick)                                                        |
-| `annualReturnRate`  | Number     | Current annual return rate                                                               |
-| `durationTicks`     | Number     | Investment duration                                                                      |
-| `startTick`         | Number     | Tick when investment started                                                             |
-| `maturityTick`      | Number     | Tick when investment matures                                                             |
-| `risk`              | String     | Risk level (low, medium, high)                                                           |
-| `requiresVote`      | Boolean    | Whether the investment required member voting                                            |
-| `proposal`          | Object     | Vote tracking: proposedBy, status, votes[], expiresAtTick                                |
-| `status`            | String     | proposed, active, matured, withdrawn, rejected                                           |
+| Field              | Type     | Description                                                                       |
+| ------------------ | -------- | --------------------------------------------------------------------------------- |
+| `companyId`        | ObjectId | Reference to RealEstateCompany                                                    |
+| `investmentType`   | String   | government_bond, corporate_bond, reit_fund, fixed_term, infrastructure_fund, etc. |
+| `name`             | String   | Investment name                                                                   |
+| `principal`        | Number   | Initial investment amount                                                         |
+| `currentValue`     | Number   | Current value (updated each tick)                                                 |
+| `annualReturnRate` | Number   | Current annual return rate                                                        |
+| `durationTicks`    | Number   | Investment duration                                                               |
+| `startTick`        | Number   | Tick when investment started                                                      |
+| `maturityTick`     | Number   | Tick when investment matures                                                      |
+| `risk`             | String   | Risk level (low, medium, high)                                                    |
+| `requiresVote`     | Boolean  | Whether the investment required member voting                                     |
+| `proposal`         | Object   | Vote tracking: proposedBy, status, votes[], expiresAtTick                         |
+| `status`           | String   | proposed, active, matured, withdrawn, rejected                                    |
 
 ### CityContract
 
-| Field            | Type       | Description                                                                         |
-| ---------------- | ---------- | ----------------------------------------------------------------------------------- |
-| `companyId`      | ObjectId   | Reference to RealEstateCompany                                                      |
-| `cityId`         | ObjectId   | Reference to City                                                                   |
-| `contractType`   | String     | renovation, small_housing, hotel, office_tower, infrastructure, etc.               |
-| `contractTier`   | Number     | Contract tier (1+)                                                                  |
-| `name`           | String     | Contract name                                                                       |
-| `requiredLevel`  | Number     | Minimum company level to take the contract                                          |
-| `requiredTreasury` | Number   | Minimum treasury balance required                                                   |
-| `cost`           | Number     | Upfront cost to accept                                                              |
-| `reward`         | Number     | Payment on completion                                                               |
-| `reputationReward` | Number   | Reputation bonus on completion                                                      |
-| `xpReward`       | Number     | XP bonus on completion                                                              |
-| `durationTicks`  | Number     | Contract duration                                                                   |
-| `status`         | String     | available, proposed, active, completed, failed, rejected                            |
-| `proposal`       | Object     | Vote tracking (same structure as investments)                                       |
+| Field              | Type     | Description                                                          |
+| ------------------ | -------- | -------------------------------------------------------------------- |
+| `companyId`        | ObjectId | Reference to RealEstateCompany                                       |
+| `cityId`           | ObjectId | Reference to City                                                    |
+| `contractType`     | String   | renovation, small_housing, hotel, office_tower, infrastructure, etc. |
+| `contractTier`     | Number   | Contract tier (1+)                                                   |
+| `name`             | String   | Contract name                                                        |
+| `requiredLevel`    | Number   | Minimum company level to take the contract                           |
+| `requiredTreasury` | Number   | Minimum treasury balance required                                    |
+| `cost`             | Number   | Upfront cost to accept                                               |
+| `reward`           | Number   | Payment on completion                                                |
+| `reputationReward` | Number   | Reputation bonus on completion                                       |
+| `xpReward`         | Number   | XP bonus on completion                                               |
+| `durationTicks`    | Number   | Contract duration                                                    |
+| `status`           | String   | available, proposed, active, completed, failed, rejected             |
+| `proposal`         | Object   | Vote tracking (same structure as investments)                        |
 
 ### Season
 
@@ -1104,16 +1128,17 @@ Automated via `gradle-play-publisher` plugin. Required GitHub Secrets:
 
 ### Kubernetes (K3s)
 
-| Component   | Description                                                        |
-| ----------- | ------------------------------------------------------------------ |
-| Namespace   | `cityflow`                                                         |
-| MongoDB     | StatefulSet with persistent storage                                |
-| Backend     | 2-replica Deployment with database-level tick lock                 |
-| Frontend    | 2-replica Deployment with nginx serving static files               |
-| Discord Bot | Single-replica Deployment with NetworkPolicy (egress only)         |
-| Backup PVC  | 5Gi PersistentVolumeClaim for backup storage                       |
-| Ingress     | Traefik with Let's Encrypt TLS (TLS-ALPN challenge)                |
-| SSL         | Auto-renewed Let's Encrypt certificate for `cityflow.sizops.co.il` |
+| Component   | Description                                                                                                 |
+| ----------- | ----------------------------------------------------------------------------------------------------------- |
+| Namespace   | `cityflow`                                                                                                  |
+| MongoDB     | StatefulSet with persistent storage                                                                         |
+| Redis       | Deployment with persistent storage, noeviction policy, healthcheck                                          |
+| Backend     | 2-replica Deployment with Redis distributed tick lock; Service with ClientIP session affinity for Socket.IO |
+| Frontend    | 2-replica Deployment with nginx serving static files                                                        |
+| Discord Bot | Single-replica Deployment with NetworkPolicy (egress only)                                                  |
+| Backup PVC  | 5Gi PersistentVolumeClaim for backup storage                                                                |
+| Ingress     | Traefik with Let's Encrypt TLS + sticky cookie for Socket.IO                                                |
+| SSL         | Auto-renewed Let's Encrypt certificate for `cityflow.sizops.co.il`                                          |
 
 ### Docker
 
