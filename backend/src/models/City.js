@@ -46,6 +46,14 @@ const citySchema = new mongoose.Schema(
     immigration: { type: Number, default: 0 },
     emigration: { type: Number, default: 0 },
     demographicsHistory: [demographicsHistoryEntry],
+
+    hazardRisk: {
+      hurricane: { type: Number, default: 0, min: 0, max: 100 },
+      flood: { type: Number, default: 0, min: 0, max: 100 },
+      earthquake: { type: Number, default: 0, min: 0, max: 100 },
+      wildfire: { type: Number, default: 0, min: 0, max: 100 },
+      storm: { type: Number, default: 0, min: 0, max: 100 },
+    },
   },
   { timestamps: true },
 );

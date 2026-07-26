@@ -111,6 +111,16 @@ export async function generateProperties() {
 
       const location = LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)];
 
+      let riskScore = 20;
+      if (location === 'Waterfront') riskScore = 55;
+      else if (location === 'Industrial Zone') riskScore = 35;
+      else if (location === 'Downtown') riskScore = 25;
+      else if (location === 'Business District') riskScore = 20;
+      if (city.economicCondition === 'recession') riskScore += 15;
+      else if (city.economicCondition === 'slowdown') riskScore += 8;
+      else if (city.economicCondition === 'boom') riskScore -= 5;
+      riskScore = Math.max(0, Math.min(100, riskScore));
+
       properties.push({
         cityId: city._id,
         ownerId: null,
@@ -122,6 +132,7 @@ export async function generateProperties() {
         volatility: 0.05 + Math.random() * 0.15,
         forSale: true,
         location,
+        riskScore,
         ...(type === 'land'
           ? { size: LAND_SIZES[Math.floor(Math.random() * LAND_SIZES.length)], developmentLevel: 0 }
           : {}),
