@@ -11,6 +11,10 @@ resources:
   - mongodb/statefulset.yml
   - mongodb/service.yml
   - mongodb/networkpolicy.yml
+  - redis/configmap.yml
+  - redis/deployment.yml
+  - redis/service.yml
+  - redis/networkpolicy.yml
   - backend/deployment.yml
   - backend/service.yml
   - backend/networkpolicy.yml

@@ -12,6 +12,7 @@ import {
   LEVEL_UP_REWARDS,
   checkMilestones,
 } from '../config/companyProgression.js';
+import { cancelDelayedJob } from '../utils/delayedJobs.js';
 
 export { getCompanyLevelBenefits } from '../config/companyProgression.js';
 
@@ -626,6 +627,7 @@ export async function processCompanyLoanRequests(tickNumber) {
         const yesVotes = lr.votes.filter((v) => v.vote === 'yes').length;
         if (totalVoters > 0 && yesVotes / totalVoters >= LOAN_REQUEST_VOTE_THRESHOLD) {
           lr.status = 'approved';
+          cancelDelayedJob(`vote:loanRequest:${lr._id}`);
         }
 
         dirty = true;
@@ -718,6 +720,7 @@ export async function processCompanyLoanRequests(tickNumber) {
 
       if (ageTicks >= LOAN_REQUEST_EXPIRE_TICKS && lr.status === 'pending') {
         lr.status = 'rejected';
+        cancelDelayedJob(`vote:loanRequest:${lr._id}`);
         expired++;
 
         await CompanyAuditLog.create({
@@ -802,6 +805,7 @@ export async function processCompanyDevelopmentRequests(tickNumber) {
         const yesVotes = dr.votes.filter((v) => v.vote === 'yes').length;
         if (totalVoters > 0 && yesVotes / totalVoters >= LOAN_REQUEST_VOTE_THRESHOLD) {
           dr.status = 'approved';
+          cancelDelayedJob(`vote:developmentRequest:${dr._id}`);
         }
 
         dirty = true;
@@ -809,6 +813,7 @@ export async function processCompanyDevelopmentRequests(tickNumber) {
 
       if (ageTicks >= DEV_REQUEST_EXPIRE_TICKS && dr.status === 'pending') {
         dr.status = 'rejected';
+        cancelDelayedJob(`vote:developmentRequest:${dr._id}`);
         dr.rejectionReason = 'expired_no_votes';
         expired++;
 

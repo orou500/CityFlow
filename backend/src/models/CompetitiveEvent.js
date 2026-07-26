@@ -44,7 +44,6 @@ const competitiveEventSchema = new mongoose.Schema(
       type: String,
       enum: ['upcoming', 'active', 'completed'],
       default: 'upcoming',
-      index: true,
     },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },

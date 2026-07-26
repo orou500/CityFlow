@@ -24,8 +24,19 @@ export const config = {
   },
   emailFrom: process.env.EMAIL_FROM || 'noreply@sizops.co.il',
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+  socketio: {
+    corsOrigin: process.env.SOCKETIO_CORS_ORIGIN || '*',
+    pingInterval: parseInt(process.env.SOCKETIO_PING_INTERVAL) || 25000,
+    pingTimeout: parseInt(process.env.SOCKETIO_PING_TIMEOUT) || 20000,
+  },
   discordBotApiUrl: process.env.DISCORD_BOT_API_URL || 'http://cityflow-discord-bot:5001',
   discordBotApiKey: process.env.DISCORD_BOT_API_KEY || '',
+  redis: {
+    url: process.env.REDIS_URL || '',
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT) || 6379,
+    password: process.env.REDIS_PASSWORD || '',
+  },
   oauth: {
     google: {
       clientId: process.env.OAUTH_GOOGLE_CLIENT_ID || '',

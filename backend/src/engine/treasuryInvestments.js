@@ -10,6 +10,7 @@ import {
   INVESTMENT_TYPES,
 } from '../config/investmentOpportunities.js';
 import { addTreasuryTransaction, grantCompanyXP } from './companyProcessing.js';
+import { cancelDelayedJob } from '../utils/delayedJobs.js';
 
 const ANNUAL_TICKS = 4 * 365;
 
@@ -139,6 +140,8 @@ async function processInvestmentProposal(investment, tickNumber, globalEconomicI
     investment.proposal.resolvedAt = new Date();
     investment.startTick = tickNumber;
     investment.maturityTick = tickNumber + investment.durationTicks;
+    const { scheduleInvestmentMaturity } = await import('../utils/delayedJobs.js');
+    scheduleInvestmentMaturity(investment._id, company._id, investment.durationTicks);
     investment.globalEconomicIndex = globalEconomicIndex;
 
     company.treasury.balance -= investment.principal;
@@ -179,11 +182,13 @@ async function processInvestmentProposal(investment, tickNumber, globalEconomicI
     investment.proposal.status = 'rejected';
     investment.proposal.resolvedAt = new Date();
     await investment.save();
+    cancelDelayedJob(`vote:investment:${investment._id}`);
   } else if (ageTicks >= 8) {
     investment.status = 'rejected';
     investment.proposal.status = 'rejected';
     investment.proposal.resolvedAt = new Date();
     await investment.save();
+    cancelDelayedJob(`vote:investment:${investment._id}`);
   }
 }
 

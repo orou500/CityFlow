@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+  namespace: cityflow
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/part-of: cityflow
+data:
+  redis.conf: |
+    maxmemory 256mb
+    maxmemory-policy allkeys-lru
+    save ""
+    appendonly no

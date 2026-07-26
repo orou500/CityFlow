@@ -13,7 +13,7 @@ import { executeTick } from '../engine/tick.js';
 import { DEVELOPMENT_PROJECTS } from '../config/developmentProjects.js';
 import { getCurrentSeason, endCurrentSeasonAndStartNew, createNewSeason } from '../engine/seasonReset.js';
 import { setMaintenanceMode, getMaintenanceInfo } from '../models/GameState.js';
-import Notification from '../models/Notification.js';
+import { enqueueNotification } from '../utils/notificationQueue.js';
 import RealEstateCompany from '../models/RealEstateCompany.js';
 import { xpRequiredForLevel, xpRequiredForNextLevel } from '../config/companyProgression.js';
 import { sendEmail, verifyConnection } from '../services/email.js';
@@ -548,7 +548,7 @@ router.post('/maintenance/enable', async (req, res) => {
     const { message } = req.body;
     await setMaintenanceMode(true, message, req.user._id);
     console.log(`[ADMIN] Maintenance Mode Enabled by ${req.user.username}`);
-    await Notification.create({
+    await enqueueNotification({
       userId: null,
       type: 'system',
       title: 'Maintenance Mode Enabled',
@@ -570,7 +570,7 @@ router.post('/maintenance/disable', async (req, res) => {
   try {
     await setMaintenanceMode(false, '', req.user._id);
     console.log(`[ADMIN] Maintenance Mode Disabled by ${req.user.username}`);
-    await Notification.create({
+    await enqueueNotification({
       userId: null,
       type: 'system',
       title: 'Maintenance Completed',

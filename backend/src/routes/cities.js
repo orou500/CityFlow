@@ -3,12 +3,15 @@ import City from '../models/City.js';
 import Property from '../models/Property.js';
 import Event from '../models/Event.js';
 import { ECONOMIC_CONDITIONS } from '../config/demographics.js';
+import { cacheGetOrSet } from '../utils/cache.js';
+import { cacheKeys, cacheTTL } from '../utils/cacheKeys.js';
 
 const router = Router();
 
 router.get('/', async (req, res) => {
   try {
-    const cities = await City.find();
+    const cities = await cacheGetOrSet(cacheKeys.cities(), async () => City.find(), cacheTTL.standard);
+
     res.json(cities);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -17,32 +20,46 @@ router.get('/', async (req, res) => {
 
 router.get('/:id', async (req, res) => {
   try {
-    const city = await City.findById(req.params.id);
-    if (!city) return res.status(404).json({ error: 'City not found' });
-    const properties = await Property.find({ cityId: city._id }).populate('ownerId', 'username');
-    const activeEvents = await Event.find({
-      _id: { $in: city.activeEvents.map((e) => e.eventId) },
-      active: true,
-    });
-    const econ = ECONOMIC_CONDITIONS[city.economicCondition] || ECONOMIC_CONDITIONS.stable;
-    res.json({
-      city,
-      properties,
-      activeEvents,
-      demographics: {
-        population: city.population,
-        economicCondition: city.economicCondition,
-        economicLabel: econ.label,
-        economicColor: econ.color,
-        avgRent: city.avgRent,
-        immigration: city.immigration,
-        emigration: city.emigration,
-        netMigration: city.immigration - city.emigration,
-        demandIndex: city.demandIndex,
-        supplyIndex: city.supplyIndex,
-        growthRate: city.growthRate,
+    const data = await cacheGetOrSet(
+      cacheKeys.city(req.params.id),
+      async () => {
+        const city = await City.findById(req.params.id);
+        if (!city) return null;
+
+        const [properties, activeEvents] = await Promise.all([
+          Property.find({ cityId: city._id }).populate('ownerId', 'username'),
+          Event.find({
+            _id: { $in: city.activeEvents.map((e) => e.eventId) },
+            active: true,
+          }),
+        ]);
+
+        const econ = ECONOMIC_CONDITIONS[city.economicCondition] || ECONOMIC_CONDITIONS.stable;
+
+        return {
+          city,
+          properties,
+          activeEvents,
+          demographics: {
+            population: city.population,
+            economicCondition: city.economicCondition,
+            economicLabel: econ.label,
+            economicColor: econ.color,
+            avgRent: city.avgRent,
+            immigration: city.immigration,
+            emigration: city.emigration,
+            netMigration: city.immigration - city.emigration,
+            demandIndex: city.demandIndex,
+            supplyIndex: city.supplyIndex,
+            growthRate: city.growthRate,
+          },
+        };
       },
-    });
+      cacheTTL.medium,
+    );
+
+    if (!data) return res.status(404).json({ error: 'City not found' });
+    res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

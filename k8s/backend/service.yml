@@ -10,6 +10,10 @@ spec:
   selector:
     app.kubernetes.io/name: backend
     app.kubernetes.io/part-of: cityflow
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800
   ports:
     - port: 5000
       targetPort: http

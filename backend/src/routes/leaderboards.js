@@ -4,8 +4,12 @@ import CompetitiveEvent from '../models/CompetitiveEvent.js';
 import User from '../models/User.js';
 import Season from '../models/Season.js';
 import { authenticate } from '../middleware/auth.js';
+import { cacheGet, cacheSet, cacheDelPattern } from '../utils/cache.js';
 
 const router = Router();
+
+const LEADERBOARD_TTL = 180;
+const LEADERBOARD_SUMMARY_TTL = 120;
 
 router.get('/rankings/:category', async (req, res) => {
   try {
@@ -24,9 +28,7 @@ router.get('/rankings/:category', async (req, res) => {
       'companyReputation',
       'companyGrowth',
     ];
-    const PLAYER_CATEGORIES = ['netWorth', 'properties', 'passiveIncome', 'dealVolume', 'cityInfluence'];
-    const validCategories = ALL_CATEGORIES;
-    if (!validCategories.includes(category)) {
+    if (!ALL_CATEGORIES.includes(category)) {
       return res.status(400).json({ error: 'Invalid category' });
     }
 
@@ -38,25 +40,29 @@ router.get('/rankings/:category', async (req, res) => {
       seasonNumber = activeSeason ? activeSeason.number : 1;
     }
 
-    const snapshot = await LeaderboardSnapshot.findOne({
-      category,
-      seasonNumber,
-    }).sort({ tickNumber: -1 });
+    const cacheKey = `lb:rankings:${category}:${seasonNumber}:${offset}:${limit}`;
+    const cached = await cacheGet(cacheKey);
+    if (cached) return res.json(cached);
 
+    const snapshot = await LeaderboardSnapshot.findOne({ category, seasonNumber }).sort({ tickNumber: -1 });
     if (!snapshot) {
-      return res.json({ rankings: [], total: 0, category, seasonNumber });
+      const empty = { rankings: [], total: 0, category, seasonNumber };
+      await cacheSet(cacheKey, empty, LEADERBOARD_TTL);
+      return res.json(empty);
     }
 
     const rankings = snapshot.rankings.slice(Number(offset), Number(offset) + Number(limit));
-
-    res.json({
+    const result = {
       rankings,
       total: snapshot.rankings.length,
       category,
       seasonNumber,
       tickNumber: snapshot.tickNumber,
       computedAt: snapshot.computedAt,
-    });
+    };
+
+    await cacheSet(cacheKey, result, LEADERBOARD_TTL);
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -79,18 +85,18 @@ router.get('/my-rank', authenticate, async (req, res) => {
       'companyReputation',
       'companyGrowth',
     ];
-    const validCategories = ALL_CATEGORIES;
-    const categories = category && validCategories.includes(category) ? [category] : validCategories;
+    const categories = category && ALL_CATEGORIES.includes(category) ? [category] : ALL_CATEGORIES;
 
     const activeSeason = await Season.findOne({ status: 'active' });
     const seasonNumber = activeSeason ? activeSeason.number : 1;
 
+    const cacheKey = `lb:myrank:${userId}:${seasonNumber}:${categories.join(',')}`;
+    const cached = await cacheGet(cacheKey);
+    if (cached) return res.json(cached);
+
     const result = {};
     for (const cat of categories) {
-      const snapshot = await LeaderboardSnapshot.findOne({
-        category: cat,
-        seasonNumber,
-      }).sort({ tickNumber: -1 });
+      const snapshot = await LeaderboardSnapshot.findOne({ category: cat, seasonNumber }).sort({ tickNumber: -1 });
 
       if (!snapshot) {
         result[cat] = { rank: null, value: 0, previousRank: null, rankChange: 0, total: 0 };
@@ -107,6 +113,7 @@ router.get('/my-rank', authenticate, async (req, res) => {
       };
     }
 
+    await cacheSet(cacheKey, result, LEADERBOARD_TTL);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -130,8 +137,7 @@ router.get('/history/:category', async (req, res) => {
       'companyReputation',
       'companyGrowth',
     ];
-    const validCategories = ALL_CATEGORIES;
-    if (!validCategories.includes(category)) {
+    if (!ALL_CATEGORIES.includes(category)) {
       return res.status(400).json({ error: 'Invalid category' });
     }
 
@@ -143,14 +149,15 @@ router.get('/history/:category', async (req, res) => {
       seasonNumber = activeSeason ? activeSeason.number : 1;
     }
 
-    const snapshots = await LeaderboardSnapshot.find({
-      category,
-      seasonNumber,
-    })
+    const cacheKey = `lb:history:${category}:${seasonNumber}:${limit}`;
+    const cached = await cacheGet(cacheKey);
+    if (cached) return res.json(cached);
+
+    const snapshots = await LeaderboardSnapshot.find({ category, seasonNumber })
       .sort({ tickNumber: -1 })
       .limit(Number(limit));
 
-    res.json({
+    const result = {
       history: snapshots.map((s) => ({
         tickNumber: s.tickNumber,
         computedAt: s.computedAt,
@@ -159,7 +166,10 @@ router.get('/history/:category', async (req, res) => {
       })),
       category,
       seasonNumber,
-    });
+    };
+
+    await cacheSet(cacheKey, result, LEADERBOARD_TTL);
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -169,22 +179,21 @@ router.get('/player/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
 
+    const cacheKey = `lb:player:${userId}`;
+    const cached = await cacheGet(cacheKey);
+    if (cached) return res.json(cached);
+
     const user = await User.findById(userId).select(
       'username displayName avatar level xp balance ownedProperties achievements bio',
     );
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
     const activeSeason = await Season.findOne({ status: 'active' });
     const seasonNumber = activeSeason ? activeSeason.number : 1;
 
     const ranks = {};
     for (const cat of ['netWorth', 'properties', 'passiveIncome', 'dealVolume', 'cityInfluence']) {
-      const snapshot = await LeaderboardSnapshot.findOne({
-        category: cat,
-        seasonNumber,
-      }).sort({ tickNumber: -1 });
+      const snapshot = await LeaderboardSnapshot.findOne({ category: cat, seasonNumber }).sort({ tickNumber: -1 });
 
       if (!snapshot) {
         ranks[cat] = { rank: null, value: 0 };
@@ -198,7 +207,7 @@ router.get('/player/:userId', async (req, res) => {
       };
     }
 
-    res.json({
+    const result = {
       user: {
         _id: user._id,
         username: user.username,
@@ -211,7 +220,10 @@ router.get('/player/:userId', async (req, res) => {
         propertyCount: user.ownedProperties?.length || 0,
       },
       ranks,
-    });
+    };
+
+    await cacheSet(cacheKey, result, LEADERBOARD_TTL);
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -226,7 +238,6 @@ router.get('/events', async (req, res) => {
     }
 
     const events = await CompetitiveEvent.find(filter).sort({ startDate: -1 }).limit(50);
-
     res.json({ events });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -236,9 +247,7 @@ router.get('/events', async (req, res) => {
 router.get('/events/:id', async (req, res) => {
   try {
     const event = await CompetitiveEvent.findById(req.params.id);
-    if (!event) {
-      return res.status(404).json({ error: 'Event not found' });
-    }
+    if (!event) return res.status(404).json({ error: 'Event not found' });
     res.json({ event });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -247,12 +256,9 @@ router.get('/events/:id', async (req, res) => {
 
 router.post('/events', authenticate, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
+    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
 
     const { name, description, type, metric, startDate, endDate, minLevel, maxParticipants, rewards } = req.body;
-
     const activeSeason = await Season.findOne({ status: 'active' });
 
     const event = await CompetitiveEvent.create({
@@ -282,6 +288,10 @@ router.get('/summary', async (req, res) => {
     const activeSeason = await Season.findOne({ status: 'active' });
     const seasonNumber = activeSeason ? activeSeason.number : 1;
 
+    const cacheKey = `lb:summary:${seasonNumber}`;
+    const cached = await cacheGet(cacheKey);
+    if (cached) return res.json(cached);
+
     const summary = {};
     const allCats = [
       'netWorth',
@@ -295,17 +305,23 @@ router.get('/summary', async (req, res) => {
       'companyReputation',
       'companyGrowth',
     ];
-    for (const cat of allCats) {
-      const snapshot = await LeaderboardSnapshot.findOne({
-        category: cat,
-        seasonNumber,
-      }).sort({ tickNumber: -1 });
 
+    const snapshots = await LeaderboardSnapshot.find({
+      category: { $in: allCats },
+      seasonNumber,
+    }).sort({ tickNumber: -1 });
+
+    const latestByCategory = {};
+    for (const snap of snapshots) {
+      if (!latestByCategory[snap.category]) latestByCategory[snap.category] = snap;
+    }
+
+    for (const cat of allCats) {
+      const snapshot = latestByCategory[cat];
       if (!snapshot || snapshot.rankings.length === 0) {
         summary[cat] = { topPlayer: null, totalPlayers: 0 };
         continue;
       }
-
       summary[cat] = {
         topPlayer: snapshot.rankings[0] || null,
         totalPlayers: snapshot.rankings.length,
@@ -316,10 +332,16 @@ router.get('/summary', async (req, res) => {
 
     const activeEvents = await CompetitiveEvent.find({ status: 'active' }).sort({ startDate: -1 }).limit(5);
 
-    res.json({ summary, activeEvents, seasonNumber });
+    const result = { summary, activeEvents, seasonNumber };
+    await cacheSet(cacheKey, result, LEADERBOARD_SUMMARY_TTL);
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
+export async function invalidateLeaderboardCache() {
+  await cacheDelPattern('lb:*');
+}
 
 export default router;

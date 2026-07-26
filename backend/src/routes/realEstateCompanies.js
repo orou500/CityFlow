@@ -5,7 +5,6 @@ import User from '../models/User.js';
 import Property from '../models/Property.js';
 import Loan from '../models/Loan.js';
 import Transaction from '../models/Transaction.js';
-import Notification from '../models/Notification.js';
 import City from '../models/City.js';
 import Company from '../models/Company.js';
 import CompanyInvestment from '../models/CompanyInvestment.js';
@@ -28,6 +27,7 @@ import {
 } from '../config/upgradeProjects.js';
 import { IMPROVEMENT_PROJECTS, calculateImprovementCost } from '../config/improvementProjects.js';
 import { getAllProjects, calculateProjectCost, calculateUnitRent } from '../config/developmentProjects.js';
+import { trackEvent, EVENTS } from '../utils/analytics.js';
 import ConstructionProject from '../models/ConstructionProject.js';
 import { grantCompanyXP, addTreasuryTransaction } from '../engine/companyProcessing.js';
 import {
@@ -37,6 +37,22 @@ import {
   COMPANY_MILESTONES,
   MAX_COMPANY_LEVEL,
 } from '../config/companyProgression.js';
+import { cacheGetOrSet } from '../utils/cache.js';
+import { cacheKeys, cacheTTL } from '../utils/cacheKeys.js';
+import { enqueueNotification } from '../utils/notificationQueue.js';
+import {
+  invalidateCompany,
+  invalidateUser,
+  invalidateLeaderboards,
+  onCompanyCreated,
+  onCompanyUpdated,
+  onCompanyTreasuryChanged,
+  onCompanyVote,
+  onCompanyVoteCompleted,
+} from '../utils/cacheInvalidation.js';
+import { scheduleVoteExpiration, cancelDelayedJob } from '../utils/delayedJobs.js';
+import { emitToCompany } from '../socket/index.js';
+import { SOCKET_EVENTS } from '../socket/events.js';
 
 const router = Router();
 router.use(authenticate);
@@ -295,6 +311,9 @@ router.post('/', async (req, res) => {
 
     await awardXp(user, 25, 'company_create');
 
+    await onCompanyCreated(company._id, user._id);
+    trackEvent(EVENTS.COMPANY_CREATED, { userId: user._id, companyId: company._id });
+
     res.status(201).json(company);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -303,51 +322,60 @@ router.post('/', async (req, res) => {
 
 router.get('/:id', async (req, res) => {
   try {
-    const company = await RealEstateCompany.findById(req.params.id)
-      .populate('founderId', 'username avatar level')
-      .populate('members.userId', 'username avatar level')
-      .populate('invitations.userId', 'username avatar')
-      .populate('invitations.invitedBy', 'username');
+    const data = await cacheGetOrSet(
+      cacheKeys.company(req.params.id),
+      async () => {
+        const company = await RealEstateCompany.findById(req.params.id)
+          .populate('founderId', 'username avatar level')
+          .populate('members.userId', 'username avatar level')
+          .populate('invitations.userId', 'username avatar')
+          .populate('invitations.invitedBy', 'username');
 
-    if (!company) return res.status(404).json({ error: 'Company not found' });
+        if (!company) return null;
 
-    const shareBreakdown = computeShares(company.members);
+        const shareBreakdown = computeShares(company.members);
 
-    const properties = await Property.find({ companyId: company._id })
-      .populate('cityId', 'name country')
-      .select('name type currentPrice rent cityId condition occupancy forSale');
+        const properties = await Property.find({ companyId: company._id })
+          .populate('cityId', 'name country')
+          .select('name type currentPrice rent cityId condition occupancy forSale');
 
-    const loans = await Loan.find({ companyId: company._id, active: true }).select(
-      'type principal remainingBalance interestRate ticksRemaining paymentPerTick',
+        const loans = await Loan.find({ companyId: company._id, active: true }).select(
+          'type principal remainingBalance interestRate ticksRemaining paymentPerTick',
+        );
+
+        const isMember = getMember(company, req.user._id);
+        const pendingInvites = company.invitations.filter((i) => i.status === 'pending');
+        const hasPendingApplication =
+          !isMember &&
+          company.applications.some((a) => a.userId?.toString() === req.user._id.toString() && a.status === 'pending');
+
+        const levelBenefits = getCompanyLevelBenefits(company.level);
+        const xpForCurrentLevel = xpRequiredForLevel(company.level);
+        const xpForNextLevel = company.xpToNextLevel || xpRequiredForNextLevel(company.level);
+        const xpInCurrentLevel = Math.max(0, company.xp - xpForCurrentLevel);
+        const xpNeededForLevel = Math.max(1, xpForNextLevel - xpForCurrentLevel);
+
+        return {
+          ...company.toJSON(),
+          xpForCurrentLevel,
+          xpToNextLevel: xpForNextLevel,
+          xpInCurrentLevel,
+          xpNeededForLevel,
+          shareBreakdown,
+          properties,
+          loans,
+          isMember: !!isMember,
+          memberRole: isMember?.role || null,
+          pendingInvitations: pendingInvites.length,
+          hasPendingApplication,
+          levelBenefits,
+        };
+      },
+      cacheTTL.standard,
     );
 
-    const isMember = getMember(company, req.user._id);
-    const pendingInvites = company.invitations.filter((i) => i.status === 'pending');
-    const hasPendingApplication =
-      !isMember &&
-      company.applications.some((a) => a.userId?.toString() === req.user._id.toString() && a.status === 'pending');
-
-    const levelBenefits = getCompanyLevelBenefits(company.level);
-    const xpForCurrentLevel = xpRequiredForLevel(company.level);
-    const xpForNextLevel = company.xpToNextLevel || xpRequiredForNextLevel(company.level);
-    const xpInCurrentLevel = Math.max(0, company.xp - xpForCurrentLevel);
-    const xpNeededForLevel = Math.max(1, xpForNextLevel - xpForCurrentLevel);
-
-    res.json({
-      ...company.toJSON(),
-      xpForCurrentLevel,
-      xpToNextLevel: xpForNextLevel,
-      xpInCurrentLevel,
-      xpNeededForLevel,
-      shareBreakdown,
-      properties,
-      loans,
-      isMember: !!isMember,
-      memberRole: isMember?.role || null,
-      pendingInvitations: pendingInvites.length,
-      hasPendingApplication,
-      levelBenefits,
-    });
+    if (!data) return res.status(404).json({ error: 'Company not found' });
+    res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -371,6 +399,8 @@ router.put('/:id', async (req, res) => {
 
     const gameState = await getGameState();
     await addAuditLog(company._id, req.user._id, 'settings_updated', { description, logo }, gameState.tickNumber);
+
+    await onCompanyUpdated(company._id);
 
     res.json(company);
   } catch (err) {
@@ -407,7 +437,7 @@ router.post('/:id/invite', async (req, res) => {
     company.invitations.push({ userId, invitedBy: req.user._id, status: 'pending' });
     await company.save();
 
-    await Notification.create({
+    await enqueueNotification({
       userId,
       type: 'system',
       title: 'Company Invitation',
@@ -424,6 +454,8 @@ router.post('/:id/invite', async (req, res) => {
       { targetUserId: userId, targetUsername: targetUser.username },
       gameState.tickNumber,
     );
+
+    await invalidateCompany(company._id);
 
     res.json({ success: true });
   } catch (err) {
@@ -474,13 +506,21 @@ router.post('/:id/invite/:invitationId/accept', async (req, res) => {
     const gameState = await getGameState();
     await addAuditLog(company._id, req.user._id, 'member_joined', { username: user.username }, gameState.tickNumber);
 
-    await Notification.create({
+    await enqueueNotification({
       userId: company.founderId,
       type: 'system',
       title: 'Member Joined',
       message: `${user.username} has joined "${company.name}"`,
       relatedId: company._id,
       global: false,
+    });
+
+    await invalidateCompany(company._id);
+    await invalidateUser(req.user._id);
+    emitToCompany(company._id, SOCKET_EVENTS.COMPANY_MEMBER_JOINED, {
+      companyId: company._id,
+      userId: req.user._id,
+      username: req.user.username,
     });
 
     res.json({ success: true });
@@ -505,6 +545,8 @@ router.post('/:id/invite/:invitationId/decline', async (req, res) => {
 
     const gameState = await getGameState();
     await addAuditLog(company._id, req.user._id, 'invitation_declined', {}, gameState.tickNumber);
+
+    await invalidateCompany(company._id);
 
     res.json({ success: true });
   } catch (err) {
@@ -556,6 +598,14 @@ router.post('/:id/leave', async (req, res) => {
       gameState.tickNumber,
     );
 
+    await invalidateCompany(company._id);
+    await invalidateUser(user._id);
+    emitToCompany(company._id, SOCKET_EVENTS.COMPANY_MEMBER_LEFT, {
+      companyId: company._id,
+      userId: user._id,
+      username: user.username,
+    });
+
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -600,13 +650,20 @@ router.delete('/:id/members/:userId', async (req, res) => {
       gameState.tickNumber,
     );
 
-    await Notification.create({
+    await enqueueNotification({
       userId: req.params.userId,
       type: 'system',
       title: 'Removed from Company',
       message: `You have been removed from "${company.name}"`,
       relatedId: company._id,
       global: false,
+    });
+
+    await invalidateCompany(company._id);
+    await invalidateUser(req.params.userId);
+    emitToCompany(company._id, SOCKET_EVENTS.COMPANY_MEMBER_LEFT, {
+      companyId: company._id,
+      userId: req.params.userId,
     });
 
     res.json({ success: true });
@@ -636,6 +693,9 @@ router.put('/:id/members/:userId/role', async (req, res) => {
       return res.status(400).json({ error: 'Cannot change CEO role' });
     }
 
+    const oldRole = targetMember.role;
+    const userId = req.params.userId;
+    const newRole = role;
     targetMember.role = role;
     await company.save();
 
@@ -647,6 +707,12 @@ router.put('/:id/members/:userId/role', async (req, res) => {
       { targetUserId: req.params.userId, newRole: role },
       gameState.tickNumber,
     );
+
+    await invalidateCompany(company._id);
+    const roleRank = { director: 4, officer: 3, member: 2, recruit: 1 };
+    const isPromotion = roleRank[newRole] > roleRank[oldRole];
+    const eventName = isPromotion ? SOCKET_EVENTS.COMPANY_MEMBER_PROMOTED : SOCKET_EVENTS.COMPANY_MEMBER_DEMOTED;
+    emitToCompany(company._id, eventName, { companyId: company._id, userId, newRole, oldRole });
 
     res.json({ success: true });
   } catch (err) {
@@ -705,6 +771,8 @@ router.post('/:id/treasury/deposit', async (req, res) => {
       { amount, balance: company.treasury.balance },
       gameState.tickNumber,
     );
+
+    await onCompanyTreasuryChanged(company._id, req.user._id);
 
     res.json({ treasury: company.treasury, balance: user.balance });
   } catch (err) {
@@ -767,6 +835,8 @@ router.post('/:id/treasury/withdraw', async (req, res) => {
       { amount, recipient: recipient.username, balance: company.treasury.balance },
       gameState.tickNumber,
     );
+
+    await onCompanyTreasuryChanged(company._id, req.user._id);
 
     res.json({ treasury: company.treasury, balance: recipient.balance });
   } catch (err) {
@@ -882,6 +952,8 @@ router.post('/:id/properties/purchase', async (req, res) => {
       gameState.tickNumber,
     );
 
+    await invalidateCompany(company._id);
+
     res.json({ property, treasury: company.treasury });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -946,6 +1018,9 @@ router.post('/:id/properties/:propertyId/sell', async (req, res) => {
       gameState.tickNumber,
     );
 
+    await invalidateCompany(company._id);
+    await invalidateUser(req.user._id);
+
     res.json({ treasury: company.treasury });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -962,20 +1037,28 @@ router.get('/:id/properties', async (req, res) => {
     const limitNum = Math.min(50, Math.max(1, parseInt(limit) || 20));
     const skip = (pageNum - 1) * limitNum;
 
-    const filter = { companyId: company._id };
-    const [total, properties] = await Promise.all([
-      Property.countDocuments(filter),
-      Property.find(filter)
-        .populate('cityId', 'name country')
-        .select(
-          'name type currentPrice rent cityId condition occupancy forSale upgradeLevel propertyRating activeImprovement improvements',
-        )
-        .sort({ currentPrice: -1 })
-        .skip(skip)
-        .limit(limitNum),
-    ]);
+    const data = await cacheGetOrSet(
+      cacheKeys.company(req.params.id) + ':properties',
+      async () => {
+        const filter = { companyId: company._id };
+        const [total, properties] = await Promise.all([
+          Property.countDocuments(filter),
+          Property.find(filter)
+            .populate('cityId', 'name country')
+            .select(
+              'name type currentPrice rent cityId condition occupancy forSale upgradeLevel propertyRating activeImprovement improvements',
+            )
+            .sort({ currentPrice: -1 })
+            .skip(skip)
+            .limit(limitNum),
+        ]);
 
-    res.json({ properties, total, page: pageNum, totalPages: Math.ceil(total / limitNum) });
+        return { properties, total, page: pageNum, totalPages: Math.ceil(total / limitNum) };
+      },
+      cacheTTL.medium,
+    );
+
+    res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -986,11 +1069,17 @@ router.get('/:id/loans', async (req, res) => {
     const company = await RealEstateCompany.findById(req.params.id);
     if (!company) return res.status(404).json({ error: 'Company not found' });
 
-    const loans = await Loan.find({ companyId: company._id })
-      .sort({ createdAt: -1 })
-      .select(
-        'type principal remainingBalance interestRate ticksRemaining durationTicks paymentPerTick active missedPayments createdAt',
-      );
+    const loans = await cacheGetOrSet(
+      cacheKeys.companyLoans(req.params.id),
+      async () => {
+        return Loan.find({ companyId: company._id })
+          .sort({ createdAt: -1 })
+          .select(
+            'type principal remainingBalance interestRate ticksRemaining durationTicks paymentPerTick active missedPayments createdAt',
+          );
+      },
+      cacheTTL.medium,
+    );
 
     res.json(loans);
   } catch (err) {
@@ -1054,6 +1143,8 @@ router.post('/:id/loans/:loanId/repay', async (req, res) => {
       gameState.tickNumber,
     );
 
+    await invalidateCompany(company._id);
+
     res.json({ loan, treasury: company.treasury });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1092,50 +1183,58 @@ router.get('/:id/stats', async (req, res) => {
     const company = await RealEstateCompany.findById(req.params.id);
     if (!company) return res.status(404).json({ error: 'Company not found' });
 
-    const properties = await Property.find({ companyId: company._id });
-    const propertyValue = properties.reduce((sum, p) => sum + p.currentPrice, 0);
-    const totalRent = properties.reduce((sum, p) => sum + (p.rent || 0), 0);
+    const statsData = await cacheGetOrSet(
+      cacheKeys.companyStats(req.params.id),
+      async () => {
+        const properties = await Property.find({ companyId: company._id });
+        const propertyValue = properties.reduce((sum, p) => sum + p.currentPrice, 0);
+        const totalRent = properties.reduce((sum, p) => sum + (p.rent || 0), 0);
 
-    const activeLoans = await Loan.find({ companyId: company._id, active: true });
-    const totalDebt = activeLoans.reduce((sum, l) => sum + l.remainingBalance, 0);
-    const monthlyLoanPayments = activeLoans.reduce((sum, l) => sum + l.paymentPerTick, 0);
+        const activeLoans = await Loan.find({ companyId: company._id, active: true });
+        const totalDebt = activeLoans.reduce((sum, l) => sum + l.remainingBalance, 0);
+        const monthlyLoanPayments = activeLoans.reduce((sum, l) => sum + l.paymentPerTick, 0);
 
-    const activeProjects = await import('../models/ConstructionProject.js').then((m) =>
-      m.default.countDocuments({ companyId: company._id, status: 'under_construction' }),
+        const activeProjects = await import('../models/ConstructionProject.js').then((m) =>
+          m.default.countDocuments({ companyId: company._id, status: 'under_construction' }),
+        );
+
+        const netWorth = company.treasury.balance + propertyValue - totalDebt;
+
+        company.stats.netWorth = netWorth;
+        company.stats.totalRentalIncome = totalRent;
+        company.stats.activeProjects = activeProjects;
+        await company.save();
+
+        const xpForCurrentLevel = xpRequiredForLevel(company.level);
+        const xpForNextLevel = company.xpToNextLevel || xpRequiredForNextLevel(company.level);
+        const xpInCurrentLevel = Math.max(0, company.xp - xpForCurrentLevel);
+        const xpNeededForLevel = Math.max(1, xpForNextLevel - xpForCurrentLevel);
+
+        return {
+          netWorth,
+          treasuryBalance: company.treasury.balance,
+          propertyValue,
+          propertiesOwned: properties.length,
+          totalRentalIncome: totalRent,
+          activeProjects,
+          totalDebt,
+          monthlyLoanPayments,
+          members: company.members.length,
+          maxMembers: company.maxMembers,
+          reputation: company.reputation,
+          level: company.level,
+          xp: company.xp,
+          xpForCurrentLevel,
+          xpToNextLevel: xpForNextLevel,
+          xpInCurrentLevel,
+          xpNeededForLevel,
+          shareBreakdown: computeShares(company.members),
+        };
+      },
+      cacheTTL.medium,
     );
 
-    const netWorth = company.treasury.balance + propertyValue - totalDebt;
-
-    company.stats.netWorth = netWorth;
-    company.stats.totalRentalIncome = totalRent;
-    company.stats.activeProjects = activeProjects;
-    await company.save();
-
-    const xpForCurrentLevel = xpRequiredForLevel(company.level);
-    const xpForNextLevel = company.xpToNextLevel || xpRequiredForNextLevel(company.level);
-    const xpInCurrentLevel = Math.max(0, company.xp - xpForCurrentLevel);
-    const xpNeededForLevel = Math.max(1, xpForNextLevel - xpForCurrentLevel);
-
-    res.json({
-      netWorth,
-      treasuryBalance: company.treasury.balance,
-      propertyValue,
-      propertiesOwned: properties.length,
-      totalRentalIncome: totalRent,
-      activeProjects,
-      totalDebt,
-      monthlyLoanPayments,
-      members: company.members.length,
-      maxMembers: company.maxMembers,
-      reputation: company.reputation,
-      level: company.level,
-      xp: company.xp,
-      xpForCurrentLevel,
-      xpToNextLevel: xpForNextLevel,
-      xpInCurrentLevel,
-      xpNeededForLevel,
-      shareBreakdown: computeShares(company.members),
-    });
+    res.json(statsData);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1175,7 +1274,7 @@ router.post('/:id/apply', async (req, res) => {
       gameState.tickNumber,
     );
 
-    await Notification.create({
+    await enqueueNotification({
       userId: company.founderId,
       type: 'system',
       title: 'New Application',
@@ -1187,7 +1286,7 @@ router.post('/:id/apply', async (req, res) => {
     for (const m of company.members) {
       if (m.userId?.toString() !== company.founderId?.toString() && m.userId?.toString() !== req.user._id.toString()) {
         if (['ceo', 'director', 'officer'].includes(m.role)) {
-          await Notification.create({
+          await enqueueNotification({
             userId: m.userId,
             type: 'system',
             title: 'New Application',
@@ -1198,6 +1297,8 @@ router.post('/:id/apply', async (req, res) => {
         }
       }
     }
+
+    await invalidateCompany(company._id);
 
     res.status(201).json({ success: true });
   } catch (err) {
@@ -1279,7 +1380,7 @@ router.post('/:id/applications/:appId/approve', async (req, res) => {
       gameState.tickNumber,
     );
 
-    await Notification.create({
+    await enqueueNotification({
       userId: applicant._id,
       type: 'system',
       title: 'Application Approved',
@@ -1287,6 +1388,9 @@ router.post('/:id/applications/:appId/approve', async (req, res) => {
       relatedId: company._id,
       global: false,
     });
+
+    await invalidateCompany(company._id);
+    await invalidateUser(applicant._id);
 
     res.json({ success: true });
   } catch (err) {
@@ -1326,6 +1430,8 @@ router.post('/:id/applications/:appId/reject', async (req, res) => {
       gameState.tickNumber,
     );
 
+    await invalidateCompany(company._id);
+
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1359,6 +1465,8 @@ router.post('/:id/applications/:appId/cancel', async (req, res) => {
       { username: req.user.username || 'Unknown' },
       gameState.tickNumber,
     );
+
+    await invalidateCompany(company._id);
 
     res.json({ success: true });
   } catch (err) {
@@ -1419,6 +1527,8 @@ router.post('/:id/loan-requests', async (req, res) => {
       createdTick: gameState.tickNumber,
     });
     await company.save();
+    const loanRequest = company.loanRequests[company.loanRequests.length - 1];
+    scheduleVoteExpiration(company._id, 'loanRequest', loanRequest._id, 8);
 
     await addAuditLog(
       company._id,
@@ -1430,7 +1540,7 @@ router.post('/:id/loan-requests', async (req, res) => {
 
     for (const m of company.members) {
       if (m.userId?.toString() !== req.user._id.toString()) {
-        await Notification.create({
+        await enqueueNotification({
           userId: m.userId,
           type: 'company_vote',
           title: 'Loan Vote Requested',
@@ -1441,7 +1551,7 @@ router.post('/:id/loan-requests', async (req, res) => {
       }
     }
 
-    await Notification.create({
+    await enqueueNotification({
       userId: req.user._id,
       type: 'company_vote',
       title: 'Loan Proposal Submitted',
@@ -1449,6 +1559,8 @@ router.post('/:id/loan-requests', async (req, res) => {
       relatedId: company._id,
       global: false,
     });
+
+    await onCompanyVote(company._id);
 
     res.status(201).json({ success: true });
   } catch (err) {
@@ -1531,6 +1643,7 @@ router.post('/:id/loan-requests/:reqId/vote', async (req, res) => {
       }
       loanReq.status = 'approved';
       await company.save();
+      cancelDelayedJob(`vote:loanRequest:${loanReq._id}`);
       await addAuditLog(
         company._id,
         null,
@@ -1541,6 +1654,8 @@ router.post('/:id/loan-requests/:reqId/vote', async (req, res) => {
     } else {
       await company.save();
     }
+
+    await onCompanyVoteCompleted(company._id);
 
     res.json({ success: true, loanRequest: loanReq });
   } catch (err) {
@@ -1603,6 +1718,7 @@ router.post('/:id/loan-requests/:reqId/execute', async (req, res) => {
     loanReq.executedAt = new Date();
     loanReq.loanId = loan._id;
     await company.save();
+    cancelDelayedJob(`vote:loanRequest:${loanReq._id}`);
     await addAuditLog(
       company._id,
       req.user._id,
@@ -1610,6 +1726,8 @@ router.post('/:id/loan-requests/:reqId/execute', async (req, res) => {
       { principal: loanReq.principal, rate, durationTicks: loanReq.durationTicks, loanId: loan._id },
       gameState.tickNumber,
     );
+
+    await onCompanyTreasuryChanged(company._id, req.user._id);
 
     res.json({ loan, treasury: company.treasury });
   } catch (err) {
@@ -1817,6 +1935,8 @@ router.post('/:id/direct-loan', async (req, res) => {
       gameState.tickNumber,
     );
 
+    await onCompanyTreasuryChanged(company._id, req.user._id);
+
     res.json({ loan, treasury: company.treasury, product });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1862,10 +1982,12 @@ router.post('/:id/property-purchase-requests', async (req, res) => {
       createdTick: gameState.tickNumber,
     });
     await company.save();
+    const purchaseRequest = company.propertyPurchaseRequests[company.propertyPurchaseRequests.length - 1];
+    scheduleVoteExpiration(company._id, 'propertyPurchase', purchaseRequest._id, 8);
 
     for (const m of company.members) {
       if (m.userId?.toString() !== req.user._id.toString()) {
-        await Notification.create({
+        await enqueueNotification({
           userId: m.userId,
           type: 'company_vote',
           title: 'Property Purchase Vote',
@@ -1876,7 +1998,7 @@ router.post('/:id/property-purchase-requests', async (req, res) => {
       }
     }
 
-    await Notification.create({
+    await enqueueNotification({
       userId: req.user._id,
       type: 'company_vote',
       title: 'Property Purchase Proposal Submitted',
@@ -1892,6 +2014,8 @@ router.post('/:id/property-purchase-requests', async (req, res) => {
       { propertyId, propertyName: property.name, price: property.currentPrice },
       gameState.tickNumber,
     );
+
+    await invalidateCompany(company._id);
 
     res.status(201).json({ success: true });
   } catch (err) {
@@ -2039,6 +2163,7 @@ router.post('/:id/property-purchase-requests/:reqId/vote', async (req, res) => {
     }
 
     await company.save();
+    await onCompanyVoteCompleted(company._id);
     res.json({ success: true, purchaseRequest: purchaseReq });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -2164,10 +2289,12 @@ router.post('/:id/development-requests', async (req, res) => {
       createdTick: currentPeriod,
     });
     await company.save();
+    const devRequest = company.developmentRequests[company.developmentRequests.length - 1];
+    scheduleVoteExpiration(company._id, 'developmentRequest', devRequest._id, 8);
 
     for (const m of company.members) {
       if (m.userId?.toString() !== req.user._id.toString()) {
-        await Notification.create({
+        await enqueueNotification({
           userId: m.userId,
           type: 'company_vote',
           title: 'Development Vote',
@@ -2178,7 +2305,7 @@ router.post('/:id/development-requests', async (req, res) => {
       }
     }
 
-    await Notification.create({
+    await enqueueNotification({
       userId: req.user._id,
       type: 'company_vote',
       title: 'Development Proposal Submitted',
@@ -2194,6 +2321,8 @@ router.post('/:id/development-requests', async (req, res) => {
       { propertyId, propertyId_name: property.name, actionType, actionData, estimatedCost, actionLabel },
       currentPeriod,
     );
+
+    await onCompanyVote(company._id);
 
     res.status(201).json({ success: true });
   } catch (err) {
@@ -2457,7 +2586,7 @@ router.post('/:id/development-requests/:reqId/vote', async (req, res) => {
         );
 
         for (const m of company.members) {
-          await Notification.create({
+          await enqueueNotification({
             userId: m.userId,
             type: 'company_vote',
             title: 'Development Approved & Executed',
@@ -2480,6 +2609,8 @@ router.post('/:id/development-requests/:reqId/vote', async (req, res) => {
     }
 
     await company.save();
+    cancelDelayedJob(`vote:developmentRequest:${devReq._id}`);
+    await onCompanyVoteCompleted(company._id);
     res.json({ success: true, developmentRequest: devReq });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -2672,7 +2803,7 @@ router.post('/:id/investments', authenticate, async (req, res) => {
       const memberUserIds = company.members.map((m) => m.userId);
       for (const userId of memberUserIds) {
         if (userId.toString() === req.user._id.toString()) continue;
-        await Notification.create({
+        await enqueueNotification({
           userId,
           type: 'company_vote',
           title: 'Investment Vote',
@@ -2682,6 +2813,7 @@ router.post('/:id/investments', authenticate, async (req, res) => {
         });
       }
 
+      scheduleVoteExpiration(company._id, 'investment', investment._id, 8);
       return res.json({ investment, status: 'proposed', treasury: company.treasury });
     }
 
@@ -2725,6 +2857,8 @@ router.post('/:id/investments', authenticate, async (req, res) => {
       { investmentType: product.type, name: product.name, principal: amount, durationTicks: product.durationTicks },
       gameState.tickNumber,
     );
+
+    await invalidateCompany(company._id);
 
     res.json({ investment, treasury: company.treasury });
   } catch (err) {
@@ -2801,6 +2935,9 @@ router.post('/:id/investments/:invId/vote', authenticate, async (req, res) => {
 
       await company.save();
       await investment.save();
+      cancelDelayedJob(`vote:investment:${investment._id}`);
+      const { scheduleInvestmentMaturity } = await import('../utils/delayedJobs.js');
+      scheduleInvestmentMaturity(investment._id, company._id, investment.durationTicks);
 
       await CompanyAuditLog.create({
         companyId: company._id,
@@ -2812,6 +2949,8 @@ router.post('/:id/investments/:invId/vote', authenticate, async (req, res) => {
 
       return res.json({ investment, treasury: company.treasury });
     }
+
+    await onCompanyVoteCompleted(company._id);
 
     res.json({ investment });
   } catch (err) {
@@ -2849,6 +2988,8 @@ router.post('/:id/investments/:invId/cancel', authenticate, async (req, res) => 
       { investmentId: investment._id, name: investment.name },
       gameState.tickNumber,
     );
+
+    await invalidateCompany(company._id);
 
     res.json({ investment });
   } catch (err) {
@@ -2963,6 +3104,9 @@ router.post('/:id/ipo', async (req, res) => {
 
     await awardXp(user, 50, 'company_ipo');
 
+    await onCompanyUpdated(company._id);
+    await invalidateLeaderboards();
+
     res.json({
       success: true,
       ipo: company.ipo,
@@ -2981,45 +3125,53 @@ router.get('/:id/progression', async (req, res) => {
     const member = getMember(company, req.user._id);
     if (!member) return res.status(403).json({ error: 'You are not a member of this company' });
 
-    const benefits = getCompanyLevelBenefits(company.level);
-    const xpForCurrentLevel = xpRequiredForLevel(company.level);
-    const nextLevelXp = xpRequiredForNextLevel(company.level);
-    const xpNeededForLevel = nextLevelXp === Infinity ? 0 : Math.max(1, nextLevelXp - xpForCurrentLevel);
-    const xpInCurrentLevel = Math.max(0, company.xp - xpForCurrentLevel);
-    const xpProgress =
-      nextLevelXp === Infinity ? 100 : Math.min(100, Math.round((xpInCurrentLevel / xpNeededForLevel) * 100));
+    const data = await cacheGetOrSet(
+      cacheKeys.companyProgression(req.params.id),
+      async () => {
+        const benefits = getCompanyLevelBenefits(company.level);
+        const xpForCurrentLevel = xpRequiredForLevel(company.level);
+        const nextLevelXp = xpRequiredForNextLevel(company.level);
+        const xpNeededForLevel = nextLevelXp === Infinity ? 0 : Math.max(1, nextLevelXp - xpForCurrentLevel);
+        const xpInCurrentLevel = Math.max(0, company.xp - xpForCurrentLevel);
+        const xpProgress =
+          nextLevelXp === Infinity ? 100 : Math.min(100, Math.round((xpInCurrentLevel / xpNeededForLevel) * 100));
 
-    const completedMilestoneIds = new Set((company.milestones || []).map((m) => m.milestoneId));
-    const availableMilestones = COMPANY_MILESTONES.filter((m) => {
-      if (completedMilestoneIds.has(m.id)) return false;
-      if (m.prerequisite && !completedMilestoneIds.has(m.prerequisite)) return false;
-      return true;
-    }).map((m) => ({
-      id: m.id,
-      name: m.name,
-      description: m.description,
-      xpReward: m.xpReward,
-      reputationReward: m.reputationReward,
-      treasuryReward: m.treasuryReward,
-    }));
+        const completedMilestoneIds = new Set((company.milestones || []).map((m) => m.milestoneId));
+        const availableMilestones = COMPANY_MILESTONES.filter((m) => {
+          if (completedMilestoneIds.has(m.id)) return false;
+          if (m.prerequisite && !completedMilestoneIds.has(m.prerequisite)) return false;
+          return true;
+        }).map((m) => ({
+          id: m.id,
+          name: m.name,
+          description: m.description,
+          xpReward: m.xpReward,
+          reputationReward: m.reputationReward,
+          treasuryReward: m.treasuryReward,
+        }));
 
-    res.json({
-      level: company.level,
-      xp: company.xp,
-      xpForCurrentLevel,
-      xpToNextLevel: nextLevelXp,
-      xpInCurrentLevel,
-      xpNeededForLevel,
-      xpProgress,
-      reputation: company.reputation,
-      maxMembers: company.maxMembers,
-      benefits,
-      completedMilestones: (company.milestones || []).length,
-      totalMilestones: COMPANY_MILESTONES.length,
-      availableMilestones,
-      recentMilestones: (company.milestones || []).slice(-5).reverse(),
-      maxLevel: MAX_COMPANY_LEVEL,
-    });
+        return {
+          level: company.level,
+          xp: company.xp,
+          xpForCurrentLevel,
+          xpToNextLevel: nextLevelXp,
+          xpInCurrentLevel,
+          xpNeededForLevel,
+          xpProgress,
+          reputation: company.reputation,
+          maxMembers: company.maxMembers,
+          benefits,
+          completedMilestones: (company.milestones || []).length,
+          totalMilestones: COMPANY_MILESTONES.length,
+          availableMilestones,
+          recentMilestones: (company.milestones || []).slice(-5).reverse(),
+          maxLevel: MAX_COMPANY_LEVEL,
+        };
+      },
+      cacheTTL.standard,
+    );
+
+    res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cityflow-redis
+  namespace: cityflow
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/part-of: cityflow
+spec:
+  selector:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/part-of: cityflow
+  ports:
+    - port: 6379
+      targetPort: redis
+      name: redis
+  type: ClusterIP

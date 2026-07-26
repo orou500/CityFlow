@@ -11,3 +11,5 @@ data:
   TICK_INTERVAL_MINUTES: "360"
   ADMIN_EMAIL: "admin@sizops.co.il"
   DISCORD_BOT_API_URL: "http://cityflow-discord-bot:5001"
+  REDIS_URL: "redis://cityflow-redis:6379"
+  SOCKETIO_CORS_ORIGIN: "https://cityflow.sizops.co.il"

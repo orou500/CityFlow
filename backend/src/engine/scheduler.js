@@ -4,6 +4,7 @@ import { executeTick } from './tick.js';
 import { acquireTickLock, releaseTickLock } from '../models/GameState.js';
 import { createBackup, enforceRetention } from './backup.js';
 import { config } from '../config/index.js';
+import { processNotificationQueue } from '../utils/notificationQueue.js';
 
 const ownerId = crypto.randomUUID();
 
@@ -49,6 +50,17 @@ export function startScheduler() {
       }
     });
   }
+
+  cron.schedule('* * * * *', async () => {
+    try {
+      const processed = await processNotificationQueue();
+      if (processed > 0) {
+        console.log(`[SCHEDULER] Processed ${processed} queued notifications`);
+      }
+    } catch (err) {
+      console.error('[SCHEDULER] Notification queue processing failed:', err.message);
+    }
+  });
 
   console.log('[SCHEDULER] Scheduler started');
 }

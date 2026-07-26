@@ -1,0 +1,75 @@
+const prefix = 'cf';
+
+export const cacheKeys = {
+  company: (id) => `${prefix}:company:${id}`,
+  companyMembers: (id) => `${prefix}:company:${id}:members`,
+  companyTreasury: (id) => `${prefix}:company:${id}:treasury`,
+  companyLoans: (id) => `${prefix}:company:${id}:loans`,
+  companyContracts: (id) => `${prefix}:company:${id}:contracts`,
+  companyInvestments: (id) => `${prefix}:company:${id}:investments`,
+  companyStats: (id) => `${prefix}:company:${id}:stats`,
+  companyProgression: (id) => `${prefix}:company:${id}:progression`,
+
+  property: (id) => `${prefix}:property:${id}`,
+  propertyDetail: (id) => `${prefix}:property:${id}:detail`,
+
+  user: (id) => `${prefix}:user:${id}`,
+  userProfile: (username) => `${prefix}:user:profile:${username}`,
+
+  city: (id) => `${prefix}:city:${id}`,
+  cities: () => `${prefix}:cities`,
+  countries: () => `${prefix}:countries`,
+
+  market: () => `${prefix}:market:global`,
+  marketStocks: () => `${prefix}:market:stocks`,
+  marketIndexes: () => `${prefix}:market:indexes`,
+  stockDetail: (id) => `${prefix}:stock:${id}`,
+  indexDetail: (id) => `${prefix}:index:${id}`,
+  stockPortfolio: (userId) => `${prefix}:portfolio:stock:${userId}`,
+  indexPortfolio: (userId) => `${prefix}:portfolio:index:${userId}`,
+
+  contracts: (companyId) => `${prefix}:contracts:${companyId}`,
+  contractsHistory: (companyId) => `${prefix}:contracts:${companyId}:history`,
+
+  investments: (companyId) => `${prefix}:investments:${companyId}`,
+  investmentsProducts: (companyId) => `${prefix}:investments:${companyId}:products`,
+  investmentsPerformance: (companyId) => `${prefix}:investments:${companyId}:perf`,
+
+  tick: () => `${prefix}:tick:current`,
+  worldStatus: () => `${prefix}:world:status`,
+  worldStats: () => `${prefix}:world:stats`,
+  activeEvents: () => `${prefix}:events:active`,
+
+  stats: () => `${prefix}:stats:global`,
+
+  leaderboard: (category, season, offset, limit) => `${prefix}:lb:rankings:${category}:${season}:${offset}:${limit}`,
+  leaderboardSummary: (season) => `${prefix}:lb:summary:${season}`,
+  leaderboardMyRank: (userId, season, cats) => `${prefix}:lb:myrank:${userId}:${season}:${cats}`,
+  leaderboardPlayer: (userId) => `${prefix}:lb:player:${userId}`,
+  leaderboardHistory: (category, season, limit) => `${prefix}:lb:history:${category}:${season}:${limit}`,
+
+  loanOptions: (companyId) => `${prefix}:company:${companyId}:loanOptions`,
+
+  rentStatus: (userId) => `${prefix}:rent:status:${userId}`,
+  bankSummary: (userId) => `${prefix}:bank:summary:${userId}`,
+
+  allCompany: (id) => [
+    `${prefix}:company:${id}`,
+    `${prefix}:company:${id}:members`,
+    `${prefix}:company:${id}:treasury`,
+    `${prefix}:company:${id}:loans`,
+    `${prefix}:company:${id}:contracts`,
+    `${prefix}:company:${id}:investments`,
+    `${prefix}:company:${id}:stats`,
+    `${prefix}:company:${id}:progression`,
+    `${prefix}:company:${id}:loanOptions`,
+  ],
+};
+
+export const cacheTTL = {
+  short: 15,
+  medium: 30,
+  standard: 60,
+  long: 180,
+  tick: 360,
+};

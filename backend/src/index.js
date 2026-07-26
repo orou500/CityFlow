@@ -1,10 +1,12 @@
 import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
+import { createServer } from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { config } from './config/index.js';
 import { connectDB } from './config/db.js';
+import { connectRedis, disconnectRedis, isRedisConnected } from './config/redis.js';
 import { startScheduler } from './engine/scheduler.js';
 import authRoutes from './routes/auth.js';
 import cityRoutes from './routes/cities.js';
@@ -39,11 +41,20 @@ import { getMaintenanceInfo } from './models/GameState.js';
 import { createNewSeason } from './engine/seasonReset.js';
 import Season from './models/Season.js';
 import { ensureBackupDir, enforceRetention } from './engine/backup.js';
+import { getCacheMetrics, getHitRate, getCacheKeyCount } from './utils/cache.js';
+import { getPubSubMetrics } from './utils/pubsub.js';
+import { getQueueStats, QUEUE_NAMES } from './utils/jobQueue.js';
+import { getNotificationQueueSize } from './utils/notificationQueue.js';
+import { initSocketIO, getAdapterStatus, shutdownSocketIO } from './socket/index.js';
+import { startJobProcessors, shutdownJobProcessors } from './utils/jobProcessors.js';
+import { getOnlineCount, getMultipleStatuses } from './utils/presence.js';
+import { getDelayedJobCount } from './utils/delayedJobs.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+const httpServer = createServer(app);
 
 app.use(cors());
 app.use(express.json());
@@ -56,11 +67,55 @@ app.get('/health', (req, res) => {
 
 app.get('/ready', (req, res) => {
   const dbReady = mongoose.connection.readyState === 1;
-  if (dbReady) {
-    res.json({ status: 'ready', timestamp: new Date().toISOString() });
-  } else {
-    res.status(503).json({ status: 'not ready', timestamp: new Date().toISOString() });
+  const redisReady = isRedisConnected();
+  const socketStatus = getAdapterStatus();
+  const status = dbReady ? 'ready' : 'not ready';
+  const code = dbReady ? 200 : 503;
+  res.status(code).json({
+    status,
+    db: dbReady,
+    redis: redisReady,
+    socketio: socketStatus.connected,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+app.get('/metrics', async (req, res) => {
+  const cacheKeys = await getCacheKeyCount();
+  const notifQueueSize = await getNotificationQueueSize();
+  const delayedJobs = await getDelayedJobCount();
+  const onlineUsers = await getOnlineCount();
+  const socketStatus = getAdapterStatus();
+
+  const queueStats = {};
+  for (const name of Object.values(QUEUE_NAMES)) {
+    const stats = await getQueueStats(name);
+    if (stats) queueStats[name] = stats;
   }
+
+  res.json({
+    cache: { ...getCacheMetrics(), hitRate: getHitRate(), totalKeys: cacheKeys },
+    pubsub: getPubSubMetrics(),
+    queues: { notificationQueueSize: notifQueueSize, delayedJobs, bullmq: queueStats },
+    websocket: {
+      ...socketStatus,
+      onlineUsers,
+    },
+    redis: { connected: isRedisConnected() },
+  });
+});
+
+app.get('/presence/:userId', async (req, res) => {
+  const { getStatus } = await import('./utils/presence.js');
+  const status = await getStatus(req.params.userId);
+  res.json(status);
+});
+
+app.get('/presence/batch', async (req, res) => {
+  const ids = (req.query.ids || '').split(',').filter(Boolean);
+  if (ids.length === 0) return res.json([]);
+  const statuses = await getMultipleStatuses(ids);
+  res.json(statuses);
 });
 
 app.get('/maintenance', async (req, res) => {
@@ -108,31 +163,42 @@ app.use((req, res) => {
   res.status(404).json({ success: false, error: 'Route not found' });
 });
 
-let server;
-
 async function start() {
-  await connectDB();
+  try {
+    await connectDB();
+    await connectRedis();
 
-  const activeSeason = await Season.findOne({ status: 'active' });
-  if (!activeSeason) {
-    console.log('[STARTUP] No active season found, creating Season 1');
-    await createNewSeason();
+    const activeSeason = await Season.findOne({ status: 'active' });
+    if (!activeSeason) {
+      console.log('[STARTUP] No active season found, creating Season 1');
+      await createNewSeason();
+    }
+
+    await ensureBackupDir();
+    await enforceRetention().catch(() => {});
+
+    await initSocketIO(httpServer);
+    startJobProcessors();
+
+    httpServer.listen(config.port, () => {
+      console.log(`CityFlow API running on port ${config.port}`);
+      startScheduler();
+    });
+  } catch (err) {
+    console.error('[STARTUP] Failed to start server:', err.message);
+    console.error(err.stack);
+    process.exit(1);
   }
-
-  await ensureBackupDir();
-  await enforceRetention().catch(() => {});
-
-  server = app.listen(config.port, () => {
-    console.log(`CityFlow API running on port ${config.port}`);
-    startScheduler();
-  });
 }
 
 function shutdown(signal) {
   console.log(`${signal} received. Shutting down gracefully...`);
-  if (server) {
-    server.close(() => {
+  if (httpServer) {
+    httpServer.close(async () => {
       console.log('HTTP server closed');
+      await shutdownSocketIO();
+      shutdownJobProcessors();
+      await disconnectRedis();
       mongoose.connection.close(false).then(() => {
         console.log('MongoDB connection closed');
         process.exit(0);

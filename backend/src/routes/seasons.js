@@ -2,29 +2,39 @@ import { Router } from 'express';
 import mongoose from 'mongoose';
 import Season from '../models/Season.js';
 import { getCurrentSeason } from '../engine/seasonReset.js';
+import { cacheGetOrSet } from '../utils/cache.js';
+import { cacheTTL } from '../utils/cacheKeys.js';
 
 const router = Router();
 
 router.get('/', async (req, res) => {
   try {
-    const seasons = await Season.find({ status: 'completed' })
-      .sort({ number: -1 })
-      .select(
-        'number name startDate endDate archive.winner archive.totalPlayers archive.totalTransactions archive.economicStatistics archive.marketStatistics archive.summary archive.playerRankings archive.cityStatistics',
-      );
+    const result = await cacheGetOrSet(
+      'cf:seasons:list',
+      async () => {
+        const seasons = await Season.find({ status: 'completed' })
+          .sort({ number: -1 })
+          .select(
+            'number name startDate endDate archive.winner archive.totalPlayers archive.totalTransactions archive.economicStatistics archive.marketStatistics archive.summary archive.playerRankings archive.cityStatistics',
+          );
 
-    const active = await getCurrentSeason();
-    const activeInfo = active
-      ? {
-          _id: active._id,
-          number: active.number,
-          name: active.name,
-          startDate: active.startDate,
-          status: active.status,
-        }
-      : null;
+        const active = await getCurrentSeason();
+        const activeInfo = active
+          ? {
+              _id: active._id,
+              number: active.number,
+              name: active.name,
+              startDate: active.startDate,
+              status: active.status,
+            }
+          : null;
 
-    res.json({ activeSeason: activeInfo, completedSeasons: seasons });
+        return { activeSeason: activeInfo, completedSeasons: seasons };
+      },
+      cacheTTL.standard,
+    );
+
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

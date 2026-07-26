@@ -2,11 +2,13 @@ import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import RealEstateCompany from '../models/RealEstateCompany.js';
 import CityContract from '../models/CityContract.js';
-import Notification from '../models/Notification.js';
 import CompanyAuditLog from '../models/CompanyAuditLog.js';
 import GameState, { getGameState } from '../models/GameState.js';
 import { VOTE_THRESHOLD, CONTRACT_PROPOSAL_EXPIRE_TICKS } from '../config/cityContracts.js';
 import { addTreasuryTransaction } from '../engine/companyProcessing.js';
+import { enqueueNotification } from '../utils/notificationQueue.js';
+import { onContractStarted, onCompanyVote } from '../utils/cacheInvalidation.js';
+import { scheduleVoteExpiration, scheduleContractCompletion, cancelDelayedJob } from '../utils/delayedJobs.js';
 
 const router = Router();
 
@@ -145,6 +147,8 @@ router.post('/:id/contracts/:contractId/propose', authenticate, async (req, res)
       expiresAtTick: gameState.tickNumber + CONTRACT_PROPOSAL_EXPIRE_TICKS,
     };
     await contract.save();
+    scheduleVoteExpiration(company._id, 'contract', contract._id, 8);
+    await onCompanyVote(company._id);
 
     await CompanyAuditLog.create({
       companyId: company._id,
@@ -163,7 +167,7 @@ router.post('/:id/contracts/:contractId/propose', authenticate, async (req, res)
     const memberUserIds = company.members.map((m) => m.userId);
     for (const userId of memberUserIds) {
       if (userId.toString() === req.user._id.toString()) continue;
-      await Notification.create({
+      await enqueueNotification({
         userId,
         type: 'company_vote',
         title: 'Contract Proposal',
@@ -173,7 +177,7 @@ router.post('/:id/contracts/:contractId/propose', authenticate, async (req, res)
       });
     }
 
-    await Notification.create({
+    await enqueueNotification({
       userId: req.user._id,
       type: 'company_vote',
       title: 'Contract Proposal Submitted',
@@ -264,6 +268,9 @@ router.post('/:id/contracts/:contractId/vote', authenticate, async (req, res) =>
       );
       await company.save();
       await contract.save();
+      cancelDelayedJob(`vote:contract:${contract._id}`);
+      scheduleContractCompletion(contract._id, company._id, contract.durationTicks, gameState.tickNumber);
+      await onContractStarted(company._id);
 
       await CompanyAuditLog.create({
         companyId: company._id,
@@ -281,7 +288,7 @@ router.post('/:id/contracts/:contractId/vote', authenticate, async (req, res) =>
 
       const memberUserIds = company.members.map((m) => m.userId);
       for (const userId of memberUserIds) {
-        await Notification.create({
+        await enqueueNotification({
           userId,
           type: 'system',
           title: 'City Contract Started',
@@ -300,11 +307,13 @@ router.post('/:id/contracts/:contractId/vote', authenticate, async (req, res) =>
       contract.status = 'rejected';
       contract.failedReason = 'Rejected by vote';
       await contract.save();
+      cancelDelayedJob(`vote:contract:${contract._id}`);
 
       return res.json({ contract, approved: false, rejected: true });
     }
 
     await contract.save();
+    await onCompanyVote(company._id);
     res.json({ contract, approved: false });
   } catch (err) {
     res.status(500).json({ error: err.message });
