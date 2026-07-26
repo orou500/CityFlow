@@ -2,6 +2,7 @@ import { Router } from 'express';
 import User from '../models/User.js';
 import { authenticate } from '../middleware/auth.js';
 import { collectOperatingFee } from '../utils/companyFees.js';
+import { onRentCollected } from '../utils/cacheInvalidation.js';
 
 const router = Router();
 
@@ -66,6 +67,8 @@ router.post('/collect', authenticate, async (req, res) => {
     await user.save();
 
     collectOperatingFee(user._id, collected, 'rent_income');
+
+    await onRentCollected(user._id);
 
     res.json({
       collected,

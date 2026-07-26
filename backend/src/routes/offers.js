@@ -1,10 +1,12 @@
 import { Router } from 'express';
 import PropertyOffer from '../models/PropertyOffer.js';
-import Notification from '../models/Notification.js';
 import Property from '../models/Property.js';
 import User from '../models/User.js';
 import Transaction from '../models/Transaction.js';
 import { authenticate } from '../middleware/auth.js';
+import { enqueueNotification } from '../utils/notificationQueue.js';
+import { onPropertyPurchased } from '../utils/cacheInvalidation.js';
+import { trackEvent, EVENTS } from '../utils/analytics.js';
 
 const MIN_OFFER_PERCENTAGE = 0.7;
 const router = Router();
@@ -12,7 +14,7 @@ const router = Router();
 router.use(authenticate);
 
 async function notify(userId, type, title, message, relatedId) {
-  await Notification.create({ userId, type, title, message, relatedId });
+  await enqueueNotification({ userId, type, title, message, relatedId });
 }
 
 router.post('/create', async (req, res) => {
@@ -65,6 +67,7 @@ router.post('/create', async (req, res) => {
       offer._id,
     );
 
+    trackEvent(EVENTS.OFFER_CREATED, { userId: req.user._id, propertyId, amount });
     res.status(201).json(offer);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -131,6 +134,9 @@ router.post('/accept/:id', async (req, res) => {
 
     offer.status = 'accepted';
     await offer.save();
+
+    await onPropertyPurchased(buyer._id, seller._id, property._id, property.cityId);
+    trackEvent(EVENTS.OFFER_ACCEPTED, { userId: req.user._id, propertyId: property._id, price });
 
     await notify(
       offer.buyerId,
@@ -281,6 +287,8 @@ router.post('/accept-counter/:id', async (req, res) => {
 
     offer.status = 'accepted';
     await offer.save();
+
+    await onPropertyPurchased(buyer._id, seller._id, property._id, property.cityId);
 
     await notify(
       offer.sellerId,

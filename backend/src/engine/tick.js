@@ -37,6 +37,12 @@ import {
   processCompanyDevelopmentRequests,
   pruneCompanyTreasuryTransactions,
 } from './companyProcessing.js';
+import { invalidateLeaderboardCache } from '../routes/leaderboards.js';
+import { cacheDelPattern, cacheDel } from '../utils/cache.js';
+import { cacheKeys } from '../utils/cacheKeys.js';
+import { publish, CHANNELS } from '../utils/pubsub.js';
+import { emitToAll } from '../socket/index.js';
+import { SOCKET_EVENTS } from '../socket/events.js';
 import {
   generateCityContracts,
   processCityContracts,
@@ -256,7 +262,20 @@ export async function executeTick() {
       console.log(`[TICK] Tick #${tickNumber} reached 720 — ending season`);
       const newSeason = await endCurrentSeasonAndStartNew();
       console.log(`[TICK] Season ended. New season: ${newSeason.number}`);
+      await invalidateLeaderboardCache();
+      await cacheDelPattern('cf:*');
     }
+
+    await invalidateLeaderboardCache();
+    await cacheDel(cacheKeys.tick());
+    await cacheDel(cacheKeys.worldStatus());
+    await cacheDel(cacheKeys.worldStats());
+    await cacheDel(cacheKeys.activeEvents());
+    await cacheDel(cacheKeys.cities());
+    await cacheDelPattern('cf:market:*');
+    await cacheDelPattern('cf:stats:*');
+    await publish(CHANNELS.TICK, { tickNumber, timestamp: new Date().toISOString() });
+    emitToAll(SOCKET_EVENTS.TICK, { tickNumber, timestamp: new Date().toISOString() });
 
     return {
       tickNumber,

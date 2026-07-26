@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import User from '../models/User.js';
 import FriendRequest from '../models/FriendRequest.js';
-import Notification from '../models/Notification.js';
+import { enqueueNotification } from '../utils/notificationQueue.js';
 import { authenticate } from '../middleware/auth.js';
 import { awardXp } from '../utils/leveling.js';
 
@@ -16,7 +16,7 @@ async function createFriendNotification(userId, sender, type) {
       ? `${sender.displayName || sender.username} accepted your friend request.`
       : `${sender.displayName || sender.username} sent you a friend request.`;
 
-  await Notification.create({
+  await enqueueNotification({
     userId,
     type: 'friend_request',
     title,

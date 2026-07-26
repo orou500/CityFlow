@@ -4,6 +4,7 @@ import City from '../models/City.js';
 import Notification from '../models/Notification.js';
 import CompanyAuditLog from '../models/CompanyAuditLog.js';
 import { getCompanyLevelBenefits, addTreasuryTransaction, grantCompanyXP } from './companyProcessing.js';
+import { cancelDelayedJob } from '../utils/delayedJobs.js';
 import {
   generateContractForCity,
   getContractTypesForLevel,
@@ -213,6 +214,7 @@ export async function processContractProposals(tickNumber) {
         tick: tickNumber,
       });
       await contract.save();
+      cancelDelayedJob(`vote:contract:${contract._id}`);
       continue;
     }
 
@@ -230,6 +232,7 @@ export async function processContractProposals(tickNumber) {
         tick: tickNumber,
       });
       await contract.save();
+      cancelDelayedJob(`vote:contract:${contract._id}`);
     }
   }
 
@@ -257,6 +260,9 @@ async function approveContract(contract, company, tickNumber) {
   contract.proposal.resolvedAt = new Date();
   contract.startTick = tickNumber;
   contract.endTick = tickNumber + contract.durationTicks;
+  cancelDelayedJob(`vote:contract:${contract._id}`);
+  const { scheduleContractCompletion } = await import('../utils/delayedJobs.js');
+  scheduleContractCompletion(contract._id, company._id, contract.durationTicks, tickNumber);
   contract.progress = 0;
   contract.budgetSpent = 0;
   contract.acceptedAt = new Date();

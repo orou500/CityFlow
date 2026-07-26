@@ -10,6 +10,7 @@ import Loan from '../models/Loan.js';
 import Transaction from '../models/Transaction.js';
 import { authenticate } from '../middleware/auth.js';
 import { validatePassword } from '../utils/validatePassword.js';
+import { invalidateUser } from '../utils/cacheInvalidation.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -108,6 +109,7 @@ router.put('/settings', authenticate, async (req, res) => {
         req.user.profileVisibility.activity = profileVisibility.activity;
     }
     await req.user.save();
+    await invalidateUser(req.user._id);
     res.json({ user: req.user });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -160,6 +162,7 @@ router.post('/avatar', authenticate, (req, res) => {
 
       req.user.avatar = `/uploads/avatars/${filename}`;
       await req.user.save();
+      await invalidateUser(req.user._id);
       res.json({ avatar: req.user.avatar });
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -175,6 +178,7 @@ router.put('/theme', authenticate, async (req, res) => {
     }
     req.user.theme = theme;
     await req.user.save();
+    await invalidateUser(req.user._id);
     res.json({ theme });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -189,6 +193,7 @@ router.put('/language', authenticate, async (req, res) => {
     }
     req.user.preferredLanguage = language;
     await req.user.save();
+    await invalidateUser(req.user._id);
     res.json({ preferredLanguage: language });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -244,6 +249,7 @@ router.delete('/account', authenticate, async (req, res) => {
     user.pushTokens = [];
     user.discordId = null;
     await user.save({ validateBeforeSave: false });
+    await invalidateUser(req.user._id);
 
     res.json({ success: true, message: 'Account deleted successfully' });
   } catch (err) {

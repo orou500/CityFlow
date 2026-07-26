@@ -38,6 +38,14 @@ spec:
       ports:
         - protocol: TCP
           port: 27017
+    # Allow backend to reach Redis
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: redis
+      ports:
+        - protocol: TCP
+          port: 6379
     # Allow backend to call Discord bot API
     - to:
         - podSelector:

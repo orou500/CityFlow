@@ -33,11 +33,11 @@ Backend
 - Express
 - MongoDB
 - Mongoose
-- Redis (planned)
+- Redis (ioredis) — caching, distributed locking, rate limiting, pub/sub, job queues (BullMQ)
 
 Infrastructure
 
-- Docker
+- Docker / Docker Compose
 - Kubernetes (k3s)
 - ArgoCD
 - GitHub Actions
@@ -238,7 +238,29 @@ cityflow/
 - `tick.js` is the master orchestrator (25+ phases)
 - Engine processes are ordered: e.g., for company loans: auto-vote → auto-execution → expiration
 - Use `bulkWrite()` with 500-document batches for performance
-- Distributed tick locking via MongoDB prevents duplicate execution
+- Distributed tick locking via Redis `SET NX EX` (falls back to MongoDB when Redis unavailable)
+- Cache invalidation runs after each tick (leaderboard + stats)
+
+### Redis Infrastructure
+
+- **Client**: `backend/src/config/redis.js` — ioredis, lazy connect, auto-reconnect, graceful fallback
+- **Cache utility**: `backend/src/utils/cache.js` — `cacheGet`, `cacheSet`, `cacheDel`, `cacheGetOrSet`, `cacheMget`, `cacheDelPattern`
+- **Distributed lock**: `backend/src/utils/redisLock.js` — `acquireLock`, `releaseLock` with Lua script for owner verification
+- **Rate limiting**: `backend/src/middleware/rateLimit.js` — Redis sliding window (sorted set), falls back to in-memory
+- **Notification queue**: `backend/src/utils/notificationQueue.js` — Redis list-based queue with batch processing
+- **Pub/Sub**: `backend/src/utils/pubsub.js` — `publish`, `subscribe` for real-time events
+- **Job queues**: `backend/src/utils/jobQueue.js` — BullMQ for tick, email, backup, discord, notifications, analytics
+
+**Caching keys**:
+- `lb:rankings:{category}:{season}:{offset}:{limit}` — leaderboard rankings (TTL: 3min)
+- `lb:summary:{season}` — leaderboard summary (TTL: 2min)
+- `lb:myrank:{userId}:{season}:{categories}` — player rank (TTL: 3min)
+- `lb:player:{userId}` — player profile ranks (TTL: 3min)
+- `lb:history:{category}:{season}:{limit}` — leaderboard history (TTL: 3min)
+- `stats:global` — public stats (TTL: 1min)
+- `lock:tick:lock` — distributed tick lock (TTL: 3min)
+
+**Fallback behavior**: If Redis is unavailable, all features gracefully degrade to MongoDB/in-memory equivalents. Application never crashes due to Redis failure.
 
 ### Dual Company Systems
 

@@ -32,7 +32,6 @@ const leaderboardSnapshotSchema = new mongoose.Schema(
         'companyGrowth',
       ],
       required: true,
-      index: true,
     },
     seasonNumber: { type: Number, required: true },
     tickNumber: { type: Number, required: true },

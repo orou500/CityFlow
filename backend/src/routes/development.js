@@ -29,6 +29,12 @@ import {
   calculateUpgradeEffects,
   countUpgradesByType,
 } from '../config/upgradeProjects.js';
+import {
+  onDevelopmentStarted,
+  invalidateProperty,
+  invalidateUser,
+  invalidateCompany,
+} from '../utils/cacheInvalidation.js';
 
 const router = Router();
 
@@ -236,9 +242,13 @@ router.post('/start', async (req, res) => {
     land.forSale = false;
     await land.save();
 
+    await invalidateProperty(land._id);
+
     await awardXp(user, 15, 'construction_start');
     user.lifetimeStats.totalConstructionStarted += 1;
     await user.save();
+
+    await onDevelopmentStarted(user._id, null);
 
     res.status(201).json({
       project: constructionProject,
@@ -418,6 +428,9 @@ router.post('/upgrade', async (req, res) => {
     await awardXp(user, 10, 'upgrade');
     user.lifetimeStats.totalUpgrades += 1;
     await user.save();
+
+    await invalidateProperty(property._id);
+    await invalidateUser(user._id);
 
     res.json({ property, balance: user.balance });
   } catch (err) {
@@ -684,6 +697,8 @@ router.post('/improvements/start', async (req, res) => {
 
     await awardXp(user, 10, 'improvement_start');
 
+    await invalidateProperty(property._id);
+
     res.status(201).json({
       improvement: property.activeImprovement,
       balance: user.balance,
@@ -774,6 +789,9 @@ router.post('/company/start', async (req, res) => {
     land.developmentLevel = 1;
     land.forSale = false;
     await land.save();
+
+    await invalidateCompany(company._id);
+    await invalidateProperty(land._id);
 
     res.status(201).json({
       project: constructionProject,

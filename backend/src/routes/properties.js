@@ -3,10 +3,14 @@ import Property from '../models/Property.js';
 import User from '../models/User.js';
 import City from '../models/City.js';
 import Transaction from '../models/Transaction.js';
-import Notification from '../models/Notification.js';
 import { authenticate } from '../middleware/auth.js';
 import { awardXp } from '../utils/leveling.js';
 import { collectOperatingFee } from '../utils/companyFees.js';
+import { enqueueNotification } from '../utils/notificationQueue.js';
+import { cacheGetOrSet } from '../utils/cache.js';
+import { cacheKeys, cacheTTL } from '../utils/cacheKeys.js';
+import { onPropertyPurchased, onPropertySold, onPropertyUpgraded } from '../utils/cacheInvalidation.js';
+import { trackEvent, EVENTS } from '../utils/analytics.js';
 import {
   GRADE_NAMES,
   MAX_GRADE,
@@ -118,46 +122,55 @@ router.get('/', async (req, res) => {
 
 router.get('/:id/detail', authenticate, async (req, res) => {
   try {
-    const property = await Property.findById(req.params.id).populate('ownerId', 'username').populate('cityId');
-    if (!property) return res.status(404).json({ error: 'Property not found' });
+    const data = await cacheGetOrSet(
+      cacheKeys.propertyDetail(req.params.id),
+      async () => {
+        const property = await Property.findById(req.params.id).populate('ownerId', 'username').populate('cityId');
+        if (!property) return null;
 
-    const rentTransactions = await Transaction.find({
-      propertyId: property._id,
-      type: 'rent',
-    });
-    const totalRentEarned = rentTransactions.reduce((sum, t) => sum + t.price, 0);
-
-    const ownerId = property.ownerId?._id || property.ownerId;
-    const investmentTransactions = ownerId
-      ? await Transaction.find({
+        const rentTransactions = await Transaction.find({
           propertyId: property._id,
-          type: { $in: ['buy', 'construction', 'upgrade', 'grade_upgrade', 'improvement'] },
-          buyerId: ownerId,
-        })
-      : [];
-    const totalInvestmentFromTransactions = investmentTransactions.reduce((sum, t) => sum + t.price, 0);
+          type: 'rent',
+        });
+        const totalRentEarned = rentTransactions.reduce((sum, t) => sum + t.price, 0);
 
-    const totalMaintenanceSpent = (property.managementHistory || []).reduce(
-      (sum, h) => sum + (h.maintenanceCost || 0),
-      0,
+        const ownerId = property.ownerId?._id || property.ownerId;
+        const investmentTransactions = ownerId
+          ? await Transaction.find({
+              propertyId: property._id,
+              type: { $in: ['buy', 'construction', 'upgrade', 'grade_upgrade', 'improvement'] },
+              buyerId: ownerId,
+            })
+          : [];
+        const totalInvestmentFromTransactions = investmentTransactions.reduce((sum, t) => sum + t.price, 0);
+
+        const totalMaintenanceSpent = (property.managementHistory || []).reduce(
+          (sum, h) => sum + (h.maintenanceCost || 0),
+          0,
+        );
+
+        const totalInvestment = totalInvestmentFromTransactions + totalMaintenanceSpent;
+
+        const investmentHistory = property.investmentHistory || [];
+        const intrinsicValue = property.intrinsicValue || 0;
+        const unrealizedGain = intrinsicValue > 0 && totalInvestment > 0 ? intrinsicValue - totalInvestment : 0;
+        const roi = totalInvestment > 0 ? ((intrinsicValue - totalInvestment) / totalInvestment) * 100 : 0;
+
+        return {
+          property,
+          totalRentEarned,
+          totalInvestment,
+          investmentHistory,
+          intrinsicValue,
+          unrealizedGain,
+          roi,
+        };
+      },
+      cacheTTL.medium,
     );
 
-    const totalInvestment = totalInvestmentFromTransactions + totalMaintenanceSpent;
-
-    const investmentHistory = property.investmentHistory || [];
-    const intrinsicValue = property.intrinsicValue || 0;
-    const unrealizedGain = intrinsicValue > 0 && totalInvestment > 0 ? intrinsicValue - totalInvestment : 0;
-    const roi = totalInvestment > 0 ? ((intrinsicValue - totalInvestment) / totalInvestment) * 100 : 0;
-
-    res.json({
-      property,
-      totalRentEarned,
-      totalInvestment,
-      investmentHistory,
-      intrinsicValue,
-      unrealizedGain,
-      roi,
-    });
+    if (!data) return res.status(404).json({ error: 'Property not found' });
+    res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -165,9 +178,17 @@ router.get('/:id/detail', authenticate, async (req, res) => {
 
 router.get('/:id', authenticate, async (req, res) => {
   try {
-    const property = await Property.findById(req.params.id).populate('ownerId', 'username');
-    if (!property) return res.status(404).json({ error: 'Property not found' });
-    res.json(property);
+    const data = await cacheGetOrSet(
+      cacheKeys.property(req.params.id),
+      async () => {
+        const property = await Property.findById(req.params.id).populate('ownerId', 'username');
+        return property || null;
+      },
+      cacheTTL.standard,
+    );
+
+    if (!data) return res.status(404).json({ error: 'Property not found' });
+    res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -262,6 +283,9 @@ router.post('/buy', authenticate, async (req, res) => {
     buyer.lifetimeStats.totalMoneySpent += price;
     await buyer.save();
 
+    await onPropertyPurchased(buyer._id, sellerId, property._id, city._id);
+    trackEvent(EVENTS.PROPERTY_PURCHASED, { userId: buyer._id, propertyId: property._id, price });
+
     res.json({ property, balance: buyer.balance });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -314,6 +338,9 @@ router.post('/sell', authenticate, async (req, res) => {
     seller.lifetimeStats.totalTransactions += 1;
     seller.lifetimeStats.totalMoneyEarned += salePrice;
     await seller.save();
+
+    await onPropertySold(req.user._id, property._id, property.cityId);
+    trackEvent(EVENTS.PROPERTY_SOLD, { userId: req.user._id, propertyId: property._id, price: salePrice });
 
     res.json({ property, balance: seller.balance });
   } catch (err) {
@@ -430,7 +457,7 @@ router.post('/grade/upgrade', authenticate, async (req, res) => {
       type: 'grade_upgrade',
     });
 
-    await Notification.create({
+    await enqueueNotification({
       userId: user._id,
       type: 'system',
       title: 'Property Grade Upgraded',
@@ -443,6 +470,8 @@ router.post('/grade/upgrade', authenticate, async (req, res) => {
     user.lifetimeStats.totalTransactions += 1;
     user.lifetimeStats.totalMoneySpent += cost;
     await user.save();
+
+    await onPropertyUpgraded(user._id, property._id);
 
     res.json({ property, balance: user.balance, grade: newGrade, upgradeCost: cost });
   } catch (err) {
