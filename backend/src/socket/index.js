@@ -36,8 +36,22 @@ export async function initSocketIO(httpServer) {
           return Math.min(times * 200, 2000);
         },
       };
-      pubClient = config.redis.url ? new Redis(config.redis.url, opts) : new Redis({ ...opts, host: config.redis.host, port: config.redis.port, password: config.redis.password || undefined });
-      subClient = config.redis.url ? new Redis(config.redis.url, opts) : new Redis({ ...opts, host: config.redis.host, port: config.redis.port, password: config.redis.password || undefined });
+      pubClient = config.redis.url
+        ? new Redis(config.redis.url, opts)
+        : new Redis({
+            ...opts,
+            host: config.redis.host,
+            port: config.redis.port,
+            password: config.redis.password || undefined,
+          });
+      subClient = config.redis.url
+        ? new Redis(config.redis.url, opts)
+        : new Redis({
+            ...opts,
+            host: config.redis.host,
+            port: config.redis.port,
+            password: config.redis.password || undefined,
+          });
       pubClient.on('error', (err) => console.warn('[SOCKET.IO] pubClient error:', err.message));
       subClient.on('error', (err) => console.warn('[SOCKET.IO] subClient error:', err.message));
 
