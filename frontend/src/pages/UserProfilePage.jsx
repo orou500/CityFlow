@@ -349,6 +349,24 @@ export default function UserProfilePage() {
             <div className="text-center md:text-left flex-1">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{displayName}</h1>
               <p className="text-sm text-gray-500 dark:text-gray-400">@{profileUser.username}</p>
+              {profileUser.supporter?.badge && profileUser.supporter.badge !== 'none' && (
+                <div className="mt-1">
+                  <span
+                    className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                      profileUser.supporter.badge === 'founding_supporter'
+                        ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300'
+                        : profileUser.supporter.badge === 'early_supporter'
+                          ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300'
+                          : 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
+                    }`}
+                  >
+                    {profileUser.supporter.badge === 'founding_supporter' && '⭐'}
+                    {profileUser.supporter.badge === 'early_supporter' && '💎'}
+                    {profileUser.supporter.badge === 'supporter' && '❤️'}
+                    {profileUser.supporter.title}
+                  </span>
+                </div>
+              )}
               {profileUser.bio && (
                 <p className="text-gray-600 dark:text-gray-300 mt-2 text-sm whitespace-pre-line">{profileUser.bio}</p>
               )}
