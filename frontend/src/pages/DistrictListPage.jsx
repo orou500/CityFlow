@@ -10,6 +10,7 @@ const TIER_STYLES = {
   commercial: { bg: 'bg-blue-100 dark:bg-blue-900/50', text: 'text-blue-700 dark:text-blue-300', icon: '🏢' },
   affordable: { bg: 'bg-amber-100 dark:bg-amber-900/50', text: 'text-amber-700 dark:text-amber-300', icon: '🏠' },
   suburban: { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300', icon: '🌳' },
+  moderate: { bg: 'bg-teal-100 dark:bg-teal-900/50', text: 'text-teal-700 dark:text-teal-300', icon: '🏘️' },
 };
 
 export default function DistrictListPage() {

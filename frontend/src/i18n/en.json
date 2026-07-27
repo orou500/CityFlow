@@ -2081,6 +2081,13 @@
     "noEvents": "No active events",
     "priceHistory": "Price History",
     "noHistory": "No history yet",
-    "noDistricts": "No districts found"
+    "noDistricts": "No districts found",
+    "avgRent": "Avg Rent",
+    "totalValue": "Total Value",
+    "occupancyRate": "Occupancy",
+    "forSale": "For Sale",
+    "playerOwned": "Player-Owned",
+    "companyOwned": "Company-Owned",
+    "growth": "Growth"
   }
 }

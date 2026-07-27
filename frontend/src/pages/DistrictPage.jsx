@@ -10,6 +10,7 @@ const TIER_STYLES = {
   commercial: { bg: 'bg-blue-100 dark:bg-blue-900/50', text: 'text-blue-700 dark:text-blue-300', icon: '🏢' },
   affordable: { bg: 'bg-amber-100 dark:bg-amber-900/50', text: 'text-amber-700 dark:text-amber-300', icon: '🏠' },
   suburban: { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300', icon: '🌳' },
+  moderate: { bg: 'bg-teal-100 dark:bg-teal-900/50', text: 'text-teal-700 dark:text-teal-300', icon: '🏘️' },
 };
 
 const INFLUENCE_TIER_STYLES = {
@@ -73,7 +74,7 @@ export default function DistrictPage() {
     );
   }
 
-  const { district, topInvestors, recentProperties } = data;
+  const { district, topInvestors, recentProperties, stats } = data;
   const tierStyle = TIER_STYLES[district.tier] || TIER_STYLES.suburban;
   const cityName = district.cityId?.name || 'Unknown';
   const countryCode = district.cityId?.country || '';
@@ -134,7 +135,7 @@ export default function DistrictPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
           <StatCard label={t('districts.population', 'Population')} value={formatCompact(district.population)} />
           <StatCard
             label={t('districts.demandIndex', 'Demand')}
@@ -168,6 +169,11 @@ export default function DistrictPage() {
             value={`${(district.growthRate * 100).toFixed(1)}%`}
             color={district.growthRate > 0 ? 'text-green-500' : 'text-red-500'}
           />
+          <StatCard
+            label={t('districts.properties', 'Properties')}
+            value={stats?.propertyCount ?? district.propertyCount ?? 0}
+            color="text-blue-500"
+          />
         </div>
 
         <div className="flex gap-1 border-b border-gray-200 dark:border-gray-700">
@@ -187,31 +193,55 @@ export default function DistrictPage() {
         </div>
 
         {activeTab === 'overview' && (
-          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-              {t('districts.marketInsights', 'Market Insights')}
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <InsightRow
-                label={t('districts.priceToRent', 'Price-to-Rent Ratio')}
-                value={district.avgRent > 0 ? (district.avgPrice / (district.avgRent * 12)).toFixed(1) + 'x' : 'N/A'}
-              />
-              <InsightRow
-                label={t('districts.rentalYield', 'Rental Yield')}
-                value={
-                  district.avgPrice > 0 ? (((district.avgRent * 12) / district.avgPrice) * 100).toFixed(1) + '%' : 'N/A'
-                }
-              />
-              <InsightRow label={t('districts.properties', 'Properties')} value={district.propertyCount || 0} />
-              <InsightRow label={t('districts.investorCount', 'Active Investors')} value={topInvestors?.length || 0} />
-              <InsightRow
-                label={t('districts.marketLeader', 'Market Leader')}
-                value={topInvestors?.[0]?.displayName || t('districts.none', 'None')}
-              />
-              <InsightRow
-                label={t('districts.leaderInfluence', 'Leader Influence')}
-                value={topInvestors?.[0] ? (topInvestors[0].score * 100).toFixed(1) + '%' : '0%'}
-              />
+          <div className="space-y-6">
+            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+                {t('districts.marketInsights', 'Market Insights')}
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <InsightRow
+                  label={t('districts.priceToRent', 'Price-to-Rent Ratio')}
+                  value={district.avgRent > 0 ? (district.avgPrice / (district.avgRent * 12)).toFixed(1) + 'x' : 'N/A'}
+                />
+                <InsightRow
+                  label={t('districts.rentalYield', 'Rental Yield')}
+                  value={
+                    district.avgPrice > 0
+                      ? (((district.avgRent * 12) / district.avgPrice) * 100).toFixed(1) + '%'
+                      : 'N/A'
+                  }
+                />
+                <InsightRow
+                  label={t('districts.avgRent', 'Avg Rent')}
+                  value={formatMoney(district.avgRent || 0) + '/mo'}
+                />
+                <InsightRow
+                  label={t('districts.totalValue', 'Total Value')}
+                  value={formatMoney(stats?.totalValue || 0)}
+                />
+                <InsightRow
+                  label={t('districts.occupancyRate', 'Occupancy')}
+                  value={(stats?.occupancyRate ?? 0) + '%'}
+                />
+                <InsightRow label={t('districts.forSale', 'For Sale')} value={stats?.forSaleCount ?? 0} />
+                <InsightRow label={t('districts.playerOwned', 'Player-Owned')} value={stats?.ownedCount ?? 0} />
+                <InsightRow
+                  label={t('districts.companyOwned', 'Company-Owned')}
+                  value={stats?.companyOwnedCount ?? 0}
+                />
+                <InsightRow
+                  label={t('districts.investorCount', 'Active Investors')}
+                  value={topInvestors?.length || 0}
+                />
+                <InsightRow
+                  label={t('districts.marketLeader', 'Market Leader')}
+                  value={topInvestors?.[0]?.displayName || t('districts.none', 'None')}
+                />
+                <InsightRow
+                  label={t('districts.leaderInfluence', 'Leader Influence')}
+                  value={topInvestors?.[0] ? (topInvestors[0].score * 100).toFixed(1) + '%' : '0%'}
+                />
+              </div>
             </div>
           </div>
         )}
@@ -268,7 +298,10 @@ export default function DistrictPage() {
         {activeTab === 'properties' && (
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-              {t('districts.recentProperties', 'Properties in District')}
+              {t('districts.recentProperties', 'Properties in District')}{' '}
+              <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
+                ({stats?.propertyCount ?? recentProperties?.length ?? 0})
+              </span>
             </h2>
             {recentProperties?.length > 0 ? (
               <div className="space-y-2">
@@ -280,9 +313,11 @@ export default function DistrictPage() {
                   >
                     <div>
                       <div className="text-sm font-medium text-gray-900 dark:text-white">{prop.name}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {prop.type} {prop.forSale ? '• For Sale' : ''}{' '}
-                        {prop.ownerId ? `• ${prop.ownerId.displayName}` : ''}
+                      <div className="text-xs text-gray-500 dark:text-gray-400 flex gap-1 flex-wrap">
+                        <span>{prop.type}</span>
+                        {prop.forSale && <span className="text-green-600 dark:text-green-400">For Sale</span>}
+                        {prop.ownerId && <span>· {prop.ownerId.displayName || prop.ownerId.username}</span>}
+                        {prop.companyId && <span className="text-blue-500">· Company</span>}
                       </div>
                     </div>
                     <div className="text-right">
