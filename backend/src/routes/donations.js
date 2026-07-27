@@ -2,7 +2,7 @@ import { Router } from 'express';
 import Donation from '../models/Donation.js';
 import User from '../models/User.js';
 import { authenticate, optionalAuth } from '../middleware/auth.js';
-import { createOrder, captureOrder, verifyOrder, isPayPalConfigured } from '../utils/paypal.js';
+import { createOrder, captureOrder, verifyOrder, isPayPalConfigured, verifyWebhookSignature } from '../utils/paypal.js';
 
 const router = Router();
 
@@ -187,6 +187,112 @@ async function getTotalDonations() {
     { $group: { _id: null, total: { $sum: '$amount' } } },
   ]);
   return result[0]?.total || 0;
+}
+
+router.post('/webhook', async (req, res) => {
+  try {
+    const event = req.body;
+    const rawBody = req.rawBody ? req.rawBody.toString() : JSON.stringify(event);
+
+    const valid = await verifyWebhookSignature(req.headers, JSON.parse(rawBody));
+    if (!valid) {
+      console.warn('[DONATIONS] Webhook signature verification failed');
+      return res.status(400).json({ error: 'Invalid signature' });
+    }
+
+    if (event.event_type === 'PAYMENT.CAPTURE.COMPLETED') {
+      const resource = event.resource;
+      const captureId = resource.id;
+      const orderId = resource.supplementary_data?.related_ids?.order_id;
+
+      if (!orderId) {
+        console.warn('[DONATIONS] Webhook missing order ID');
+        return res.status(200).json({ status: 'ignored' });
+      }
+
+      const donation = await Donation.findOne({ paypalOrderId: orderId });
+      if (!donation) {
+        console.warn(`[DONATIONS] Webhook for unknown order: ${orderId}`);
+        return res.status(200).json({ status: 'unknown_order' });
+      }
+
+      if (donation.status === 'completed') {
+        return res.status(200).json({ status: 'already_processed' });
+      }
+
+      donation.status = 'completed';
+      donation.paypalCaptureId = captureId;
+      await donation.save();
+
+      await updateUserSupporterTier(donation.userId, donation.amount, donation.isAnonymous);
+
+      console.log(`[DONATIONS] Webhook captured: $${donation.amount} from order ${orderId}`);
+    }
+
+    res.status(200).json({ status: 'ok' });
+  } catch (err) {
+    console.error('[DONATIONS] Webhook error:', err.message);
+    res.status(200).json({ status: 'error' });
+  }
+});
+
+export async function reconcilePendingDonations() {
+  const cutoff = new Date(Date.now() - 10 * 60 * 1000);
+  const pending = await Donation.find({
+    status: 'pending',
+    createdAt: { $lt: cutoff },
+  }).limit(20);
+
+  if (!pending.length) return 0;
+
+  let reconciled = 0;
+  for (const donation of pending) {
+    try {
+      const order = await verifyOrder(donation.paypalOrderId);
+      if (!order) continue;
+
+      if (order.status === 'COMPLETED') {
+        const capture = order.purchase_units?.[0]?.payments?.captures?.[0];
+        donation.status = 'completed';
+        donation.paypalCaptureId = capture?.id;
+        await donation.save();
+        await updateUserSupporterTier(donation.userId, donation.amount, donation.isAnonymous);
+        reconciled++;
+      } else if (order.status === 'VOIDED' || order.status === 'PAYER_ACTION_REQUIRED') {
+        donation.status = 'failed';
+        await donation.save();
+      }
+    } catch (err) {
+      console.error(`[DONATIONS] Reconciliation failed for ${donation.paypalOrderId}:`, err.message);
+    }
+  }
+
+  if (reconciled > 0) {
+    console.log(`[DONATIONS] Reconciled ${reconciled} pending donations`);
+  }
+  return reconciled;
+}
+
+async function updateUserSupporterTier(userId, donationAmount, isAnonymous) {
+  const user = await User.findById(userId);
+  if (!user) return;
+
+  const totalDonated = (user.donationStats?.totalDonated || 0) + donationAmount;
+  const donationCount = (user.donationStats?.donationCount || 0) + 1;
+
+  let badge = 'supporter';
+  if (totalDonated >= 100) badge = 'founding_supporter';
+  else if (totalDonated >= 25) badge = 'early_supporter';
+
+  let title;
+  if (totalDonated >= 100) title = 'Founder Supporter';
+  else if (totalDonated >= 50) title = 'CityFlow Patron';
+  else if (totalDonated >= 25) title = 'Real Estate Backer';
+  else title = 'Community Supporter';
+
+  user.supporter = { badge, title, isAnonymous: !!isAnonymous };
+  user.donationStats = { totalDonated, donorSince: user.donationStats?.donorSince || new Date(), donationCount };
+  await user.save();
 }
 
 export default router;
