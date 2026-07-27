@@ -5,6 +5,7 @@ import { acquireTickLock, releaseTickLock } from '../models/GameState.js';
 import { createBackup, enforceRetention } from './backup.js';
 import { config } from '../config/index.js';
 import { processNotificationQueue } from '../utils/notificationQueue.js';
+import { reconcilePendingDonations } from '../routes/donations.js';
 
 const ownerId = crypto.randomUUID();
 
@@ -59,6 +60,14 @@ export function startScheduler() {
       }
     } catch (err) {
       console.error('[SCHEDULER] Notification queue processing failed:', err.message);
+    }
+  });
+
+  cron.schedule('*/5 * * * *', async () => {
+    try {
+      await reconcilePendingDonations();
+    } catch (err) {
+      console.error('[SCHEDULER] Donation reconciliation failed:', err.message);
     }
   });
 
