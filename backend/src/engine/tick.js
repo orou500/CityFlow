@@ -53,6 +53,7 @@ import {
 } from './cityContracts.js';
 import { generateInvestmentOpportunities, processCompanyInvestments } from './treasuryInvestments.js';
 import { simulateDistricts } from './districtSimulation.js';
+import { evaluateExpiredReports } from './marketIntelligence.js';
 
 export async function executeTick() {
   const startTime = Date.now();
@@ -186,6 +187,9 @@ export async function executeTick() {
     console.log('[TICK] Processing company investments...');
     const investmentResults = await processCompanyInvestments(tickNumber);
 
+    console.log('[TICK] Evaluating expired market reports...');
+    const evaluatedReports = await evaluateExpiredReports(tickNumber);
+
     console.log('[TICK] Computing leaderboards...');
     const leaderboardSnapshots = await computeLeaderboards(tickNumber);
 
@@ -253,6 +257,7 @@ export async function executeTick() {
     console.log(`[TICK] Events finalized: ${finalizedEvents.length}`);
     console.log(`[TICK] Completed events cleaned up: ${cleanedUpEvents}`);
     console.log(`[TICK] New competitive events: ${newCompEvents.length}`);
+    console.log(`[TICK] Evaluated market reports: ${evaluatedReports}`);
 
     const deletedCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const usersToDelete = await User.find({ deletedAt: { $ne: null, $lte: deletedCutoff } }).select('_id');
@@ -287,6 +292,7 @@ export async function executeTick() {
     await cacheDel(cacheKeys.cities());
     await cacheDelPattern('cf:district:*');
     await cacheDelPattern('cf:market:*');
+    await cacheDelPattern('cf:mi:*');
     await cacheDelPattern('cf:stats:*');
     await publish(CHANNELS.TICK, { tickNumber, timestamp: new Date().toISOString() });
     emitToAll(SOCKET_EVENTS.TICK, { tickNumber, timestamp: new Date().toISOString() });

@@ -61,6 +61,10 @@ export const cacheKeys = {
   rentStatus: (userId) => `${prefix}:rent:status:${userId}`,
   bankSummary: (userId) => `${prefix}:bank:summary:${userId}`,
 
+  miReport: (userId, reportType, tier, cityId, districtId) =>
+    `${prefix}:mi:${userId}:${reportType}:${tier}:${cityId || 'none'}:${districtId || 'none'}`,
+  miTrends: (cityId) => `${prefix}:mi:trends:${cityId}`,
+
   allCompany: (id) => [
     `${prefix}:company:${id}`,
     `${prefix}:company:${id}:members`,

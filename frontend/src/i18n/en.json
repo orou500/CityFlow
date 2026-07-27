@@ -27,7 +27,8 @@
     "events": "Events",
     "companies": "Companies",
     "donate": "Donate",
-    "districts": "Districts"
+    "districts": "Districts",
+    "mi": "Market Intel"
   },
   "map": {
     "title": "World Map",
@@ -2089,5 +2090,124 @@
     "playerOwned": "Player-Owned",
     "companyOwned": "Company-Owned",
     "growth": "Growth"
+  },
+  "mi": {
+    "title": "Market Intelligence",
+    "subtitle": "Purchase market reports with real simulation data and forecast accuracy",
+    "loading": "Loading market intelligence...",
+    "dismiss": "Dismiss",
+    "tabs": {
+      "catalog": "Report Catalog",
+      "reports": "My Reports",
+      "performance": "Performance"
+    },
+    "reportTypes": {
+      "price_forecast": "Price Forecast",
+      "risk_assessment": "Risk Assessment",
+      "growth_opportunities": "Growth Opportunities"
+    },
+    "reportDescriptions": {
+      "price_forecast": "Price predictions with best/worst case scenarios and economic probability breakdown",
+      "risk_assessment": "City-level risk scoring with factor breakdown, hazard probabilities, and mitigation tips",
+      "growth_opportunities": "Cross-market analysis with emerging cities, undervalued areas, and migration signals"
+    },
+    "tiers": {
+      "basic": "Basic",
+      "advanced": "Advanced",
+      "premium": "Premium"
+    },
+    "status": {
+      "active": "Active",
+      "expired": "Expired",
+      "evaluated": "Evaluated",
+      "all": "All"
+    },
+    "whatYouGet": {
+      "title": "What you get:",
+      "price_forecast": [
+        "Best-case, most-likely, and worst-case price predictions",
+        "Economic probability distribution (boom/growth/stable/slowdown/recession)",
+        "Confidence interval for forecast accuracy",
+        "Price-to-rent ratio analysis",
+        "City demand, supply, and growth snapshot"
+      ],
+      "risk_assessment": [
+        "Overall risk score (0-100) with severity level",
+        "Multi-factor risk breakdown (hazard, economic, demand, growth)",
+        "Expected volatility estimate",
+        "Hazard-specific probability for each disaster type",
+        "Actionable mitigation tips"
+      ],
+      "growth_opportunities": [
+        "Ranked emerging cities by demand and growth potential",
+        "Undervalued districts priced below intrinsic value",
+        "Event-driven investment signals",
+        "Population growth and migration trends",
+        "District-level emerging opportunities"
+      ]
+    },
+    "purchaseReport": "Purchase Report",
+    "purchase": "Purchase",
+    "purchasing": "Purchasing...",
+    "cancel": "Cancel",
+    "close": "Close",
+    "noReports": "No reports yet",
+    "noData": "No data available",
+    "noPerformanceData": "No performance data yet",
+    "selectCity": "Select a city",
+    "ticksRemaining": "{{count}} ticks remaining",
+    "accuracy": "Accuracy",
+    "forecastAccuracy": "Forecast Accuracy",
+    "evaluationTick": "Evaluation Tick",
+    "ticks": {
+      "count": "{{count}} ticks"
+    },
+    "demandIndex": "Demand Index",
+    "supplyIndex": "Supply Index",
+    "growthRate": "Growth Rate",
+    "currentPrice": "Current Price",
+    "economicCondition": "Economic Condition",
+    "priceForecast": "Price Forecast",
+    "confidence": "Confidence Interval",
+    "economicProbabilities": "Economic Probabilities",
+    "bestCase": "Best Case",
+    "mostLikely": "Most Likely",
+    "worstCase": "Worst Case",
+    "priceToRent": "Price-to-Rent",
+    "projectedPTR": "Projected P/R",
+    "overallRisk": "Overall Risk Level",
+    "expectedVolatility": "Expected Volatility",
+    "riskFactors": "Risk Factors",
+    "hazardProbabilities": "Hazard Probabilities (next 4 ticks)",
+    "mitigationTips": "Mitigation Tips",
+    "emergingCities": "Emerging Cities",
+    "emergingDistricts": "Emerging Districts",
+    "undervaluedAreas": "Undervalued Areas",
+    "eventDrivenOpportunities": "Event-Driven Opportunities",
+    "populationGrowthSignals": "Population Growth Signals",
+    "totalReports": "Total Reports",
+    "overallAccuracy": "Overall Accuracy",
+    "byReportType": "By Report Type",
+    "recentEvaluations": "Recent Evaluations",
+    "reports": "reports",
+    "econConditions": {
+      "boom": "Boom",
+      "growth": "Growth",
+      "stable": "Stable",
+      "slowdown": "Slowdown",
+      "recession": "Recession"
+    },
+    "riskLevels": {
+      "very_low": "Very Low",
+      "low": "Low",
+      "moderate": "Moderate",
+      "high": "High",
+      "very_high": "Very High"
+    },
+    "riskFactorLevels": {
+      "low": "Low",
+      "moderate": "Moderate",
+      "high": "High"
+    }
   }
 }
