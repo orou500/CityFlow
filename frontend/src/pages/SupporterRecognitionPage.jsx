@@ -37,10 +37,7 @@ export default function SupporterRecognitionPage() {
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {data?.supporters?.map((s, i) => (
-          <div
-            key={i}
-            className="bg-gray-800 border border-gray-700 rounded-lg p-4 hover:border-gray-600 transition"
-          >
+          <div key={i} className="bg-gray-800 border border-gray-700 rounded-lg p-4 hover:border-gray-600 transition">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 rounded-full bg-gray-700 overflow-hidden flex-shrink-0">
                 {s.avatar ? (
@@ -57,7 +54,9 @@ export default function SupporterRecognitionPage() {
               </div>
             </div>
 
-            <div className={`text-xs font-bold px-2 py-1 rounded bg-gradient-to-r ${BADGE_COLORS[s.badge] || 'from-gray-500 to-gray-600'} text-white inline-block mb-2`}>
+            <div
+              className={`text-xs font-bold px-2 py-1 rounded bg-gradient-to-r ${BADGE_COLORS[s.badge] || 'from-gray-500 to-gray-600'} text-white inline-block mb-2`}
+            >
               {s.title || s.badge}
             </div>
 
@@ -69,9 +68,7 @@ export default function SupporterRecognitionPage() {
       </div>
 
       {data?.supporters?.length === 0 && (
-        <div className="text-center text-gray-500 py-12">
-          {t('donations.noSupporters')}
-        </div>
+        <div className="text-center text-gray-500 py-12">{t('donations.noSupporters')}</div>
       )}
     </div>
   );

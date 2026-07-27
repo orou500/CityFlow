@@ -66,9 +66,7 @@ router.post('/capture', authenticate, async (req, res) => {
     }
 
     const capture = await captureOrder(orderId);
-    const captureId =
-      capture.purchase_units?.[0]?.payments?.captures?.[0]?.id ||
-      capture.id;
+    const captureId = capture.purchase_units?.[0]?.payments?.captures?.[0]?.id || capture.id;
 
     if (capture.status !== 'COMPLETED') {
       donation.status = 'failed';

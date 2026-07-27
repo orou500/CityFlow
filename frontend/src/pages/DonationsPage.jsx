@@ -30,9 +30,13 @@ export default function DonationsPage() {
   const [history, setHistory] = useState([]);
 
   useEffect(() => {
-    api('/donations/config').then(setConfig).catch(() => {});
+    api('/donations/config')
+      .then(setConfig)
+      .catch(() => {});
     if (user) {
-      api('/donations/history').then((d) => setHistory(d.donations)).catch(() => {});
+      api('/donations/history')
+        .then((d) => setHistory(d.donations))
+        .catch(() => {});
     }
   }, [user]);
 
@@ -91,7 +95,9 @@ export default function DonationsPage() {
       <p className="text-gray-400 mb-6">{t('donations.subtitle')}</p>
 
       {message && (
-        <div className={`p-3 rounded mb-4 text-sm ${message.type === 'success' ? 'bg-green-900/50 text-green-300 border border-green-800' : 'bg-red-900/50 text-red-300 border border-red-800'}`}>
+        <div
+          className={`p-3 rounded mb-4 text-sm ${message.type === 'success' ? 'bg-green-900/50 text-green-300 border border-green-800' : 'bg-red-900/50 text-red-300 border border-red-800'}`}
+        >
           {message.text}
         </div>
       )}
@@ -159,7 +165,10 @@ export default function DonationsPage() {
           {DONATION_AMOUNTS.map((amt) => (
             <button
               key={amt}
-              onClick={() => { setSelectedAmount(amt); setUseCustom(false); }}
+              onClick={() => {
+                setSelectedAmount(amt);
+                setUseCustom(false);
+              }}
               className={`px-4 py-2 rounded font-semibold text-sm transition ${!useCustom && selectedAmount === amt ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
             >
               ${amt}
@@ -193,7 +202,9 @@ export default function DonationsPage() {
             onChange={(e) => setIsAnonymous(e.target.checked)}
             className="rounded"
           />
-          <label htmlFor="anonymous" className="text-sm text-gray-400">{t('donations.anonymousDonation')}</label>
+          <label htmlFor="anonymous" className="text-sm text-gray-400">
+            {t('donations.anonymousDonation')}
+          </label>
         </div>
 
         <button
@@ -214,7 +225,9 @@ export default function DonationsPage() {
             {history.map((d, i) => (
               <div key={i} className="flex justify-between items-center text-sm bg-gray-900 rounded p-3">
                 <span className="text-white">${d.amount} USD</span>
-                <span className={`px-2 py-0.5 rounded text-xs ${d.status === 'completed' ? 'bg-green-900 text-green-300' : d.status === 'pending' ? 'bg-yellow-900 text-yellow-300' : 'bg-red-900 text-red-300'}`}>
+                <span
+                  className={`px-2 py-0.5 rounded text-xs ${d.status === 'completed' ? 'bg-green-900 text-green-300' : d.status === 'pending' ? 'bg-yellow-900 text-yellow-300' : 'bg-red-900 text-red-300'}`}
+                >
                   {t(`donations.status${d.status.charAt(0).toUpperCase() + d.status.slice(1)}`)}
                 </span>
                 <span className="text-gray-500 text-xs">{new Date(d.createdAt).toLocaleDateString()}</span>
