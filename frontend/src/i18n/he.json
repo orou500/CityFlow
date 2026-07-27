@@ -27,7 +27,8 @@
     "events": "אירועים",
     "companies": "חברות",
     "donate": "תרומות",
-    "districts": "שכונות"
+    "districts": "שכונות",
+    "mi": "מודיעין שוק"
   },
   "map": {
     "title": "מפת העולם",
@@ -2080,5 +2081,124 @@
     "playerOwned": "בבעלות שחקנים",
     "companyOwned": "בבעלות חברות",
     "growth": "צמיחה"
+  },
+  "mi": {
+    "title": "מודיעין שוק",
+    "subtitle": "רכישת דוחות שוק עם נתוני סימולציה אמיתיים ודיוק חיזוי",
+    "loading": "טוען מודיעין שוק...",
+    "dismiss": "סגור",
+    "tabs": {
+      "catalog": "קטלוג דוחות",
+      "reports": "הדוחות שלי",
+      "performance": "ביצועים"
+    },
+    "reportTypes": {
+      "price_forecast": "חיזוי מחירים",
+      "risk_assessment": "הערכת סיכונים",
+      "growth_opportunities": "הזדמנויות צמיחה"
+    },
+    "reportDescriptions": {
+      "price_forecast": "תחזיות מחירים עם תרחישים אופטימי/פסימי + התפלגות כלכלית",
+      "risk_assessment": "ניקוד סיכונים ברמת עיר עם פירוק גורמים, הסתברויות אסונות וטיפים",
+      "growth_opportunities": "ניתוח חוצה שוק עם ערים מתפתחות, אזורים מתחת למחיר ומגמות הגירה"
+    },
+    "tiers": {
+      "basic": "בסיסי",
+      "advanced": "מתקדם",
+      "premium": "פרימיום"
+    },
+    "status": {
+      "active": "פעיל",
+      "expired": "פג תוקף",
+      "evaluated": "הוערך",
+      "all": "הכל"
+    },
+    "whatYouGet": {
+      "title": "מה תקבל:",
+      "price_forecast": [
+        "תחזית מחירים: אופטימי, סביר ופסימי",
+        "התפלגות הסתברויות כלכליות (פריחה/צמיחה/יציב/האטה/מיתון)",
+        "תחום ביטחון לדיוק החיזוי",
+        "ניתוח יחס מחיר-שכירות",
+        "נתוני ביקוש, היצע וצמיחה של העיר"
+      ],
+      "risk_assessment": [
+        "ניקוד סיכונים כולל (0-100) עם רמת חומרה",
+        "פירוק סיכונים רב-גורמי (אסון, כלכלי, ביקוש, צמיחה)",
+        "אומדן תנודתיות צפוי",
+        "הסתברויות אסון נפרדות לכל סוג",
+        "טיפים מעשיים להפחתת סיכון"
+      ],
+      "growth_opportunities": [
+        "ערים מתפתחות מדורגות לפי ביקוש ופוטנציאל צמיחה",
+        "שכונות מתחת למחיר שווי שוק",
+        "אותות השקעה מונעי אירועים",
+        "מגמות צמיחה ואוכלוסייה",
+        "הזדמנויות ברמת שכונה"
+      ]
+    },
+    "purchaseReport": "רכישת דוח",
+    "purchase": "רכישה",
+    "purchasing": "רוכש...",
+    "cancel": "ביטול",
+    "close": "סגור",
+    "noReports": "אין עדיין דוחות",
+    "noData": "אין נתונים זמינים",
+    "noPerformanceData": "אין עדיין נתוני ביצועים",
+    "selectCity": "בחר עיר",
+    "ticksRemaining": "{{count}} מחזורים נותרו",
+    "accuracy": "דיוק",
+    "forecastAccuracy": "דיוק חיזוי",
+    "evaluationTick": "מחזור הערכה",
+    "ticks": {
+      "count": "{{count}} מחזורים"
+    },
+    "demandIndex": "מדד ביקוש",
+    "supplyIndex": "מדד היצע",
+    "growthRate": "שיעור צמיחה",
+    "currentPrice": "מחיר נוכחי",
+    "economicCondition": "מצב כלכלי",
+    "priceForecast": "חיזוי מחירים",
+    "confidence": "תחום ביטחון",
+    "economicProbabilities": "הסתברויות כלכליות",
+    "bestCase": "תרחיש אופטימי",
+    "mostLikely": "סביר",
+    "worstCase": "תרחיש פסימי",
+    "priceToRent": "מחיר-שכירות",
+    "projectedPTR": "יחסי פ/ש צפוי",
+    "overallRisk": "רמת סיכון כולל",
+    "expectedVolatility": "תנודתיות צפויה",
+    "riskFactors": "גורמי סיכון",
+    "hazardProbabilities": "הסתברויות אסון (4 מחזורים הבאים)",
+    "mitigationTips": "טיפים להפחתת סיכון",
+    "emergingCities": "ערים מתפתחות",
+    "emergingDistricts": "שכונות מתפתחות",
+    "undervaluedAreas": "אזורים מתחת למחיר",
+    "eventDrivenOpportunities": "הזדמנויות מונעות אירועים",
+    "populationGrowthSignals": "אותות צמיחת אוכלוסייה",
+    "totalReports": "סך הדוחות",
+    "overallAccuracy": "דיוק כולל",
+    "byReportType": "לפי סוג דוח",
+    "recentEvaluations": "הערכות אחרונות",
+    "reports": "דוחות",
+    "econConditions": {
+      "boom": "פריחה",
+      "growth": "צמיחה",
+      "stable": "יציב",
+      "slowdown": "האטה",
+      "recession": "מיתון"
+    },
+    "riskLevels": {
+      "very_low": "נמוך מאוד",
+      "low": "נמוך",
+      "moderate": "בינוני",
+      "high": "גבוה",
+      "very_high": "גבוה מאוד"
+    },
+    "riskFactorLevels": {
+      "low": "נמוך",
+      "moderate": "בינוני",
+      "high": "גבוה"
+    }
   }
 }
