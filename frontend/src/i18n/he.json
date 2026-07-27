@@ -2072,6 +2072,13 @@
     "noEvents": "אין אירועים פעילים",
     "priceHistory": "היסטורית מחירים",
     "noHistory": "אין עדיין היסטוריה",
-    "noDistricts": "לא נמצאו שכונות"
+    "noDistricts": "לא נמצאו שכונות",
+    "avgRent": "שכירות ממוצעת",
+    "totalValue": "שווי כולל",
+    "occupancyRate": "תפוסה",
+    "forSale": "למכירה",
+    "playerOwned": "בבעלות שחקנים",
+    "companyOwned": "בבעלות חברות",
+    "growth": "צמיחה"
   }
 }

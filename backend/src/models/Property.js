@@ -159,6 +159,7 @@ const propertySchema = new mongoose.Schema(
 
 propertySchema.index({ currentPrice: 1 });
 propertySchema.index({ cityId: 1 });
+propertySchema.index({ districtId: 1 });
 propertySchema.index({ type: 1 });
 propertySchema.index({ forSale: 1 });
 propertySchema.index({ name: 1 });
@@ -187,6 +188,11 @@ propertySchema.set('toJSON', {
       ret.ownerId = { _id: ret.ownerId._id.toString(), username: ret.ownerId.username };
     } else if (ret.ownerId && typeof ret.ownerId === 'object' && ret.ownerId.toString) {
       ret.ownerId = ret.ownerId.toString();
+    }
+    if (ret.districtId && typeof ret.districtId === 'object' && ret.districtId._id) {
+      ret.districtId = { _id: ret.districtId._id.toString(), name: ret.districtId.name, tier: ret.districtId.tier };
+    } else if (ret.districtId && typeof ret.districtId === 'object' && ret.districtId.toString) {
+      ret.districtId = ret.districtId.toString();
     }
     if (ret.parentBuilding && typeof ret.parentBuilding === 'object' && ret.parentBuilding.toString) {
       ret.parentBuilding = ret.parentBuilding.toString();

@@ -23,6 +23,35 @@ router.get('/', async (req, res) => {
   }
 });
 
+router.get('/leaderboard/top', async (req, res) => {
+  try {
+    const { cityId, sortBy } = req.query;
+    const filter = cityId ? { cityId } : {};
+    const sortField = sortBy === 'demand' ? 'demandIndex' : sortBy === 'growth' ? 'growthRate' : 'avgPrice';
+    const districts = await District.find(filter)
+      .populate('cityId', 'name country')
+      .sort({ [sortField]: -1 })
+      .limit(20);
+    res.json(districts);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/city/:cityId', async (req, res) => {
+  try {
+    const districts = await cacheGetOrSet(
+      cacheKeys.districtByCity(req.params.cityId),
+      async () =>
+        District.find({ cityId: req.params.cityId }).populate('cityId', 'name country').sort({ avgPrice: -1 }),
+      cacheTTL.standard,
+    );
+    res.json(districts);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/:id', optionalAuth, async (req, res) => {
   try {
     const district = await cacheGetOrSet(
@@ -46,15 +75,45 @@ router.get('/:id', optionalAuth, async (req, res) => {
     );
 
     const properties = await Property.find({ districtId: district._id })
-      .select('name type currentPrice rent forSale condition occupancy ownerId')
+      .select('name type currentPrice rent forSale condition occupancy ownerId companyId')
       .populate('ownerId', 'username displayName')
       .sort({ currentPrice: -1 })
-      .limit(20);
+      .limit(50);
+
+    const propertyCount = await Property.countDocuments({ districtId: district._id });
+    const stats = await Property.aggregate([
+      { $match: { districtId: district._id } },
+      {
+        $group: {
+          _id: null,
+          totalValue: { $sum: '$currentPrice' },
+          avgRent: { $avg: '$rent' },
+          avgOccupancy: { $avg: '$occupancy' },
+          forSaleCount: { $sum: { $cond: ['$forSale', 1, 0] } },
+          ownedCount: { $sum: { $cond: [{ $ne: ['$ownerId', null] }, 1, 0] } },
+          companyOwnedCount: { $sum: { $cond: [{ $ne: ['$companyId', null] }, 1, 0] } },
+        },
+      },
+    ]);
+
+    const districtStats = stats[0] || {
+      totalValue: 0,
+      avgRent: 0,
+      avgOccupancy: 0,
+      forSaleCount: 0,
+      ownedCount: 0,
+      companyOwnedCount: 0,
+    };
 
     res.json({
       district,
       topInvestors,
       recentProperties: properties,
+      stats: {
+        ...districtStats,
+        propertyCount,
+        occupancyRate: propertyCount > 0 ? Math.round(districtStats.avgOccupancy || 0) : 0,
+      },
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -99,35 +158,6 @@ router.get('/:id/influence', async (req, res) => {
       totalInfluencePoints: district.totalInfluencePoints,
       rankings: enriched,
     });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.get('/city/:cityId', async (req, res) => {
-  try {
-    const districts = await cacheGetOrSet(
-      cacheKeys.districtByCity(req.params.cityId),
-      async () =>
-        District.find({ cityId: req.params.cityId }).populate('cityId', 'name country').sort({ avgPrice: -1 }),
-      cacheTTL.standard,
-    );
-    res.json(districts);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.get('/leaderboard/top', async (req, res) => {
-  try {
-    const { cityId, sortBy } = req.query;
-    const filter = cityId ? { cityId } : {};
-    const sortField = sortBy === 'demand' ? 'demandIndex' : sortBy === 'growth' ? 'growthRate' : 'avgPrice';
-    const districts = await District.find(filter)
-      .populate('cityId', 'name country')
-      .sort({ [sortField]: -1 })
-      .limit(20);
-    res.json(districts);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

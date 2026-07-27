@@ -96,11 +96,38 @@ async function migrate() {
     const properties = await Property.find({ cityId: city._id, districtId: null });
     if (properties.length > 0) {
       const districtCount = districts.length;
+      const bulkOps = [];
+      const districtCounts = new Map();
+      for (const district of districts) {
+        districtCounts.set(district._id.toString(), 0);
+      }
       for (const property of properties) {
         const assignedDistrict = districts[Math.floor(Math.random() * districtCount)];
-        property.districtId = assignedDistrict._id;
-        await property.save();
+        bulkOps.push({
+          updateOne: { filter: { _id: property._id }, update: { $set: { districtId: assignedDistrict._id } } },
+        });
+        districtCounts.set(
+          assignedDistrict._id.toString(),
+          (districtCounts.get(assignedDistrict._id.toString()) || 0) + 1,
+        );
         totalPropertiesUpdated++;
+      }
+      if (bulkOps.length > 0) {
+        for (let i = 0; i < bulkOps.length; i += 500) {
+          await Property.bulkWrite(bulkOps.slice(i, i + 500));
+        }
+      }
+      const countBulkOps = [];
+      for (const district of districts) {
+        countBulkOps.push({
+          updateOne: {
+            filter: { _id: district._id },
+            update: { $set: { propertyCount: districtCounts.get(district._id.toString()) || 0 } },
+          },
+        });
+      }
+      if (countBulkOps.length > 0) {
+        await District.bulkWrite(countBulkOps);
       }
       console.log(`[MIGRATION] Assigned ${properties.length} properties to districts in ${city.name}`);
     }

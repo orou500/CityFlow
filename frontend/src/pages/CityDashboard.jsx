@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useGameStore } from '../store/useGameStore';
 import { useAuthStore } from '../store/useAuthStore';
@@ -28,6 +28,15 @@ const ECONOMIC_COLORS = {
   recession: 'bg-red-900 text-red-300',
 };
 
+const DISTRICT_TIER_STYLES = {
+  premium: { bg: 'bg-purple-100 dark:bg-purple-900/50', text: 'text-purple-700 dark:text-purple-300', icon: '👑' },
+  growing: { bg: 'bg-green-100 dark:bg-green-900/50', text: 'text-green-700 dark:text-green-300', icon: '📈' },
+  commercial: { bg: 'bg-blue-100 dark:bg-blue-900/50', text: 'text-blue-700 dark:text-blue-300', icon: '🏢' },
+  affordable: { bg: 'bg-amber-100 dark:bg-amber-900/50', text: 'text-amber-700 dark:text-amber-300', icon: '🏠' },
+  suburban: { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300', icon: '🌳' },
+  moderate: { bg: 'bg-teal-100 dark:bg-teal-900/50', text: 'text-teal-700 dark:text-teal-300', icon: '🏘️' },
+};
+
 export default function CityDashboard() {
   const { id } = useParams();
   const { t } = useTranslation();
@@ -38,6 +47,7 @@ export default function CityDashboard() {
   const [actionMsg, setActionMsg] = useState(null);
   const [propPage, setPropPage] = useState(1);
   const [historyData, setHistoryData] = useState([]);
+  const [cityDistricts, setCityDistricts] = useState([]);
   const PROPS_PER_PAGE = 21;
 
   useEffect(() => {
@@ -45,6 +55,7 @@ export default function CityDashboard() {
       fetchCity(id);
       setPropPage(1);
       fetchHistory(id);
+      fetchDistricts(id);
     }
   }, [id, fetchCity]);
 
@@ -54,6 +65,15 @@ export default function CityDashboard() {
       setHistoryData(hist);
     } catch {
       setHistoryData([]);
+    }
+  };
+
+  const fetchDistricts = async (cityId) => {
+    try {
+      const data = await api(`/districts/city/${cityId}`);
+      setCityDistricts(Array.isArray(data) ? data : []);
+    } catch {
+      setCityDistricts([]);
     }
   };
 
@@ -287,6 +307,79 @@ export default function CityDashboard() {
                 </span>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {cityDistricts.length > 0 && (
+        <div className="bg-white dark:bg-gray-900 rounded-lg p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold">{t('nav.districts', 'Districts')}</h2>
+            <Link to={`/districts?city=${id}`} className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-300">
+              {t('common.viewAll', 'View All')} →
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {cityDistricts.map((district) => {
+              const tierStyle = DISTRICT_TIER_STYLES[district.tier] || DISTRICT_TIER_STYLES.suburban;
+              return (
+                <Link
+                  key={district._id}
+                  to={`/district/${district._id}`}
+                  className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500"
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-lg">{tierStyle.icon}</span>
+                    <h3 className="font-bold text-gray-900 dark:text-white">{district.name}</h3>
+                    <span
+                      className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${tierStyle.bg} ${tierStyle.text}`}
+                    >
+                      {district.tier}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <span className="text-gray-500 dark:text-gray-400">{t('map.avgPrice', 'Avg Price')}</span>
+                      <p className="font-semibold text-orange-500">{formatMoney(district.avgPrice)}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 dark:text-gray-400">{t('districts.demandIndex', 'Demand')}</span>
+                      <p
+                        className={`font-semibold ${
+                          district.demandIndex > 1.3
+                            ? 'text-green-500'
+                            : district.demandIndex < 0.8
+                              ? 'text-red-500'
+                              : 'text-gray-900 dark:text-white'
+                        }`}
+                      >
+                        {district.demandIndex?.toFixed(2)}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 dark:text-gray-400">{t('districts.properties', 'Props')}</span>
+                      <p className="font-semibold text-gray-900 dark:text-white">{district.propertyCount || 0}</p>
+                    </div>
+                  </div>
+                  {district.activeEvents?.length > 0 && (
+                    <div className="mt-2 flex gap-1 flex-wrap">
+                      {district.activeEvents.map((ev, i) => (
+                        <span
+                          key={i}
+                          className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
+                            ev.type === 'positive'
+                              ? 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300'
+                              : 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300'
+                          }`}
+                        >
+                          {ev.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </Link>
+              );
+            })}
           </div>
         </div>
       )}
