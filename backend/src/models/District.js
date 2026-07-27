@@ -54,7 +54,7 @@ const districtSchema = new mongoose.Schema(
     name: { type: String, required: true },
     tier: {
       type: String,
-      enum: ['premium', 'growing', 'commercial', 'affordable', 'suburban'],
+      enum: ['premium', 'growing', 'commercial', 'affordable', 'suburban', 'moderate'],
       required: true,
     },
     population: { type: Number, default: 100000 },
