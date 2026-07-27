@@ -266,7 +266,9 @@ export async function executeTick() {
     console.log(`[TICK] Completed events cleaned up: ${cleanedUpEvents}`);
     console.log(`[TICK] New competitive events: ${newCompEvents.length}`);
     console.log(`[TICK] Evaluated market reports: ${evaluatedReports}`);
-    console.log(`[TICK] Auctions processed: ${auctionResults.activated} activated, ${auctionResults.completed} completed`);
+    console.log(
+      `[TICK] Auctions processed: ${auctionResults.activated} activated, ${auctionResults.completed} completed`,
+    );
     console.log(`[TICK] Bank auctions generated: ${newBankAuctions.length}`);
 
     const deletedCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);

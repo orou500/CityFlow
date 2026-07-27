@@ -239,10 +239,7 @@ export default function DonationsPage() {
       )}
 
       <div className="text-center mt-8">
-        <Link
-          to="/supporters"
-          className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
-        >
+        <Link to="/supporters" className="text-blue-400 hover:text-blue-300 text-sm transition-colors">
           🏆 {t('supporters')}
         </Link>
       </div>

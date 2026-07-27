@@ -50,10 +50,7 @@ export async function processAuctions() {
   console.log(`[AUCTION-TICK ${currentTick}] Upcoming found: ${upcomingToActivate.length}`);
 
   if (upcomingToActivate.length > 0) {
-    await Auction.updateMany(
-      { _id: { $in: upcomingToActivate.map((a) => a._id) } },
-      { $set: { status: 'active' } },
-    );
+    await Auction.updateMany({ _id: { $in: upcomingToActivate.map((a) => a._id) } }, { $set: { status: 'active' } });
     activated = upcomingToActivate.length;
     console.log(`[AUCTION-TICK ${currentTick}] Activated: ${activated}`);
   }
@@ -93,10 +90,7 @@ export async function processAuctions() {
   );
 
   if (endingCompleted.length > 0) {
-    await Auction.updateMany(
-      { _id: { $in: endingCompleted.map((a) => a._id) } },
-      { $set: { status: 'ended' } },
-    );
+    await Auction.updateMany({ _id: { $in: endingCompleted.map((a) => a._id) } }, { $set: { status: 'ended' } });
     completed = endingCompleted.length;
     console.log(`[AUCTION-TICK ${currentTick}] ✓ Completed: ${completed}`);
   }
@@ -107,10 +101,7 @@ export async function processAuctions() {
   });
 
   if (stuckEnding.length > 0) {
-    await Auction.updateMany(
-      { _id: { $in: stuckEnding.map((a) => a._id) } },
-      { $set: { status: 'cancelled' } },
-    );
+    await Auction.updateMany({ _id: { $in: stuckEnding.map((a) => a._id) } }, { $set: { status: 'cancelled' } });
   }
 
   if (activated > 0 || ending > 0 || completed > 0) {
@@ -150,9 +141,10 @@ async function settleAuction(auction) {
   }
   console.log(`[SETTLE] ✓ Property found: ${property.name}`);
 
-  const reserveMet =
-    auction.auctionType === 'reserve' ? auction.currentBid >= auction.reservePrice : true;
-  console.log(`[SETTLE] Reserve: ${auction.auctionType}, met=${reserveMet} (bid=${auction.currentBid}, reserve=${auction.reservePrice})`);
+  const reserveMet = auction.auctionType === 'reserve' ? auction.currentBid >= auction.reservePrice : true;
+  console.log(
+    `[SETTLE] Reserve: ${auction.auctionType}, met=${reserveMet} (bid=${auction.currentBid}, reserve=${auction.reservePrice})`,
+  );
 
   if (auction.currentBidderId && auction.currentBid > 0 && reserveMet) {
     auction.winnerId = auction.currentBidderId;
@@ -172,7 +164,9 @@ async function settleAuction(auction) {
 
     const winner = await User.findById(auction.currentBidderId);
     if (winner && winner.balance >= auction.winningBid) {
-      console.log(`[SETTLE] ✓ Winner validated: ${winner.username}, balance=${winner.balance}, cost=${auction.winningBid}`);
+      console.log(
+        `[SETTLE] ✓ Winner validated: ${winner.username}, balance=${winner.balance}, cost=${auction.winningBid}`,
+      );
       winner.balance -= auction.winningBid;
       await winner.save();
       console.log(`[SETTLE] ✓ Winner charged: new balance=${winner.balance}`);
@@ -191,9 +185,7 @@ async function settleAuction(auction) {
       console.log(`[SETTLE] ✓ Property transferred to ${winner.username}`);
 
       if (auction.sellerId && auction.sellerType === 'player') {
-        const commission = Math.floor(
-          auction.winningBid * (AUCTION_CONFIG.playerSoldCommissionPercent / 100),
-        );
+        const commission = Math.floor(auction.winningBid * (AUCTION_CONFIG.playerSoldCommissionPercent / 100));
         const sellerProceeds = auction.winningBid - commission;
         console.log(`[SETTLE] Seller commission: ${commission}, proceeds: ${sellerProceeds}`);
         const seller = await User.findById(auction.sellerId);
@@ -271,9 +263,13 @@ async function settleAuction(auction) {
       }
       if (auction.watchers.length > 0) console.log(`[SETTLE] ✓ ${auction.watchers.length} watchers notified`);
 
-      console.log(`[SETTLE] ✓ Auction ${auction._id} fully settled — winner=${winner.username}, property=${property.name}, amount=${auction.winningBid}`);
+      console.log(
+        `[SETTLE] ✓ Auction ${auction._id} fully settled — winner=${winner.username}, property=${property.name}, amount=${auction.winningBid}`,
+      );
     } else {
-      console.log(`[SETTLE] ✗ Winner ${winner?.username || 'unknown'} has insufficient balance: ${winner?.balance || 0} < ${auction.winningBid}`);
+      console.log(
+        `[SETTLE] ✗ Winner ${winner?.username || 'unknown'} has insufficient balance: ${winner?.balance || 0} < ${auction.winningBid}`,
+      );
       if (winner) {
         await enqueueNotification({
           userId: winner._id,
@@ -289,7 +285,9 @@ async function settleAuction(auction) {
       console.log(`[SETTLE] → Auction cancelled due to insufficient funds`);
     }
   } else {
-    console.log(`[SETTLE] No valid winner: currentBidderId=${auction.currentBidderId}, currentBid=${auction.currentBid}, reserveMet=${reserveMet}`);
+    console.log(
+      `[SETTLE] No valid winner: currentBidderId=${auction.currentBidderId}, currentBid=${auction.currentBid}, reserveMet=${reserveMet}`,
+    );
     auction.winnerId = null;
     auction.winningBid = 0;
     await auction.save();
@@ -356,10 +354,7 @@ export async function generateBankAuctions() {
     config.maxUpcoming,
     Math.floor(config.baseUpcoming + playerCount * config.upcomingPerPlayer),
   );
-  const targetActive = Math.min(
-    config.maxActive,
-    Math.floor(config.minActive + playerCount * config.activePerPlayer),
-  );
+  const targetActive = Math.min(config.maxActive, Math.floor(config.minActive + playerCount * config.activePerPlayer));
 
   const currentUpcoming = await Auction.countDocuments({ sellerType: 'bank', status: 'upcoming' });
   const currentActive = await Auction.countDocuments({ sellerType: 'bank', status: { $in: ['active', 'ending'] } });
@@ -392,28 +387,17 @@ export async function generateBankAuctions() {
     const city = availableCities[Math.floor(Math.random() * availableCities.length)];
     const cityId = new mongoose.Types.ObjectId(city._id);
 
-    const districts = await mongoose.connection.db
-      .collection('districts')
-      .find({ cityId })
-      .toArray();
+    const districts = await mongoose.connection.db.collection('districts').find({ cityId }).toArray();
 
     const districtId =
       districts.length > 0
         ? new mongoose.Types.ObjectId(districts[Math.floor(Math.random() * districts.length)]._id)
         : null;
 
-    const price = Math.floor(
-      template.basePriceMin + Math.random() * (template.basePriceMax - template.basePriceMin),
-    );
+    const price = Math.floor(template.basePriceMin + Math.random() * (template.basePriceMax - template.basePriceMin));
     const startingBid = Math.floor(price * 0.7);
-    const bidIncrement = Math.max(
-      1000,
-      Math.floor(startingBid * (AUCTION_CONFIG.minBidIncrementPercent / 100)),
-    );
-    const duration =
-      rarity === 'legendary'
-        ? AUCTION_CONFIG.durations.long
-        : AUCTION_CONFIG.durations.medium;
+    const bidIncrement = Math.max(1000, Math.floor(startingBid * (AUCTION_CONFIG.minBidIncrementPercent / 100)));
+    const duration = rarity === 'legendary' ? AUCTION_CONFIG.durations.long : AUCTION_CONFIG.durations.medium;
 
     const property = await Property.create({
       cityId,
@@ -513,8 +497,7 @@ export async function cancelAuction(auctionId, userId) {
   if (!auction) throw new Error('Auction not found');
   if (auction.sellerId?.toString() !== userId.toString()) throw new Error('Not authorized');
   if (auction.totalBids > 0) throw new Error('Cannot cancel auction with existing bids');
-  if (auction.status !== 'upcoming' && auction.status !== 'active')
-    throw new Error('Auction cannot be cancelled');
+  if (auction.status !== 'upcoming' && auction.status !== 'active') throw new Error('Auction cannot be cancelled');
 
   auction.status = 'cancelled';
   await auction.save();
@@ -532,48 +515,41 @@ export async function cancelAuction(auctionId, userId) {
     });
   }
 
-  await Promise.all([
-    cacheDel(cacheKeys.auction(auction._id.toString())),
-    cacheDel(cacheKeys.auctionFeatured()),
-  ]);
+  await Promise.all([cacheDel(cacheKeys.auction(auction._id.toString())), cacheDel(cacheKeys.auctionFeatured())]);
 
   return auction;
 }
 
 export async function getAuctionStats() {
-  const [totalAuctions, endedAuctions, totalVolume, avgBids, topCity, topDistrict, topSeller] =
-    await Promise.all([
-      Auction.countDocuments(),
-      Auction.find({ status: 'ended', winningBid: { $gt: 0 } })
-        .populate('propertyId', 'name')
-        .lean(),
-      Auction.aggregate([
-        { $match: { status: 'ended', winningBid: { $gt: 0 } } },
-        { $group: { _id: null, total: { $sum: '$winningBid' }, avg: { $avg: '$winningBid' } } },
-      ]),
-      Auction.aggregate([
-        { $match: { status: 'ended' } },
-        { $group: { _id: null, avg: { $avg: '$totalBids' } } },
-      ]),
-      Auction.aggregate([
-        { $match: { status: 'ended', winningBid: { $gt: 0 } } },
-        { $lookup: { from: 'properties', localField: 'propertyId', foreignField: '_id', as: 'prop' } },
-        { $unwind: '$prop' },
-        { $group: { _id: '$prop.cityId', count: { $sum: 1 }, volume: { $sum: '$winningBid' } } },
-        { $sort: { volume: -1 } },
-        { $limit: 1 },
-      ]),
-      Auction.aggregate([
-        { $match: { status: 'ended', winningBid: { $gt: 0 } } },
-        { $lookup: { from: 'properties', localField: 'propertyId', foreignField: '_id', as: 'prop' } },
-        { $unwind: '$prop' },
-        { $match: { 'prop.districtId': { $ne: null } } },
-        { $group: { _id: '$prop.districtId', count: { $sum: 1 }, volume: { $sum: '$winningBid' } } },
-        { $sort: { volume: -1 } },
-        { $limit: 1 },
-      ]),
-      AuctionReputation.findOne().sort({ totalVolume: -1 }).populate('userId', 'username').lean(),
-    ]);
+  const [totalAuctions, endedAuctions, totalVolume, avgBids, topCity, topDistrict, topSeller] = await Promise.all([
+    Auction.countDocuments(),
+    Auction.find({ status: 'ended', winningBid: { $gt: 0 } })
+      .populate('propertyId', 'name')
+      .lean(),
+    Auction.aggregate([
+      { $match: { status: 'ended', winningBid: { $gt: 0 } } },
+      { $group: { _id: null, total: { $sum: '$winningBid' }, avg: { $avg: '$winningBid' } } },
+    ]),
+    Auction.aggregate([{ $match: { status: 'ended' } }, { $group: { _id: null, avg: { $avg: '$totalBids' } } }]),
+    Auction.aggregate([
+      { $match: { status: 'ended', winningBid: { $gt: 0 } } },
+      { $lookup: { from: 'properties', localField: 'propertyId', foreignField: '_id', as: 'prop' } },
+      { $unwind: '$prop' },
+      { $group: { _id: '$prop.cityId', count: { $sum: 1 }, volume: { $sum: '$winningBid' } } },
+      { $sort: { volume: -1 } },
+      { $limit: 1 },
+    ]),
+    Auction.aggregate([
+      { $match: { status: 'ended', winningBid: { $gt: 0 } } },
+      { $lookup: { from: 'properties', localField: 'propertyId', foreignField: '_id', as: 'prop' } },
+      { $unwind: '$prop' },
+      { $match: { 'prop.districtId': { $ne: null } } },
+      { $group: { _id: '$prop.districtId', count: { $sum: 1 }, volume: { $sum: '$winningBid' } } },
+      { $sort: { volume: -1 } },
+      { $limit: 1 },
+    ]),
+    AuctionReputation.findOne().sort({ totalVolume: -1 }).populate('userId', 'username').lean(),
+  ]);
 
   const highest =
     endedAuctions.length > 0
@@ -588,9 +564,7 @@ export async function getAuctionStats() {
 
   let mostActiveDistrictName = null;
   if (topDistrict[0]?._id) {
-    const districtDoc = await mongoose.connection.db
-      .collection('districts')
-      .findOne({ _id: topDistrict[0]._id });
+    const districtDoc = await mongoose.connection.db.collection('districts').findOne({ _id: topDistrict[0]._id });
     mostActiveDistrictName = districtDoc?.name || null;
   }
 

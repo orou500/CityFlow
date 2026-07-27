@@ -25,7 +25,17 @@ function hasPermission(member, permission) {
   if (!member) return false;
   if (member.role === 'ceo') return true;
   if (member.role === 'director') {
-    return ['invite_members', 'manage_properties', 'initiate_investments', 'view_treasury', 'manage_treasury', 'manage_settings', 'manage_applications', 'manage_loan_requests', 'remove_members'].includes(permission);
+    return [
+      'invite_members',
+      'manage_properties',
+      'initiate_investments',
+      'view_treasury',
+      'manage_treasury',
+      'manage_settings',
+      'manage_applications',
+      'manage_loan_requests',
+      'remove_members',
+    ].includes(permission);
   }
   if (member.role === 'officer') {
     return ['invite_members', 'view_treasury', 'manage_applications'].includes(permission);
@@ -50,7 +60,10 @@ const createRateLimit = rateLimit({
 function handleValidationErrors(req, res, next) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    const messages = errors.array().map((e) => e.msg).join('; ');
+    const messages = errors
+      .array()
+      .map((e) => e.msg)
+      .join('; ');
     return res.status(400).json({
       success: false,
       error: messages,

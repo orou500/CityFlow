@@ -107,7 +107,9 @@ auctionSchema.set('toJSON', {
       ret.winnerId = ret.winnerId.toString();
     }
     if (ret.watchers && Array.isArray(ret.watchers)) {
-      ret.watchers = ret.watchers.map((w) => (typeof w === 'object' && w._id ? w._id.toString() : w?.toString?.() || w));
+      ret.watchers = ret.watchers.map((w) =>
+        typeof w === 'object' && w._id ? w._id.toString() : w?.toString?.() || w,
+      );
     }
     return ret;
   },

@@ -48,11 +48,7 @@ function TickCountdown({ endTick, currentTick, status, className }) {
     return <span className={className}>{t(`auctions.status.${status}`)}</span>;
   }
   if (status === 'ending') {
-    return (
-      <span className={`${className} text-purple-400 font-medium`}>
-        ⏰ {t('auctions.finalizing')}
-      </span>
-    );
+    return <span className={`${className} text-purple-400 font-medium`}>⏰ {t('auctions.finalizing')}</span>;
   }
   if (status === 'upcoming') {
     return (
@@ -111,7 +107,8 @@ function FeaturedCard({ auction, onClick }) {
         {property?.name || t('auctions.unknownProperty')}
       </div>
       <div className="text-xs text-gray-400 mt-1">
-        {SELLER_ICONS[auction.sellerType]} {auction.sellerId?.username || t(`auctions.sellerTypes.${auction.sellerType}`)}
+        {SELLER_ICONS[auction.sellerType]}{' '}
+        {auction.sellerId?.username || t(`auctions.sellerTypes.${auction.sellerType}`)}
         {property?.propertyRating && (
           <span className={`ml-2 ${RARITY_STYLES[property.propertyRating]?.text || ''}`}>
             💎 {t(`auctions.ratings.${property.propertyRating}`)}
@@ -203,7 +200,7 @@ function AuctionCard({ auction, onClick, onWatch, isWatched, user }) {
     auction.isEndingSoon ||
     (auction.status === 'active' &&
       (auction.ticksRemaining ?? Math.max(0, (auction.endTick || 0) - (auction.currentTick || 0))) <= 2);
-  const isOwner = user && ((auction.sellerId?._id || auction.sellerId)?.toString() === user._id?.toString());
+  const isOwner = user && (auction.sellerId?._id || auction.sellerId)?.toString() === user._id?.toString();
   const canCancel = isOwner && auction.totalBids === 0 && auction.status === 'upcoming';
   const [cancelling, setCancelling] = useState(false);
 
@@ -669,7 +666,8 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
           <div>
             <span className="text-gray-400">{t('auctions.source')}: </span>
             <span className="text-white">
-              {SELLER_ICONS[detail.sellerType]} {detail.sellerId?.username || t(`auctions.sellerTypes.${detail.sellerType}`)}
+              {SELLER_ICONS[detail.sellerType]}{' '}
+              {detail.sellerId?.username || t(`auctions.sellerTypes.${detail.sellerType}`)}
             </span>
           </div>
           {detail.auctionType === 'reserve' && (
