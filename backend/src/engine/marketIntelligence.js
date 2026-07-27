@@ -43,9 +43,9 @@ export async function generatePriceForecastReport(cityId, tier) {
   const demandPressure = (city.demandIndex - 1.0) * 0.08;
   const supplyPressure = (1.0 - city.supplyIndex) * 0.04;
 
-  const mostLikelyChange = addNoise((baseMod - 1.0) + demandPressure + supplyPressure + city.growthRate * 0.5, accuracy);
-  const bestCaseChange = addNoise((boomMod - 1.0) + Math.abs(demandPressure) + 0.03, accuracy);
-  const worstCaseChange = addNoise((recessionMod - 1.0) - Math.abs(supplyPressure) - 0.02, accuracy);
+  const mostLikelyChange = addNoise(baseMod - 1.0 + demandPressure + supplyPressure + city.growthRate * 0.5, accuracy);
+  const bestCaseChange = addNoise(boomMod - 1.0 + Math.abs(demandPressure) + 0.03, accuracy);
+  const worstCaseChange = addNoise(recessionMod - 1.0 - Math.abs(supplyPressure) - 0.02, accuracy);
 
   const rangeWidth = (1 - accuracy) * 0.1;
 
@@ -76,9 +76,10 @@ export async function generatePriceForecastReport(cityId, tier) {
       },
       priceToRentRatio: {
         current: city.avgRent > 0 ? Math.round((city.avgPrice / (city.avgRent * 12)) * 10) / 10 : null,
-        projected: city.avgRent > 0
-          ? Math.round((city.avgPrice * (1 + mostLikelyChange) / (city.avgRent * 12)) * 10) / 10
-          : null,
+        projected:
+          city.avgRent > 0
+            ? Math.round(((city.avgPrice * (1 + mostLikelyChange)) / (city.avgRent * 12)) * 10) / 10
+            : null,
       },
       confidenceInterval: `${Math.round((mostLikelyChange - rangeWidth) * 100)}% to ${Math.round((mostLikelyChange + rangeWidth) * 100)}%`,
     },
@@ -277,7 +278,9 @@ export async function generateGrowthOpportunitiesReport(tier) {
           name: d.name,
           cityName: d.cityId?.name || 'Unknown',
           eventName: e.name,
-          expectedImpact: e.effects?.demandDelta ? `+${Math.round(e.effects.demandDelta * 100)}% demand` : 'Positive event',
+          expectedImpact: e.effects?.demandDelta
+            ? `+${Math.round(e.effects.demandDelta * 100)}% demand`
+            : 'Positive event',
         })),
     )
     .slice(0, maxResults);
@@ -294,10 +297,7 @@ export async function generateGrowthOpportunitiesReport(tier) {
       name: c.name,
       growthRate: Math.round(c.growthRate * 10000) / 100,
       netMigration: (c.immigration || 0) - (c.emigration || 0),
-      reason:
-        (c.immigration || 0) > (c.emigration || 0)
-          ? 'Net positive migration'
-          : 'Above-average population growth',
+      reason: (c.immigration || 0) > (c.emigration || 0) ? 'Net positive migration' : 'Above-average population growth',
     }));
 
   return {
@@ -347,7 +347,8 @@ export async function evaluateExpiredReports(currentTick) {
         };
         const predictedLevel = report.data?.overall?.level;
         const actualRisk = city.demandIndex < 0.5 ? 'high' : city.demandIndex < 0.8 ? 'moderate' : 'low';
-        forecastAccuracy = predictedLevel === actualRisk ? 90 : predictedLevel === 'moderate' || actualRisk === 'moderate' ? 65 : 40;
+        forecastAccuracy =
+          predictedLevel === actualRisk ? 90 : predictedLevel === 'moderate' || actualRisk === 'moderate' ? 65 : 40;
       }
     } else if (report.reportType === 'growth_opportunities') {
       forecastAccuracy = 60 + Math.random() * 20;
@@ -427,7 +428,8 @@ export async function generatePublicTrends(cityId) {
   else if (city.economicCondition === 'recession') healthScore -= 15;
   healthScore = clamp(healthScore, 0, 100);
 
-  const healthLabel = healthScore >= 75 ? 'Strong' : healthScore >= 50 ? 'Healthy' : healthScore >= 25 ? 'Weak' : 'Critical';
+  const healthLabel =
+    healthScore >= 75 ? 'Strong' : healthScore >= 50 ? 'Healthy' : healthScore >= 25 ? 'Weak' : 'Critical';
 
   const activeEvents = (city.activeEvents || []).map((e) => ({
     name: e.name,

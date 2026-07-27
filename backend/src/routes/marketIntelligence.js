@@ -51,10 +51,7 @@ router.get('/catalog', (req, res) => {
 router.get(
   '/trends/:cityId',
   authenticate,
-  [
-    param('cityId').isMongoId().withMessage('Invalid city ID'),
-    handleValidationErrors,
-  ],
+  [param('cityId').isMongoId().withMessage('Invalid city ID'), handleValidationErrors],
   async (req, res) => {
     try {
       const { cityId } = req.params;
@@ -208,11 +205,7 @@ router.get(
       if (cityId) filter.cityId = cityId;
 
       const [reports, total] = await Promise.all([
-        MarketReport.find(filter)
-          .sort({ createdAt: -1 })
-          .skip(Number(offset))
-          .limit(Number(limit))
-          .lean(),
+        MarketReport.find(filter).sort({ createdAt: -1 }).skip(Number(offset)).limit(Number(limit)).lean(),
         MarketReport.countDocuments(filter),
       ]);
 

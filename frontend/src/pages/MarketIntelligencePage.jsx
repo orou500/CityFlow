@@ -49,9 +49,7 @@ function ReportCard({ report, onClick }) {
       className="w-full text-left bg-gray-800 border border-gray-700 hover:border-gray-500 rounded-lg p-4 transition-colors"
     >
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-medium text-white">
-          {t(`mi.reportTypes.${report.reportType}`)}
-        </span>
+        <span className="text-sm font-medium text-white">{t(`mi.reportTypes.${report.reportType}`)}</span>
         <span className={`text-xs px-2 py-0.5 rounded ${tierStyle.bg} ${tierStyle.border} ${tierStyle.text} border`}>
           {t(`mi.tiers.${report.tier}`)}
         </span>
@@ -61,9 +59,7 @@ function ReportCard({ report, onClick }) {
           {t(`mi.status.${report.status}`)}
         </span>
         {report.status === 'active' && (
-          <span className="text-xs text-gray-400">
-            {t('mi.ticksRemaining', { count: ticksLeft })}
-          </span>
+          <span className="text-xs text-gray-400">{t('mi.ticksRemaining', { count: ticksLeft })}</span>
         )}
         {report.forecastAccuracy != null && (
           <span className="text-xs text-gray-400">
@@ -91,7 +87,10 @@ function ReportDetail({ report, onClose }) {
               <StatCard label={t('mi.currentPrice')} value={`$${data.snapshot?.avgPrice?.toLocaleString()}`} />
               <StatCard label={t('mi.demandIndex')} value={data.snapshot?.demandIndex} />
               <StatCard label={t('mi.supplyIndex')} value={data.snapshot?.supplyIndex} />
-              <StatCard label={t('mi.economicCondition')} value={t(`mi.econConditions.${data.snapshot?.economicCondition}`)} />
+              <StatCard
+                label={t('mi.economicCondition')}
+                value={t(`mi.econConditions.${data.snapshot?.economicCondition}`)}
+              />
             </div>
             {data.forecast && (
               <div className="bg-gray-900 rounded-lg p-4 space-y-3">
@@ -114,7 +113,9 @@ function ReportDetail({ report, onClose }) {
                   </div>
                 </div>
                 {data.forecast.confidenceInterval && (
-                  <div className="text-xs text-gray-400 text-center">{t('mi.confidence')}: {data.forecast.confidenceInterval}</div>
+                  <div className="text-xs text-gray-400 text-center">
+                    {t('mi.confidence')}: {data.forecast.confidenceInterval}
+                  </div>
                 )}
                 {data.forecast.priceToRentRatio?.current != null && (
                   <div className="grid grid-cols-2 gap-3 text-sm">
@@ -154,15 +155,22 @@ function ReportDetail({ report, onClose }) {
           <div className="space-y-4">
             <div className="bg-gray-900 rounded-lg p-4 text-center">
               <div className="text-xs text-gray-400 mb-1">{t('mi.overallRisk')}</div>
-              <div className={`text-3xl font-bold ${
-                data.overall?.level === 'low' || data.overall?.level === 'very_low' ? 'text-green-400' :
-                data.overall?.level === 'high' || data.overall?.level === 'very_high' ? 'text-red-400' : 'text-yellow-400'
-              }`}>
+              <div
+                className={`text-3xl font-bold ${
+                  data.overall?.level === 'low' || data.overall?.level === 'very_low'
+                    ? 'text-green-400'
+                    : data.overall?.level === 'high' || data.overall?.level === 'very_high'
+                      ? 'text-red-400'
+                      : 'text-yellow-400'
+                }`}
+              >
                 {data.overall?.score}/100
               </div>
               <div className="text-sm text-gray-400">{t(`mi.riskLevels.${data.overall?.level}`)}</div>
               {data.expectedVolatility != null && (
-                <div className="text-xs text-gray-500 mt-1">{t('mi.expectedVolatility')}: {data.expectedVolatility}%</div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {t('mi.expectedVolatility')}: {data.expectedVolatility}%
+                </div>
               )}
             </div>
             {data.factors?.length > 0 && (
@@ -172,11 +180,19 @@ function ReportDetail({ report, onClose }) {
                   <div key={i} className="flex items-center justify-between text-sm">
                     <span className="text-gray-300">{f.name}</span>
                     <div className="flex items-center gap-2">
-                      <span className="text-gray-500">{f.contribution > 0 ? '+' : ''}{f.contribution}</span>
-                      <span className={`px-2 py-0.5 rounded text-xs ${
-                        f.level === 'high' ? 'bg-red-900 text-red-300' :
-                        f.level === 'moderate' ? 'bg-yellow-900 text-yellow-300' : 'bg-green-900 text-green-300'
-                      }`}>
+                      <span className="text-gray-500">
+                        {f.contribution > 0 ? '+' : ''}
+                        {f.contribution}
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded text-xs ${
+                          f.level === 'high'
+                            ? 'bg-red-900 text-red-300'
+                            : f.level === 'moderate'
+                              ? 'bg-yellow-900 text-yellow-300'
+                              : 'bg-green-900 text-green-300'
+                        }`}
+                      >
                         {t(`mi.riskFactorLevels.${f.level}`)}
                       </span>
                     </div>
@@ -337,7 +353,9 @@ function ReportDetail({ report, onClose }) {
         <div className="bg-gray-900 rounded-lg p-4 text-center">
           <div className="text-xs text-gray-400 mb-1">{t('mi.forecastAccuracy')}</div>
           <div className="text-2xl font-bold text-blue-400">{report.forecastAccuracy}%</div>
-          <div className="text-xs text-gray-500">{t('mi.evaluationTick')}: {report.evaluationTick}</div>
+          <div className="text-xs text-gray-500">
+            {t('mi.evaluationTick')}: {report.evaluationTick}
+          </div>
         </div>
       )}
     </div>
@@ -369,7 +387,9 @@ function PurchaseForm({ reportType, tierInfo, cities, selectedCity, onSelectCity
           >
             <option value="">{t('mi.selectCity')}</option>
             {cities.map((c) => (
-              <option key={c._id} value={c._id}>{c.name}</option>
+              <option key={c._id} value={c._id}>
+                {c.name}
+              </option>
             ))}
           </select>
         </div>
@@ -461,7 +481,9 @@ function PerformanceTab({ performance }) {
               <div key={type} className="flex items-center justify-between text-sm bg-gray-900 rounded p-2">
                 <span className="text-gray-300">{t(`mi.reportTypes.${type}`)}</span>
                 <div className="flex items-center gap-4">
-                  <span className="text-gray-400">{stats.count} {t('mi.reports')}</span>
+                  <span className="text-gray-400">
+                    {stats.count} {t('mi.reports')}
+                  </span>
                   <span className="text-white font-medium">{stats.avgAccuracy}%</span>
                 </div>
               </div>
@@ -477,7 +499,9 @@ function PerformanceTab({ performance }) {
               <div key={i} className="flex items-center justify-between text-sm bg-gray-900 rounded p-2">
                 <div className="flex items-center gap-2">
                   <span className="text-gray-300">{t(`mi.reportTypes.${r.reportType}`)}</span>
-                  <span className={`text-xs px-1.5 py-0.5 rounded ${TIER_STYLES[r.tier]?.bg} ${TIER_STYLES[r.tier]?.text}`}>
+                  <span
+                    className={`text-xs px-1.5 py-0.5 rounded ${TIER_STYLES[r.tier]?.bg} ${TIER_STYLES[r.tier]?.text}`}
+                  >
                     {t(`mi.tiers.${r.tier}`)}
                   </span>
                 </div>
@@ -520,7 +544,7 @@ export default function MarketIntelligencePage() {
       ]);
       setCatalog(catalogRes.catalog || []);
       setReports(reportsRes.reports || []);
-      setCities(Array.isArray(citiesRes) ? citiesRes : (citiesRes.cities || []));
+      setCities(Array.isArray(citiesRes) ? citiesRes : citiesRes.cities || []);
 
       if (reportsRes.reports?.length > 0) {
         const report = reportsRes.reports[0];
@@ -610,7 +634,9 @@ export default function MarketIntelligencePage() {
       {error && (
         <div className="bg-red-900/50 border border-red-800 text-red-300 px-4 py-3 rounded mb-4 text-sm">
           {error}
-          <button onClick={() => setError(null)} className="ml-2 text-red-400 hover:text-red-300">{t('mi.dismiss')}</button>
+          <button onClick={() => setError(null)} className="ml-2 text-red-400 hover:text-red-300">
+            {t('mi.dismiss')}
+          </button>
         </div>
       )}
 
@@ -654,10 +680,15 @@ export default function MarketIntelligencePage() {
               <WhatYouGet reportType={item.reportType} />
               <div className="grid grid-cols-3 gap-2 mt-3 mb-3">
                 {['basic', 'advanced', 'premium'].map((tier) => (
-                  <div key={tier} className={`rounded p-2 text-center ${TIER_STYLES[tier].bg} border ${TIER_STYLES[tier].border}`}>
+                  <div
+                    key={tier}
+                    className={`rounded p-2 text-center ${TIER_STYLES[tier].bg} border ${TIER_STYLES[tier].border}`}
+                  >
                     <div className={`text-xs font-medium ${TIER_STYLES[tier].text}`}>{t(`mi.tiers.${tier}`)}</div>
                     <div className="text-white font-semibold text-sm">${item.costs?.[tier]?.toLocaleString()}</div>
-                    <div className="text-xs text-gray-400">{Math.round((item.accuracy?.[tier] || 0) * 100)}% {t('mi.accuracy')}</div>
+                    <div className="text-xs text-gray-400">
+                      {Math.round((item.accuracy?.[tier] || 0) * 100)}% {t('mi.accuracy')}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -681,8 +712,11 @@ export default function MarketIntelligencePage() {
                 key={status}
                 onClick={() => loadReports(status)}
                 className={`px-3 py-1.5 rounded text-sm transition-colors ${
-                  status === 'active' ? 'bg-green-900 text-green-300' :
-                  status === 'evaluated' ? 'bg-blue-900 text-blue-300' : 'bg-gray-700 text-gray-300'
+                  status === 'active'
+                    ? 'bg-green-900 text-green-300'
+                    : status === 'evaluated'
+                      ? 'bg-blue-900 text-blue-300'
+                      : 'bg-gray-700 text-gray-300'
                 }`}
               >
                 {t(`mi.status.${status}`)}
@@ -705,9 +739,7 @@ export default function MarketIntelligencePage() {
         <ReportDetail report={selectedReport} onClose={() => setSelectedReport(null)} />
       )}
 
-      {activeTab === 'performance' && (
-        <PerformanceTab performance={performance} />
-      )}
+      {activeTab === 'performance' && <PerformanceTab performance={performance} />}
     </div>
   );
 }
