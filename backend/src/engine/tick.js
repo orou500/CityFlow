@@ -54,6 +54,7 @@ import {
 import { generateInvestmentOpportunities, processCompanyInvestments } from './treasuryInvestments.js';
 import { simulateDistricts } from './districtSimulation.js';
 import { evaluateExpiredReports } from './marketIntelligence.js';
+import { processAuctions, generateBankAuctions } from './auctionProcessing.js';
 
 export async function executeTick() {
   const startTime = Date.now();
@@ -61,7 +62,14 @@ export async function executeTick() {
 
   try {
     const tickNumber = await incrementTick();
+    global.currentTick = tickNumber;
     console.log(`[TICK] Tick #${tickNumber}`);
+
+    console.log('[TICK] Processing auctions...');
+    const auctionResults = await processAuctions();
+
+    console.log('[TICK] Generating bank auctions...');
+    const newBankAuctions = await generateBankAuctions();
 
     const activeEvents = await Event.find({ active: true });
 
@@ -258,6 +266,8 @@ export async function executeTick() {
     console.log(`[TICK] Completed events cleaned up: ${cleanedUpEvents}`);
     console.log(`[TICK] New competitive events: ${newCompEvents.length}`);
     console.log(`[TICK] Evaluated market reports: ${evaluatedReports}`);
+    console.log(`[TICK] Auctions processed: ${auctionResults.activated} activated, ${auctionResults.completed} completed`);
+    console.log(`[TICK] Bank auctions generated: ${newBankAuctions.length}`);
 
     const deletedCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const usersToDelete = await User.find({ deletedAt: { $ne: null, $lte: deletedCutoff } }).select('_id');
@@ -293,6 +303,7 @@ export async function executeTick() {
     await cacheDelPattern('cf:district:*');
     await cacheDelPattern('cf:market:*');
     await cacheDelPattern('cf:mi:*');
+    await cacheDelPattern('cf:auction*');
     await cacheDelPattern('cf:stats:*');
     await publish(CHANNELS.TICK, { tickNumber, timestamp: new Date().toISOString() });
     emitToAll(SOCKET_EVENTS.TICK, { tickNumber, timestamp: new Date().toISOString() });

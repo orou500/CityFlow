@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getApiBaseUrl } from '../utils/capacitor';
 import { useAuthStore } from '../store/useAuthStore';
@@ -236,6 +237,15 @@ export default function DonationsPage() {
           </div>
         </div>
       )}
+
+      <div className="text-center mt-8">
+        <Link
+          to="/supporters"
+          className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
+        >
+          🏆 {t('supporters')}
+        </Link>
+      </div>
     </div>
   );
 }

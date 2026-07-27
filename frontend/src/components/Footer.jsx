@@ -24,6 +24,9 @@ export default function Footer() {
           <Link to="/contributors" className="hover:text-primary transition-colors">
             {t('contributors.title')}
           </Link>
+          <Link to="/supporters" className="hover:text-primary transition-colors">
+            {t('supporters')}
+          </Link>
         </div>
         <div className="text-muted text-xs">&copy; {new Date().getFullYear()} CityFlow. All rights reserved.</div>
       </div>

@@ -109,9 +109,14 @@ export default function OnboardingWrapper({ children }) {
         content: t('onboarding.step11.content'),
       },
       {
-        target: 'body',
+        target: '[data-tour="auctions"]',
         title: t('onboarding.step12.title'),
         content: t('onboarding.step12.content'),
+      },
+      {
+        target: 'body',
+        title: t('onboarding.step13.title'),
+        content: t('onboarding.step13.content'),
       },
     ],
     [t, i18n.language],

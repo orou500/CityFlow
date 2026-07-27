@@ -90,6 +90,7 @@ Late-game progression is important.
 - Market Events
 - Companies (Stock Market)
 - Real Estate Companies (Player-created guilds/clans)
+- Property Auctions & Competitive Bidding
 - Leaderboards
 - Competitive Events
 - OAuth
@@ -128,21 +129,12 @@ Think about future scalability.
 Future systems include:
 
 - Public Companies (IPO)
-
 - Stock Market
-
 - Population Simulation
-
 - Neighborhood Control
-
 - Risk System
-
 - Missions
-
-- Auctions
-
 - Banking Expansion
-
 - Discord Integration
 
 Every new feature should integrate naturally with these systems whenever possible.
@@ -194,7 +186,7 @@ cityflow/
 ├── backend/              # Node.js/Express API + simulation engine
 │   └── src/
 │       ├── config/       # Environment, DB, simulation constants
-│       ├── engine/       # Tick-based simulation logic (22 files)
+│       ├── engine/       # Tick-based simulation logic (22 files) (22 files)
 │       ├── middleware/    # JWT auth, admin, maintenance, rate limiting
 │       ├── models/       # Mongoose schemas (25 models)
 │       ├── routes/       # Express routes (27 files)
@@ -236,10 +228,11 @@ cityflow/
 
 - 22 engine files execute simulation phases each tick
 - `tick.js` is the master orchestrator (25+ phases)
+- **Auction processing runs first** (before city simulation, markets, rent, etc.) to eliminate race conditions between tick advancement and auction state transitions
 - Engine processes are ordered: e.g., for company loans: auto-vote → auto-execution → expiration
 - Use `bulkWrite()` with 500-document batches for performance
 - Distributed tick locking via Redis `SET NX EX` (falls back to MongoDB when Redis unavailable)
-- Cache invalidation runs after each tick (leaderboard + stats)
+- Cache invalidation runs after each tick (leaderboard + stats + auctions)
 
 ### Redis Infrastructure
 
@@ -306,6 +299,46 @@ cityflow/
 - Transaction types: deposit, withdrawal, rent_income, loan_disbursement, loan_payment, property_purchase, property_sale, construction, contract_reward, investment_withdrawal, investment_return, development
 - Treasury transactions are retained for 4 ticks (24 hours) plus a createdAt fallback for legacy entries, then pruned each tick to keep the DB light
 - In-memory hard cap of 100 transactions still applies before pruning
+
+#### Property Auction System
+
+- **Model**: `backend/src/models/Auction.js` (status: upcoming/active/ending/ended/cancelled, embedded bid/activity subdocs, watchers array, reputation tracking)
+- **Routes**: `backend/src/routes/auctions.js` (~1000 lines, 13 endpoints under `/auctions`)
+- **Engine**: `backend/src/engine/auctionProcessing.js` — tick-based lifecycle, settlement, bank generation, anti-sniping
+- **Config**: `backend/src/config/auctions.js` — 18 property templates (3 tiers), rarity weights, auction constants
+- **Frontend**: `frontend/src/pages/AuctionDashboardPage.jsx` — 6 tabs, featured section, analytics panel, live activity feed, watchlist, company bid modal, reputation display
+
+**State machine**: Upcoming → Active → Ending (2 ticks) → Ended → History
+- Auctions process at the start of every world tick (before all other simulation)
+- **Ending** phase: lasts 2 ticks, no new bids allowed, settlement occurs (winner charged, seller paid, property transferred, notifications sent)
+- **Bank generation**: Scales with player count (`baseUpcoming + playerCount * 0.03`, max 12 upcoming, max 15 active)
+
+**Seller types**: bank, player, event
+**Auction types**: standard, reserve (with reserve price)
+
+**Anti-sniping**: When a bid is placed within 2 ticks of end, auction extends by 1 tick
+
+**Featured scoring** (composite algorithm):
+- valueScore (30%) + bidsScore (25%) + watchersScore (20%) + rarityBonus (0-30) + endingSoonBonus (20)
+
+**Company participation**: Members with `initiate_investments` permission can propose bids → company vote → if approved, treasury places bid
+
+**Watchlist**: Up to 50 per player, auto-add when user bids, notifications for outbid/reserve/ending/extension/cancellation
+
+---
+
+### Redis Caching Keys (Auction)
+
+- `cf:auction:{id}` — individual auction detail (TTL: 15s)
+- `cf:auctions:{status}` — auction list by status (TTL: 20s)
+- `cf:auctions:featured` — featured auctions (TTL: 30s)
+- `cf:auctions:analytics` — global auction stats (TTL: 60s)
+- `cf:auctions:watchlist:{userId}` — user watchlist (TTL: 30s)
+- `cf:auctions:rep:{userId}` — user auction reputation (TTL: 120s)
+
+Cache invalidation on: new bid, auction completed, auction cancelled, watchlist updated, tick completed (`cacheDelPattern('cf:auction*')`)
+
+---
 
 ### i18n (Internationalization)
 
@@ -394,3 +427,8 @@ cityflow/
 8. **User.role vs company member role**: The User model's `role` field (`user`/`admin`) is different from company member roles (`ceo`/`director`/`officer`/`member`/`recruit`). When querying permissions within a company, always use the member's role from `company.members[]`, never query `User.role`
 9. **Company permissions**: The `hasPermission()` function defines per-role permissions. Always verify new endpoints use the correct permission name and that it's granted to the intended roles
 10. **Voting threshold**: For company votes, `totalVoters = members.length - 1` (excludes the proposer). Threshold is 50% of totalVoters
+11. **Auction engine ordering**: `processAuctions()` must run immediately after `global.currentTick = tickNumber` in `tick.js` — before any other simulation — to prevent race conditions where API requests see the new tick before auctions are activated/finalized
+12. **MongoDB transactions**: `settleAuction()` runs without MongoDB sessions/transactions (standalone MongoDB doesn't support them). All saves are direct `findById` + `save()` with individual error handling
+13. **Auction state machine**: Every auction must always progress through `upcoming → active → ending (2 ticks) → ended`. Never skip the `ending` phase
+14. **Bank auction scaling**: Generation targets are calculated per tick based on player count. If `currentTotal >= targetTotal`, no new bank auctions are generated until existing ones complete
+15. **No `new` operator on `mongoose.Types.ObjectId`**: When creating ObjectIds in routes/engine, use `new mongoose.Types.ObjectId(string)` not bare strings

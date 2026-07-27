@@ -28,7 +28,8 @@
     "companies": "Companies",
     "donate": "Donate",
     "districts": "Districts",
-    "mi": "Market Intel"
+    "mi": "Market Intel",
+    "auctions": "Auctions"
   },
   "map": {
     "title": "World Map",
@@ -893,8 +894,12 @@
       "content": "CityFlow is better with friends.\n\n• Add other players from their profile page\n• Accept or decline friend requests\n• View friends' net worth and portfolios\n• Send offers and negotiate deals together\n\nBuild your network — allies can help you spot opportunities."
     },
     "step12": {
+      "title": "🔨 Property Auctions",
+      "content": "Compete for rare and exclusive properties through live auctions!\n\n🔥 Featured Auctions — Top-value, ending-soon, and hot auctions highlighted\n📊 Auction Analytics — Global stats: highest auction ever, total volume, avg prices\n👁️ Watchlist — Follow auctions without bidding, get notified on outbid/ending\n🏢 Company Bidding — Propose auction bids through your company's governance vote\n👑 Seller Reputation — Track your auction wins, sales, volume, and win rate\n\nBid strategically against other players and companies for the best properties.\nAuctions refresh every month with bank-generated and player-listed properties."
+    },
+    "step13": {
       "title": "🚀 You're Ready!",
-      "content": "You now know everything you need to start.\n\nQuick strategy tips:\n• Start by buying a few cheap properties\n• Collect your rent regularly — it expires in 24h!\n• Claim your month bonus every 6 hours for free cash & XP\n• Use bank loans wisely to scale faster\n• Watch city demand — buy low, sell high\n• Check city demographics — growing populations = rising values\n• Set maintenance to Standard or Premium for better occupancy\n• Develop land for long-term income\n• Keep an eye on world events\n\nGood luck, tycoon! 🏆"
+      "content": "You now know everything you need to start.\n\nQuick strategy tips:\n• Start by buying a few cheap properties\n• Collect your rent regularly — it expires in 24h!\n• Claim your month bonus every 6 hours for free cash & XP\n• Use bank loans wisely to scale faster\n• Watch city demand — buy low, sell high\n• Check city demographics — growing populations = rising values\n• Set maintenance to Standard or Premium for better occupancy\n• Develop land for long-term income\n• Keep an eye on world events\n• Participate in property auctions for rare finds\n\nGood luck, tycoon! 🏆"
     }
   },
   "transaction": {
@@ -2208,6 +2213,142 @@
       "low": "Low",
       "moderate": "Moderate",
       "high": "High"
+    }
+  },
+  "auctions": {
+    "title": "Property Auctions",
+    "subtitle": "Compete for rare and exclusive properties through competitive bidding",
+    "loading": "Loading auctions...",
+    "dismiss": "Dismiss",
+    "close": "Close",
+    "cancel": "Cancel",
+    "noAuctions": "No auctions found",
+    "unknownProperty": "Unknown Property",
+    "unknownBidder": "Unknown Bidder",
+    "you": "You",
+    "system": "System",
+    "optional": "Optional",
+    "defaultAuto": "Default: 70% of market value",
+    "tabs": {
+      "active": "Active",
+      "upcoming": "Upcoming",
+      "my-auctions": "My Auctions",
+      "my-bids": "My Bids",
+      "watchlist": "Watchlist",
+      "history": "History"
+    },
+    "status": {
+      "upcoming": "Upcoming",
+      "active": "Live",
+      "ending": "Ending",
+      "ended": "Ended",
+      "cancelled": "Cancelled"
+    },
+    "finalizing": "Finalizing...",
+    "propertyTypes": {
+      "apartment": "Apartment",
+      "house": "House",
+      "commercial": "Commercial",
+      "land": "Land",
+      "all": "All Types"
+    },
+    "ratings": {
+      "standard": "Standard",
+      "improved": "Improved",
+      "premium": "Premium",
+      "luxury": "Luxury",
+      "elite": "Elite"
+    },
+    "auctionTypes": {
+      "standard": "Standard",
+      "reserve": "Reserve"
+    },
+    "sellerTypes": {
+      "bank": "Bank",
+      "player": "Player",
+      "event": "Event"
+    },
+    "currentBid": "Current Bid",
+    "startingBid": "Starting Bid",
+    "bids": "Bids",
+    "totalBids": "Total Bids",
+    "uniqueBidders": "Bidders",
+    "timeLeft": "Time Left",
+    "ticksLeft": "{{count}} ticks left",
+    "startsIn": "Starts in {{count}} ticks",
+    "minNextBid": "Min. next bid",
+    "reserve": "Reserve",
+    "reserveMet": "Reserve met",
+    "bankAuction": "Bank Auction",
+    "hot": "Hot auction",
+    "endingSoon": "Ending soon",
+    "propertyDetails": "Property Details",
+    "marketValue": "Market Value",
+    "intrinsicValue": "Intrinsic Value",
+    "condition": "Condition",
+    "rating": "Rating",
+    "rent": "Rent",
+    "quality": "Quality",
+    "occupancy": "Occupancy",
+    "roi": "ROI",
+    "valueToBid": "Estimated fair value",
+    "auctionInfo": "Auction Info",
+    "type": "Type",
+    "source": "Source",
+    "reservePrice": "Reserve Price",
+    "winner": "Winner",
+    "watchers": "Watchers",
+    "placeBid": "Place Bid",
+    "bidding": "Bidding...",
+    "youAreWinning": "You are the highest bidder!",
+    "yourAuction": "This is your auction",
+    "bidHistory": "Bid History",
+    "bidTooLow": "Bid must be at least {{min}}",
+    "sellProperty": "Sell Property",
+    "selectProperty": "Select a property to auction",
+    "createAuction": "Create Auction",
+    "creating": "Creating...",
+    "listingFee": "Listing fee: {{percent}}% of market value",
+    "watch": "Watch",
+    "unwatch": "Unwatch",
+    "watching": "Watching",
+    "cancelAuction": "Cancel Auction",
+    "cancelConfirm": "Are you sure you want to cancel this auction? This action cannot be undone.",
+    "cancelling": "Cancelling...",
+    "companyBid": "Bid via Company",
+    "selectCompany": "Select your company",
+    "bidAmount": "Bid Amount",
+    "treasury": "Treasury",
+    "companyBidWarning": "This will create a vote in your company. Members must approve before the bid is placed.",
+    "proposeBid": "Propose Bid",
+    "submitting": "Submitting...",
+    "noCompanies": "You are not a member of any company",
+    "featured": "Featured Auctions",
+    "analytics": "Auction Analytics",
+    "totalAuctions": "Total Auctions",
+    "totalVolume": "Total Volume",
+    "auctionType": "Auction Type",
+    "averageSalePrice": "Avg Sale Price",
+    "averageBidsPerAuction": "Avg Bids/Auction",
+    "highestAuctionEver": "Highest auction ever",
+    "mostActiveCity": "Most active city",
+    "mostActiveDistrict": "Most active district",
+    "mostSuccessfulSeller": "Top seller",
+    "activityFeed": "Activity Feed",
+    "prev": "Previous",
+    "next": "Next",
+    "page": "Page",
+    "reputation": "Seller Reputation",
+    "auctionsWon": "Auctions Won",
+    "auctionsSold": "Auctions Sold",
+    "winRate": "Win Rate",
+    "highestBid": "Highest Bid",
+    "totalProfit": "Total Profit",
+    "durations": {
+      "short": "1 Tick (6h)",
+      "medium": "4 Ticks (24h)",
+      "long": "8 Ticks (48h)",
+      "extended": "16 Ticks (96h)"
     }
   }
 }
