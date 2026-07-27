@@ -1,0 +1,136 @@
+import { Router } from 'express';
+import District from '../models/District.js';
+import Property from '../models/Property.js';
+import User from '../models/User.js';
+import { optionalAuth } from '../middleware/auth.js';
+import { cacheGetOrSet } from '../utils/cache.js';
+import { cacheKeys, cacheTTL } from '../utils/cacheKeys.js';
+
+const router = Router();
+
+router.get('/', async (req, res) => {
+  try {
+    const { cityId } = req.query;
+    const filter = cityId ? { cityId } : {};
+    const districts = await cacheGetOrSet(
+      cityId ? cacheKeys.districtByCity(cityId) : cacheKeys.districtByCity('all'),
+      async () => District.find(filter).populate('cityId', 'name country').sort({ avgPrice: -1 }),
+      cacheTTL.standard,
+    );
+    res.json(districts);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/:id', optionalAuth, async (req, res) => {
+  try {
+    const district = await cacheGetOrSet(
+      cacheKeys.district(req.params.id),
+      async () => District.findById(req.params.id).populate('cityId', 'name country coordinates'),
+      cacheTTL.standard,
+    );
+    if (!district) return res.status(404).json({ error: 'District not found' });
+
+    const topInvestors = await Promise.all(
+      district.influence.slice(0, 10).map(async (inf) => {
+        const user = await User.findById(inf.userId).select('username displayName avatar');
+        return {
+          ...inf,
+          userId: inf.userId?.toString?.() || inf.userId,
+          username: user?.username || 'Unknown',
+          displayName: user?.displayName || user?.username || 'Unknown',
+          avatar: user?.avatar || null,
+        };
+      }),
+    );
+
+    const properties = await Property.find({ districtId: district._id })
+      .select('name type currentPrice rent forSale condition occupancy ownerId')
+      .populate('ownerId', 'username displayName')
+      .sort({ currentPrice: -1 })
+      .limit(20);
+
+    res.json({
+      district,
+      topInvestors,
+      recentProperties: properties,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/:id/history', async (req, res) => {
+  try {
+    const district = await cacheGetOrSet(
+      cacheKeys.districtHistory(req.params.id),
+      async () => District.findById(req.params.id).select('history name'),
+      cacheTTL.standard,
+    );
+    if (!district) return res.status(404).json({ error: 'District not found' });
+
+    res.json({ history: district.history, name: district.name });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/:id/influence', async (req, res) => {
+  try {
+    const district = await District.findById(req.params.id).select('name influence totalInfluencePoints');
+    if (!district) return res.status(404).json({ error: 'District not found' });
+
+    const enriched = await Promise.all(
+      district.influence.map(async (inf) => {
+        const user = await User.findById(inf.userId).select('username displayName avatar');
+        return {
+          ...inf,
+          userId: inf.userId?.toString?.() || inf.userId,
+          username: user?.username || 'Unknown',
+          displayName: user?.displayName || user?.username || 'Unknown',
+          avatar: user?.avatar || null,
+        };
+      }),
+    );
+
+    res.json({
+      districtName: district.name,
+      totalInfluencePoints: district.totalInfluencePoints,
+      rankings: enriched,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/city/:cityId', async (req, res) => {
+  try {
+    const districts = await cacheGetOrSet(
+      cacheKeys.districtByCity(req.params.cityId),
+      async () =>
+        District.find({ cityId: req.params.cityId }).populate('cityId', 'name country').sort({ avgPrice: -1 }),
+      cacheTTL.standard,
+    );
+    res.json(districts);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/leaderboard/top', async (req, res) => {
+  try {
+    const { cityId, sortBy } = req.query;
+    const filter = cityId ? { cityId } : {};
+    const sortField = sortBy === 'demand' ? 'demandIndex' : sortBy === 'growth' ? 'growthRate' : 'avgPrice';
+    const districts = await District.find(filter)
+      .populate('cityId', 'name country')
+      .sort({ [sortField]: -1 })
+      .limit(20);
+    res.json(districts);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+export default router;

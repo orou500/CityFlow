@@ -45,6 +45,8 @@ import LeaderboardPage from './pages/LeaderboardPage';
 import CompetitiveEventsPage from './pages/CompetitiveEventsPage';
 import CompaniesListPage from './pages/CompaniesListPage';
 import CompanyDetailPage from './pages/CompanyDetailPage';
+import DistrictPage from './pages/DistrictPage';
+import DistrictListPage from './pages/DistrictListPage';
 import { useEffect } from 'react';
 import { useAuthStore } from './store/useAuthStore';
 import { useGameStore } from './store/useGameStore';
@@ -281,6 +283,8 @@ function AppRoutes() {
       <Route path="/contributors" element={<ContributorsPage />} />
       <Route path="/donate" element={<DonationsPage />} />
       <Route path="/supporters" element={<SupporterRecognitionPage />} />
+      <Route path="/districts" element={<DistrictListPage />} />
+      <Route path="/district/:id" element={<DistrictPage />} />
       <Route
         path="/real-estate-companies"
         element={

@@ -37,6 +37,7 @@ import leaderboardRoutes from './routes/leaderboards.js';
 import realEstateCompanyRoutes from './routes/realEstateCompanies.js';
 import cityContractRoutes from './routes/cityContracts.js';
 import donationRoutes from './routes/donations.js';
+import districtRoutes from './routes/districts.js';
 import { maintenanceCheck } from './middleware/maintenance.js';
 import { getMaintenanceInfo } from './models/GameState.js';
 import { createNewSeason } from './engine/seasonReset.js';
@@ -159,6 +160,7 @@ app.use('/leaderboards', leaderboardRoutes);
 app.use('/real-estate-companies', realEstateCompanyRoutes);
 app.use('/city-contracts', cityContractRoutes);
 app.use('/donations', donationRoutes);
+app.use('/districts', districtRoutes);
 
 app.use((req, res) => {
   console.warn(`404 API Route: ${req.method} ${req.originalUrl}`);

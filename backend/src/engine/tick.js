@@ -52,6 +52,7 @@ import {
   expireAvailableContracts,
 } from './cityContracts.js';
 import { generateInvestmentOpportunities, processCompanyInvestments } from './treasuryInvestments.js';
+import { simulateDistricts } from './districtSimulation.js';
 
 export async function executeTick() {
   const startTime = Date.now();
@@ -65,6 +66,9 @@ export async function executeTick() {
 
     console.log('[TICK] Simulating cities...');
     const cityResults = await simulateCities(activeEvents);
+
+    console.log('[TICK] Simulating districts...');
+    const districtResults = await simulateDistricts();
 
     console.log('[TICK] Simulating demographics...');
     const demoResults = await simulateDemographics(tickNumber);
@@ -281,6 +285,7 @@ export async function executeTick() {
     await cacheDel(cacheKeys.worldStats());
     await cacheDel(cacheKeys.activeEvents());
     await cacheDel(cacheKeys.cities());
+    await cacheDelPattern('cf:district:*');
     await cacheDelPattern('cf:market:*');
     await cacheDelPattern('cf:stats:*');
     await publish(CHANNELS.TICK, { tickNumber, timestamp: new Date().toISOString() });
@@ -290,6 +295,7 @@ export async function executeTick() {
       tickNumber,
       duration,
       cities: cityResults,
+      districts: districtResults,
       demographics: demoResults,
       stockMarket: stockResults,
       priceUpdates: priceUpdates.length,

@@ -20,6 +20,11 @@ export const cacheKeys = {
   cities: () => `${prefix}:cities`,
   countries: () => `${prefix}:countries`,
 
+  district: (id) => `${prefix}:district:${id}`,
+  districtByCity: (cityId) => `${prefix}:district:city:${cityId}`,
+  districtLeaderboard: (districtId) => `${prefix}:district:${districtId}:leaders`,
+  districtHistory: (districtId) => `${prefix}:district:${districtId}:history`,
+
   market: () => `${prefix}:market:global`,
   marketStocks: () => `${prefix}:market:stocks`,
   marketIndexes: () => `${prefix}:market:indexes`,

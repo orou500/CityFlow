@@ -1,6 +1,7 @@
 import City from '../models/City.js';
 import Property from '../models/Property.js';
 import User from '../models/User.js';
+import District from '../models/District.js';
 
 const PROPERTY_TYPES = ['apartment', 'house', 'commercial', 'land'];
 const PROPERTY_NAMES = [
@@ -62,6 +63,16 @@ export async function generateProperties() {
       continue;
     }
 
+    const districts = await District.find({ cityId: city._id });
+    const districtWeights = districts.map((d) => ({
+      district: d,
+      weight: d.demandIndex * (1 + d.growthRate),
+    }));
+    const totalWeight = districtWeights.reduce((s, dw) => s + dw.weight, 0);
+    for (const dw of districtWeights) {
+      dw.cumulative = (dw.cumulative || 0) + dw.weight / totalWeight;
+    }
+
     const unsoldCount = await Property.countDocuments({
       cityId: city._id,
       ownerId: null,
@@ -111,6 +122,20 @@ export async function generateProperties() {
 
       const location = LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)];
 
+      let assignedDistrictId = null;
+      if (districtWeights.length > 0) {
+        const roll = Math.random();
+        for (const dw of districtWeights) {
+          if (roll <= dw.cumulative) {
+            assignedDistrictId = dw.district._id;
+            break;
+          }
+        }
+        if (!assignedDistrictId) {
+          assignedDistrictId = districtWeights[districtWeights.length - 1].district._id;
+        }
+      }
+
       let riskScore = 20;
       if (location === 'Waterfront') riskScore = 55;
       else if (location === 'Industrial Zone') riskScore = 35;
@@ -123,6 +148,7 @@ export async function generateProperties() {
 
       properties.push({
         cityId: city._id,
+        districtId: assignedDistrictId,
         ownerId: null,
         type,
         name: `${PROPERTY_NAMES[nameIndex]} - ${city.name}`,

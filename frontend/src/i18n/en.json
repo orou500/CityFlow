@@ -26,7 +26,8 @@
     "leaderboards": "Leaderboards",
     "events": "Events",
     "companies": "Companies",
-    "donate": "Donate"
+    "donate": "Donate",
+    "districts": "Districts"
   },
   "map": {
     "title": "World Map",
@@ -2049,5 +2050,37 @@
     "supportersDescription": "Thank you to everyone who supports CityFlow development!",
     "totalRaised": "Total Raised",
     "noSupporters": "No supporters yet. Be the first!"
+  },
+  "districts": {
+    "pageTitle": "Districts",
+    "pageSubtitle": "Explore neighborhoods and compete for local influence",
+    "allCities": "All Cities",
+    "overview": "Overview",
+    "investors": "Investors",
+    "properties": "Properties",
+    "events": "Events",
+    "history": "History",
+    "population": "Population",
+    "demandIndex": "Demand",
+    "supplyIndex": "Supply",
+    "avgPrice": "Avg Price",
+    "growthRate": "Growth",
+    "price": "Price",
+    "demand": "Demand",
+    "marketInsights": "Market Insights",
+    "priceToRent": "Price-to-Rent Ratio",
+    "rentalYield": "Rental Yield",
+    "investorCount": "Active Investors",
+    "marketLeader": "Market Leader",
+    "leaderInfluence": "Leader Influence",
+    "topInvestors": "Top Investors",
+    "noInvestors": "No investors yet",
+    "recentProperties": "Properties in District",
+    "noProperties": "No properties yet",
+    "activeEvents": "Active Events",
+    "noEvents": "No active events",
+    "priceHistory": "Price History",
+    "noHistory": "No history yet",
+    "noDistricts": "No districts found"
   }
 }

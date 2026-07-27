@@ -17,6 +17,7 @@ const unitSchema = new mongoose.Schema(
 const propertySchema = new mongoose.Schema(
   {
     cityId: { type: mongoose.Schema.Types.ObjectId, ref: 'City', required: true },
+    districtId: { type: mongoose.Schema.Types.ObjectId, ref: 'District', default: null },
     ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'RealEstateCompany', default: null },
     type: {

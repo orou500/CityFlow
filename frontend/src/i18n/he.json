@@ -26,7 +26,8 @@
     "leaderboards": "טבלאות מובילים",
     "events": "אירועים",
     "companies": "חברות",
-    "donate": "תרומות"
+    "donate": "תרומות",
+    "districts": "שכונות"
   },
   "map": {
     "title": "מפת העולם",
@@ -2040,5 +2041,37 @@
     "supportersDescription": "תודה לכל מי שתומך בפיתוח CityFlow!",
     "totalRaised": "סך הכל נתרם",
     "noSupporters": "עדיין אין תומכים. היה הראשון!"
+  },
+  "districts": {
+    "pageTitle": "שכונות",
+    "pageSubtitle": "חקור שכונות והתחרה על השפעה מקומית",
+    "allCities": "כל הערים",
+    "overview": "סקירה",
+    "investors": "משקיעים",
+    "properties": "נכסים",
+    "events": "אירועים",
+    "history": "היסטוריה",
+    "population": "אוכלוסייה",
+    "demandIndex": "ביקוש",
+    "supplyIndex": "היצע",
+    "avgPrice": "מחיר ממוצע",
+    "growthRate": "צמיחה",
+    "price": "מחיר",
+    "demand": "ביקוש",
+    "marketInsights": "תובנות שוק",
+    "priceToRent": "יחס מחיר-שכירות",
+    "rentalYield": "תשואת שכירות",
+    "investorCount": "משקיעים פעילים",
+    "marketLeader": "מוביל שוק",
+    "leaderInfluence": "השפעת מוביל",
+    "topInvestors": "משקיעים מובילים",
+    "noInvestors": "אין עדיין משקיעים",
+    "recentProperties": "נכסים בשכונה",
+    "noProperties": "אין עדיין נכסים",
+    "activeEvents": "אירועים פעילים",
+    "noEvents": "אין אירועים פעילים",
+    "priceHistory": "היסטורית מחירים",
+    "noHistory": "אין עדיין היסטוריה",
+    "noDistricts": "לא נמצאו שכונות"
   }
 }
