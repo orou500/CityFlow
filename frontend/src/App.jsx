@@ -48,6 +48,7 @@ import CompanyDetailPage from './pages/CompanyDetailPage';
 import DistrictPage from './pages/DistrictPage';
 import DistrictListPage from './pages/DistrictListPage';
 import MarketIntelligencePage from './pages/MarketIntelligencePage';
+import AuctionDashboardPage from './pages/AuctionDashboardPage';
 import { useEffect } from 'react';
 import { useAuthStore } from './store/useAuthStore';
 import { useGameStore } from './store/useGameStore';
@@ -296,6 +297,16 @@ function AppRoutes() {
         }
       />
       <Route path="/district/:id" element={<DistrictPage />} />
+      <Route
+        path="/auctions"
+        element={
+          <ErrorBoundary>
+            <ProtectedRoute>
+              <AuctionDashboardPage />
+            </ProtectedRoute>
+          </ErrorBoundary>
+        }
+      />
       <Route
         path="/real-estate-companies"
         element={

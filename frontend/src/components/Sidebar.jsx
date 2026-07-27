@@ -94,6 +94,7 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
     { to: '/real-estate-companies', icon: '\uD83C\uDFE2', label: t('nav.companies'), tour: 'companies' },
     { to: '/districts', icon: '\uD83C\uDFD8\uFE0F', label: t('nav.districts'), tour: 'districts' },
     { to: '/market-intelligence', icon: '\uD83D\uDD0D', label: t('nav.mi'), tour: 'market-intelligence' },
+    { to: '/auctions', icon: '\uD83C\uDFE9', label: t('nav.auctions'), tour: 'auctions' },
     { to: '/donate', icon: '\u2764\uFE0F', label: t('nav.donate'), tour: 'donate' },
   ];
 

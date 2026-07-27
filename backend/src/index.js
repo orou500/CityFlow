@@ -39,8 +39,9 @@ import cityContractRoutes from './routes/cityContracts.js';
 import donationRoutes from './routes/donations.js';
 import districtRoutes from './routes/districts.js';
 import marketIntelligenceRoutes from './routes/marketIntelligence.js';
+import auctionRoutes from './routes/auctions.js';
 import { maintenanceCheck } from './middleware/maintenance.js';
-import { getMaintenanceInfo } from './models/GameState.js';
+import { getMaintenanceInfo, getTickNumber } from './models/GameState.js';
 import { createNewSeason } from './engine/seasonReset.js';
 import Season from './models/Season.js';
 import { ensureBackupDir, enforceRetention } from './engine/backup.js';
@@ -163,6 +164,7 @@ app.use('/city-contracts', cityContractRoutes);
 app.use('/donations', donationRoutes);
 app.use('/districts', districtRoutes);
 app.use('/market-intelligence', marketIntelligenceRoutes);
+app.use('/auctions', auctionRoutes);
 
 app.use((req, res) => {
   console.warn(`404 API Route: ${req.method} ${req.originalUrl}`);
@@ -173,6 +175,9 @@ async function start() {
   try {
     await connectDB();
     await connectRedis();
+
+    global.currentTick = await getTickNumber();
+    console.log(`[STARTUP] Current tick: ${global.currentTick}`);
 
     const activeSeason = await Season.findOne({ status: 'active' });
     if (!activeSeason) {

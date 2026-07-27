@@ -3,7 +3,7 @@ import Property from '../models/Property.js';
 import User from '../models/User.js';
 import City from '../models/City.js';
 import Transaction from '../models/Transaction.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, optionalAuth } from '../middleware/auth.js';
 import { awardXp } from '../utils/leveling.js';
 import { collectOperatingFee } from '../utils/companyFees.js';
 import { enqueueNotification } from '../utils/notificationQueue.js';
@@ -25,7 +25,7 @@ import {
 const router = Router();
 const PROPERTY_XP_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
-router.get('/', async (req, res) => {
+router.get('/', optionalAuth, async (req, res) => {
   try {
     const {
       search,
@@ -39,9 +39,15 @@ router.get('/', async (req, res) => {
       page = '1',
       limit = '21',
       forSale,
+      owned,
     } = req.query;
 
     const filter = {};
+
+    if (owned === 'true') {
+      if (!req.user) return res.status(401).json({ error: 'Authentication required' });
+      filter.ownerId = req.user._id;
+    }
 
     if (forSale === 'true') filter.forSale = true;
     else if (forSale === 'false') filter.forSale = false;

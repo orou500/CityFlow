@@ -65,6 +65,13 @@ export const cacheKeys = {
     `${prefix}:mi:${userId}:${reportType}:${tier}:${cityId || 'none'}:${districtId || 'none'}`,
   miTrends: (cityId) => `${prefix}:mi:trends:${cityId}`,
 
+  auction: (id) => `${prefix}:auction:${id}`,
+  auctionList: (status) => `${prefix}:auctions:${status || 'all'}`,
+  auctionFeatured: () => `${prefix}:auctions:featured`,
+  auctionAnalytics: () => `${prefix}:auctions:analytics`,
+  auctionWatchlist: (userId) => `${prefix}:auctions:watchlist:${userId}`,
+  auctionReputation: (userId) => `${prefix}:auctions:rep:${userId}`,
+
   allCompany: (id) => [
     `${prefix}:company:${id}`,
     `${prefix}:company:${id}:members`,
