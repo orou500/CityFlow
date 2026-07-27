@@ -1,7 +1,6 @@
 const PAYPAL_API = process.env.PAYPAL_API_URL || 'https://api-m.sandbox.paypal.com';
 const CLIENT_ID = process.env.PAYPAL_CLIENT_ID || '';
 const CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET || '';
-const WEBHOOK_ID = process.env.PAYPAL_WEBHOOK_ID || '';
 
 let accessToken = null;
 let tokenExpiresAt = 0;
@@ -82,44 +81,6 @@ export async function verifyOrder(orderId) {
   return res.json();
 }
 
-export async function verifyWebhookSignature(headers, body) {
-  if (!WEBHOOK_ID) {
-    console.warn('[PAYPAL] PAYPAL_WEBHOOK_ID not set — skipping signature verification');
-    return true;
-  }
-
-  const token = await getAccessToken();
-  const verificationPayload = {
-    auth_algo: headers['paypal-auth-algo'],
-    cert_url: headers['paypal-cert-url'],
-    transmission_id: headers['paypal-transmission-id'],
-    timestamp: headers['paypal-transmission-time'],
-    webhook_id: WEBHOOK_ID,
-    webhook_event: typeof body === 'string' ? JSON.parse(body) : body,
-  };
-
-  const res = await fetch(`${PAYPAL_API}/v1/notifications/verify-webhook-signature`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(verificationPayload),
-  });
-
-  if (!res.ok) {
-    console.error('[PAYPAL] Webhook verification request failed:', res.status);
-    return false;
-  }
-
-  const result = await res.json();
-  return result.verification_status === 'SUCCESS';
-}
-
 export function isPayPalConfigured() {
   return !!(CLIENT_ID && CLIENT_SECRET);
-}
-
-export function isWebhookConfigured() {
-  return !!(WEBHOOK_ID && CLIENT_ID && CLIENT_SECRET);
 }

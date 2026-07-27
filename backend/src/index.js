@@ -58,9 +58,7 @@ const app = express();
 const httpServer = createServer(app);
 
 app.use(cors());
-app.use(express.json({
-  verify: (req, _res, buf) => { req.rawBody = buf; },
-}));
+app.use(express.json());
 
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 

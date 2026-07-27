@@ -2,7 +2,7 @@ import { Router } from 'express';
 import Donation from '../models/Donation.js';
 import User from '../models/User.js';
 import { authenticate, optionalAuth } from '../middleware/auth.js';
-import { createOrder, captureOrder, verifyOrder, isPayPalConfigured, verifyWebhookSignature } from '../utils/paypal.js';
+import { createOrder, captureOrder, verifyOrder, isPayPalConfigured } from '../utils/paypal.js';
 
 const router = Router();
 
@@ -188,53 +188,6 @@ async function getTotalDonations() {
   ]);
   return result[0]?.total || 0;
 }
-
-router.post('/webhook', async (req, res) => {
-  try {
-    const event = req.body;
-    const rawBody = req.rawBody ? req.rawBody.toString() : JSON.stringify(event);
-
-    const valid = await verifyWebhookSignature(req.headers, JSON.parse(rawBody));
-    if (!valid) {
-      console.warn('[DONATIONS] Webhook signature verification failed');
-      return res.status(400).json({ error: 'Invalid signature' });
-    }
-
-    if (event.event_type === 'PAYMENT.CAPTURE.COMPLETED') {
-      const resource = event.resource;
-      const captureId = resource.id;
-      const orderId = resource.supplementary_data?.related_ids?.order_id;
-
-      if (!orderId) {
-        console.warn('[DONATIONS] Webhook missing order ID');
-        return res.status(200).json({ status: 'ignored' });
-      }
-
-      const donation = await Donation.findOne({ paypalOrderId: orderId });
-      if (!donation) {
-        console.warn(`[DONATIONS] Webhook for unknown order: ${orderId}`);
-        return res.status(200).json({ status: 'unknown_order' });
-      }
-
-      if (donation.status === 'completed') {
-        return res.status(200).json({ status: 'already_processed' });
-      }
-
-      donation.status = 'completed';
-      donation.paypalCaptureId = captureId;
-      await donation.save();
-
-      await updateUserSupporterTier(donation.userId, donation.amount, donation.isAnonymous);
-
-      console.log(`[DONATIONS] Webhook captured: $${donation.amount} from order ${orderId}`);
-    }
-
-    res.status(200).json({ status: 'ok' });
-  } catch (err) {
-    console.error('[DONATIONS] Webhook error:', err.message);
-    res.status(200).json({ status: 'error' });
-  }
-});
 
 export async function reconcilePendingDonations() {
   const cutoff = new Date(Date.now() - 10 * 60 * 1000);
