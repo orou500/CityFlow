@@ -17,7 +17,7 @@ const donationSchema = new mongoose.Schema({
 });
 
 donationSchema.index({ userId: 1, createdAt: -1 });
-donationSchema.index({ paypalOrderId: 1 }, { unique: true });
+
 donationSchema.index({ status: 1 });
 
 export default mongoose.model('Donation', donationSchema);

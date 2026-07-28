@@ -205,7 +205,6 @@ const realEstateCompanySchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-realEstateCompanySchema.index({ name: 1 });
 realEstateCompanySchema.index({ founderId: 1 });
 realEstateCompanySchema.index({ 'members.userId': 1 });
 realEstateCompanySchema.index({ reputation: -1 });

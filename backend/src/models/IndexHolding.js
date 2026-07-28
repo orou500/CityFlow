@@ -11,6 +11,5 @@ const indexHoldingSchema = new mongoose.Schema(
 );
 
 indexHoldingSchema.index({ userId: 1, indexId: 1 }, { unique: true });
-indexHoldingSchema.index({ userId: 1 });
 
 export default mongoose.model('IndexHolding', indexHoldingSchema);

@@ -7,10 +7,13 @@ import MarketReport from '../models/MarketReport.js';
 import Auction from '../models/Auction.js';
 import RealEstateCompany from '../models/RealEstateCompany.js';
 import District from '../models/District.js';
+import Transaction from '../models/Transaction.js';
+import ConstructionProject from '../models/ConstructionProject.js';
 import { MISSION_DEFINITIONS, getMissionById } from '../config/missions.js';
 import { enqueueNotification } from '../utils/notificationQueue.js';
 import { emitToUser } from '../socket/index.js';
 import { SOCKET_EVENTS } from '../socket/events.js';
+import { awardXp } from '../utils/leveling.js';
 
 function getDailyPeriodKey() {
   const now = new Date();
@@ -44,37 +47,33 @@ function getPeriodKey(type) {
   }
 }
 
-async function evaluateCondition(userId, condition, userData) {
+export async function evaluateCondition(userId, missionId, condition, userData) {
   let value;
   switch (condition.type) {
+    // ── PROPERTY CONDITIONS ──────────────────────────────
     case 'properties_owned': {
-      value = userData.ownedProperties?.length || 0;
+      value = await Property.countDocuments({ ownerId: userId });
       break;
     }
     case 'total_rent_collected': {
-      value = userData.lifetimeStats?.totalRentCollected || 0;
+      value = await Transaction.countDocuments({ buyerId: userId, type: 'rent' });
       break;
     }
     case 'total_upgrades': {
-      value = userData.lifetimeStats?.totalUpgrades || 0;
+      value = await Transaction.countDocuments({ buyerId: userId, type: { $in: ['upgrade', 'grade_upgrade'] } });
       break;
     }
     case 'total_properties_sold': {
-      value = await Property.countDocuments({
-        lastPurchaseDate: { $ne: null },
-        ownerId: { $ne: userId },
-        $or: [{ _id: { $in: userData.ownedProperties || [] } }, { priceHistory: { $elemMatch: { tick: { $gt: 0 } } } }],
+      value = await Transaction.countDocuments({
+        sellerId: userId,
+        type: { $in: ['sell', 'buy'] },
       });
       break;
     }
+
+    // ── AUCTION CONDITIONS ───────────────────────────────
     case 'auctions_won': {
-      value = condition.periodKey
-        ? await Auction.countDocuments({
-            currentBidderId: userId,
-            status: 'ended',
-            periodKey: condition.periodKey,
-          })
-        : await Auction.countDocuments({ currentBidderId: userId, status: 'ended' });
+      value = await Auction.countDocuments({ winnerId: userId, status: 'ended' });
       break;
     }
     case 'auctions_sold': {
@@ -82,13 +81,15 @@ async function evaluateCondition(userId, condition, userData) {
       break;
     }
     case 'rare_auctions_won': {
-      value = await Auction.countDocuments({
-        currentBidderId: userId,
-        status: 'ended',
-        propertyRating: 'rare',
+      const wonAuctionPropIds = await Auction.find({ winnerId: userId, status: 'ended' }).distinct('propertyId');
+      value = await Property.countDocuments({
+        _id: { $in: wonAuctionPropIds },
+        propertyRating: 'elite',
       });
       break;
     }
+
+    // ── INCOME / NET WORTH CONDITIONS ────────────────────
     case 'monthly_income': {
       const properties = await Property.find({ ownerId: userId }).lean();
       value = properties.reduce((sum, p) => sum + (p.rent || 0), 0);
@@ -101,33 +102,50 @@ async function evaluateCondition(userId, condition, userData) {
       value = balance + propertyValue;
       break;
     }
+
+    // ── PROPERTY QUALITY CONDITIONS ──────────────────────
     case 'own_legendary_property': {
-      value = await Property.countDocuments({
-        ownerId: userId,
-        propertyRating: 'elite',
-      });
+      value = await Property.countDocuments({ ownerId: userId, propertyRating: 'elite' });
       break;
     }
+
+    // ── GEOGRAPHIC CONDITIONS ────────────────────────────
     case 'unique_cities': {
-      const properties = await Property.find({ ownerId: userId }).distinct('cityId');
-      value = properties.length;
+      const cityIds = await Property.find({ ownerId: userId }).distinct('cityId');
+      value = cityIds.length;
       break;
     }
     case 'city_owned': {
       const city = await mongoose.model('City').findOne({ name: condition.cityName }).lean();
-      if (!city) {
-        value = 0;
-        break;
+      value = city ? await Property.countDocuments({ ownerId: userId, cityId: city._id }) : 0;
+      break;
+    }
+    case 'unique_districts': {
+      const districtIds = await Property.find({ ownerId: userId }).distinct('districtId');
+      value = districtIds.filter(Boolean).length;
+      break;
+    }
+    case 'district_leader': {
+      const districts = await District.find({ 'influence.userId': userId }).lean();
+      value = 0;
+      for (const district of districts) {
+        const userEntry = district.influence.find((i) => i.userId.toString() === userId.toString());
+        if (!userEntry) continue;
+        const topScore = Math.max(...district.influence.map((i) => i.score));
+        if (userEntry.score >= topScore) value++;
       }
-      value = await Property.countDocuments({ ownerId: userId, cityId: city._id });
       break;
     }
+
+    // ── CONSTRUCTION / DEVELOPMENT CONDITIONS ────────────
     case 'total_construction_completed': {
-      value = userData.lifetimeStats?.totalConstructionStarted || 0;
+      value = await ConstructionProject.countDocuments({ ownerId: userId, status: 'completed' });
       break;
     }
+
+    // ── BANKING / LOAN CONDITIONS ────────────────────────
     case 'total_loans_taken': {
-      value = userData.lifetimeStats?.totalLoansTaken || 0;
+      value = await Loan.countDocuments({ userId });
       break;
     }
     case 'total_loan_repayments': {
@@ -139,12 +157,14 @@ async function evaluateCondition(userId, condition, userData) {
       break;
     }
     case 'total_loan_amount_repaid': {
-      const loans = await Loan.find({ userId, active: false }).lean();
-      value = loans.reduce((sum, l) => sum + (l.principal || 0), 0);
+      const repaidLoans = await Loan.find({ userId, active: false }).lean();
+      value = repaidLoans.reduce((sum, l) => sum + (l.principal || 0), 0);
       break;
     }
+
+    // ── COMPANY CONDITIONS ───────────────────────────────
     case 'joined_company': {
-      value = userData.companyId ? 1 : 0;
+      value = (await RealEstateCompany.countDocuments({ 'members.userId': userId })) > 0 ? 1 : 0;
       break;
     }
     case 'created_company': {
@@ -152,64 +172,64 @@ async function evaluateCondition(userId, condition, userData) {
       break;
     }
     case 'company_votes_cast': {
-      value = userData.lifetimeStats?.totalTransactions || 0;
+      const companiesWithVotes = await RealEstateCompany.find({
+        'members.userId': userId,
+      })
+        .select('loanRequests propertyPurchaseRequests')
+        .lean();
+      let voteCount = 0;
+      for (const company of companiesWithVotes) {
+        for (const lr of company.loanRequests || []) {
+          if (lr.votes?.some((v) => v.userId?.toString() === userId.toString())) voteCount++;
+        }
+        for (const pr of company.propertyPurchaseRequests || []) {
+          if (pr.votes?.some((v) => v.userId?.toString() === userId.toString())) voteCount++;
+        }
+      }
+      value = voteCount;
       break;
     }
     case 'company_projects_completed': {
-      value = 0;
+      value = await ConstructionProject.countDocuments({
+        ownerId: userId,
+        companyId: { $ne: null },
+        status: 'completed',
+      });
       break;
     }
     case 'company_properties_purchased': {
-      const company = userData.companyId ? await RealEstateCompany.findById(userData.companyId).lean() : null;
-      value = company?.properties?.length || 0;
+      const userCompany = await RealEstateCompany.findOne({ 'members.userId': userId }).select('_id').lean();
+      value = userCompany ? await Property.countDocuments({ companyId: userCompany._id }) : 0;
       break;
     }
-    case 'unique_districts': {
-      const districts = await Property.find({ ownerId: userId }).distinct('districtId');
-      value = districts.filter(Boolean).length;
-      break;
-    }
-    case 'district_leader': {
-      const topDistricts = await District.find({
-        topInvestor: userId,
-      }).lean();
-      value = topDistricts.length;
-      break;
-    }
+
+    // ── MARKET INTELLIGENCE CONDITIONS ───────────────────
     case 'reports_purchased': {
       value = await MarketReport.countDocuments({ userId });
       break;
     }
     case 'forecast_accuracy_90': {
-      const accurateReport = await MarketReport.findOne({
-        userId,
-        forecastAccuracy: { $gte: 90 },
-      }).lean();
+      const accurateReport = await MarketReport.findOne({ userId, forecastAccuracy: { $gte: 90 } }).lean();
       value = accurateReport ? 1 : 0;
       break;
     }
+
+    // ── TODAY / THIS WEEK CONDITIONS ─────────────────────
     case 'properties_bought_today': {
       const dayStart = new Date();
       dayStart.setUTCHours(0, 0, 0, 0);
-      value = await Property.countDocuments({
-        ownerId: userId,
-        lastPurchaseDate: { $gte: dayStart },
-      });
+      value = await Property.countDocuments({ ownerId: userId, lastPurchaseDate: { $gte: dayStart } });
       break;
     }
     case 'rent_collected_today': {
-      if (!userData.lastRentCollectedAt) {
-        value = 0;
-        break;
-      }
-      const collected = new Date(userData.lastRentCollectedAt);
-      const now = new Date();
-      value =
-        collected.getUTCFullYear() === now.getUTCFullYear() &&
-        collected.getUTCMonth() === now.getUTCMonth() &&
-        collected.getUTCDate() === now.getUTCDate()
-          ? 1
-          : 0;
+      const dayStart = new Date();
+      dayStart.setUTCHours(0, 0, 0, 0);
+      const rentTxToday = await Transaction.countDocuments({
+        buyerId: userId,
+        type: 'rent',
+        createdAt: { $gte: dayStart },
+      });
+      value = rentTxToday > 0 ? 1 : 0;
       break;
     }
     case 'bonus_claimed_today': {
@@ -243,18 +263,13 @@ async function evaluateCondition(userId, condition, userData) {
       break;
     }
     case 'upgrades_today': {
-      if (!userData.lastUpgradeAt) {
-        value = 0;
-        break;
-      }
-      const upgraded = new Date(userData.lastUpgradeAt);
-      const now = new Date();
-      value =
-        upgraded.getUTCFullYear() === now.getUTCFullYear() &&
-        upgraded.getUTCMonth() === now.getUTCMonth() &&
-        upgraded.getUTCDate() === now.getUTCDate()
-          ? 1
-          : 0;
+      const dayStart = new Date();
+      dayStart.setUTCHours(0, 0, 0, 0);
+      value = await Transaction.countDocuments({
+        buyerId: userId,
+        type: { $in: ['upgrade', 'grade_upgrade'] },
+        createdAt: { $gte: dayStart },
+      });
       break;
     }
     case 'auction_bids_today': {
@@ -266,8 +281,17 @@ async function evaluateCondition(userId, condition, userData) {
       });
       break;
     }
+
+    // ── WEEKLY CONDITIONS ───────────────────────────────
     case 'money_earned_this_week': {
-      value = userData.lifetimeStats?.totalMoneyEarned || 0;
+      const weekStart = new Date();
+      weekStart.setUTCHours(0, 0, 0, 0);
+      weekStart.setUTCDate(weekStart.getUTCDate() - weekStart.getUTCDay());
+      const [sellTxs, rentTxs] = await Promise.all([
+        Transaction.find({ sellerId: userId, type: 'sell', createdAt: { $gte: weekStart } }).lean(),
+        Transaction.find({ buyerId: userId, type: 'rent', createdAt: { $gte: weekStart } }).lean(),
+      ]);
+      value = [...sellTxs, ...rentTxs].reduce((sum, t) => sum + (t.price || 0), 0);
       break;
     }
     case 'properties_bought_this_week': {
@@ -285,17 +309,64 @@ async function evaluateCondition(userId, condition, userData) {
       weekStart.setUTCHours(0, 0, 0, 0);
       weekStart.setUTCDate(weekStart.getUTCDate() - weekStart.getUTCDay());
       value = await Auction.countDocuments({
-        currentBidderId: userId,
+        winnerId: userId,
         status: 'ended',
         updatedAt: { $gte: weekStart },
       });
       break;
     }
+    case 'rent_collected_this_week': {
+      const weekStart = new Date();
+      weekStart.setUTCHours(0, 0, 0, 0);
+      weekStart.setUTCDate(weekStart.getUTCDate() - weekStart.getUTCDay());
+      value = await Transaction.countDocuments({
+        buyerId: userId,
+        type: 'rent',
+        createdAt: { $gte: weekStart },
+      });
+      break;
+    }
+    case 'bonus_claimed_this_week': {
+      const weekStart = new Date();
+      weekStart.setUTCHours(0, 0, 0, 0);
+      weekStart.setUTCDate(weekStart.getUTCDate() - weekStart.getUTCDay());
+      value = await Transaction.countDocuments({
+        buyerId: userId,
+        type: 'period_bonus',
+        createdAt: { $gte: weekStart },
+      });
+      break;
+    }
+    case 'login_this_week': {
+      if (!userData.lastLoginAt) {
+        value = 0;
+        break;
+      }
+      const weekStart = new Date();
+      weekStart.setUTCHours(0, 0, 0, 0);
+      weekStart.setUTCDate(weekStart.getUTCDate() - weekStart.getUTCDay());
+      value = userData.lastLoginAt >= weekStart ? 1 : 0;
+      break;
+    }
+    case 'login_count_this_week': {
+      const weekStart = new Date();
+      weekStart.setUTCHours(0, 0, 0, 0);
+      weekStart.setUTCDate(weekStart.getUTCDate() - weekStart.getUTCDay());
+      value = await Transaction.countDocuments({
+        buyerId: userId,
+        type: 'login',
+        createdAt: { $gte: weekStart },
+      });
+      break;
+    }
+
+    // ── FUTURE / STOCK MARKET (placeholder) ──────────────
     case 'stocks_bought':
     case 'dividends_received': {
       value = 0;
       break;
     }
+
     default:
       value = 0;
   }
@@ -305,26 +376,36 @@ async function evaluateCondition(userId, condition, userData) {
 
 export async function initializeMissionsForUser(userId) {
   const user = await User.findById(userId).lean();
-  if (!user) return [];
+  if (!user) {
+    return [];
+  }
 
   const existingProgress = await MissionProgress.find({ userId }).lean();
   const existingMap = new Map(existingProgress.map((ep) => [ep.missionId, ep]));
 
   const missionsToCreate = [];
   for (const def of MISSION_DEFINITIONS) {
-    if (def.hidden) continue;
-    if (existingMap.has(def.id)) continue;
+    if (def.hidden) {
+      continue;
+    }
+    if (existingMap.has(def.id)) {
+      continue;
+    }
 
     if (def.prerequisiteMissionId) {
       const prereq = existingMap.get(def.prerequisiteMissionId);
-      if (!prereq || prereq.status === 'active') continue;
+      if (!prereq || prereq.status === 'active') {
+        continue;
+      }
     }
 
     const periodKey = getPeriodKey(def.type);
     const existingPeriod = periodKey
       ? existingProgress.find((ep) => ep.missionId === def.id && ep.periodKey === periodKey)
       : null;
-    if (existingPeriod) continue;
+    if (existingPeriod) {
+      continue;
+    }
 
     missionsToCreate.push({
       userId,
@@ -338,7 +419,9 @@ export async function initializeMissionsForUser(userId) {
   }
 
   if (missionsToCreate.length > 0) {
-    await MissionProgress.insertMany(missionsToCreate, { ordered: false }).catch(() => {});
+    await MissionProgress.insertMany(missionsToCreate, { ordered: false }).catch((err) => {
+      console.error(`[MISSION INIT] insertMany error:`, err.message);
+    });
   }
 
   return missionsToCreate.length;
@@ -348,21 +431,27 @@ export async function updateMissionProgress(userId, triggerType) {
   await initializeMissionsForUser(userId);
 
   const user = await User.findById(userId).lean();
-  if (!user) return { completed: [], updated: [] };
+  if (!user) {
+    return { completed: [], updated: [] };
+  }
 
   const activeMissions = await MissionProgress.find({
     userId,
     status: 'active',
   }).lean();
 
-  if (activeMissions.length === 0) return { completed: [], updated: [] };
+  if (activeMissions.length === 0) {
+    return { completed: [], updated: [] };
+  }
 
   const completedMissions = [];
   const updatedMissions = [];
 
   for (const mp of activeMissions) {
     const def = getMissionById(mp.missionId);
-    if (!def) continue;
+    if (!def) {
+      continue;
+    }
 
     if (def.type === 'daily' || def.type === 'weekly' || def.type === 'seasonal') {
       const currentPeriodKey = getPeriodKey(def.type);
@@ -372,7 +461,7 @@ export async function updateMissionProgress(userId, triggerType) {
       }
     }
 
-    const currentValue = await evaluateCondition(userId, def.condition, user);
+    const currentValue = await evaluateCondition(userId, mp.missionId, def.condition, user);
     const safeValue = Number.isFinite(currentValue) ? currentValue : 0;
     const safeTarget = Number.isFinite(def.condition.target) ? def.condition.target : 0;
     const newProgress = Math.min(safeValue, safeTarget);
@@ -420,15 +509,18 @@ export async function claimMissionReward(userId, missionId) {
   const def = getMissionById(missionId);
   if (!def) throw new Error('Mission not found');
 
-  const mp = await MissionProgress.findOne({ userId, missionId, status: 'completed' });
+  const mp = await MissionProgress.findOneAndUpdate(
+    { userId, missionId, status: 'completed' },
+    { status: 'claimed', claimedAt: new Date() },
+    { new: true },
+  );
   if (!mp) throw new Error('Mission not ready to claim');
 
   const updates = {};
   if (def.rewards.xp) {
     const user = await User.findById(userId);
-    user.xp = (user.xp || 0) + def.rewards.xp;
+    await awardXp(user, def.rewards.xp, 'mission_reward');
     updates.xp = def.rewards.xp;
-    await user.save();
   }
   if (def.rewards.balance) {
     await User.updateOne({ _id: userId }, { $inc: { balance: def.rewards.balance } });
@@ -442,14 +534,7 @@ export async function claimMissionReward(userId, missionId) {
     updates.title = def.rewards.title;
   }
 
-  await MissionProgress.updateOne(
-    { _id: mp._id },
-    {
-      status: 'claimed',
-      claimedAt: new Date(),
-      rewardsClaimed: updates,
-    },
-  );
+  await MissionProgress.updateOne({ _id: mp._id }, { rewardsClaimed: updates });
 
   emitToUser(userId.toString(), SOCKET_EVENTS.MISSION_REWARD_CLAIMED, {
     missionId,

@@ -76,6 +76,8 @@ export const cacheKeys = {
   missionActive: (userId) => `${prefix}:missions:active:${userId}`,
   missionStats: (userId) => `${prefix}:missions:stats:${userId}`,
 
+  careerDashboard: (userId) => `${prefix}:career:dashboard:${userId}`,
+
   allCompany: (id) => [
     `${prefix}:company:${id}`,
     `${prefix}:company:${id}:members`,

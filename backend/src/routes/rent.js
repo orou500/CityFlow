@@ -3,7 +3,7 @@ import User from '../models/User.js';
 import { authenticate } from '../middleware/auth.js';
 import { collectOperatingFee } from '../utils/companyFees.js';
 import { onRentCollected } from '../utils/cacheInvalidation.js';
-import { triggerMissionProgress } from '../utils/missionTrigger.js';
+import { processPlayerProgress } from '../utils/playerProgress.js';
 
 const router = Router();
 
@@ -74,7 +74,7 @@ router.post('/collect', authenticate, async (req, res) => {
 
     await onRentCollected(user._id);
 
-    triggerMissionProgress(user._id, 'rent_collect');
+    await processPlayerProgress(user._id, 'rent_collect');
 
     res.json({
       collected,

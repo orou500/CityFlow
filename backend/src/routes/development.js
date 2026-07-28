@@ -35,7 +35,7 @@ import {
   invalidateUser,
   invalidateCompany,
 } from '../utils/cacheInvalidation.js';
-import { triggerMissionProgress } from '../utils/missionTrigger.js';
+import { processPlayerProgress } from '../utils/playerProgress.js';
 
 const router = Router();
 
@@ -251,7 +251,7 @@ router.post('/start', async (req, res) => {
 
     await onDevelopmentStarted(user._id, null);
 
-    triggerMissionProgress(user._id, 'construction_start');
+    await processPlayerProgress(user._id, 'construction_start', { skipXp: true });
 
     res.status(201).json({
       project: constructionProject,
@@ -436,7 +436,7 @@ router.post('/upgrade', async (req, res) => {
     await invalidateProperty(property._id);
     await invalidateUser(user._id);
 
-    triggerMissionProgress(user._id, 'property_upgrade');
+    await processPlayerProgress(user._id, 'property_upgrade', { skipXp: true });
 
     res.json({ property, balance: user.balance });
   } catch (err) {
@@ -705,7 +705,7 @@ router.post('/improvements/start', async (req, res) => {
 
     await invalidateProperty(property._id);
 
-    triggerMissionProgress(user._id, 'improvement_start');
+    await processPlayerProgress(user._id, 'improvement_start', { skipXp: true });
 
     res.status(201).json({
       improvement: property.activeImprovement,
@@ -801,7 +801,7 @@ router.post('/company/start', async (req, res) => {
     await invalidateCompany(company._id);
     await invalidateProperty(land._id);
 
-    triggerMissionProgress(req.user._id, 'company_construction_start');
+    await processPlayerProgress(req.user._id, 'company_construction_start');
 
     res.status(201).json({
       project: constructionProject,

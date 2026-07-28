@@ -64,68 +64,47 @@ export async function executeTick() {
   try {
     const tickNumber = await incrementTick();
     global.currentTick = tickNumber;
-    console.log(`[TICK] Tick #${tickNumber}`);
 
-    console.log('[TICK] Processing auctions...');
     const auctionResults = await processAuctions();
 
-    console.log('[TICK] Generating bank auctions...');
     const newBankAuctions = await generateBankAuctions();
 
     const activeEvents = await Event.find({ active: true });
 
-    console.log('[TICK] Simulating cities...');
     const cityResults = await simulateCities(activeEvents);
 
-    console.log('[TICK] Simulating districts...');
     const districtResults = await simulateDistricts();
 
-    console.log('[TICK] Simulating demographics...');
     const demoResults = await simulateDemographics(tickNumber);
 
-    console.log('[TICK] Simulating stock market...');
     const stockResults = await simulateStockMarket(tickNumber);
 
-    console.log('[TICK] Simulating stock indexes...');
     const indexResults = await simulateIndexes(tickNumber);
 
-    console.log('[TICK] Updating intrinsic property values...');
     const intrinsicCount = await updateIntrinsicValues();
 
-    console.log('[TICK] Updating prices...');
     const priceUpdates = await updatePrices(activeEvents);
 
-    console.log('[TICK] Processing rent...');
     const rentResults = await processRent();
 
-    console.log('[TICK] Processing property management...');
     await processPropertyManagement(tickNumber);
 
-    console.log('[TICK] Processing loans...');
     const loanResults = await processLoans();
 
-    console.log('[TICK] Updating credit scores...');
     const creditResults = await updateCreditScores(tickNumber);
 
-    console.log('[TICK] Balancing market...');
     await balanceMarket();
 
-    console.log('[TICK] Processing construction...');
     const constructionResults = await processConstruction();
 
-    console.log('[TICK] Processing improvements...');
     const improvementResults = await processImprovements();
 
-    console.log('[TICK] Processing property risks...');
     const riskResults = await processPropertyRisks(tickNumber);
 
-    console.log('[TICK] Processing event lifecycles...');
     const expiredEvents = await tickEvents();
 
-    console.log('[TICK] Generating new properties...');
     const propertyGeneration = await generateProperties();
 
-    console.log('[TICK] Generating new events...');
     const newEvents = await generateEvents();
 
     if (
@@ -154,70 +133,48 @@ export async function executeTick() {
       }).catch(() => {});
     }
 
-    console.log('[TICK] Expiring uncollected rent...');
     const expiredRentCount = await expireUncollectedRent();
 
-    console.log('[TICK] Sending rent expiry warnings...');
     const rentWarningsCount = await sendRentExpiryWarnings();
 
-    console.log('[TICK] Processing company rent...');
     const companyRentResults = await processCompanyRent(tickNumber);
 
-    console.log('[TICK] Processing company loans...');
     const companyLoanResults = await processCompanyLoans(tickNumber);
 
-    console.log('[TICK] Processing company loan requests...');
     const loanRequestResults = await processCompanyLoanRequests(tickNumber);
 
-    console.log('[TICK] Processing company development requests...');
     const devRequestResults = await processCompanyDevelopmentRequests(tickNumber);
 
-    console.log('[TICK] Processing company levels...');
     const companyLevelUps = await processCompanyLevelUp(tickNumber);
 
-    console.log('[TICK] Pruning company treasury transactions...');
     const prunedTransactions = await pruneCompanyTreasuryTransactions(tickNumber);
 
-    console.log('[TICK] Generating city contracts...');
     const newContracts = await generateCityContracts(tickNumber);
 
-    console.log('[TICK] Processing city contracts...');
     const contractResults = await processCityContracts(tickNumber);
 
-    console.log('[TICK] Processing contract proposals...');
     const contractProposalResults = await processContractProposals(tickNumber);
 
-    console.log('[TICK] Expiring available contracts...');
     const expiredContracts = await expireAvailableContracts(tickNumber);
 
-    console.log('[TICK] Generating investment opportunities...');
     const investmentOpportunities = await generateInvestmentOpportunities(tickNumber);
 
-    console.log('[TICK] Processing company investments...');
     const investmentResults = await processCompanyInvestments(tickNumber);
 
-    console.log('[TICK] Evaluating expired market reports...');
     const evaluatedReports = await evaluateExpiredReports(tickNumber);
 
-    console.log('[TICK] Processing mission resets...');
     const missionResets = await processMissionReset();
 
-    console.log('[TICK] Computing leaderboards...');
     const leaderboardSnapshots = await computeLeaderboards(tickNumber);
 
-    console.log('[TICK] Activating upcoming events...');
     const activatedEvents = await activateUpcomingEvents(tickNumber);
 
-    console.log('[TICK] Updating competitive event progress...');
     await updateCompetitiveEventProgress(tickNumber);
 
-    console.log('[TICK] Finalizing expired events...');
     const finalizedEvents = await finalizeExpiredEvents(tickNumber);
 
-    console.log('[TICK] Cleaning up old completed events...');
     const cleanedUpEvents = await cleanupExpiredCompletedEvents(tickNumber);
 
-    console.log('[TICK] Generating competitive events...');
     const newCompEvents = await generateCompetitiveEvents(tickNumber);
 
     if (activatedEvents.length > 0 || finalizedEvents.length > 0 || newCompEvents.length > 0 || cleanedUpEvents > 0) {
@@ -226,57 +183,26 @@ export async function executeTick() {
 
     const duration = Date.now() - startTime;
     console.log(`[TICK] World tick #${tickNumber} completed in ${duration}ms`);
-    console.log(`[TICK] Cities simulated: ${cityResults.length}`);
-    console.log(`[TICK] Demographics simulated: ${demoResults.length}`);
-    console.log(`[TICK] Stock market: ${stockResults.length} companies updated`);
-    const stockEvents = stockResults.filter((r) => r.event).length;
-    if (stockEvents > 0) console.log(`[TICK] Company events: ${stockEvents}`);
-    console.log(`[TICK] Stock indexes: ${indexResults.length} indexes updated`);
-    console.log(`[TICK] Prices updated: ${priceUpdates.length}`);
-    console.log(`[TICK] Intrinsic values updated: ${intrinsicCount}`);
-    console.log(`[TICK] Rent processed: ${rentResults.length}`);
-    console.log(`[TICK] Loans processed: ${loanResults.length}`);
-    console.log(`[TICK] Credit scores updated: ${creditResults.length}`);
-    console.log(`[TICK] New properties: ${propertyGeneration.reduce((s, r) => s + r.generated, 0)}`);
-    console.log(`[TICK] Construction processed: ${constructionResults.length}`);
-    console.log(`[TICK] Improvements processed: ${improvementResults.length}`);
-    console.log(`[TICK] Company rent processed: ${companyRentResults.length}`);
-    console.log(`[TICK] Company loans processed: ${companyLoanResults.length}`);
+    console.log(`  Cities simulated: ${cityResults.length}`);
+    console.log(`  Demographics simulated: ${demoResults.length}`);
+    console.log(`  Stock market: ${stockResults.length} companies updated`);
+    console.log(`  Prices: ${priceUpdates.length} updated, Intrinsic values: ${intrinsicCount}`);
+    console.log(`  Rent processed: ${rentResults.length}`);
+    console.log(`  Loans processed: ${loanResults.length}`);
+    console.log(`  Credit scores updated: ${creditResults.length}`);
+    console.log(`  New properties generated: ${propertyGeneration.reduce((s, r) => s + r.generated, 0)}`);
+    console.log(`  Construction: ${constructionResults.length}, Improvements: ${improvementResults.length}`);
+    console.log(`  Company rent/loans: ${companyRentResults.length}/${companyLoanResults.length}`);
+    console.log(`  Company level ups: ${companyLevelUps}, Treasury pruned: ${prunedTransactions}`);
+    console.log(`  Contracts: ${newContracts} new, ${contractResults.length} processed`);
+    console.log(`  Events: ${newEvents.length} new, ${expiredEvents.length} expired`);
+    console.log(`  Expired rent: ${expiredRentCount} users, warnings sent: ${rentWarningsCount}`);
+    console.log(`  Auctions: ${auctionResults.activated} activated, ${auctionResults.completed} completed`);
+    console.log(`  Bank auctions generated: ${newBankAuctions.length}`);
+    console.log(`  Leaderboard snapshots: ${leaderboardSnapshots.length}`);
     console.log(
-      `[TICK] Company loan requests: ${loanRequestResults.autoVoted} auto-voted, ${loanRequestResults.autoExecuted} auto-executed, ${loanRequestResults.expired} expired`,
+      `  Competitive events: ${activatedEvents.length} activated, ${finalizedEvents.length} finalized, ${newCompEvents.length} new, ${cleanedUpEvents} cleaned`,
     );
-    console.log(
-      `[TICK] Company development requests: ${devRequestResults.autoVoted} auto-voted, ${devRequestResults.expired} expired`,
-    );
-    console.log(`[TICK] Company level ups: ${companyLevelUps}`);
-    console.log(`[TICK] Pruned treasury transactions: ${prunedTransactions}`);
-    console.log(`[TICK] New contracts generated: ${newContracts}`);
-    console.log(`[TICK] Contracts processed: ${contractResults.length}`);
-    console.log(
-      `[TICK] Investment opportunities: ${investmentOpportunities.generated} generated, ${investmentOpportunities.expired} expired`,
-    );
-    console.log(`[TICK] Investments processed: ${investmentResults.length}`);
-    console.log(
-      `[TICK] Contract proposals: ${contractProposalResults.autoVoted} auto-voted, ${contractProposalResults.approved} approved, ${contractProposalResults.rejected} rejected, ${contractProposalResults.expired} expired`,
-    );
-    console.log(`[TICK] Expired available contracts: ${expiredContracts}`);
-    console.log(`[TICK] New events: ${newEvents.length}`);
-    console.log(`[TICK] Expired events: ${expiredEvents.length}`);
-    console.log(`[TICK] Expired uncollected rent: ${expiredRentCount} users`);
-    console.log(`[TICK] Rent expiry warnings sent: ${rentWarningsCount} users`);
-    console.log(`[TICK] Leaderboard snapshots computed: ${leaderboardSnapshots.length}`);
-    console.log(`[TICK] Events activated: ${activatedEvents.length}`);
-    console.log(`[TICK] Events finalized: ${finalizedEvents.length}`);
-    console.log(`[TICK] Completed events cleaned up: ${cleanedUpEvents}`);
-    console.log(`[TICK] New competitive events: ${newCompEvents.length}`);
-    console.log(`[TICK] Evaluated market reports: ${evaluatedReports}`);
-    console.log(
-      `[TICK] Mission resets: ${missionResets.dailyRefreshed} daily, ${missionResets.weeklyRefreshed} weekly`,
-    );
-    console.log(
-      `[TICK] Auctions processed: ${auctionResults.activated} activated, ${auctionResults.completed} completed`,
-    );
-    console.log(`[TICK] Bank auctions generated: ${newBankAuctions.length}`);
 
     const deletedCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const usersToDelete = await User.find({ deletedAt: { $ne: null, $lte: deletedCutoff } }).select('_id');

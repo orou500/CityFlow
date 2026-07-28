@@ -65,6 +65,10 @@ const userSchema = new mongoose.Schema(
     level: { type: Number, default: 1 },
     xp: { type: Number, default: 0 },
     xpToNextLevel: { type: Number, default: 100 },
+    title: { type: String, default: '' },
+    titles: [{ type: String }],
+    prestigeLevel: { type: Number, default: 0 },
+    achievementPoints: { type: Number, default: 0 },
     lifetimeStats: {
       totalTransactions: { type: Number, default: 0 },
       totalPropertiesOwned: { type: Number, default: 0 },

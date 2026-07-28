@@ -432,3 +432,51 @@ Cache invalidation on: new bid, auction completed, auction cancelled, watchlist 
 13. **Auction state machine**: Every auction must always progress through `upcoming → active → ending (2 ticks) → ended`. Never skip the `ending` phase
 14. **Bank auction scaling**: Generation targets are calculated per tick based on player count. If `currentTotal >= targetTotal`, no new bank auctions are generated until existing ones complete
 15. **No `new` operator on `mongoose.Types.ObjectId`**: When creating ObjectIds in routes/engine, use `new mongoose.Types.ObjectId(string)` not bare strings
+
+---
+
+## Mission & Career System (Completed July 2026)
+
+### evaluateCondition() — Authoritative Data Sources
+
+All 22 condition types in `evaluateCondition()` read from MongoDB directly (not stale User doc counter fields):
+
+| Condition | Source |
+|-----------|--------|
+| `properties_owned` | `Property.countDocuments({ ownerId, forSale: true omitted })` |
+| `total_rent_collected` | `Transaction.countDocuments({ buyerId, type: 'rent' })` |
+| `total_upgrades` | `Transaction.countDocuments({ buyerId, type: { $in: ['upgrade', 'grade_upgrade'] } })` |
+| `total_properties_sold` | `Transaction.countDocuments({ sellerId, type: { $in: ['sell', 'buy'] } })` |
+| `auctions_won` | `Auction.countDocuments({ winnerId, status: 'ended' })` |
+| `rare_auctions_won` | `Auction.countDocuments({ winnerId, status: 'ended', propertyRating: 'elite' })` |
+| `total_construction_completed` | `ConstructionProject.countDocuments({ ownerId, status: 'completed' })` |
+| `company_votes_cast` | `RealEstateCompany.aggregate` counting votes subdocs by `userId` |
+| `company_projects_completed` | `ConstructionProject.countDocuments({ companyId, status: 'completed' })` |
+| `district_leader` | In-memory sort of `District.influence[]` by `score` |
+| `money_earned_this_week` | Aggregation of Transaction types `sell`+`rent` this tick week |
+| `company_properties_purchased` | `Property.countDocuments({ companyId })` |
+| `total_loans_taken` | `Loan.countDocuments({ userId, active: true })` |
+| `rent_collected_today` / `upgrades_today` | Transaction count in current tick period |
+| `auctions_won_this_week` | Auction count by `winnerId` in tick week window |
+
+### Two Progression Pipelines (now unified)
+
+**Before (July 2026 fix):**
+- `processPlayerProgress()` (routes) — full pipeline: missions + achievements + XP + cache + `career:updated` socket
+- `triggerMissionProgress()` (engine ticks) — fire-and-forget, missions only, no achievements/XP/sockets
+
+**After:** `triggerMissionProgress()` now calls `processPlayerProgress()` internally — same full pipeline, still fire-and-forget. All 10 engine call sites (auctionProcessing, companyProcessing, cityContracts, loanProcessing, constructionProcessing, treasuryInvestments, rentProcessing) automatically get achievements, XP, career cache, and socket emissions.
+
+### Reward Atomicity
+
+`claimMissionReward()` uses `findOneAndUpdate({ userId, missionId, status: 'completed' }, { status: 'claimed' })` — atomically transitions from completed→claimed, preventing double-claims from concurrent requests.
+
+### Route Coverage
+
+Every gameplay action route calls `processPlayerProgress()` with the correct event name. See `playerProgress.js` `XP_REWARDS` map for all 29 supported events. Engine tick events now also flow through the full pipeline via `triggerMissionProgress()` → `processPlayerProgress()`.
+
+### Android Production API
+
+`frontend/src/utils/capacitor.js`:
+- Android native: `isDev ? 'http://10.0.2.2:5000' : 'https://cityflow.sizops.co.il/api'`
+- Production APK on real devices auto-connects to production API (no `VITE_API_URL` needed)

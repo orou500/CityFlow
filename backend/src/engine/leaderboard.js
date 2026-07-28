@@ -118,13 +118,11 @@ const EVENT_TEMPLATES = [
 export async function generateCompetitiveEvents(tickNumber) {
   const activeEvents = await CompetitiveEvent.countDocuments({ status: 'active' });
   if (activeEvents >= 3) {
-    console.log(`[LEADERBOARD] generateCompetitiveEvents skipped: ${activeEvents} active (limit 3)`);
     return [];
   }
 
   const upcomingEvents = await CompetitiveEvent.countDocuments({ status: 'upcoming' });
   if (upcomingEvents >= 2) {
-    console.log(`[LEADERBOARD] generateCompetitiveEvents skipped: ${upcomingEvents} upcoming (limit 2)`);
     return [];
   }
 
@@ -141,7 +139,6 @@ export async function generateCompetitiveEvents(tickNumber) {
 
   let template;
   if (available.length === 0) {
-    console.log(`[LEADERBOARD] All ${EVENT_TEMPLATES.length} templates recently used, recycling least recent`);
     const usedOrder = EVENT_TEMPLATES.map((t) => ({
       template: t,
       lastUsed: recentEvents.find((e) => e.name === t.name)?.createdAt || new Date(0),
@@ -207,10 +204,6 @@ export async function generateCompetitiveEvents(tickNumber) {
     createdFromSeason: seasonNumber,
   });
 
-  console.log(
-    `[LEADERBOARD] Generated upcoming event: "${template.name}" (starts tick ${startTick}, ends tick ${endTick}, ${initialParticipants.length} initial participants)`,
-  );
-
   sendDiscordNotification({
     type: 'announcements',
     title: `Upcoming Event: ${template.name}`,
@@ -230,23 +223,10 @@ export async function activateUpcomingEvents(tickNumber) {
     startTick: { $lte: tickNumber },
   });
 
-  console.log(`[LEADERBOARD] activateUpcomingEvents: ${upcoming.length} events to activate at tick ${tickNumber}`);
-
-  if (upcoming.length === 0) {
-    const totalUpcoming = await CompetitiveEvent.countDocuments({ status: 'upcoming' });
-    if (totalUpcoming > 0) {
-      const next = await CompetitiveEvent.findOne({ status: 'upcoming' }).sort({ startTick: 1 });
-      console.log(
-        `[LEADERBOARD] Next upcoming event "${next?.name}" starts at tick ${next?.startTick} (current: ${tickNumber})`,
-      );
-    }
-  }
-
   for (const event of upcoming) {
     event.status = 'active';
     event.lastSnapshotTick = tickNumber;
     await event.save();
-    console.log(`[LEADERBOARD] Activated event: "${event.name}" at tick ${tickNumber}`);
   }
 
   return upcoming;
@@ -714,12 +694,6 @@ export async function updateCompetitiveEventProgress(tickNumber) {
       console.error(`[LEADERBOARD] Error updating event ${event.name}:`, err.message);
     }
   }
-
-  if (events.length > 0) {
-    console.log(
-      `[LEADERBOARD] updateCompetitiveEventProgress: ${updatedCount}/${events.length} events updated at tick ${tickNumber}`,
-    );
-  }
 }
 
 export async function finalizeExpiredEvents(tickNumber) {
@@ -727,18 +701,6 @@ export async function finalizeExpiredEvents(tickNumber) {
     status: 'active',
     endTick: { $lte: tickNumber },
   });
-
-  if (expired.length > 0) {
-    console.log(`[LEADERBOARD] finalizeExpiredEvents: ${expired.length} events to finalize at tick ${tickNumber}`);
-  } else {
-    const activeCount = await CompetitiveEvent.countDocuments({ status: 'active' });
-    if (activeCount > 0) {
-      const earliest = await CompetitiveEvent.findOne({ status: 'active' }).sort({ endTick: 1 });
-      console.log(
-        `[LEADERBOARD] No expired events. Earliest active "${earliest?.name}" ends at tick ${earliest?.endTick} (current: ${tickNumber})`,
-      );
-    }
-  }
 
   for (const event of expired) {
     event.status = 'completed';
@@ -804,8 +766,6 @@ export async function finalizeExpiredEvents(tickNumber) {
       }
     }
 
-    console.log(`[LEADERBOARD] Event "${event.name}" finalized. Winner: ${sorted[0]?.username || 'None'}`);
-
     sendDiscordNotification({
       type: 'announcements',
       title: `Event Complete: ${event.name}`,
@@ -827,12 +787,6 @@ export async function cleanupExpiredCompletedEvents(tickNumber) {
     status: 'completed',
     endTick: { $lte: cutoff },
   });
-
-  if (result.deletedCount > 0) {
-    console.log(
-      `[LEADERBOARD] Cleaned up ${result.deletedCount} completed events older than ${COMPLETED_RETENTION_TICKS} ticks`,
-    );
-  }
 
   return result.deletedCount;
 }

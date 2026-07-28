@@ -42,43 +42,31 @@ export async function processAuctions() {
   let ending = 0;
   let completed = 0;
 
-  console.log(`[AUCTION-TICK ${currentTick}] processAuctions() started`);
-
   const upcomingToActivate = await Auction.find({
     status: 'upcoming',
     startTick: { $lte: currentTick },
   });
-  console.log(`[AUCTION-TICK ${currentTick}] Upcoming found: ${upcomingToActivate.length}`);
 
   if (upcomingToActivate.length > 0) {
     await Auction.updateMany({ _id: { $in: upcomingToActivate.map((a) => a._id) } }, { $set: { status: 'active' } });
     activated = upcomingToActivate.length;
-    console.log(`[AUCTION-TICK ${currentTick}] Activated: ${activated}`);
   }
 
   const expiredAuctions = await Auction.find({
     status: 'active',
     endTick: { $lte: currentTick },
   });
-  console.log(
-    `[AUCTION-TICK ${currentTick}] Active auctions found: ${await Auction.countDocuments({ status: 'active' })}, expired: ${expiredAuctions.length}`,
-  );
 
   for (const auction of expiredAuctions) {
-    console.log(
-      `[AUCTION-TICK ${currentTick}] Processing expired auction ${auction._id}: endTick=${auction.endTick}, currentBid=${auction.currentBid}, bids=${auction.totalBids}`,
-    );
     try {
       auction.status = 'ending';
       auction.endingStartedAt = currentTick;
       await settleAuction(auction);
       ending++;
-      console.log(`[AUCTION-TICK ${currentTick}] ✓ Auction ${auction._id} settled as ending`);
     } catch (err) {
       console.error(`[AUCTION-TICK ${currentTick}] ✗ Failed to settle auction ${auction._id}:`, err.message);
       auction.status = 'cancelled';
       await auction.save().catch(() => {});
-      console.log(`[AUCTION-TICK ${currentTick}] → Auction ${auction._id} cancelled due to error`);
     }
   }
 
@@ -86,14 +74,10 @@ export async function processAuctions() {
     status: 'ending',
     endingStartedAt: { $lte: currentTick - AUCTION_CONFIG.endingDurationTicks },
   });
-  console.log(
-    `[AUCTION-TICK ${currentTick}] Ending auctions found: ${await Auction.countDocuments({ status: 'ending' })}, matured: ${endingCompleted.length}`,
-  );
 
   if (endingCompleted.length > 0) {
     await Auction.updateMany({ _id: { $in: endingCompleted.map((a) => a._id) } }, { $set: { status: 'ended' } });
     completed = endingCompleted.length;
-    console.log(`[AUCTION-TICK ${currentTick}] ✓ Completed: ${completed}`);
   }
 
   const stuckEnding = await Auction.find({
@@ -103,10 +87,6 @@ export async function processAuctions() {
 
   if (stuckEnding.length > 0) {
     await Auction.updateMany({ _id: { $in: stuckEnding.map((a) => a._id) } }, { $set: { status: 'cancelled' } });
-  }
-
-  if (activated > 0 || ending > 0 || completed > 0) {
-    console.log(`[TICK ${currentTick}] Auctions: ${activated} activated, ${ending} ending, ${completed} completed`);
   }
 
   await Promise.all([cacheDel(cacheKeys.auctionFeatured()), cacheDel(cacheKeys.auctionAnalytics())]);
@@ -129,29 +109,20 @@ export async function resolveStuckAuction(auctionId) {
 
 async function settleAuction(auction) {
   const currentTick = global.currentTick || 0;
-  console.log(
-    `[SETTLE] Starting auction ${auction._id}: status=${auction.status}, endTick=${auction.endTick}, currentTick=${currentTick}, highestBid=${auction.currentBid}, bidder=${auction.currentBidderId}`,
-  );
 
   const property = await Property.findById(auction.propertyId);
   if (!property) {
-    console.log(`[SETTLE] ✗ Property ${auction.propertyId} not found — cancelling auction`);
     auction.status = 'cancelled';
     await auction.save();
     return;
   }
-  console.log(`[SETTLE] ✓ Property found: ${property.name}`);
 
   const reserveMet = auction.auctionType === 'reserve' ? auction.currentBid >= auction.reservePrice : true;
-  console.log(
-    `[SETTLE] Reserve: ${auction.auctionType}, met=${reserveMet} (bid=${auction.currentBid}, reserve=${auction.reservePrice})`,
-  );
 
   if (auction.currentBidderId && auction.currentBid > 0 && reserveMet) {
     auction.winnerId = auction.currentBidderId;
     auction.winningBid = auction.currentBid;
     auction.reserveMet = true;
-    console.log(`[SETTLE] ✓ Winner assigned: ${auction.currentBidderId}, amount: ${auction.currentBid}`);
 
     auction.activity.push({
       type: 'won',
@@ -161,16 +132,11 @@ async function settleAuction(auction) {
     });
 
     await auction.save();
-    console.log(`[SETTLE] ✓ Auction saved with status=ending, winner=${auction.winnerId}`);
 
     const winner = await User.findById(auction.currentBidderId);
     if (winner && winner.balance >= auction.winningBid) {
-      console.log(
-        `[SETTLE] ✓ Winner validated: ${winner.username}, balance=${winner.balance}, cost=${auction.winningBid}`,
-      );
       winner.balance -= auction.winningBid;
       await winner.save();
-      console.log(`[SETTLE] ✓ Winner charged: new balance=${winner.balance}`);
 
       property.ownerId = winner._id;
       property.forSale = false;
@@ -183,17 +149,14 @@ async function settleAuction(auction) {
         description: `Won auction for ${property.name}`,
       });
       await property.save();
-      console.log(`[SETTLE] ✓ Property transferred to ${winner.username}`);
 
       if (auction.sellerId && auction.sellerType === 'player') {
         const commission = Math.floor(auction.winningBid * (AUCTION_CONFIG.playerSoldCommissionPercent / 100));
         const sellerProceeds = auction.winningBid - commission;
-        console.log(`[SETTLE] Seller commission: ${commission}, proceeds: ${sellerProceeds}`);
         const seller = await User.findById(auction.sellerId);
         if (seller) {
           seller.balance += sellerProceeds;
           await seller.save();
-          console.log(`[SETTLE] ✓ Seller ${seller.username} paid: +${sellerProceeds}`);
         }
       }
 
@@ -201,7 +164,6 @@ async function settleAuction(auction) {
       if (auction.sellerId) {
         await updateReputation(auction.sellerId, 'sold', auction.winningBid);
       }
-      console.log(`[SETTLE] ✓ Reputation updated`);
 
       triggerMissionProgress(auction.currentBidderId, 'auction_won');
       if (auction.sellerId) {
@@ -216,13 +178,11 @@ async function settleAuction(auction) {
         relatedId: auction._id,
         global: false,
       });
-      console.log(`[SETTLE] ✓ Winner notification sent`);
 
       emitAuctionEnded(auction._id.toString(), {
         winnerId: auction.currentBidderId.toString(),
         winningBid: auction.winningBid,
       });
-      console.log(`[SETTLE] ✓ Socket.IO event emitted`);
 
       if (auction.sellerId && auction.sellerType === 'player') {
         await enqueueNotification({
@@ -233,7 +193,6 @@ async function settleAuction(auction) {
           relatedId: auction._id,
           global: false,
         });
-        console.log(`[SETTLE] ✓ Seller notification sent`);
       }
 
       const outbidUserIds = auction.bids
@@ -250,7 +209,6 @@ async function settleAuction(auction) {
           global: false,
         });
       }
-      if (uniqueOutbid.length > 0) console.log(`[SETTLE] ✓ ${uniqueOutbid.length} outbid users notified`);
 
       for (const watcherId of auction.watchers) {
         if (
@@ -267,15 +225,7 @@ async function settleAuction(auction) {
           });
         }
       }
-      if (auction.watchers.length > 0) console.log(`[SETTLE] ✓ ${auction.watchers.length} watchers notified`);
-
-      console.log(
-        `[SETTLE] ✓ Auction ${auction._id} fully settled — winner=${winner.username}, property=${property.name}, amount=${auction.winningBid}`,
-      );
     } else {
-      console.log(
-        `[SETTLE] ✗ Winner ${winner?.username || 'unknown'} has insufficient balance: ${winner?.balance || 0} < ${auction.winningBid}`,
-      );
       if (winner) {
         await enqueueNotification({
           userId: winner._id,
@@ -288,12 +238,8 @@ async function settleAuction(auction) {
       }
       auction.status = 'cancelled';
       await auction.save();
-      console.log(`[SETTLE] → Auction cancelled due to insufficient funds`);
     }
   } else {
-    console.log(
-      `[SETTLE] No valid winner: currentBidderId=${auction.currentBidderId}, currentBid=${auction.currentBid}, reserveMet=${reserveMet}`,
-    );
     auction.winnerId = null;
     auction.winningBid = 0;
     await auction.save();
@@ -307,12 +253,8 @@ async function settleAuction(auction) {
         relatedId: auction._id,
         global: false,
       });
-      console.log(`[SETTLE] ✓ Seller notified: no winner`);
     }
-    console.log(`[SETTLE] → Auction ended with no winner`);
   }
-
-  console.log(`[SETTLE] ✓ Settlement complete for auction ${auction._id}`);
 
   await Promise.all([
     cacheDel(cacheKeys.auction(auction._id.toString())),
@@ -368,14 +310,9 @@ export async function generateBankAuctions() {
   const targetTotal = targetUpcoming + targetActive;
   const toGenerate = Math.max(0, targetTotal - currentTotal);
 
-  console.log(
-    `[BANK-AUCTION ${currentTick}] Players=${playerCount}, target: ${targetUpcoming}U+${targetActive}A=${targetTotal}, current: ${currentUpcoming}U+${currentActive}A=${currentTotal}, toGenerate=${toGenerate}`,
-  );
-
   if (toGenerate === 0) return generated;
 
   const generateCount = Math.min(toGenerate, currentTick % config.bankAuctionIntervalTicks === 0 ? 3 : 1);
-  console.log(`[BANK-AUCTION ${currentTick}] Generating ${generateCount} auctions`);
 
   if (generateCount === 0) return generated;
 
@@ -446,15 +383,6 @@ export async function generateBankAuctions() {
     });
 
     generated.push(auction);
-    console.log(
-      `[BANK-AUCTION] Created ${template.name} (${rarity}) in ${city.name}, price=$${price.toLocaleString()}, startTick=${currentTick + 1}, endTick=${currentTick + 1 + duration}`,
-    );
-  }
-
-  if (generated.length > 0) {
-    console.log(
-      `[TICK ${currentTick}] Bank auctions: target ${targetTotal}, current ${currentTotal}, generated ${generated.length}`,
-    );
   }
 
   return generated;

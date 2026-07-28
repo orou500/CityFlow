@@ -12,7 +12,7 @@ import {
 } from '../engine/marketIntelligence.js';
 import { authenticate } from '../middleware/auth.js';
 import { cacheGetOrSet } from '../utils/cache.js';
-import { triggerMissionProgress } from '../utils/missionTrigger.js';
+import { processPlayerProgress } from '../utils/playerProgress.js';
 import { rateLimit } from '../middleware/rateLimit.js';
 import { cacheKeys } from '../utils/cacheKeys.js';
 
@@ -164,7 +164,7 @@ router.post(
       user.balance -= cost;
       await user.save();
 
-      triggerMissionProgress(userId, 'report_purchase');
+      await processPlayerProgress(userId, 'report_purchase');
 
       return res.status(201).json({
         success: true,

@@ -47,6 +47,9 @@ export const SOCKET_EVENTS = {
   MISSION_COMPLETED: 'mission:completed',
   MISSION_REWARD_CLAIMED: 'mission:reward:claimed',
   MISSIONS_REFRESHED: 'mission:refreshed',
+
+  ACHIEVEMENT_UNLOCKED: 'achievement:unlocked',
+  CAREER_UPDATED: 'career:updated',
 };
 
 export const COMPANY_ROOM_PREFIX = 'company:';

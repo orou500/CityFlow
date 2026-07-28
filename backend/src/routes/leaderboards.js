@@ -184,7 +184,7 @@ router.get('/player/:userId', async (req, res) => {
     if (cached) return res.json(cached);
 
     const user = await User.findById(userId).select(
-      'username displayName avatar level xp balance ownedProperties achievements bio',
+      'username displayName avatar level xp balance ownedProperties achievements bio title prestigeLevel achievementPoints',
     );
     if (!user) return res.status(404).json({ error: 'User not found' });
 
@@ -217,6 +217,9 @@ router.get('/player/:userId', async (req, res) => {
         xp: user.xp,
         bio: user.bio,
         achievements: user.achievements,
+        title: user.title,
+        prestigeLevel: user.prestigeLevel,
+        achievementPoints: user.achievementPoints,
         propertyCount: user.ownedProperties?.length || 0,
       },
       ranks,

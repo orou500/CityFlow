@@ -4,7 +4,7 @@ import StockHolding from '../models/StockHolding.js';
 import StockTransaction from '../models/StockTransaction.js';
 import User from '../models/User.js';
 import { authenticate } from '../middleware/auth.js';
-import { triggerMissionProgress } from '../utils/missionTrigger.js';
+import { processPlayerProgress } from '../utils/playerProgress.js';
 
 const router = express.Router();
 router.use(authenticate);
@@ -54,7 +54,7 @@ router.post('/buy', async (req, res) => {
       total: totalCost,
     });
 
-    triggerMissionProgress(req.user._id, 'stocks_buy');
+    await processPlayerProgress(req.user._id, 'stocks_buy');
 
     res.json({
       holding: {
@@ -108,7 +108,7 @@ router.post('/sell', async (req, res) => {
       total: totalRevenue,
     });
 
-    triggerMissionProgress(req.user._id, 'stocks_sell');
+    await processPlayerProgress(req.user._id, 'stocks_sell');
 
     res.json({
       holding:
