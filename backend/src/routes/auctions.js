@@ -9,6 +9,7 @@ import RealEstateCompany from '../models/RealEstateCompany.js';
 import { authenticate } from '../middleware/auth.js';
 import { rateLimit } from '../middleware/rateLimit.js';
 import { AUCTION_CONFIG } from '../config/auctions.js';
+import { triggerMissionProgress } from '../utils/missionTrigger.js';
 import {
   processAntiSniping,
   cancelAuction,
@@ -409,6 +410,8 @@ router.post(
       property.forSale = false;
       await property.save();
 
+      triggerMissionProgress(userId, 'auction_create');
+
       return res.status(201).json({
         success: true,
         auction: {
@@ -592,6 +595,8 @@ router.post(
         cacheDel(cacheKeys.auctionFeatured()),
         cacheDel(cacheKeys.auctionAnalytics()),
       ]);
+
+      triggerMissionProgress(userId, 'auction_bid');
 
       return res.json({
         success: true,

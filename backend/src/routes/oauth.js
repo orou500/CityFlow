@@ -8,6 +8,7 @@ import { isMaintenanceMode } from '../models/GameState.js';
 import { sendEmail } from '../services/email.js';
 import emailTemplates from '../services/emailTemplates.js';
 import { downloadOAuthAvatar } from '../services/avatarDownload.js';
+import { triggerMissionProgress } from '../utils/missionTrigger.js';
 
 const router = Router();
 
@@ -164,6 +165,7 @@ async function handleOAuthCallback({ provider, providerId, email, name, avatar }
   }
 
   await User.updateOne({ _id: user._id }, { $set: { lastLoginAt: new Date() } });
+  triggerMissionProgress(user._id, 'login');
 
   const token = generateToken(user._id);
   const params = new URLSearchParams({ token });

@@ -9,8 +9,26 @@ router.use(authenticate);
 router.get('/', async (req, res) => {
   try {
     await cleanupOldRead();
-    const notifications = await Notification.find({ userId: req.user._id }).sort({ createdAt: -1 }).limit(50);
-    res.json(notifications);
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
+    const skip = (page - 1) * limit;
+
+    const [notifications, total] = await Promise.all([
+      Notification.find({ userId: req.user._id })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Notification.countDocuments({ userId: req.user._id }),
+    ]);
+
+    res.json({
+      notifications,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+      limit,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

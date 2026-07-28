@@ -30,6 +30,7 @@ import { getAllProjects, calculateProjectCost, calculateUnitRent } from '../conf
 import { trackEvent, EVENTS } from '../utils/analytics.js';
 import ConstructionProject from '../models/ConstructionProject.js';
 import { grantCompanyXP, addTreasuryTransaction } from '../engine/companyProcessing.js';
+import { triggerMissionProgress } from '../utils/missionTrigger.js';
 import {
   getCompanyLevelBenefits,
   xpRequiredForLevel,
@@ -313,6 +314,8 @@ router.post('/', async (req, res) => {
 
     await onCompanyCreated(company._id, user._id);
     trackEvent(EVENTS.COMPANY_CREATED, { userId: user._id, companyId: company._id });
+
+    triggerMissionProgress(user._id, 'company_create');
 
     res.status(201).json(company);
   } catch (err) {
@@ -774,6 +777,8 @@ router.post('/:id/treasury/deposit', async (req, res) => {
 
     await onCompanyTreasuryChanged(company._id, req.user._id);
 
+    triggerMissionProgress(req.user._id, 'treasury_deposit');
+
     res.json({ treasury: company.treasury, balance: user.balance });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -954,6 +959,8 @@ router.post('/:id/properties/purchase', async (req, res) => {
 
     await invalidateCompany(company._id);
 
+    triggerMissionProgress(req.user._id, 'company_property_purchase');
+
     res.json({ property, treasury: company.treasury });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1020,6 +1027,8 @@ router.post('/:id/properties/:propertyId/sell', async (req, res) => {
 
     await invalidateCompany(company._id);
     await invalidateUser(req.user._id);
+
+    triggerMissionProgress(req.user._id, 'company_property_sell');
 
     res.json({ treasury: company.treasury });
   } catch (err) {
@@ -1144,6 +1153,8 @@ router.post('/:id/loans/:loanId/repay', async (req, res) => {
     );
 
     await invalidateCompany(company._id);
+
+    triggerMissionProgress(req.user._id, 'company_loan_repay');
 
     res.json({ loan, treasury: company.treasury });
   } catch (err) {
@@ -1299,6 +1310,8 @@ router.post('/:id/apply', async (req, res) => {
     }
 
     await invalidateCompany(company._id);
+
+    triggerMissionProgress(req.user._id, 'company_apply');
 
     res.status(201).json({ success: true });
   } catch (err) {
@@ -1936,6 +1949,8 @@ router.post('/:id/direct-loan', async (req, res) => {
     );
 
     await onCompanyTreasuryChanged(company._id, req.user._id);
+
+    triggerMissionProgress(req.user._id, 'company_loan_take');
 
     res.json({ loan, treasury: company.treasury, product });
   } catch (err) {
@@ -2859,6 +2874,8 @@ router.post('/:id/investments', authenticate, async (req, res) => {
     );
 
     await invalidateCompany(company._id);
+
+    triggerMissionProgress(req.user._id, 'investment_create');
 
     res.json({ investment, treasury: company.treasury });
   } catch (err) {

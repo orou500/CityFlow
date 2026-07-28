@@ -7,6 +7,7 @@ import GameState, { getGameState } from '../models/GameState.js';
 import { VOTE_THRESHOLD, CONTRACT_PROPOSAL_EXPIRE_TICKS } from '../config/cityContracts.js';
 import { addTreasuryTransaction } from '../engine/companyProcessing.js';
 import { enqueueNotification } from '../utils/notificationQueue.js';
+import { triggerMissionProgress } from '../utils/missionTrigger.js';
 import { onContractStarted, onCompanyVote } from '../utils/cacheInvalidation.js';
 import { scheduleVoteExpiration, scheduleContractCompletion, cancelDelayedJob } from '../utils/delayedJobs.js';
 
@@ -164,29 +165,31 @@ router.post('/:id/contracts/:contractId/propose', authenticate, async (req, res)
       tick: gameState.tickNumber,
     });
 
-    const memberUserIds = company.members.map((m) => m.userId);
-    for (const userId of memberUserIds) {
-      if (userId.toString() === req.user._id.toString()) continue;
+      const memberUserIds = company.members.map((m) => m.userId);
+      for (const userId of memberUserIds) {
+        if (userId.toString() === req.user._id.toString()) continue;
+        await enqueueNotification({
+          userId,
+          type: 'company_vote',
+          title: 'Contract Proposal',
+          message: `${caller.role} proposed contract: ${contract.name} ($${contract.cost.toLocaleString()}). Vote to approve.`,
+          relatedId: company._id,
+          global: false,
+        });
+      }
+
       await enqueueNotification({
-        userId,
+        userId: req.user._id,
         type: 'company_vote',
-        title: 'Contract Proposal',
-        message: `${caller.role} proposed contract: ${contract.name} ($${contract.cost.toLocaleString()}). Vote to approve.`,
+        title: 'Contract Proposal Submitted',
+        message: `You proposed contract: ${contract.name}. Members will vote in the contracts tab.`,
         relatedId: company._id,
         global: false,
       });
-    }
 
-    await enqueueNotification({
-      userId: req.user._id,
-      type: 'company_vote',
-      title: 'Contract Proposal Submitted',
-      message: `You proposed contract: ${contract.name}. Members will vote in the contracts tab.`,
-      relatedId: company._id,
-      global: false,
-    });
+      triggerMissionProgress(req.user._id, 'contract_propose');
 
-    res.json(contract);
+      res.json(contract);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -313,6 +313,8 @@ export const useGameStore = create((set, get) => ({
   receivedOffers: [],
   notifications: [],
   unreadCount: 0,
+  notificationPage: 1,
+  notificationTotalPages: 1,
 
   fetchSentOffers: async () => {
     try {
@@ -360,11 +362,11 @@ export const useGameStore = create((set, get) => ({
     return await api(`/offers/accept-counter/${offerId}`, { method: 'POST' });
   },
 
-  fetchNotifications: async () => {
+  fetchNotifications: async (page = 1, limit = 20) => {
     try {
-      const notifications = await api('/notifications');
-      set({ notifications });
-      return notifications;
+      const data = await api(`/notifications?page=${page}&limit=${limit}`);
+      set({ notifications: data.notifications, notificationPage: data.page, notificationTotalPages: data.totalPages });
+      return data.notifications;
     } catch {
       return [];
     }

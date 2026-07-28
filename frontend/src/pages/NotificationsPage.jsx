@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../store/useGameStore';
 import { useAuthStore } from '../store/useAuthStore';
+import Pagination from '../components/Pagination';
 
 const TYPE_CONFIG = {
   property_offer: { icon: '🤝', color: 'text-blue-500', route: '/dashboard' },
@@ -31,13 +32,13 @@ export default function NotificationsPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { notifications, fetchNotifications, fetchUnreadCount, markNotificationRead, markAllRead, deleteNotification } =
+  const { notifications, notificationPage, notificationTotalPages, fetchNotifications, fetchUnreadCount, markNotificationRead, markAllRead, deleteNotification } =
     useGameStore();
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (page) => {
     setLoading(true);
-    await Promise.all([fetchNotifications(), fetchUnreadCount()]);
+    await Promise.all([fetchNotifications(page), fetchUnreadCount()]);
     setLoading(false);
   }, [fetchNotifications, fetchUnreadCount]);
 
@@ -46,8 +47,12 @@ export default function NotificationsPage() {
       navigate('/login');
       return;
     }
-    load();
+    load(1);
   }, [user]);
+
+  const handlePageChange = (page) => {
+    load(page);
+  };
 
   const handleClick = async (notification) => {
     if (!notification.read) {
@@ -64,13 +69,13 @@ export default function NotificationsPage() {
 
   const handleMarkAllRead = async () => {
     await markAllRead();
-    await Promise.all([fetchNotifications(), fetchUnreadCount()]);
+    await Promise.all([fetchNotifications(1), fetchUnreadCount()]);
   };
 
   const handleDelete = async (e, id) => {
     e.stopPropagation();
     await deleteNotification(id);
-    await Promise.all([fetchNotifications(), fetchUnreadCount()]);
+    await Promise.all([fetchNotifications(notificationPage), fetchUnreadCount()]);
   };
 
   if (!user) return null;
@@ -139,6 +144,7 @@ export default function NotificationsPage() {
             })}
           </div>
         )}
+        <Pagination page={notificationPage} totalPages={notificationTotalPages} onPageChange={handlePageChange} />
       </div>
     </div>
   );

@@ -11,6 +11,7 @@ import {
 } from '../config/investmentOpportunities.js';
 import { addTreasuryTransaction, grantCompanyXP } from './companyProcessing.js';
 import { cancelDelayedJob } from '../utils/delayedJobs.js';
+import { triggerMissionProgressForMany } from '../utils/missionTrigger.js';
 
 const ANNUAL_TICKS = 4 * 365;
 
@@ -265,6 +266,8 @@ async function matureInvestment(investment, tickNumber, globalEconomicIndex) {
       global: false,
     });
   }
+
+  triggerMissionProgressForMany(memberUserIds, 'investment_matured');
 
   return investment.currentValue;
 }

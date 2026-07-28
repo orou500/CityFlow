@@ -92,8 +92,8 @@ export default function DonationsPage() {
 
   return (
     <div className="max-w-3xl mx-auto p-4">
-      <h1 className="text-3xl font-bold text-white mb-2">{t('donations.title')}</h1>
-      <p className="text-gray-400 mb-6">{t('donations.subtitle')}</p>
+      <h1 className="text-3xl font-bold text-primary mb-2">{t('donations.title')}</h1>
+      <p className="text-muted mb-6">{t('donations.subtitle')}</p>
 
       {message && (
         <div
@@ -110,9 +110,9 @@ export default function DonationsPage() {
       )}
 
       <div className="grid md:grid-cols-2 gap-6 mb-8">
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-          <h2 className="text-lg font-bold text-white mb-4">{t('donations.whyDonate')}</h2>
-          <ul className="space-y-2 text-sm text-gray-300">
+        <div className="bg-card border border-border rounded-lg p-6">
+          <h2 className="text-lg font-bold text-primary mb-4">{t('donations.whyDonate')}</h2>
+          <ul className="space-y-2 text-sm text-secondary">
             <li className="flex items-start gap-2">
               <span className="text-blue-400 mt-0.5">{'\u{2022}'}</span>
               <span>{t('donations.serverHosting')}</span>
@@ -136,9 +136,9 @@ export default function DonationsPage() {
           </ul>
         </div>
 
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-          <h2 className="text-lg font-bold text-white mb-4">{t('donations.rewards')}</h2>
-          <ul className="space-y-2 text-sm text-gray-300">
+        <div className="bg-card border border-border rounded-lg p-6">
+          <h2 className="text-lg font-bold text-primary mb-4">{t('donations.rewards')}</h2>
+          <ul className="space-y-2 text-sm text-secondary">
             <li className="flex items-start gap-2">
               <span className="text-yellow-400 mt-0.5">{'\u{2B50}'}</span>
               <span>{t('donations.rewardBadge')}</span>
@@ -156,12 +156,12 @@ export default function DonationsPage() {
               <span>{t('donations.rewardRecognition')}</span>
             </li>
           </ul>
-          <div className="mt-3 text-xs text-gray-500">{t('donations.noPayToWin')}</div>
+          <div className="mt-3 text-xs text-muted">{t('donations.noPayToWin')}</div>
         </div>
       </div>
 
-      <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 mb-8">
-        <h2 className="text-lg font-bold text-white mb-4">{t('donations.selectAmount')}</h2>
+      <div className="bg-card border border-border rounded-lg p-6 mb-8">
+        <h2 className="text-lg font-bold text-primary mb-4">{t('donations.selectAmount')}</h2>
         <div className="flex flex-wrap gap-2 mb-4">
           {DONATION_AMOUNTS.map((amt) => (
             <button
@@ -170,14 +170,14 @@ export default function DonationsPage() {
                 setSelectedAmount(amt);
                 setUseCustom(false);
               }}
-              className={`px-4 py-2 rounded font-semibold text-sm transition ${!useCustom && selectedAmount === amt ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+              className={`px-4 py-2 rounded font-semibold text-sm transition ${!useCustom && selectedAmount === amt ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-secondary hover:bg-gray-300 dark:hover:bg-gray-600'}`}
             >
               ${amt}
             </button>
           ))}
           <button
             onClick={() => setUseCustom(true)}
-            className={`px-4 py-2 rounded font-semibold text-sm transition ${useCustom ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+            className={`px-4 py-2 rounded font-semibold text-sm transition ${useCustom ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-secondary hover:bg-gray-300 dark:hover:bg-gray-600'}`}
           >
             {t('donations.custom')}
           </button>
@@ -191,7 +191,7 @@ export default function DonationsPage() {
             value={customAmount}
             onChange={(e) => setCustomAmount(e.target.value)}
             placeholder="$10"
-            className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white mb-4"
+            className="w-full bg-gray-100 dark:bg-gray-700 border border-border rounded p-2 text-primary mb-4"
           />
         )}
 
@@ -203,7 +203,7 @@ export default function DonationsPage() {
             onChange={(e) => setIsAnonymous(e.target.checked)}
             className="rounded"
           />
-          <label htmlFor="anonymous" className="text-sm text-gray-400">
+          <label htmlFor="anonymous" className="text-sm text-muted">
             {t('donations.anonymousDonation')}
           </label>
         </div>
@@ -211,27 +211,30 @@ export default function DonationsPage() {
         <button
           onClick={handleDonate}
           disabled={loading || !config?.enabled}
-          className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-6 rounded-lg transition disabled:opacity-50"
+          className="w-full bg-yellow-500 hover:bg-yellow-600 text-yellow-950 dark:text-black font-bold py-3 px-6 rounded-lg transition disabled:opacity-50"
         >
           {loading ? t('donations.processing') : `${t('donations.donate')} $${getAmount()}`}
         </button>
 
-        <p className="text-xs text-gray-500 mt-3">{t('donations.terms')}</p>
+        <p className="text-xs text-muted mt-3">{t('donations.terms')}</p>
       </div>
 
       {history.length > 0 && (
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-          <h2 className="text-lg font-bold text-white mb-4">{t('donations.history')}</h2>
+        <div className="bg-card border border-border rounded-lg p-6">
+          <h2 className="text-lg font-bold text-primary mb-4">{t('donations.history')}</h2>
           <div className="space-y-2">
             {history.map((d, i) => (
-              <div key={i} className="flex justify-between items-center text-sm bg-gray-900 rounded p-3">
-                <span className="text-white">${d.amount} USD</span>
+              <div
+                key={i}
+                className="flex justify-between items-center text-sm bg-gray-100 dark:bg-gray-900 rounded p-3"
+              >
+                <span className="text-primary">${d.amount} USD</span>
                 <span
                   className={`px-2 py-0.5 rounded text-xs ${d.status === 'completed' ? 'bg-green-900 text-green-300' : d.status === 'pending' ? 'bg-yellow-900 text-yellow-300' : 'bg-red-900 text-red-300'}`}
                 >
                   {t(`donations.status${d.status.charAt(0).toUpperCase() + d.status.slice(1)}`)}
                 </span>
-                <span className="text-gray-500 text-xs">{new Date(d.createdAt).toLocaleDateString()}</span>
+                <span className="text-muted text-xs">{new Date(d.createdAt).toLocaleDateString()}</span>
               </div>
             ))}
           </div>

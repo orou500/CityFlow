@@ -49,6 +49,7 @@ import DistrictPage from './pages/DistrictPage';
 import DistrictListPage from './pages/DistrictListPage';
 import MarketIntelligencePage from './pages/MarketIntelligencePage';
 import AuctionDashboardPage from './pages/AuctionDashboardPage';
+import MissionsPage from './pages/MissionsPage';
 import { useEffect } from 'react';
 import { useAuthStore } from './store/useAuthStore';
 import { useGameStore } from './store/useGameStore';
@@ -303,6 +304,16 @@ function AppRoutes() {
           <ErrorBoundary>
             <ProtectedRoute>
               <AuctionDashboardPage />
+            </ProtectedRoute>
+          </ErrorBoundary>
+        }
+      />
+      <Route
+        path="/missions"
+        element={
+          <ErrorBoundary>
+            <ProtectedRoute>
+              <MissionsPage />
             </ProtectedRoute>
           </ErrorBoundary>
         }

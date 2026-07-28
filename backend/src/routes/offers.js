@@ -6,6 +6,7 @@ import Transaction from '../models/Transaction.js';
 import { authenticate } from '../middleware/auth.js';
 import { enqueueNotification } from '../utils/notificationQueue.js';
 import { onPropertyPurchased } from '../utils/cacheInvalidation.js';
+import { triggerMissionProgress } from '../utils/missionTrigger.js';
 import { trackEvent, EVENTS } from '../utils/analytics.js';
 
 const MIN_OFFER_PERCENTAGE = 0.7;
@@ -68,6 +69,9 @@ router.post('/create', async (req, res) => {
     );
 
     trackEvent(EVENTS.OFFER_CREATED, { userId: req.user._id, propertyId, amount });
+
+    triggerMissionProgress(req.user._id, 'offer_create');
+
     res.status(201).json(offer);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -137,6 +141,9 @@ router.post('/accept/:id', async (req, res) => {
 
     await onPropertyPurchased(buyer._id, seller._id, property._id, property.cityId);
     trackEvent(EVENTS.OFFER_ACCEPTED, { userId: req.user._id, propertyId: property._id, price });
+
+    triggerMissionProgress(buyer._id, 'property_buy');
+    triggerMissionProgress(seller._id, 'property_sell');
 
     await notify(
       offer.buyerId,
@@ -289,6 +296,9 @@ router.post('/accept-counter/:id', async (req, res) => {
     await offer.save();
 
     await onPropertyPurchased(buyer._id, seller._id, property._id, property.cityId);
+
+    triggerMissionProgress(buyer._id, 'property_buy');
+    triggerMissionProgress(seller._id, 'property_sell');
 
     await notify(
       offer.sellerId,

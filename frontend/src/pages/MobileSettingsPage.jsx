@@ -95,7 +95,7 @@ export default function MobileSettingsPage() {
             }`}
           >
             <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+              className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-gray-300 transition-transform ${
                 pushEnabled ? 'translate-x-6' : 'translate-x-1'
               }`}
             />
@@ -117,7 +117,7 @@ export default function MobileSettingsPage() {
               }`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-gray-300 transition-transform ${
                   biometricOn ? 'translate-x-6' : 'translate-x-1'
                 }`}
               />
@@ -165,7 +165,7 @@ export default function MobileSettingsPage() {
             }`}
           >
             <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+              className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-gray-300 transition-transform ${
                 dataSaver ? 'translate-x-6' : 'translate-x-1'
               }`}
             />

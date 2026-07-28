@@ -8,6 +8,7 @@ import { enqueueNotification } from '../utils/notificationQueue.js';
 import { emitToAll } from '../socket/index.js';
 import { cacheDel } from '../utils/cache.js';
 import { cacheKeys } from '../utils/cacheKeys.js';
+import { triggerMissionProgress } from '../utils/missionTrigger.js';
 
 export function emitAuctionBid(auctionId, data) {
   emitToAll(`auction:bid`, { auctionId, ...data });
@@ -201,6 +202,11 @@ async function settleAuction(auction) {
         await updateReputation(auction.sellerId, 'sold', auction.winningBid);
       }
       console.log(`[SETTLE] ✓ Reputation updated`);
+
+      triggerMissionProgress(auction.currentBidderId, 'auction_won');
+      if (auction.sellerId) {
+        triggerMissionProgress(auction.sellerId, 'auction_sold');
+      }
 
       await enqueueNotification({
         userId: auction.currentBidderId,

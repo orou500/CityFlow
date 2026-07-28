@@ -40,6 +40,7 @@ import donationRoutes from './routes/donations.js';
 import districtRoutes from './routes/districts.js';
 import marketIntelligenceRoutes from './routes/marketIntelligence.js';
 import auctionRoutes from './routes/auctions.js';
+import missionRoutes from './routes/missions.js';
 import { maintenanceCheck } from './middleware/maintenance.js';
 import { getMaintenanceInfo, getTickNumber } from './models/GameState.js';
 import { createNewSeason } from './engine/seasonReset.js';
@@ -165,6 +166,7 @@ app.use('/donations', donationRoutes);
 app.use('/districts', districtRoutes);
 app.use('/market-intelligence', marketIntelligenceRoutes);
 app.use('/auctions', auctionRoutes);
+app.use('/missions', missionRoutes);
 
 app.use((req, res) => {
   console.warn(`404 API Route: ${req.method} ${req.originalUrl}`);
