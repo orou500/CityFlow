@@ -341,7 +341,10 @@ export async function processCompanyLoans(tickNumber) {
     await company.save();
     await loan.save();
 
-    triggerMissionProgressForMany(company.members.map((m) => m.userId), 'company_loan_payment');
+    triggerMissionProgressForMany(
+      company.members.map((m) => m.userId),
+      'company_loan_payment',
+    );
 
     results.push({
       loanId: loan._id,
@@ -474,7 +477,10 @@ export async function processCompanyLevelUp(tickNumber) {
         });
       }
 
-      triggerMissionProgressForMany(company.members.map((m) => m.userId), 'company_milestone');
+      triggerMissionProgressForMany(
+        company.members.map((m) => m.userId),
+        'company_milestone',
+      );
 
       dirty = true;
     }

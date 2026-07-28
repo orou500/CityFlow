@@ -32,15 +32,26 @@ export default function NotificationsPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { notifications, notificationPage, notificationTotalPages, fetchNotifications, fetchUnreadCount, markNotificationRead, markAllRead, deleteNotification } =
-    useGameStore();
+  const {
+    notifications,
+    notificationPage,
+    notificationTotalPages,
+    fetchNotifications,
+    fetchUnreadCount,
+    markNotificationRead,
+    markAllRead,
+    deleteNotification,
+  } = useGameStore();
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async (page) => {
-    setLoading(true);
-    await Promise.all([fetchNotifications(page), fetchUnreadCount()]);
-    setLoading(false);
-  }, [fetchNotifications, fetchUnreadCount]);
+  const load = useCallback(
+    async (page) => {
+      setLoading(true);
+      await Promise.all([fetchNotifications(page), fetchUnreadCount()]);
+      setLoading(false);
+    },
+    [fetchNotifications, fetchUnreadCount],
+  );
 
   useEffect(() => {
     if (!user) {

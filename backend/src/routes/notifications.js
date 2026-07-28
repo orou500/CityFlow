@@ -14,11 +14,7 @@ router.get('/', async (req, res) => {
     const skip = (page - 1) * limit;
 
     const [notifications, total] = await Promise.all([
-      Notification.find({ userId: req.user._id })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
+      Notification.find({ userId: req.user._id }).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
       Notification.countDocuments({ userId: req.user._id }),
     ]);
 

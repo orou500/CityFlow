@@ -165,31 +165,31 @@ router.post('/:id/contracts/:contractId/propose', authenticate, async (req, res)
       tick: gameState.tickNumber,
     });
 
-      const memberUserIds = company.members.map((m) => m.userId);
-      for (const userId of memberUserIds) {
-        if (userId.toString() === req.user._id.toString()) continue;
-        await enqueueNotification({
-          userId,
-          type: 'company_vote',
-          title: 'Contract Proposal',
-          message: `${caller.role} proposed contract: ${contract.name} ($${contract.cost.toLocaleString()}). Vote to approve.`,
-          relatedId: company._id,
-          global: false,
-        });
-      }
-
+    const memberUserIds = company.members.map((m) => m.userId);
+    for (const userId of memberUserIds) {
+      if (userId.toString() === req.user._id.toString()) continue;
       await enqueueNotification({
-        userId: req.user._id,
+        userId,
         type: 'company_vote',
-        title: 'Contract Proposal Submitted',
-        message: `You proposed contract: ${contract.name}. Members will vote in the contracts tab.`,
+        title: 'Contract Proposal',
+        message: `${caller.role} proposed contract: ${contract.name} ($${contract.cost.toLocaleString()}). Vote to approve.`,
         relatedId: company._id,
         global: false,
       });
+    }
 
-      triggerMissionProgress(req.user._id, 'contract_propose');
+    await enqueueNotification({
+      userId: req.user._id,
+      type: 'company_vote',
+      title: 'Contract Proposal Submitted',
+      message: `You proposed contract: ${contract.name}. Members will vote in the contracts tab.`,
+      relatedId: company._id,
+      global: false,
+    });
 
-      res.json(contract);
+    triggerMissionProgress(req.user._id, 'contract_propose');
+
+    res.json(contract);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

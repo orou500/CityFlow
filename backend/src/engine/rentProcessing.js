@@ -158,10 +158,12 @@ export async function processRent() {
     }
   }
 
-  const affectedUserIds = [...new Set([
-    ...rentPoolUpdates.map((u) => u.userId?.toString()).filter(Boolean),
-    ...userLifetimeUpdates.map((u) => u.userId?.toString()).filter(Boolean),
-  ])];
+  const affectedUserIds = [
+    ...new Set([
+      ...rentPoolUpdates.map((u) => u.userId?.toString()).filter(Boolean),
+      ...userLifetimeUpdates.map((u) => u.userId?.toString()).filter(Boolean),
+    ]),
+  ];
   for (const uid of affectedUserIds) {
     triggerMissionProgress(uid, 'rent_collected');
   }

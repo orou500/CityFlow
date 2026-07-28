@@ -115,7 +115,10 @@ async function evaluateCondition(userId, condition, userData) {
     }
     case 'city_owned': {
       const city = await mongoose.model('City').findOne({ name: condition.cityName }).lean();
-      if (!city) { value = 0; break; }
+      if (!city) {
+        value = 0;
+        break;
+      }
       value = await Property.countDocuments({ ownerId: userId, cityId: city._id });
       break;
     }
@@ -195,47 +198,63 @@ async function evaluateCondition(userId, condition, userData) {
       break;
     }
     case 'rent_collected_today': {
-      if (!userData.lastRentCollectedAt) { value = 0; break; }
+      if (!userData.lastRentCollectedAt) {
+        value = 0;
+        break;
+      }
       const collected = new Date(userData.lastRentCollectedAt);
       const now = new Date();
-      value = collected.getUTCFullYear() === now.getUTCFullYear() &&
+      value =
+        collected.getUTCFullYear() === now.getUTCFullYear() &&
         collected.getUTCMonth() === now.getUTCMonth() &&
         collected.getUTCDate() === now.getUTCDate()
-        ? 1
-        : 0;
+          ? 1
+          : 0;
       break;
     }
     case 'bonus_claimed_today': {
-      if (!userData.lastPeriodBonusClaim) { value = 0; break; }
+      if (!userData.lastPeriodBonusClaim) {
+        value = 0;
+        break;
+      }
       const claimed = new Date(userData.lastPeriodBonusClaim);
       const now = new Date();
-      value = claimed.getUTCFullYear() === now.getUTCFullYear() &&
+      value =
+        claimed.getUTCFullYear() === now.getUTCFullYear() &&
         claimed.getUTCMonth() === now.getUTCMonth() &&
         claimed.getUTCDate() === now.getUTCDate()
-        ? 1
-        : 0;
+          ? 1
+          : 0;
       break;
     }
     case 'login_today': {
-      if (!userData.lastLoginAt) { value = 0; break; }
+      if (!userData.lastLoginAt) {
+        value = 0;
+        break;
+      }
       const loginDate = new Date(userData.lastLoginAt);
       const now = new Date();
-      value = loginDate.getUTCFullYear() === now.getUTCFullYear() &&
+      value =
+        loginDate.getUTCFullYear() === now.getUTCFullYear() &&
         loginDate.getUTCMonth() === now.getUTCMonth() &&
         loginDate.getUTCDate() === now.getUTCDate()
-        ? 1
-        : 0;
+          ? 1
+          : 0;
       break;
     }
     case 'upgrades_today': {
-      if (!userData.lastUpgradeAt) { value = 0; break; }
+      if (!userData.lastUpgradeAt) {
+        value = 0;
+        break;
+      }
       const upgraded = new Date(userData.lastUpgradeAt);
       const now = new Date();
-      value = upgraded.getUTCFullYear() === now.getUTCFullYear() &&
+      value =
+        upgraded.getUTCFullYear() === now.getUTCFullYear() &&
         upgraded.getUTCMonth() === now.getUTCMonth() &&
         upgraded.getUTCDate() === now.getUTCDate()
-        ? 1
-        : 0;
+          ? 1
+          : 0;
       break;
     }
     case 'auction_bids_today': {
