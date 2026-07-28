@@ -1,6 +1,11 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
-import { getCareerDashboard, processPrestige, setDisplayTitle, checkAndAwardAchievements } from '../engine/careerProcessing.js';
+import {
+  getCareerDashboard,
+  processPrestige,
+  setDisplayTitle,
+  checkAndAwardAchievements,
+} from '../engine/careerProcessing.js';
 import { awardXpAndLevels } from '../engine/careerProcessing.js';
 import { cacheGet, cacheSet, cacheDel } from '../utils/cache.js';
 import { cacheKeys } from '../utils/cacheKeys.js';

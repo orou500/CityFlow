@@ -9,7 +9,12 @@ import MarketReport from '../models/MarketReport.js';
 import StockHolding from '../models/StockHolding.js';
 import Notification from '../models/Notification.js';
 import { getXpForLevel } from '../utils/leveling.js';
-import { ACHIEVEMENT_DEFINITIONS, MAX_LEVEL, PRESTIGE_REQUIREMENT_LEVEL, MAX_PRESTIGE } from '../config/achievements.js';
+import {
+  ACHIEVEMENT_DEFINITIONS,
+  MAX_LEVEL,
+  PRESTIGE_REQUIREMENT_LEVEL,
+  MAX_PRESTIGE,
+} from '../config/achievements.js';
 import { getLevelFromXp } from '../utils/leveling.js';
 import { emitToUser } from '../socket/index.js';
 import { SOCKET_EVENTS } from '../socket/events.js';
@@ -39,9 +44,7 @@ export async function awardXpAndLevels(userId, xpAmount) {
 
   if (levelUps > 0) {
     const levelText =
-      levelUps === 1
-        ? `You reached Level ${user.level}!`
-        : `You reached Level ${user.level}! (${levelUps} level-ups)`;
+      levelUps === 1 ? `You reached Level ${user.level}!` : `You reached Level ${user.level}! (${levelUps} level-ups)`;
     await Notification.create({
       userId: user._id,
       type: 'system',

@@ -200,7 +200,9 @@ export async function executeTick() {
     console.log(`  Auctions: ${auctionResults.activated} activated, ${auctionResults.completed} completed`);
     console.log(`  Bank auctions generated: ${newBankAuctions.length}`);
     console.log(`  Leaderboard snapshots: ${leaderboardSnapshots.length}`);
-    console.log(`  Competitive events: ${activatedEvents.length} activated, ${finalizedEvents.length} finalized, ${newCompEvents.length} new, ${cleanedUpEvents} cleaned`);
+    console.log(
+      `  Competitive events: ${activatedEvents.length} activated, ${finalizedEvents.length} finalized, ${newCompEvents.length} new, ${cleanedUpEvents} cleaned`,
+    );
 
     const deletedCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const usersToDelete = await User.find({ deletedAt: { $ne: null, $lte: deletedCutoff } }).select('_id');

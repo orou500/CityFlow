@@ -694,7 +694,6 @@ export async function updateCompetitiveEventProgress(tickNumber) {
       console.error(`[LEADERBOARD] Error updating event ${event.name}:`, err.message);
     }
   }
-
 }
 
 export async function finalizeExpiredEvents(tickNumber) {

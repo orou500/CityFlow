@@ -47,11 +47,7 @@ describe('Full Progression Pipeline', () => {
       expect(result.missionResult.updated).toBeDefined();
       expect(result.newAchievements).toBeDefined();
       expect(result.xpResult).toBeDefined();
-      expect(socket.emitToUser).toHaveBeenCalledWith(
-        user._id.toString(),
-        'career:updated',
-        {},
-      );
+      expect(socket.emitToUser).toHaveBeenCalledWith(user._id.toString(), 'career:updated', {});
     });
 
     it('completes first_property mission when user owns a property', async () => {
@@ -129,9 +125,7 @@ describe('Full Progression Pipeline', () => {
       expect(mp).toBeDefined();
       expect(mp.progress).toBe(1);
 
-      const careerCalls = vi.mocked(socket.emitToUser).mock.calls.filter(
-        ([, event]) => event === 'career:updated',
-      );
+      const careerCalls = vi.mocked(socket.emitToUser).mock.calls.filter(([, event]) => event === 'career:updated');
       expect(careerCalls.length).toBeGreaterThanOrEqual(1);
     });
   });
@@ -154,9 +148,7 @@ describe('Full Progression Pipeline', () => {
       const claim1 = await claimMissionReward(user._id, 'first_property');
       expect(claim1.rewards).toBeDefined();
 
-      await expect(
-        claimMissionReward(user._id, 'first_property'),
-      ).rejects.toThrow('Mission not ready to claim');
+      await expect(claimMissionReward(user._id, 'first_property')).rejects.toThrow('Mission not ready to claim');
 
       const mp = await MissionProgress.findOne({
         userId: user._id,
@@ -179,14 +171,10 @@ describe('Full Progression Pipeline', () => {
       await initializeMissionsForUser(user._id);
       await processPlayerProgress(user._id, 'property_buy');
 
-      const res1 = await request(app)
-        .post('/missions/claim/first_property')
-        .set(authHeader(token));
+      const res1 = await request(app).post('/missions/claim/first_property').set(authHeader(token));
       expect(res1.status).toBe(200);
 
-      const res2 = await request(app)
-        .post('/missions/claim/first_property')
-        .set(authHeader(token));
+      const res2 = await request(app).post('/missions/claim/first_property').set(authHeader(token));
       expect(res2.status).toBe(400);
     });
 
@@ -213,15 +201,11 @@ describe('Full Progression Pipeline', () => {
 
     it('rejects claiming uncompleted mission', async () => {
       await initializeMissionsForUser(user._id);
-      await expect(
-        claimMissionReward(user._id, 'first_property'),
-      ).rejects.toThrow('Mission not ready to claim');
+      await expect(claimMissionReward(user._id, 'first_property')).rejects.toThrow('Mission not ready to claim');
     });
 
     it('rejects claiming non-existent mission definition', async () => {
-      await expect(
-        claimMissionReward(user._id, 'nonexistent_mission'),
-      ).rejects.toThrow('Mission not found');
+      await expect(claimMissionReward(user._id, 'nonexistent_mission')).rejects.toThrow('Mission not found');
     });
   });
 
@@ -242,9 +226,7 @@ describe('Full Progression Pipeline', () => {
 
       await updateMissionProgress(user._id, 'property_buy');
 
-      const res = await request(app)
-        .post('/missions/claim/first_property')
-        .set(authHeader(token));
+      const res = await request(app).post('/missions/claim/first_property').set(authHeader(token));
 
       expect(res.status).toBe(200);
       expect(res.body.rewards).toBeDefined();
@@ -358,9 +340,7 @@ describe('Full Progression Pipeline', () => {
       await initializeMissionsForUser(user._id);
       await processPlayerProgress(user._id, 'property_buy');
 
-      const def = (await import('../../config/missions.js')).MISSION_DEFINITIONS.find(
-        (m) => m.id === 'first_property',
-      );
+      const def = (await import('../../config/missions.js')).MISSION_DEFINITIONS.find((m) => m.id === 'first_property');
       const xpBefore = (await User.findById(user._id)).xp;
       await claimMissionReward(user._id, 'first_property');
       const xpAfter = (await User.findById(user._id)).xp;

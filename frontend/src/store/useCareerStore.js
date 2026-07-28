@@ -35,37 +35,29 @@ export const useCareerStore = create((set) => ({
   },
 
   setTitle: async (title) => {
-    try {
-      const data = await api('/career/title', {
-        method: 'POST',
-        body: JSON.stringify({ title }),
-      });
-      set((state) => ({
-        career: state.career ? { ...state.career, title: data.title } : null,
-      }));
-      return data;
-    } catch (err) {
-      throw err;
-    }
+    const data = await api('/career/title', {
+      method: 'POST',
+      body: JSON.stringify({ title }),
+    });
+    set((state) => ({
+      career: state.career ? { ...state.career, title: data.title } : null,
+    }));
+    return data;
   },
 
   prestige: async () => {
-    try {
-      const data = await api('/career/prestige', { method: 'POST' });
-      set((state) => ({
-        career: state.career
-          ? {
-              ...state.career,
-              level: data.prestige.level,
-              xp: data.prestige.xp,
-              xpToNextLevel: data.prestige.xpToNextLevel,
-              prestigeLevel: data.prestige.prestigeLevel,
-            }
-          : null,
-      }));
-      return data;
-    } catch (err) {
-      throw err;
-    }
+    const data = await api('/career/prestige', { method: 'POST' });
+    set((state) => ({
+      career: state.career
+        ? {
+            ...state.career,
+            level: data.prestige.level,
+            xp: data.prestige.xp,
+            xpToNextLevel: data.prestige.xpToNextLevel,
+            prestigeLevel: data.prestige.prestigeLevel,
+          }
+        : null,
+    }));
+    return data;
   },
 }));

@@ -10,14 +10,9 @@ import District from '../../models/District.js';
 import ConstructionProject from '../../models/ConstructionProject.js';
 import MarketReport from '../../models/MarketReport.js';
 import { createTestUser, createTestCity } from '../../test/helpers.js';
-import {
-  initializeMissionsForUser,
-  updateMissionProgress,
-  evaluateCondition,
-} from '../../engine/missionProcessing.js';
+import { initializeMissionsForUser, updateMissionProgress, evaluateCondition } from '../../engine/missionProcessing.js';
 
-const getMissionProgress = async (userId, missionId) =>
-  MissionProgress.findOne({ userId, missionId }).lean();
+const getMissionProgress = async (userId, missionId) => MissionProgress.findOne({ userId, missionId }).lean();
 
 const makeProperty = async (overrides = {}) =>
   Property.create({
@@ -109,8 +104,32 @@ describe('Mission Conditions', () => {
     await initializeMissionsForUser(user._id);
     const prop = await makeProperty({ cityId: city._id });
     await Auction.create([
-      { propertyId: prop._id, sellerType: 'bank', startingBid: 50000, currentBid: 55000, bidIncrement: 1000, winnerId: user._id, winningBid: 55000, status: 'ended', startTick: 0, endTick: 10, originalEndTick: 10 },
-      { propertyId: prop._id, sellerType: 'bank', startingBid: 60000, currentBid: 65000, bidIncrement: 1000, winnerId: user._id, winningBid: 65000, status: 'ended', startTick: 0, endTick: 10, originalEndTick: 10 },
+      {
+        propertyId: prop._id,
+        sellerType: 'bank',
+        startingBid: 50000,
+        currentBid: 55000,
+        bidIncrement: 1000,
+        winnerId: user._id,
+        winningBid: 55000,
+        status: 'ended',
+        startTick: 0,
+        endTick: 10,
+        originalEndTick: 10,
+      },
+      {
+        propertyId: prop._id,
+        sellerType: 'bank',
+        startingBid: 60000,
+        currentBid: 65000,
+        bidIncrement: 1000,
+        winnerId: user._id,
+        winningBid: 65000,
+        status: 'ended',
+        startTick: 0,
+        endTick: 10,
+        originalEndTick: 10,
+      },
     ]);
     await updateMissionProgress(user._id, 'auction_won');
     const mp = await getMissionProgress(user._id, 'first_auction');
@@ -122,7 +141,17 @@ describe('Mission Conditions', () => {
     await initializeMissionsForUser(user._id);
     const prop = await makeProperty({ cityId: city._id });
     await Auction.create([
-      { propertyId: prop._id, sellerId: user._id, sellerType: 'player', startingBid: 50000, bidIncrement: 1000, status: 'ended', startTick: 0, endTick: 10, originalEndTick: 10 },
+      {
+        propertyId: prop._id,
+        sellerId: user._id,
+        sellerType: 'player',
+        startingBid: 50000,
+        bidIncrement: 1000,
+        status: 'ended',
+        startTick: 0,
+        endTick: 10,
+        originalEndTick: 10,
+      },
     ]);
     await updateMissionProgress(user._id, 'auction_sold');
     const mp = await getMissionProgress(user._id, 'auction_sell');
@@ -135,8 +164,30 @@ describe('Mission Conditions', () => {
     const eliteProp = await makeProperty({ cityId: city._id, propertyRating: 'elite' });
     const normalProp = await makeProperty({ cityId: city._id });
     await Auction.create([
-      { propertyId: eliteProp._id, sellerType: 'bank', startingBid: 50000, bidIncrement: 1000, winnerId: user._id, winningBid: 55000, status: 'ended', startTick: 0, endTick: 10, originalEndTick: 10 },
-      { propertyId: normalProp._id, sellerType: 'bank', startingBid: 60000, bidIncrement: 1000, winnerId: user._id, winningBid: 65000, status: 'ended', startTick: 0, endTick: 10, originalEndTick: 10 },
+      {
+        propertyId: eliteProp._id,
+        sellerType: 'bank',
+        startingBid: 50000,
+        bidIncrement: 1000,
+        winnerId: user._id,
+        winningBid: 55000,
+        status: 'ended',
+        startTick: 0,
+        endTick: 10,
+        originalEndTick: 10,
+      },
+      {
+        propertyId: normalProp._id,
+        sellerType: 'bank',
+        startingBid: 60000,
+        bidIncrement: 1000,
+        winnerId: user._id,
+        winningBid: 65000,
+        status: 'ended',
+        startTick: 0,
+        endTick: 10,
+        originalEndTick: 10,
+      },
     ]);
     await updateMissionProgress(user._id, 'auction_won');
     const mp = await getMissionProgress(user._id, 'auction_rare');
@@ -258,8 +309,30 @@ describe('Mission Conditions', () => {
     const land1 = await makeProperty({ cityId: city._id });
     const land2 = await makeProperty({ cityId: city._id });
     await ConstructionProject.create([
-      { ownerId: user._id, landId: land1._id, cityId: city._id, projectType: 'residential', projectName: 'C1', category: 'residential', totalCost: 50000, constructionPeriods: 5, status: 'completed', completionPeriod: 10 },
-      { ownerId: user._id, landId: land2._id, cityId: city._id, projectType: 'residential', projectName: 'C2', category: 'residential', totalCost: 60000, constructionPeriods: 5, status: 'completed', completionPeriod: 12 },
+      {
+        ownerId: user._id,
+        landId: land1._id,
+        cityId: city._id,
+        projectType: 'residential',
+        projectName: 'C1',
+        category: 'residential',
+        totalCost: 50000,
+        constructionPeriods: 5,
+        status: 'completed',
+        completionPeriod: 10,
+      },
+      {
+        ownerId: user._id,
+        landId: land2._id,
+        cityId: city._id,
+        projectType: 'residential',
+        projectName: 'C2',
+        category: 'residential',
+        totalCost: 60000,
+        constructionPeriods: 5,
+        status: 'completed',
+        completionPeriod: 12,
+      },
     ]);
     await updateMissionProgress(user._id, 'construction_complete');
     const mp = await getMissionProgress(user._id, 'dev_first');
@@ -273,7 +346,16 @@ describe('Mission Conditions', () => {
   it('total_loans_taken: counts Loan documents', async () => {
     await initializeMissionsForUser(user._id);
     await Loan.create([
-      { userId: user._id, principal: 50000, paymentPerTick: 1000, interestRate: 0.05, durationTicks: 10, remainingBalance: 50000, ticksRemaining: 10, active: true },
+      {
+        userId: user._id,
+        principal: 50000,
+        paymentPerTick: 1000,
+        interestRate: 0.05,
+        durationTicks: 10,
+        remainingBalance: 50000,
+        ticksRemaining: 10,
+        active: true,
+      },
     ]);
     await updateMissionProgress(user._id, 'loan_taken');
     const mp = await getMissionProgress(user._id, 'bank_first_loan');
@@ -314,23 +396,30 @@ describe('Mission Conditions', () => {
     await RealEstateCompany.create({
       name: 'VoteCo',
       founderId: otherUser._id,
-      members: [{ userId: user._id, role: 'member' }, { userId: otherUser._id, role: 'ceo' }],
-      loanRequests: [{
-        requestedBy: otherUser._id,
-        principal: 50000,
-        durationTicks: 10,
-        loanType: 'business',
-        status: 'pending',
-        createdTick: 1,
-        votes: [{ userId: user._id, vote: 'yes' }],
-      }],
-      propertyPurchaseRequests: [{
-        requestedBy: otherUser._id,
-        propertyId: prop._id,
-        status: 'pending',
-        createdTick: 1,
-        votes: [{ userId: user._id, vote: 'yes' }],
-      }],
+      members: [
+        { userId: user._id, role: 'member' },
+        { userId: otherUser._id, role: 'ceo' },
+      ],
+      loanRequests: [
+        {
+          requestedBy: otherUser._id,
+          principal: 50000,
+          durationTicks: 10,
+          loanType: 'business',
+          status: 'pending',
+          createdTick: 1,
+          votes: [{ userId: user._id, vote: 'yes' }],
+        },
+      ],
+      propertyPurchaseRequests: [
+        {
+          requestedBy: otherUser._id,
+          propertyId: prop._id,
+          status: 'pending',
+          createdTick: 1,
+          votes: [{ userId: user._id, vote: 'yes' }],
+        },
+      ],
     });
     await updateMissionProgress(user._id, 'company_vote');
     const mp = await getMissionProgress(user._id, 'company_vote');
@@ -348,7 +437,19 @@ describe('Mission Conditions', () => {
     });
     const land = await makeProperty({ cityId: city._id });
     await ConstructionProject.create([
-      { ownerId: user._id, companyId: company._id, landId: land._id, cityId: city._id, projectType: 'residential', projectName: 'CP1', category: 'residential', totalCost: 50000, constructionPeriods: 5, status: 'completed', completionPeriod: 10 },
+      {
+        ownerId: user._id,
+        companyId: company._id,
+        landId: land._id,
+        cityId: city._id,
+        projectType: 'residential',
+        projectName: 'CP1',
+        category: 'residential',
+        totalCost: 50000,
+        constructionPeriods: 5,
+        status: 'completed',
+        completionPeriod: 10,
+      },
     ]);
     await updateMissionProgress(user._id, 'company_project_done');
     const mp = await getMissionProgress(user._id, 'company_project');
@@ -377,8 +478,30 @@ describe('Mission Conditions', () => {
   it('reports_purchased: counts MarketReports for user', async () => {
     await initializeMissionsForUser(user._id);
     await MarketReport.create([
-      { userId: user._id, cityId: city._id, data: {}, forecastAccuracy: 80, priceForecast: [], tier: 'basic', reportType: 'city_market', cost: 1000, purchasedAtTick: 1, expiresAtTick: 100 },
-      { userId: user._id, cityId: city._id, data: {}, forecastAccuracy: 85, priceForecast: [], tier: 'basic', reportType: 'city_market', cost: 1000, purchasedAtTick: 2, expiresAtTick: 100 },
+      {
+        userId: user._id,
+        cityId: city._id,
+        data: {},
+        forecastAccuracy: 80,
+        priceForecast: [],
+        tier: 'basic',
+        reportType: 'city_market',
+        cost: 1000,
+        purchasedAtTick: 1,
+        expiresAtTick: 100,
+      },
+      {
+        userId: user._id,
+        cityId: city._id,
+        data: {},
+        forecastAccuracy: 85,
+        priceForecast: [],
+        tier: 'basic',
+        reportType: 'city_market',
+        cost: 1000,
+        purchasedAtTick: 2,
+        expiresAtTick: 100,
+      },
     ]);
     await updateMissionProgress(user._id, 'report_purchased');
     const mp = await getMissionProgress(user._id, 'mi_first_report');
@@ -390,7 +513,18 @@ describe('Mission Conditions', () => {
   it('forecast_accuracy_90: returns 1 if any MarketReport has accuracy >=90', async () => {
     await initializeMissionsForUser(user._id);
     await MarketReport.create([
-      { userId: user._id, cityId: city._id, data: {}, forecastAccuracy: 92, priceForecast: [], tier: 'basic', reportType: 'city_market', cost: 1000, purchasedAtTick: 1, expiresAtTick: 100 },
+      {
+        userId: user._id,
+        cityId: city._id,
+        data: {},
+        forecastAccuracy: 92,
+        priceForecast: [],
+        tier: 'basic',
+        reportType: 'city_market',
+        cost: 1000,
+        purchasedAtTick: 1,
+        expiresAtTick: 100,
+      },
     ]);
     await updateMissionProgress(user._id, 'report_purchased');
     const mp = await getMissionProgress(user._id, 'mi_accuracy');
@@ -442,11 +576,15 @@ describe('Mission Conditions', () => {
     weekStart.setUTCHours(0, 0, 0, 0);
     weekStart.setUTCDate(weekStart.getUTCDate() - weekStart.getUTCDay());
     await makeTransaction({
-      sellerId: user._id, type: 'sell', price: 50000,
+      sellerId: user._id,
+      type: 'sell',
+      price: 50000,
       createdAt: new Date(weekStart.getTime() + 60000),
     });
     await makeTransaction({
-      buyerId: user._id, type: 'rent', price: 3000,
+      buyerId: user._id,
+      type: 'rent',
+      price: 3000,
       createdAt: new Date(weekStart.getTime() + 120000),
     });
     const value = await evaluateCondition(user._id, null, { type: 'money_earned_this_week', target: 100000 }, {});
@@ -458,11 +596,13 @@ describe('Mission Conditions', () => {
     weekStart.setUTCHours(0, 0, 0, 0);
     weekStart.setUTCDate(weekStart.getUTCDate() - weekStart.getUTCDay());
     await makeProperty({
-      ownerId: user._id, cityId: city._id,
+      ownerId: user._id,
+      cityId: city._id,
       lastPurchaseDate: new Date(weekStart.getTime() + 60000),
     });
     await makeProperty({
-      ownerId: user._id, cityId: city._id,
+      ownerId: user._id,
+      cityId: city._id,
       lastPurchaseDate: new Date(weekStart.getTime() + 120000),
     });
     const value = await evaluateCondition(user._id, null, { type: 'properties_bought_this_week', target: 5 }, {});
@@ -536,7 +676,12 @@ describe('Mission Conditions', () => {
     weekStart.setUTCHours(0, 0, 0, 0);
     weekStart.setUTCDate(weekStart.getUTCDate() - weekStart.getUTCDay());
     for (let i = 0; i < 3; i++) {
-      await Transaction.create({ buyerId: user._id, price: 0, type: 'login', createdAt: new Date(weekStart.getTime() + i * 60000) });
+      await Transaction.create({
+        buyerId: user._id,
+        price: 0,
+        type: 'login',
+        createdAt: new Date(weekStart.getTime() + i * 60000),
+      });
     }
     await updateMissionProgress(user._id, 'login');
     const mp = await getMissionProgress(user._id, 'weekly_login');
@@ -550,7 +695,12 @@ describe('Mission Conditions', () => {
     weekStart.setUTCHours(0, 0, 0, 0);
     weekStart.setUTCDate(weekStart.getUTCDate() - weekStart.getUTCDay());
     for (let i = 0; i < 5; i++) {
-      await Transaction.create({ buyerId: user._id, price: 0, type: 'login', createdAt: new Date(weekStart.getTime() + i * 60000) });
+      await Transaction.create({
+        buyerId: user._id,
+        price: 0,
+        type: 'login',
+        createdAt: new Date(weekStart.getTime() + i * 60000),
+      });
     }
     await updateMissionProgress(user._id, 'login');
     const mp = await getMissionProgress(user._id, 'weekly_login');

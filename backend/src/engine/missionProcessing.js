@@ -81,8 +81,7 @@ export async function evaluateCondition(userId, missionId, condition, userData) 
       break;
     }
     case 'rare_auctions_won': {
-      const wonAuctionPropIds = await Auction.find({ winnerId: userId, status: 'ended' })
-        .distinct('propertyId');
+      const wonAuctionPropIds = await Auction.find({ winnerId: userId, status: 'ended' }).distinct('propertyId');
       value = await Property.countDocuments({
         _id: { $in: wonAuctionPropIds },
         propertyRating: 'elite',
@@ -130,9 +129,7 @@ export async function evaluateCondition(userId, missionId, condition, userData) 
       const districts = await District.find({ 'influence.userId': userId }).lean();
       value = 0;
       for (const district of districts) {
-        const userEntry = district.influence.find(
-          (i) => i.userId.toString() === userId.toString(),
-        );
+        const userEntry = district.influence.find((i) => i.userId.toString() === userId.toString());
         if (!userEntry) continue;
         const topScore = Math.max(...district.influence.map((i) => i.score));
         if (userEntry.score >= topScore) value++;
@@ -167,7 +164,7 @@ export async function evaluateCondition(userId, missionId, condition, userData) 
 
     // ── COMPANY CONDITIONS ───────────────────────────────
     case 'joined_company': {
-      value = await RealEstateCompany.countDocuments({ 'members.userId': userId }) > 0 ? 1 : 0;
+      value = (await RealEstateCompany.countDocuments({ 'members.userId': userId })) > 0 ? 1 : 0;
       break;
     }
     case 'created_company': {
@@ -177,7 +174,9 @@ export async function evaluateCondition(userId, missionId, condition, userData) 
     case 'company_votes_cast': {
       const companiesWithVotes = await RealEstateCompany.find({
         'members.userId': userId,
-      }).select('loanRequests propertyPurchaseRequests').lean();
+      })
+        .select('loanRequests propertyPurchaseRequests')
+        .lean();
       let voteCount = 0;
       for (const company of companiesWithVotes) {
         for (const lr of company.loanRequests || []) {
@@ -199,11 +198,8 @@ export async function evaluateCondition(userId, missionId, condition, userData) 
       break;
     }
     case 'company_properties_purchased': {
-      const userCompany = await RealEstateCompany.findOne({ 'members.userId': userId })
-        .select('_id').lean();
-      value = userCompany
-        ? await Property.countDocuments({ companyId: userCompany._id })
-        : 0;
+      const userCompany = await RealEstateCompany.findOne({ 'members.userId': userId }).select('_id').lean();
+      value = userCompany ? await Property.countDocuments({ companyId: userCompany._id }) : 0;
       break;
     }
 
@@ -237,25 +233,33 @@ export async function evaluateCondition(userId, missionId, condition, userData) 
       break;
     }
     case 'bonus_claimed_today': {
-      if (!userData.lastPeriodBonusClaim) { value = 0; break; }
+      if (!userData.lastPeriodBonusClaim) {
+        value = 0;
+        break;
+      }
       const claimed = new Date(userData.lastPeriodBonusClaim);
       const now = new Date();
       value =
         claimed.getUTCFullYear() === now.getUTCFullYear() &&
         claimed.getUTCMonth() === now.getUTCMonth() &&
         claimed.getUTCDate() === now.getUTCDate()
-          ? 1 : 0;
+          ? 1
+          : 0;
       break;
     }
     case 'login_today': {
-      if (!userData.lastLoginAt) { value = 0; break; }
+      if (!userData.lastLoginAt) {
+        value = 0;
+        break;
+      }
       const loginDate = new Date(userData.lastLoginAt);
       const now = new Date();
       value =
         loginDate.getUTCFullYear() === now.getUTCFullYear() &&
         loginDate.getUTCMonth() === now.getUTCMonth() &&
         loginDate.getUTCDate() === now.getUTCDate()
-          ? 1 : 0;
+          ? 1
+          : 0;
       break;
     }
     case 'upgrades_today': {
@@ -334,7 +338,10 @@ export async function evaluateCondition(userId, missionId, condition, userData) 
       break;
     }
     case 'login_this_week': {
-      if (!userData.lastLoginAt) { value = 0; break; }
+      if (!userData.lastLoginAt) {
+        value = 0;
+        break;
+      }
       const weekStart = new Date();
       weekStart.setUTCHours(0, 0, 0, 0);
       weekStart.setUTCDate(weekStart.getUTCDate() - weekStart.getUTCDay());
@@ -527,10 +534,7 @@ export async function claimMissionReward(userId, missionId) {
     updates.title = def.rewards.title;
   }
 
-  await MissionProgress.updateOne(
-    { _id: mp._id },
-    { rewardsClaimed: updates },
-  );
+  await MissionProgress.updateOne({ _id: mp._id }, { rewardsClaimed: updates });
 
   emitToUser(userId.toString(), SOCKET_EVENTS.MISSION_REWARD_CLAIMED, {
     missionId,
