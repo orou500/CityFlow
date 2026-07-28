@@ -7,6 +7,7 @@ import GameState, { getGameState } from '../models/GameState.js';
 import { VOTE_THRESHOLD, CONTRACT_PROPOSAL_EXPIRE_TICKS } from '../config/cityContracts.js';
 import { addTreasuryTransaction } from '../engine/companyProcessing.js';
 import { enqueueNotification } from '../utils/notificationQueue.js';
+import { triggerMissionProgress } from '../utils/missionTrigger.js';
 import { onContractStarted, onCompanyVote } from '../utils/cacheInvalidation.js';
 import { scheduleVoteExpiration, scheduleContractCompletion, cancelDelayedJob } from '../utils/delayedJobs.js';
 
@@ -185,6 +186,8 @@ router.post('/:id/contracts/:contractId/propose', authenticate, async (req, res)
       relatedId: company._id,
       global: false,
     });
+
+    triggerMissionProgress(req.user._id, 'contract_propose');
 
     res.json(contract);
   } catch (err) {

@@ -29,7 +29,8 @@
     "donate": "Donate",
     "districts": "Districts",
     "mi": "Market Intel",
-    "auctions": "Auctions"
+    "auctions": "Auctions",
+    "missions": "Missions"
   },
   "map": {
     "title": "World Map",
@@ -2350,5 +2351,64 @@
       "long": "8 Ticks (48h)",
       "extended": "16 Ticks (96h)"
     }
+  },
+  "missions": {
+    "title": "Missions & Challenges",
+    "subtitle": "Complete objectives, earn rewards, and become a real estate tycoon",
+    "tabs": {
+      "active": "Active",
+      "completed": "Completed",
+      "claimed": "Claimed"
+    },
+    "search": "Search missions...",
+    "allCategories": "All Categories",
+    "allDifficulties": "All Difficulties",
+    "noMissions": "No missions found",
+    "loading": "Loading missions...",
+    "claimReward": "Claim Reward",
+    "claimed": "Claimed",
+    "chain": "Chain",
+    "chainLabel": "Mission Chain",
+    "progressByCategory": "Progress by Category",
+    "dailyMissions": "Daily Missions",
+    "weeklyMissions": "Weekly Missions",
+    "categories": {
+      "beginner": "Beginner",
+      "property": "Property",
+      "income": "Income",
+      "networth": "Net Worth",
+      "geographic": "Geographic",
+      "development": "Development",
+      "banking": "Banking",
+      "auction": "Auction",
+      "company": "Company",
+      "district": "District",
+      "intelligence": "Market Intel",
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "seasonal": "Seasonal",
+      "event": "Event"
+    },
+    "difficulty": {
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard",
+      "expert": "Expert",
+      "legendary": "Legendary"
+    },
+    "types": {
+      "permanent": "Permanent",
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "seasonal": "Seasonal",
+      "event": "Event"
+    },
+    "badge": "Badge",
+    "reward": "Reward",
+    "progress": "Progress",
+    "complete": "Mission Complete!",
+    "newMission": "New Mission Available",
+    "chainUnlocked": "Chain Unlocked",
+    "rewardAvailable": "Reward Available"
   }
 }

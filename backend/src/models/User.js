@@ -51,6 +51,8 @@ const userSchema = new mongoose.Schema(
     lastPeriodBonusClaim: { type: Date, default: null },
     uncollectedRent: { type: Number, default: 0 },
     rentStorageStartedAt: { type: Date, default: null },
+    lastRentCollectedAt: { type: Date, default: null },
+    lastUpgradeAt: { type: Date, default: null },
     discordId: { type: String, default: null, sparse: true },
     pushTokens: [
       {
@@ -73,6 +75,7 @@ const userSchema = new mongoose.Schema(
       totalUpgrades: { type: Number, default: 0 },
       totalConstructionStarted: { type: Number, default: 0 },
       totalSeasonsCompleted: { type: Number, default: 0 },
+      totalRentCollected: { type: Number, default: 0 },
     },
     supporter: {
       badge: { type: String, enum: ['none', 'supporter', 'early_supporter', 'founding_supporter'], default: 'none' },

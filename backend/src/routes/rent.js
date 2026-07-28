@@ -3,6 +3,7 @@ import User from '../models/User.js';
 import { authenticate } from '../middleware/auth.js';
 import { collectOperatingFee } from '../utils/companyFees.js';
 import { onRentCollected } from '../utils/cacheInvalidation.js';
+import { triggerMissionProgress } from '../utils/missionTrigger.js';
 
 const router = Router();
 
@@ -64,11 +65,16 @@ router.post('/collect', authenticate, async (req, res) => {
     user.balance += collected;
     user.uncollectedRent = 0;
     user.rentStorageStartedAt = null;
+    user.lastRentCollectedAt = new Date();
+    if (!user.lifetimeStats) user.lifetimeStats = {};
+    user.lifetimeStats.totalRentCollected = (user.lifetimeStats.totalRentCollected || 0) + collected;
     await user.save();
 
     collectOperatingFee(user._id, collected, 'rent_income');
 
     await onRentCollected(user._id);
+
+    triggerMissionProgress(user._id, 'rent_collect');
 
     res.json({
       collected,

@@ -11,6 +11,7 @@ import { rateLimit } from '../middleware/rateLimit.js';
 import { downloadOAuthAvatar } from '../services/avatarDownload.js';
 import { validatePassword } from '../utils/validatePassword.js';
 import { awardXp } from '../utils/leveling.js';
+import { triggerMissionProgress } from '../utils/missionTrigger.js';
 
 const router = Router();
 
@@ -140,6 +141,7 @@ router.post('/login', loginLimiter, async (req, res) => {
       }
     }
     await User.updateOne({ _id: user._id }, { $set: { lastLoginAt: new Date() } });
+    triggerMissionProgress(user._id, 'login');
 
     if (user.avatar && (user.avatar.startsWith('http://') || user.avatar.startsWith('https://'))) {
       const localPath = await downloadOAuthAvatar(user._id, user.avatar);

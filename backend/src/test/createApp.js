@@ -18,6 +18,7 @@ import seasonRoutes from '../routes/seasons.js';
 import backupRoutes from '../routes/backup.js';
 import discordRoutes from '../routes/discord.js';
 import realEstateCompanyRoutes from '../routes/realEstateCompanies.js';
+import missionRoutes from '../routes/missions.js';
 
 export function createApp() {
   const app = express();
@@ -42,6 +43,7 @@ export function createApp() {
   app.use('/admin/backups', backupRoutes);
   app.use('/discord', discordRoutes);
   app.use('/real-estate-companies', realEstateCompanyRoutes);
+  app.use('/missions', missionRoutes);
 
   app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });

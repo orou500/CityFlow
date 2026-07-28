@@ -35,6 +35,7 @@ import {
   invalidateUser,
   invalidateCompany,
 } from '../utils/cacheInvalidation.js';
+import { triggerMissionProgress } from '../utils/missionTrigger.js';
 
 const router = Router();
 
@@ -250,6 +251,8 @@ router.post('/start', async (req, res) => {
 
     await onDevelopmentStarted(user._id, null);
 
+    triggerMissionProgress(user._id, 'construction_start');
+
     res.status(201).json({
       project: constructionProject,
       balance: user.balance,
@@ -427,10 +430,13 @@ router.post('/upgrade', async (req, res) => {
 
     await awardXp(user, 10, 'upgrade');
     user.lifetimeStats.totalUpgrades += 1;
+    user.lastUpgradeAt = new Date();
     await user.save();
 
     await invalidateProperty(property._id);
     await invalidateUser(user._id);
+
+    triggerMissionProgress(user._id, 'property_upgrade');
 
     res.json({ property, balance: user.balance });
   } catch (err) {
@@ -699,6 +705,8 @@ router.post('/improvements/start', async (req, res) => {
 
     await invalidateProperty(property._id);
 
+    triggerMissionProgress(user._id, 'improvement_start');
+
     res.status(201).json({
       improvement: property.activeImprovement,
       balance: user.balance,
@@ -792,6 +800,8 @@ router.post('/company/start', async (req, res) => {
 
     await invalidateCompany(company._id);
     await invalidateProperty(land._id);
+
+    triggerMissionProgress(req.user._id, 'company_construction_start');
 
     res.status(201).json({
       project: constructionProject,

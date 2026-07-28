@@ -10,6 +10,7 @@ import { enqueueNotification } from '../utils/notificationQueue.js';
 import { cacheGetOrSet } from '../utils/cache.js';
 import { cacheKeys, cacheTTL } from '../utils/cacheKeys.js';
 import { onPropertyPurchased, onPropertySold, onPropertyUpgraded } from '../utils/cacheInvalidation.js';
+import { triggerMissionProgress } from '../utils/missionTrigger.js';
 import { getPropertyRiskProfile } from '../engine/propertyRisk.js';
 import { trackEvent, EVENTS } from '../utils/analytics.js';
 import {
@@ -294,6 +295,8 @@ router.post('/buy', authenticate, async (req, res) => {
     await onPropertyPurchased(buyer._id, sellerId, property._id, city._id);
     trackEvent(EVENTS.PROPERTY_PURCHASED, { userId: buyer._id, propertyId: property._id, price });
 
+    triggerMissionProgress(buyer._id, 'property_buy');
+
     res.json({ property, balance: buyer.balance });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -349,6 +352,8 @@ router.post('/sell', authenticate, async (req, res) => {
 
     await onPropertySold(req.user._id, property._id, property.cityId);
     trackEvent(EVENTS.PROPERTY_SOLD, { userId: req.user._id, propertyId: property._id, price: salePrice });
+
+    triggerMissionProgress(req.user._id, 'property_sell');
 
     res.json({ property, balance: seller.balance });
   } catch (err) {
@@ -477,9 +482,12 @@ router.post('/grade/upgrade', authenticate, async (req, res) => {
     await awardXp(user, 15, 'property_grade_upgrade');
     user.lifetimeStats.totalTransactions += 1;
     user.lifetimeStats.totalMoneySpent += cost;
+    user.lastUpgradeAt = new Date();
     await user.save();
 
     await onPropertyUpgraded(user._id, property._id);
+
+    triggerMissionProgress(user._id, 'property_upgrade');
 
     res.json({ property, balance: user.balance, grade: newGrade, upgradeCost: cost });
   } catch (err) {

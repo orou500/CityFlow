@@ -3,6 +3,7 @@ import User from '../models/User.js';
 import Property from '../models/Property.js';
 import Transaction from '../models/Transaction.js';
 import CreditScoreHistory from '../models/CreditScoreHistory.js';
+import { triggerMissionProgress } from '../utils/missionTrigger.js';
 
 export async function processLoans() {
   const activeLoans = await Loan.find({ active: true, companyId: null });
@@ -91,6 +92,8 @@ export async function processLoans() {
 
     await user.save();
     await loan.save();
+
+    triggerMissionProgress(user._id, 'loan_processed');
 
     results.push({
       loanId: loan._id,

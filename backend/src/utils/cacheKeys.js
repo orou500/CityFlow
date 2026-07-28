@@ -72,6 +72,10 @@ export const cacheKeys = {
   auctionWatchlist: (userId) => `${prefix}:auctions:watchlist:${userId}`,
   auctionReputation: (userId) => `${prefix}:auctions:rep:${userId}`,
 
+  missionDashboard: (userId) => `${prefix}:missions:dashboard:${userId}`,
+  missionActive: (userId) => `${prefix}:missions:active:${userId}`,
+  missionStats: (userId) => `${prefix}:missions:stats:${userId}`,
+
   allCompany: (id) => [
     `${prefix}:company:${id}`,
     `${prefix}:company:${id}:members`,

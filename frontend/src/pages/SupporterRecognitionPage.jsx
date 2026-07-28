@@ -23,34 +23,37 @@ export default function SupporterRecognitionPage() {
 
   return (
     <div className="max-w-4xl mx-auto p-4">
-      <h1 className="text-3xl font-bold text-white mb-2">{t('donations.supporters')}</h1>
-      <p className="text-gray-400 mb-6">{t('donations.supportersDescription')}</p>
+      <h1 className="text-3xl font-bold text-primary mb-2">{t('donations.supporters')}</h1>
+      <p className="text-muted mb-6">{t('donations.supportersDescription')}</p>
 
       {data && (
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 mb-8">
+        <div className="bg-card border border-border rounded-lg p-6 mb-8">
           <div className="text-center mb-6">
             <div className="text-3xl font-bold text-yellow-400">${data.totalDonations?.toLocaleString() || 0}</div>
-            <div className="text-gray-400 text-sm">{t('donations.totalRaised')}</div>
+            <div className="text-muted text-sm">{t('donations.totalRaised')}</div>
           </div>
         </div>
       )}
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {data?.supporters?.map((s, i) => (
-          <div key={i} className="bg-gray-800 border border-gray-700 rounded-lg p-4 hover:border-gray-600 transition">
+          <div
+            key={i}
+            className="bg-card border border-border rounded-lg p-4 hover:border-gray-400 dark:hover:border-gray-600 transition"
+          >
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-full bg-gray-700 overflow-hidden flex-shrink-0">
+              <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden flex-shrink-0">
                 {s.avatar ? (
                   <img src={s.avatar} alt="" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400 text-lg font-bold">
+                  <div className="w-full h-full flex items-center justify-center text-muted text-lg font-bold">
                     {s.username?.[0]?.toUpperCase() || '?'}
                   </div>
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-white font-semibold truncate">{s.displayName || s.username}</div>
-                <div className="text-xs text-gray-400">#{i + 1}</div>
+                <div className="text-primary font-semibold truncate">{s.displayName || s.username}</div>
+                <div className="text-xs text-muted">#{i + 1}</div>
               </div>
             </div>
 
@@ -60,7 +63,7 @@ export default function SupporterRecognitionPage() {
               {s.title || s.badge}
             </div>
 
-            <div className="text-sm text-gray-400">
+            <div className="text-sm text-muted">
               <span className="text-yellow-400 font-semibold">${s.totalDonated?.toLocaleString()}</span> donated
             </div>
           </div>
@@ -68,7 +71,7 @@ export default function SupporterRecognitionPage() {
       </div>
 
       {data?.supporters?.length === 0 && (
-        <div className="text-center text-gray-500 py-12">{t('donations.noSupporters')}</div>
+        <div className="text-center text-muted py-12">{t('donations.noSupporters')}</div>
       )}
     </div>
   );

@@ -13,6 +13,7 @@ import {
   checkMilestones,
 } from '../config/companyProgression.js';
 import { cancelDelayedJob } from '../utils/delayedJobs.js';
+import { triggerMissionProgressForMany } from '../utils/missionTrigger.js';
 
 export { getCompanyLevelBenefits } from '../config/companyProgression.js';
 
@@ -340,6 +341,11 @@ export async function processCompanyLoans(tickNumber) {
     await company.save();
     await loan.save();
 
+    triggerMissionProgressForMany(
+      company.members.map((m) => m.userId),
+      'company_loan_payment',
+    );
+
     results.push({
       loanId: loan._id,
       companyId: loan.companyId,
@@ -416,6 +422,8 @@ export async function processCompanyLevelUp(tickNumber) {
         });
       }
 
+      triggerMissionProgressForMany(memberUserIds, 'company_level_up');
+
       dirty = true;
     }
 
@@ -468,6 +476,11 @@ export async function processCompanyLevelUp(tickNumber) {
           global: false,
         });
       }
+
+      triggerMissionProgressForMany(
+        company.members.map((m) => m.userId),
+        'company_milestone',
+      );
 
       dirty = true;
     }

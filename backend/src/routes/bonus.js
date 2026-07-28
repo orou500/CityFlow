@@ -2,6 +2,7 @@ import { Router } from 'express';
 import User from '../models/User.js';
 import { authenticate } from '../middleware/auth.js';
 import { awardXp } from '../utils/leveling.js';
+import { triggerMissionProgress } from '../utils/missionTrigger.js';
 
 const router = Router();
 
@@ -69,6 +70,8 @@ router.post('/claim', authenticate, async (req, res) => {
     await user.save();
 
     const xpResult = await awardXp(user, xp, 'period_bonus');
+
+    triggerMissionProgress(user._id, 'bonus_claim');
 
     res.json({
       money,

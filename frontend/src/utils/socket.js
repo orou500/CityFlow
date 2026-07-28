@@ -145,6 +145,18 @@ export async function connectSocket() {
     triggerListeners('auction:activity', data);
   });
 
+  socket.on('mission:progress', (data) => {
+    triggerListeners('mission:progress', data);
+  });
+
+  socket.on('mission:completed', (data) => {
+    triggerListeners('mission:completed', data);
+  });
+
+  socket.on('mission:reward:claimed', (data) => {
+    triggerListeners('mission:reward:claimed', data);
+  });
+
   return socket;
 }
 

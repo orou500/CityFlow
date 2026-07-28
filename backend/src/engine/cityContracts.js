@@ -5,6 +5,7 @@ import Notification from '../models/Notification.js';
 import CompanyAuditLog from '../models/CompanyAuditLog.js';
 import { getCompanyLevelBenefits, addTreasuryTransaction, grantCompanyXP } from './companyProcessing.js';
 import { cancelDelayedJob } from '../utils/delayedJobs.js';
+import { triggerMissionProgressForMany } from '../utils/missionTrigger.js';
 import {
   generateContractForCity,
   getContractTypesForLevel,
@@ -139,6 +140,8 @@ export async function processCityContracts(tickNumber) {
           global: false,
         });
       }
+
+      triggerMissionProgressForMany(memberUserIds, 'contract_complete');
 
       results.push({ companyId: company._id, contractId: contract._id, status: 'completed' });
     }

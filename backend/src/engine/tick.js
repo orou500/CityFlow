@@ -55,6 +55,7 @@ import { generateInvestmentOpportunities, processCompanyInvestments } from './tr
 import { simulateDistricts } from './districtSimulation.js';
 import { evaluateExpiredReports } from './marketIntelligence.js';
 import { processAuctions, generateBankAuctions } from './auctionProcessing.js';
+import { processMissionReset } from './missionProcessing.js';
 
 export async function executeTick() {
   const startTime = Date.now();
@@ -198,6 +199,9 @@ export async function executeTick() {
     console.log('[TICK] Evaluating expired market reports...');
     const evaluatedReports = await evaluateExpiredReports(tickNumber);
 
+    console.log('[TICK] Processing mission resets...');
+    const missionResets = await processMissionReset();
+
     console.log('[TICK] Computing leaderboards...');
     const leaderboardSnapshots = await computeLeaderboards(tickNumber);
 
@@ -267,6 +271,9 @@ export async function executeTick() {
     console.log(`[TICK] New competitive events: ${newCompEvents.length}`);
     console.log(`[TICK] Evaluated market reports: ${evaluatedReports}`);
     console.log(
+      `[TICK] Mission resets: ${missionResets.dailyRefreshed} daily, ${missionResets.weeklyRefreshed} weekly`,
+    );
+    console.log(
       `[TICK] Auctions processed: ${auctionResults.activated} activated, ${auctionResults.completed} completed`,
     );
     console.log(`[TICK] Bank auctions generated: ${newBankAuctions.length}`);
@@ -306,6 +313,7 @@ export async function executeTick() {
     await cacheDelPattern('cf:market:*');
     await cacheDelPattern('cf:mi:*');
     await cacheDelPattern('cf:auction*');
+    await cacheDelPattern('cf:missions:*');
     await cacheDelPattern('cf:stats:*');
     await publish(CHANNELS.TICK, { tickNumber, timestamp: new Date().toISOString() });
     emitToAll(SOCKET_EVENTS.TICK, { tickNumber, timestamp: new Date().toISOString() });

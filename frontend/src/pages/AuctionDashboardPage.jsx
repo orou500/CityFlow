@@ -24,17 +24,51 @@ async function api(path, options = {}) {
 }
 
 const STATUS_STYLES = {
-  upcoming: { bg: 'bg-yellow-900/70', text: 'text-yellow-300', border: 'border-yellow-600', icon: '⏳' },
-  active: { bg: 'bg-emerald-900/70', text: 'text-emerald-300', border: 'border-emerald-600', icon: '🔴' },
-  ending: { bg: 'bg-purple-900/70', text: 'text-purple-300', border: 'border-purple-600', icon: '⏰' },
-  ended: { bg: 'bg-gray-800/70', text: 'text-gray-300', border: 'border-gray-600', icon: '🏁' },
-  cancelled: { bg: 'bg-red-900/70', text: 'text-red-300', border: 'border-red-600', icon: '❌' },
+  upcoming: {
+    bg: 'bg-yellow-100 dark:bg-yellow-900/70',
+    text: 'text-yellow-800 dark:text-yellow-300',
+    border: 'border-yellow-300 dark:border-yellow-600',
+    icon: '⏳',
+  },
+  active: {
+    bg: 'bg-emerald-100 dark:bg-emerald-900/70',
+    text: 'text-emerald-800 dark:text-emerald-300',
+    border: 'border-emerald-300 dark:border-emerald-600',
+    icon: '🔴',
+  },
+  ending: {
+    bg: 'bg-purple-100 dark:bg-purple-900/70',
+    text: 'text-purple-800 dark:text-purple-300',
+    border: 'border-purple-300 dark:border-purple-600',
+    icon: '⏰',
+  },
+  ended: {
+    bg: 'bg-gray-200 dark:bg-card/70',
+    text: 'text-muted dark:text-secondary',
+    border: 'border-gray-300 dark:border-gray-600',
+    icon: '🏁',
+  },
+  cancelled: {
+    bg: 'bg-red-100 dark:bg-red-900/70',
+    text: 'text-red-800 dark:text-red-300',
+    border: 'border-red-300 dark:border-red-600',
+    icon: '❌',
+  },
 };
 
 const RARITY_STYLES = {
-  uncommon: { text: 'text-emerald-400', badge: 'bg-emerald-900/60 border-emerald-600' },
-  rare: { text: 'text-blue-400', badge: 'bg-blue-900/60 border-blue-600' },
-  legendary: { text: 'text-amber-400', badge: 'bg-amber-900/60 border-amber-600' },
+  uncommon: {
+    text: 'text-emerald-600 dark:text-emerald-400',
+    badge: 'bg-emerald-100 dark:bg-emerald-900/60 border-emerald-300 dark:border-emerald-600',
+  },
+  rare: {
+    text: 'text-blue-600 dark:text-blue-400',
+    badge: 'bg-blue-100 dark:bg-blue-900/60 border-blue-300 dark:border-blue-600',
+  },
+  legendary: {
+    text: 'text-amber-600 dark:text-amber-400',
+    badge: 'bg-amber-100 dark:bg-amber-900/60 border-amber-300 dark:border-amber-600',
+  },
 };
 
 const SELLER_ICONS = { bank: '🏦', player: '👤', event: '🎯' };
@@ -70,7 +104,7 @@ function FeaturedSection({ auctions, onSelect }) {
 
   return (
     <div className="mb-6">
-      <h2 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
+      <h2 className="text-lg font-bold text-primary mb-3 flex items-center gap-2">
         <span>🔥</span> {t('auctions.featured')}
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -91,7 +125,7 @@ function FeaturedCard({ auction, onClick }) {
   return (
     <button
       onClick={() => onClick(auction)}
-      className="relative w-full text-left bg-gradient-to-br from-gray-800 via-gray-850 to-gray-900 border-2 border-amber-700/50 hover:border-amber-500 rounded-xl p-4 transition-all hover:scale-[1.02] hover:shadow-lg hover:shadow-amber-900/30"
+      className="relative w-full text-left bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:via-gray-850 dark:to-gray-900 border-2 border-amber-300/50 dark:border-amber-700/50 hover:border-amber-500 rounded-xl p-4 transition-all hover:scale-[1.02] hover:shadow-lg hover:shadow-amber-200/30 dark:hover:shadow-amber-900/30"
     >
       <div className="absolute top-2 right-2 flex gap-1">
         {isEndingSoon && (
@@ -103,10 +137,10 @@ function FeaturedCard({ auction, onClick }) {
           </span>
         )}
       </div>
-      <div className="text-sm font-medium text-white truncate pr-16">
+      <div className="text-sm font-medium text-primary truncate pr-16">
         {property?.name || t('auctions.unknownProperty')}
       </div>
-      <div className="text-xs text-gray-400 mt-1">
+      <div className="text-xs text-muted mt-1">
         {SELLER_ICONS[auction.sellerType]}{' '}
         {auction.sellerId?.username || t(`auctions.sellerTypes.${auction.sellerType}`)}
         {property?.propertyRating && (
@@ -117,20 +151,22 @@ function FeaturedCard({ auction, onClick }) {
       </div>
       <div className="flex items-center justify-between mt-3">
         <div>
-          <div className="text-xs text-gray-500">{t('auctions.currentBid')}</div>
-          <div className="text-base font-bold text-white">{formatMoney(auction.currentBid || auction.startingBid)}</div>
+          <div className="text-xs text-muted">{t('auctions.currentBid')}</div>
+          <div className="text-base font-bold text-primary">
+            {formatMoney(auction.currentBid || auction.startingBid)}
+          </div>
         </div>
         <div className="text-right">
-          <div className="text-xs text-gray-500">{t('auctions.timeLeft')}</div>
+          <div className="text-xs text-muted">{t('auctions.timeLeft')}</div>
           <TickCountdown
             endTick={auction.endTick}
             currentTick={auction.currentTick}
             status={auction.status}
-            className="text-sm text-white"
+            className="text-sm text-primary"
           />
         </div>
       </div>
-      <div className="text-xs text-gray-500 mt-2">
+      <div className="text-xs text-muted mt-2">
         {t('auctions.bids')}: {auction.totalBids || 0}
         {auction.uniqueBidders ? ` · ${t('auctions.uniqueBidders')}: ${auction.uniqueBidders}` : ''}
       </div>
@@ -143,8 +179,8 @@ function AnalyticsPanel({ stats }) {
   if (!stats) return null;
 
   return (
-    <div className="mb-6 bg-gray-800 border border-gray-700 rounded-lg p-4">
-      <h2 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
+    <div className="mb-6 bg-card border border-border rounded-lg p-4">
+      <h2 className="text-lg font-bold text-primary mb-3 flex items-center gap-2">
         <span>📊</span> {t('auctions.analytics')}
       </h2>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -154,13 +190,13 @@ function AnalyticsPanel({ stats }) {
         <StatCard label={t('auctions.averageBidsPerAuction')} value={(stats.averageBidsPerAuction || 0).toFixed(1)} />
       </div>
       {stats.highestAuctionEver?.propertyName && (
-        <div className="mt-3 text-sm text-gray-400">
+        <div className="mt-3 text-sm text-muted">
           🏆 {t('auctions.highestAuctionEver')}:{' '}
           <span className="text-yellow-400">{stats.highestAuctionEver.propertyName}</span> —{' '}
           {formatMoney(stats.highestAuctionEver.winningBid)}
         </div>
       )}
-      <div className="mt-2 flex flex-wrap gap-4 text-xs text-gray-500">
+      <div className="mt-2 flex flex-wrap gap-4 text-xs text-muted">
         {stats.mostActiveCity && (
           <span>
             📍 {t('auctions.mostActiveCity')}: {stats.mostActiveCity}
@@ -184,9 +220,9 @@ function AnalyticsPanel({ stats }) {
 
 function StatCard({ label, value }) {
   return (
-    <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg p-3 text-center border border-gray-700/50">
-      <div className="text-xs text-gray-400">{label}</div>
-      <div className="text-base font-bold text-white">{value}</div>
+    <div className="bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 rounded-lg p-3 text-center border border-border/50">
+      <div className="text-xs text-muted">{label}</div>
+      <div className="text-base font-bold text-primary">{value}</div>
     </div>
   );
 }
@@ -219,12 +255,12 @@ function AuctionCard({ auction, onClick, onWatch, isWatched, user }) {
   return (
     <button
       onClick={() => onClick(auction)}
-      className={`w-full text-left bg-gray-800/80 border-l-4 ${statusStyle.border} border-gray-700 hover:border-gray-500 hover:border-l-4 rounded-lg p-4 transition-all hover:bg-gray-800`}
+      className={`w-full text-left bg-card/80 border-l-4 ${statusStyle.border} border-border hover:border-border hover:border-l-4 rounded-lg p-4 transition-all hover:bg-card`}
     >
       <div className="flex items-start justify-between mb-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-white truncate">
+            <span className="text-sm font-medium text-primary truncate">
               {property?.name || t('auctions.unknownProperty')}
             </span>
             {auction.sellerType === 'bank' && <span title={t('auctions.bankAuction')}>🏦</span>}
@@ -232,7 +268,7 @@ function AuctionCard({ auction, onClick, onWatch, isWatched, user }) {
             {auction.auctionType === 'reserve' && <span title={t('auctions.reserve')}>💎</span>}
             {auction.reserveMet && <span title={t('auctions.reserveMet')}>✅</span>}
           </div>
-          <div className="text-xs text-gray-400 mt-0.5">
+          <div className="text-xs text-muted mt-0.5">
             {property?.type && t(`auctions.propertyTypes.${property.type}`)}
             {property?.propertyRating && (
               <span className={`ml-2 ${RARITY_STYLES[property.propertyRating]?.text || ''}`}>
@@ -264,22 +300,22 @@ function AuctionCard({ auction, onClick, onWatch, isWatched, user }) {
 
       <div className="grid grid-cols-3 gap-3 mt-3">
         <div>
-          <div className="text-xs text-gray-500">{t('auctions.currentBid')}</div>
-          <div className="text-sm font-semibold text-white">
+          <div className="text-xs text-muted">{t('auctions.currentBid')}</div>
+          <div className="text-sm font-semibold text-primary">
             {formatMoney(auction.currentBid || auction.startingBid)}
           </div>
         </div>
         <div>
-          <div className="text-xs text-gray-500">{t('auctions.bids')}</div>
-          <div className="text-sm text-white">{auction.totalBids || 0}</div>
+          <div className="text-xs text-muted">{t('auctions.bids')}</div>
+          <div className="text-sm text-primary">{auction.totalBids || 0}</div>
         </div>
         <div>
-          <div className="text-xs text-gray-500">{t('auctions.timeLeft')}</div>
+          <div className="text-xs text-muted">{t('auctions.timeLeft')}</div>
           <TickCountdown
             endTick={auction.endTick}
             currentTick={auction.currentTick}
             status={auction.status}
-            className="text-sm text-white"
+            className="text-sm text-primary"
           />
         </div>
       </div>
@@ -291,7 +327,7 @@ function AuctionCard({ auction, onClick, onWatch, isWatched, user }) {
       )}
 
       <div className="flex items-center justify-between mt-2">
-        <span className="text-xs text-gray-500">
+        <span className="text-xs text-muted">
           {t('auctions.minNextBid')}:{' '}
           {formatMoney(
             (auction.currentBid || 0) > 0
@@ -335,18 +371,18 @@ function ActivityFeed({ activities }) {
   };
 
   return (
-    <div className="bg-gradient-to-br from-gray-800/90 to-gray-900 rounded-xl p-4 border border-gray-700/40">
-      <h3 className="text-sm font-medium text-white mb-3 flex items-center gap-2">📋 {t('auctions.activityFeed')}</h3>
+    <div className="bg-gradient-to-br from-gray-100/90 to-gray-200 dark:from-gray-800/90 dark:to-gray-900 rounded-xl p-4 border border-border/40">
+      <h3 className="text-sm font-medium text-primary mb-3 flex items-center gap-2">📋 {t('auctions.activityFeed')}</h3>
       <div className="space-y-2 max-h-48 overflow-y-auto">
         {activities.map((act, i) => (
           <div key={i} className="flex items-start gap-2 text-sm">
             <span>{icons[act.type] || '📌'}</span>
             <div className="flex-1 min-w-0">
-              <span className="text-gray-300">{act.username || t('auctions.system')}</span>
-              {act.amount ? <span className="text-white ml-1">{formatMoney(act.amount)}</span> : null}
-              {act.message && <span className="text-gray-500 ml-1 text-xs">— {act.message}</span>}
+              <span className="text-secondary">{act.username || t('auctions.system')}</span>
+              {act.amount ? <span className="text-primary ml-1">{formatMoney(act.amount)}</span> : null}
+              {act.message && <span className="text-muted ml-1 text-xs">— {act.message}</span>}
             </div>
-            <span className="text-xs text-gray-600 whitespace-nowrap">T{act.tick}</span>
+            <span className="text-xs text-muted whitespace-nowrap">T{act.tick}</span>
           </div>
         ))}
       </div>
@@ -359,34 +395,34 @@ function ReputationBadge({ reputation }) {
   if (!reputation) return null;
 
   return (
-    <div className="bg-gradient-to-br from-gray-800/90 to-gray-900 rounded-xl p-4 border border-gray-700/40">
-      <h3 className="text-sm font-medium text-white mb-3 flex items-center gap-2">👑 {t('auctions.reputation')}</h3>
+    <div className="bg-gradient-to-br from-gray-100/90 to-gray-200 dark:from-gray-800/90 dark:to-gray-900 rounded-xl p-4 border border-border/40">
+      <h3 className="text-sm font-medium text-primary mb-3 flex items-center gap-2">👑 {t('auctions.reputation')}</h3>
       <div className="grid grid-cols-2 gap-3 text-sm">
         <div>
-          <span className="text-gray-400">{t('auctions.auctionsWon')}: </span>
+          <span className="text-muted">{t('auctions.auctionsWon')}: </span>
           <span className="text-green-400 font-medium">{reputation.auctionsWon || 0}</span>
         </div>
         <div>
-          <span className="text-gray-400">{t('auctions.auctionsSold')}: </span>
+          <span className="text-muted">{t('auctions.auctionsSold')}: </span>
           <span className="text-blue-400 font-medium">{reputation.auctionsSold || 0}</span>
         </div>
         <div>
-          <span className="text-gray-400">{t('auctions.totalVolume')}: </span>
-          <span className="text-white">{formatMoney(reputation.totalVolume || 0)}</span>
+          <span className="text-muted">{t('auctions.totalVolume')}: </span>
+          <span className="text-primary">{formatMoney(reputation.totalVolume || 0)}</span>
         </div>
         <div>
-          <span className="text-gray-400">{t('auctions.winRate')}: </span>
+          <span className="text-muted">{t('auctions.winRate')}: </span>
           <span className="text-yellow-400">{(reputation.winRate || 0).toFixed(1)}%</span>
         </div>
         {reputation.highestWinningBid > 0 && (
           <div>
-            <span className="text-gray-400">{t('auctions.highestBid')}: </span>
+            <span className="text-muted">{t('auctions.highestBid')}: </span>
             <span className="text-purple-400">{formatMoney(reputation.highestWinningBid)}</span>
           </div>
         )}
         {reputation.totalProfit > 0 && (
           <div>
-            <span className="text-gray-400">{t('auctions.totalProfit')}: </span>
+            <span className="text-muted">{t('auctions.totalProfit')}: </span>
             <span className="text-green-400">+{formatMoney(reputation.totalProfit)}</span>
           </div>
         )}
@@ -548,7 +584,7 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
         <div className="flex items-center gap-2">
           <Link
             to={`/property/${property?._id}`}
-            className="text-lg font-bold text-white hover:text-blue-400 transition-colors"
+            className="text-lg font-bold text-primary hover:text-blue-400 transition-colors"
           >
             {property?.name || t('auctions.unknownProperty')}
           </Link>
@@ -556,32 +592,32 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
           {auction.auctionType === 'reserve' && <span>💎</span>}
         </div>
         <div className="flex items-center gap-2">
-          {refreshing && <span className="text-xs text-gray-500 animate-pulse">↻</span>}
+          {refreshing && <span className="text-xs text-muted animate-pulse">↻</span>}
           {user && detail.status === 'active' && (
             <button
               onClick={() => onWatch(detail._id)}
-              className={`text-sm px-2 py-1 rounded border transition-colors ${isWatched ? 'bg-blue-900/50 border-blue-700 text-blue-300' : 'bg-gray-900 border-gray-700 text-gray-400 hover:border-gray-500'}`}
+              className={`text-sm px-2 py-1 rounded border transition-colors ${isWatched ? 'bg-blue-100 dark:bg-blue-900/50 border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-300' : 'bg-gray-100 dark:bg-gray-900 border-border text-muted hover:border-gray-400 dark:hover:border-gray-500'}`}
             >
               {isWatched ? `👁️ ${t('auctions.watching')}` : `👁️‍🗨️ ${t('auctions.watch')}`}
             </button>
           )}
-          <button onClick={onClose} className="text-gray-400 hover:text-white text-sm">
+          <button onClick={onClose} className="text-muted hover:text-primary text-sm">
             {t('auctions.close')}
           </button>
         </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="bg-gradient-to-br from-blue-900/40 to-gray-900 rounded-lg p-3 text-center border border-blue-900/30">
-          <div className="text-xs text-gray-400">{t('auctions.currentBid')}</div>
-          <div className="text-lg font-bold text-white">{formatMoney(detail.currentBid || detail.startingBid)}</div>
+        <div className="bg-gradient-to-br from-blue-100/40 to-gray-100 dark:from-blue-900/40 dark:to-gray-900 rounded-lg p-3 text-center border border-blue-200/30 dark:border-blue-900/30">
+          <div className="text-xs text-muted">{t('auctions.currentBid')}</div>
+          <div className="text-lg font-bold text-primary">{formatMoney(detail.currentBid || detail.startingBid)}</div>
         </div>
-        <div className="bg-gradient-to-br from-blue-900/40 to-gray-900 rounded-lg p-3 text-center border border-blue-900/30">
-          <div className="text-xs text-gray-400">{t('auctions.totalBids')}</div>
-          <div className="text-lg font-bold text-white">{detail.totalBids || 0}</div>
+        <div className="bg-gradient-to-br from-blue-100/40 to-gray-100 dark:from-blue-900/40 dark:to-gray-900 rounded-lg p-3 text-center border border-blue-200/30 dark:border-blue-900/30">
+          <div className="text-xs text-muted">{t('auctions.totalBids')}</div>
+          <div className="text-lg font-bold text-primary">{detail.totalBids || 0}</div>
         </div>
-        <div className="bg-gradient-to-br from-blue-900/40 to-gray-900 rounded-lg p-3 text-center border border-blue-900/30">
-          <div className="text-xs text-gray-400">{t('auctions.timeLeft')}</div>
+        <div className="bg-gradient-to-br from-blue-100/40 to-gray-100 dark:from-blue-900/40 dark:to-gray-900 rounded-lg p-3 text-center border border-blue-200/30 dark:border-blue-900/30">
+          <div className="text-xs text-muted">{t('auctions.timeLeft')}</div>
           <TickCountdown
             endTick={detail.endTick}
             currentTick={detail.currentTick}
@@ -589,61 +625,61 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
             className="text-lg font-bold"
           />
         </div>
-        <div className="bg-gradient-to-br from-blue-900/40 to-gray-900 rounded-lg p-3 text-center border border-blue-900/30">
-          <div className="text-xs text-gray-400">{t('auctions.startingBid')}</div>
-          <div className="text-lg font-bold text-gray-300">{formatMoney(detail.startingBid)}</div>
+        <div className="bg-gradient-to-br from-blue-100/40 to-gray-100 dark:from-blue-900/40 dark:to-gray-900 rounded-lg p-3 text-center border border-blue-200/30 dark:border-blue-900/30">
+          <div className="text-xs text-muted">{t('auctions.startingBid')}</div>
+          <div className="text-lg font-bold text-secondary">{formatMoney(detail.startingBid)}</div>
         </div>
       </div>
 
       {property && (
-        <div className="bg-gradient-to-br from-gray-800/90 to-gray-900 rounded-xl p-4 border border-gray-700/40">
-          <h3 className="text-sm font-medium text-white mb-2">{t('auctions.propertyDetails')}</h3>
+        <div className="bg-gradient-to-br from-gray-100/90 to-gray-200 dark:from-gray-800/90 dark:to-gray-900 rounded-xl p-4 border border-border/40">
+          <h3 className="text-sm font-medium text-primary mb-2">{t('auctions.propertyDetails')}</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
             <div>
-              <span className="text-gray-400">{t('auctions.type')}: </span>
-              <span className="text-white">{t(`auctions.propertyTypes.${property.type}`)}</span>
+              <span className="text-muted">{t('auctions.type')}: </span>
+              <span className="text-primary">{t(`auctions.propertyTypes.${property.type}`)}</span>
             </div>
             <div>
-              <span className="text-gray-400">{t('auctions.condition')}: </span>
-              <span className="text-white">{property.condition}%</span>
+              <span className="text-muted">{t('auctions.condition')}: </span>
+              <span className="text-primary">{property.condition}%</span>
             </div>
             <div>
-              <span className="text-gray-400">{t('auctions.marketValue')}: </span>
-              <span className="text-white">{formatMoney(property.currentPrice)}</span>
+              <span className="text-muted">{t('auctions.marketValue')}: </span>
+              <span className="text-primary">{formatMoney(property.currentPrice)}</span>
             </div>
             <div>
-              <span className="text-gray-400">{t('auctions.rating')}: </span>
-              <span className={RARITY_STYLES[property.propertyRating]?.text || 'text-white'}>
+              <span className="text-muted">{t('auctions.rating')}: </span>
+              <span className={RARITY_STYLES[property.propertyRating]?.text || 'text-primary'}>
                 {t(`auctions.ratings.${property.propertyRating}`)}
               </span>
             </div>
             {property.intrinsicValue > 0 && (
               <div>
-                <span className="text-gray-400">{t('auctions.intrinsicValue')}: </span>
-                <span className="text-white">{formatMoney(property.intrinsicValue)}</span>
+                <span className="text-muted">{t('auctions.intrinsicValue')}: </span>
+                <span className="text-primary">{formatMoney(property.intrinsicValue)}</span>
               </div>
             )}
             {property.rent > 0 && (
               <div>
-                <span className="text-gray-400">{t('auctions.rent')}: </span>
+                <span className="text-muted">{t('auctions.rent')}: </span>
                 <span className="text-green-400">{formatMoney(property.rent)}/tick</span>
               </div>
             )}
             {property.qualityScore != null && (
               <div>
-                <span className="text-gray-400">{t('auctions.quality')}: </span>
-                <span className="text-white">{property.qualityScore}/100</span>
+                <span className="text-muted">{t('auctions.quality')}: </span>
+                <span className="text-primary">{property.qualityScore}/100</span>
               </div>
             )}
             {property.occupancy != null && (
               <div>
-                <span className="text-gray-400">{t('auctions.occupancy')}: </span>
-                <span className="text-white">{property.occupancy}%</span>
+                <span className="text-muted">{t('auctions.occupancy')}: </span>
+                <span className="text-primary">{property.occupancy}%</span>
               </div>
             )}
             {property.roi != null && (
               <div>
-                <span className="text-gray-400">{t('auctions.roi')}: </span>
+                <span className="text-muted">{t('auctions.roi')}: </span>
                 <span className="text-green-400">{(property.roi * 100).toFixed(1)}%</span>
               </div>
             )}
@@ -656,23 +692,23 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
         </div>
       )}
 
-      <div className="bg-gradient-to-br from-gray-800/90 to-gray-900 rounded-xl p-4 border border-gray-700/40">
-        <h3 className="text-sm font-medium text-white mb-2">{t('auctions.auctionInfo')}</h3>
+      <div className="bg-gradient-to-br from-gray-100/90 to-gray-200 dark:from-gray-800/90 dark:to-gray-900 rounded-xl p-4 border border-border/40">
+        <h3 className="text-sm font-medium text-primary mb-2">{t('auctions.auctionInfo')}</h3>
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div>
-            <span className="text-gray-400">{t('auctions.type')}: </span>
-            <span className="text-white">{t(`auctions.auctionTypes.${detail.auctionType}`)}</span>
+            <span className="text-muted">{t('auctions.type')}: </span>
+            <span className="text-primary">{t(`auctions.auctionTypes.${detail.auctionType}`)}</span>
           </div>
           <div>
-            <span className="text-gray-400">{t('auctions.source')}: </span>
-            <span className="text-white">
+            <span className="text-muted">{t('auctions.source')}: </span>
+            <span className="text-primary">
               {SELLER_ICONS[detail.sellerType]}{' '}
               {detail.sellerId?.username || t(`auctions.sellerTypes.${detail.sellerType}`)}
             </span>
           </div>
           {detail.auctionType === 'reserve' && (
             <div>
-              <span className="text-gray-400">{t('auctions.reservePrice')}: </span>
+              <span className="text-muted">{t('auctions.reservePrice')}: </span>
               <span className={detail.reserveMet ? 'text-green-400' : 'text-orange-400'}>
                 {formatMoney(detail.reservePrice)} {detail.reserveMet ? '✅' : ''}
               </span>
@@ -680,7 +716,7 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
           )}
           {detail.winnerId && (
             <div>
-              <span className="text-gray-400">{t('auctions.winner')}: </span>
+              <span className="text-muted">{t('auctions.winner')}: </span>
               <span className="text-green-400">
                 {detail.winnerId.username} ({formatMoney(detail.winningBid)})
               </span>
@@ -688,22 +724,22 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
           )}
           {detail.uniqueBidders > 0 && (
             <div>
-              <span className="text-gray-400">{t('auctions.uniqueBidders')}: </span>
-              <span className="text-white">{detail.uniqueBidders}</span>
+              <span className="text-muted">{t('auctions.uniqueBidders')}: </span>
+              <span className="text-primary">{detail.uniqueBidders}</span>
             </div>
           )}
           {detail.watcherCount > 0 && (
             <div>
-              <span className="text-gray-400">{t('auctions.watchers')}: </span>
-              <span className="text-white">👁️ {detail.watcherCount}</span>
+              <span className="text-muted">{t('auctions.watchers')}: </span>
+              <span className="text-primary">👁️ {detail.watcherCount}</span>
             </div>
           )}
         </div>
       </div>
 
       {detail.status === 'active' && !isOwner && user && (
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-          <h3 className="text-sm font-medium text-white mb-3">{t('auctions.placeBid')}</h3>
+        <div className="bg-card border border-border rounded-lg p-4">
+          <h3 className="text-sm font-medium text-primary mb-3">{t('auctions.placeBid')}</h3>
           {error && (
             <div className="bg-red-900/50 border border-red-800 text-red-300 px-3 py-2 rounded mb-3 text-sm">
               {error}
@@ -711,14 +747,14 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
           )}
           <div className="flex items-center gap-2">
             <div className="flex-1 relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">$</span>
               <input
                 type="number"
                 value={bidAmount}
                 onChange={(e) => setBidAmount(e.target.value)}
                 placeholder={minNextBid.toLocaleString()}
                 min={minNextBid}
-                className="w-full bg-gray-900 border border-gray-700 text-white rounded pl-7 pr-3 py-2 text-sm"
+                className="w-full bg-gray-100 dark:bg-gray-900 border border-border text-primary rounded pl-7 pr-3 py-2 text-sm"
               />
             </div>
             <button
@@ -729,7 +765,7 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
               {bidding ? t('auctions.bidding') : t('auctions.placeBid')}
             </button>
           </div>
-          <div className="text-xs text-gray-500 mt-2">
+          <div className="text-xs text-muted mt-2">
             {t('auctions.minNextBid')}: {formatMoney(minNextBid)}
           </div>
           {isWinning && <div className="text-xs text-green-400 mt-1">✅ {t('auctions.youAreWinning')}</div>}
@@ -745,8 +781,8 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
       )}
 
       {(detail.status === 'active' || detail.status === 'upcoming') && isOwner && (
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 flex items-center justify-between">
-          <div className="text-sm text-gray-400">👤 {t('auctions.yourAuction')}</div>
+        <div className="bg-card border border-border rounded-lg p-4 flex items-center justify-between">
+          <div className="text-sm text-muted">👤 {t('auctions.yourAuction')}</div>
           {canCancel && (
             <button
               onClick={handleCancel}
@@ -760,22 +796,22 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
       )}
 
       {detail.bids?.length > 0 && (
-        <div className="bg-gradient-to-br from-gray-800/90 to-gray-900 rounded-xl p-4 border border-gray-700/40">
-          <h3 className="text-sm font-medium text-white mb-3">
+        <div className="bg-gradient-to-br from-gray-100/90 to-gray-200 dark:from-gray-800/90 dark:to-gray-900 rounded-xl p-4 border border-border/40">
+          <h3 className="text-sm font-medium text-primary mb-3">
             {t('auctions.bidHistory')} ({detail.bids.length})
           </h3>
           <div className="space-y-1 max-h-60 overflow-y-auto">
             {[...detail.bids].reverse().map((bid, i) => (
               <div key={i} className="flex items-center justify-between text-sm py-1">
-                <span className="text-gray-400">
+                <span className="text-muted">
                   {bid.username || bid.bidderId?.username || t('auctions.unknownBidder')}
                   {user && bid.bidderId?._id === user._id && (
                     <span className="text-blue-400 ml-1">({t('auctions.you')})</span>
                   )}
                 </span>
                 <div className="flex items-center gap-3">
-                  <span className="text-gray-500 text-xs">T{bid.tick}</span>
-                  <span className="text-white font-medium">{formatMoney(bid.amount)}</span>
+                  <span className="text-muted text-xs">T{bid.tick}</span>
+                  <span className="text-primary font-medium">{formatMoney(bid.amount)}</span>
                 </div>
               </div>
             ))}
@@ -839,23 +875,23 @@ function CompanyBidModal({ auctionId, minBid, onClose, onSubmit }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 w-full max-w-md">
-        <h3 className="text-lg font-bold text-white mb-4">🏢 {t('auctions.companyBid')}</h3>
+      <div className="bg-card border border-border rounded-lg p-6 w-full max-w-md">
+        <h3 className="text-lg font-bold text-primary mb-4">🏢 {t('auctions.companyBid')}</h3>
         {error && (
           <div className="bg-red-900/50 border border-red-800 text-red-300 px-3 py-2 rounded mb-3 text-sm">{error}</div>
         )}
         {loading ? (
-          <div className="text-gray-400 text-sm py-4">{t('auctions.loading')}</div>
+          <div className="text-muted text-sm py-4">{t('auctions.loading')}</div>
         ) : companies.length === 0 ? (
-          <div className="text-gray-400 text-sm py-4">{t('auctions.noCompanies')}</div>
+          <div className="text-muted text-sm py-4">{t('auctions.noCompanies')}</div>
         ) : (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm text-gray-300 mb-1">{t('auctions.selectCompany')}</label>
+              <label className="block text-sm text-secondary mb-1">{t('auctions.selectCompany')}</label>
               <select
                 value={selectedCompany}
                 onChange={(e) => setSelectedCompany(e.target.value)}
-                className="w-full bg-gray-900 border border-gray-700 text-white rounded p-2 text-sm"
+                className="w-full bg-gray-100 dark:bg-gray-900 border border-border text-primary rounded p-2 text-sm"
               >
                 <option value="">{t('auctions.selectCompany')}</option>
                 {companies.map((c) => (
@@ -866,16 +902,16 @@ function CompanyBidModal({ auctionId, minBid, onClose, onSubmit }) {
               </select>
             </div>
             <div>
-              <label className="block text-sm text-gray-300 mb-1">{t('auctions.bidAmount')}</label>
+              <label className="block text-sm text-secondary mb-1">{t('auctions.bidAmount')}</label>
               <input
                 type="number"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 min={minBid}
                 placeholder={minBid.toLocaleString()}
-                className="w-full bg-gray-900 border border-gray-700 text-white rounded p-2 text-sm"
+                className="w-full bg-gray-100 dark:bg-gray-900 border border-border text-primary rounded p-2 text-sm"
               />
-              <div className="text-xs text-gray-500 mt-1">
+              <div className="text-xs text-muted mt-1">
                 {t('auctions.minNextBid')}: {formatMoney(minBid)}
               </div>
             </div>
@@ -890,7 +926,7 @@ function CompanyBidModal({ auctionId, minBid, onClose, onSubmit }) {
               </button>
               <button
                 onClick={onClose}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded transition-colors"
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-secondary rounded transition-colors"
               >
                 {t('auctions.cancel')}
               </button>
@@ -943,21 +979,21 @@ function SellPropertyModal({ onClose, onSubmit }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 w-full max-w-md">
-        <h3 className="text-lg font-bold text-white mb-4">🏷️ {t('auctions.sellProperty')}</h3>
+      <div className="bg-card border border-border rounded-lg p-6 w-full max-w-md">
+        <h3 className="text-lg font-bold text-primary mb-4">🏷️ {t('auctions.sellProperty')}</h3>
         {error && (
           <div className="bg-red-900/50 border border-red-800 text-red-300 px-3 py-2 rounded mb-3 text-sm">{error}</div>
         )}
         {loading ? (
-          <div className="text-gray-400 text-sm py-4">{t('auctions.loading')}</div>
+          <div className="text-muted text-sm py-4">{t('auctions.loading')}</div>
         ) : (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm text-gray-300 mb-1">{t('auctions.selectProperty')}</label>
+              <label className="block text-sm text-secondary mb-1">{t('auctions.selectProperty')}</label>
               <select
                 value={selectedProperty}
                 onChange={(e) => setSelectedProperty(e.target.value)}
-                className="w-full bg-gray-900 border border-gray-700 text-white rounded p-2 text-sm"
+                className="w-full bg-gray-100 dark:bg-gray-900 border border-border text-primary rounded p-2 text-sm"
               >
                 <option value="">{t('auctions.selectProperty')}</option>
                 {properties.map((p) => (
@@ -968,13 +1004,13 @@ function SellPropertyModal({ onClose, onSubmit }) {
               </select>
             </div>
             <div>
-              <label className="block text-sm text-gray-300 mb-1">{t('auctions.auctionType')}</label>
+              <label className="block text-sm text-secondary mb-1">{t('auctions.auctionType')}</label>
               <div className="flex gap-2">
                 {['standard', 'reserve'].map((type) => (
                   <button
                     key={type}
                     onClick={() => setAuctionType(type)}
-                    className={`flex-1 py-2 rounded text-sm border transition-colors ${auctionType === type ? 'bg-blue-900 border-blue-700 text-blue-300' : 'bg-gray-900 border-gray-700 text-gray-400 hover:border-gray-500'}`}
+                    className={`flex-1 py-2 rounded text-sm border transition-colors ${auctionType === type ? 'bg-blue-900 border-blue-700 text-blue-300' : 'bg-gray-100 dark:bg-gray-900 border-border text-muted hover:border-border'}`}
                   >
                     {t(`auctions.auctionTypes.${type}`)}
                   </button>
@@ -983,24 +1019,24 @@ function SellPropertyModal({ onClose, onSubmit }) {
             </div>
             {auctionType === 'reserve' && (
               <div>
-                <label className="block text-sm text-gray-300 mb-1">{t('auctions.reservePrice')}</label>
+                <label className="block text-sm text-secondary mb-1">{t('auctions.reservePrice')}</label>
                 <input
                   type="number"
                   value={reservePrice}
                   onChange={(e) => setReservePrice(e.target.value)}
-                  className="w-full bg-gray-900 border border-gray-700 text-white rounded p-2 text-sm"
+                  className="w-full bg-gray-100 dark:bg-gray-900 border border-border text-primary rounded p-2 text-sm"
                   placeholder="0"
                 />
               </div>
             )}
             <div>
-              <label className="block text-sm text-gray-300 mb-1">{t('auctions.duration')}</label>
+              <label className="block text-sm text-secondary mb-1">{t('auctions.duration')}</label>
               <div className="grid grid-cols-2 gap-2">
                 {['short', 'medium', 'long', 'extended'].map((d) => (
                   <button
                     key={d}
                     onClick={() => setDuration(d)}
-                    className={`py-2 rounded text-sm border transition-colors ${duration === d ? 'bg-blue-900 border-blue-700 text-blue-300' : 'bg-gray-900 border-gray-700 text-gray-400 hover:border-gray-500'}`}
+                    className={`py-2 rounded text-sm border transition-colors ${duration === d ? 'bg-blue-900 border-blue-700 text-blue-300' : 'bg-gray-100 dark:bg-gray-900 border-border text-muted hover:border-border'}`}
                   >
                     {t(`auctions.durations.${d}`)}
                   </button>
@@ -1008,18 +1044,18 @@ function SellPropertyModal({ onClose, onSubmit }) {
               </div>
             </div>
             <div>
-              <label className="block text-sm text-gray-300 mb-1">
+              <label className="block text-sm text-secondary mb-1">
                 {t('auctions.startingBid')} ({t('auctions.optional')})
               </label>
               <input
                 type="number"
                 value={startingBid}
                 onChange={(e) => setStartingBid(e.target.value)}
-                className="w-full bg-gray-900 border border-gray-700 text-white rounded p-2 text-sm"
+                className="w-full bg-gray-100 dark:bg-gray-900 border border-border text-primary rounded p-2 text-sm"
                 placeholder={t('auctions.defaultAuto')}
               />
             </div>
-            <div className="text-xs text-gray-500">💡 {t('auctions.listingFee', { percent: 5 })}</div>
+            <div className="text-xs text-muted">💡 {t('auctions.listingFee', { percent: 5 })}</div>
             <div className="flex gap-2">
               <button
                 onClick={handleSubmit}
@@ -1030,7 +1066,7 @@ function SellPropertyModal({ onClose, onSubmit }) {
               </button>
               <button
                 onClick={onClose}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded transition-colors"
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-secondary rounded transition-colors"
               >
                 {t('auctions.cancel')}
               </button>
@@ -1222,8 +1258,8 @@ export default function AuctionDashboardPage() {
     <div className="max-w-4xl mx-auto p-4">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-white">🔨 {t('auctions.title')}</h1>
-          <p className="text-gray-400 mt-1">{t('auctions.subtitle')}</p>
+          <h1 className="text-3xl font-bold text-primary">🔨 {t('auctions.title')}</h1>
+          <p className="text-muted mt-1">{t('auctions.subtitle')}</p>
         </div>
         {user && (
           <button
@@ -1247,12 +1283,12 @@ export default function AuctionDashboardPage() {
       <FeaturedSection auctions={featured} onSelect={setSelectedAuction} />
       <AnalyticsPanel stats={analytics} />
 
-      <div className="flex flex-wrap gap-1 mb-4 bg-gray-800 rounded-lg p-1">
+      <div className="flex flex-wrap gap-1 mb-4 bg-card rounded-lg p-1">
         {tabs.map((tab) => (
           <button
             key={tab}
             onClick={() => handleTabChange(tab)}
-            className={`flex-shrink-0 py-2 px-3 rounded text-sm font-medium transition-colors ${activeTab === tab ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
+            className={`flex-shrink-0 py-2 px-3 rounded text-sm font-medium transition-colors ${activeTab === tab ? 'bg-blue-600 text-white' : 'text-muted hover:text-primary'}`}
           >
             {t(`auctions.tabs.${tab}`)}
           </button>
@@ -1265,7 +1301,7 @@ export default function AuctionDashboardPage() {
             <button
               key={type}
               onClick={() => setFilterType(type)}
-              className={`px-3 py-1 rounded text-xs transition-colors whitespace-nowrap ${filterType === type ? 'bg-gray-700 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'}`}
+              className={`px-3 py-1 rounded text-xs transition-colors whitespace-nowrap ${filterType === type ? 'bg-gray-200 dark:bg-gray-200 dark:bg-gray-700 text-primary' : 'bg-gray-100 dark:bg-card text-muted hover:text-primary'}`}
             >
               {t(`auctions.propertyTypes.${type}`)}
             </button>
@@ -1274,9 +1310,9 @@ export default function AuctionDashboardPage() {
       )}
 
       {loading ? (
-        <div className="text-center py-12 text-gray-400">{t('auctions.loading')}</div>
+        <div className="text-center py-12 text-muted">{t('auctions.loading')}</div>
       ) : auctions.length === 0 ? (
-        <div className="text-center py-12 text-gray-400">{t('auctions.noAuctions')}</div>
+        <div className="text-center py-12 text-muted">{t('auctions.noAuctions')}</div>
       ) : (
         <div className="space-y-2">
           {auctions.map((a) => (
@@ -1297,17 +1333,17 @@ export default function AuctionDashboardPage() {
           <button
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={page === 0}
-            className="px-3 py-1.5 bg-gray-800 border border-gray-700 text-gray-300 rounded text-sm hover:bg-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-3 py-1.5 bg-card border border-border text-secondary rounded text-sm hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             ← {t('auctions.prev')}
           </button>
-          <span className="text-sm text-gray-400">
+          <span className="text-sm text-muted">
             {t('auctions.page')} {page + 1} / {totalPages}
           </span>
           <button
             onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
             disabled={page >= totalPages - 1}
-            className="px-3 py-1.5 bg-gray-800 border border-gray-700 text-gray-300 rounded text-sm hover:bg-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-3 py-1.5 bg-card border border-border text-secondary rounded text-sm hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {t('auctions.next')} →
           </button>

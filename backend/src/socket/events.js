@@ -42,6 +42,11 @@ export const SOCKET_EVENTS = {
   LEADERBOARD_UPDATED: 'leaderboard:updated',
 
   TICK: 'tick:completed',
+
+  MISSION_PROGRESS: 'mission:progress',
+  MISSION_COMPLETED: 'mission:completed',
+  MISSION_REWARD_CLAIMED: 'mission:reward:claimed',
+  MISSIONS_REFRESHED: 'mission:refreshed',
 };
 
 export const COMPANY_ROOM_PREFIX = 'company:';

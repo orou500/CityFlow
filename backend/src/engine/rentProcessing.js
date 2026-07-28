@@ -2,6 +2,7 @@ import Property from '../models/Property.js';
 import User from '../models/User.js';
 import Transaction from '../models/Transaction.js';
 import Notification from '../models/Notification.js';
+import { triggerMissionProgress } from '../utils/missionTrigger.js';
 
 const RENT_STORAGE_DURATION_MS = 24 * 60 * 60 * 1000;
 
@@ -155,6 +156,16 @@ export async function processRent() {
     for (let i = 0; i < transactions.length; i += BATCH_SIZE) {
       await Transaction.insertMany(transactions.slice(i, i + BATCH_SIZE));
     }
+  }
+
+  const affectedUserIds = [
+    ...new Set([
+      ...rentPoolUpdates.map((u) => u.userId?.toString()).filter(Boolean),
+      ...userLifetimeUpdates.map((u) => u.userId?.toString()).filter(Boolean),
+    ]),
+  ];
+  for (const uid of affectedUserIds) {
+    triggerMissionProgress(uid, 'rent_collected');
   }
 
   return results;

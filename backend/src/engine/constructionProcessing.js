@@ -5,6 +5,7 @@ import Notification from '../models/Notification.js';
 import { getTickNumber } from '../models/GameState.js';
 import { getAllProjects, calculateUnitRent } from '../config/developmentProjects.js';
 import { sendDiscordNotification } from '../services/discordBot.js';
+import { triggerMissionProgress } from '../utils/missionTrigger.js';
 
 export async function processConstruction() {
   const tickNumber = await getTickNumber();
@@ -101,6 +102,8 @@ export async function processConstruction() {
               owner.ownedProperties = owner.ownedProperties.filter((p) => p.toString() !== land._id.toString());
               owner.ownedProperties.push(land._id);
               await owner.save();
+
+              triggerMissionProgress(project.ownerId, 'construction_complete');
             }
           }
         }

@@ -29,7 +29,8 @@
     "donate": "תרומות",
     "districts": "שכונות",
     "mi": "מודיעין שוק",
-    "auctions": "מכרזים"
+    "auctions": "מכרזים",
+    "missions": "משימות"
   },
   "map": {
     "title": "מפת העולם",
@@ -2341,5 +2342,64 @@
       "long": "8 מחזורים (48ש)",
       "extended": "16 מחזורים (96ש)"
     }
+  },
+  "missions": {
+    "title": "משימות ואתגרים",
+    "subtitle": "השלם משימות, הרויח פרסים והפוך לטייקון נדל\"ן",
+    "tabs": {
+      "active": "פעילות",
+      "completed": "הושלמו",
+      "claimed": "נקבעו"
+    },
+    "search": "חפש משימות...",
+    "allCategories": "כל הקטגוריות",
+    "allDifficulties": "כל הרמות",
+    "noMissions": "לא נמצאו משימות",
+    "loading": "טוען משימות...",
+    "claimReward": "קבץ פרס",
+    "claimed": "נקבע",
+    "chain": "שרשרת",
+    "chainLabel": "שרשרת משימות",
+    "progressByCategory": "התקדמות לפי קטגוריה",
+    "dailyMissions": "משימות יומיות",
+    "weeklyMissions": "משימות שבועיות",
+    "categories": {
+      "beginner": "מתחילים",
+      "property": "נדל\"ן",
+      "income": "הכנסה",
+      "networth": "שווי נקי",
+      "geographic": "גיאוגרפי",
+      "development": "פיתוח",
+      "banking": "בנק",
+      "auction": "מכרז",
+      "company": "חברה",
+      "district": "שכונה",
+      "intelligence": "מודיעין שוק",
+      "daily": "יומי",
+      "weekly": "שבועי",
+      "seasonal": "עונתי",
+      "event": "אירוע"
+    },
+    "difficulty": {
+      "easy": "קל",
+      "medium": "בינוני",
+      "hard": "קשה",
+      "expert": "מומחה",
+      "legendary": "אגדי"
+    },
+    "types": {
+      "permanent": "קבוע",
+      "daily": "יומי",
+      "weekly": "שבועי",
+      "seasonal": "עונתי",
+      "event": "אירוע"
+    },
+    "badge": "תג",
+    "reward": "פרס",
+    "progress": "התקדמות",
+    "complete": "משימה הושלמה!",
+    "newMission": "משימה חדשה זמינה",
+    "chainUnlocked": "שרשרת נפתחה",
+    "rewardAvailable": "פרס זמין"
   }
 }
