@@ -4,7 +4,7 @@ const XP_BASE = 100;
 const XP_GROWTH = 1.5;
 
 export function getXpForLevel(level) {
-  return 25 * level * (level + 3);
+  return Math.round(100 * Math.pow(1.5, level - 1));
 }
 
 export function getLevelFromXp(totalXp) {
