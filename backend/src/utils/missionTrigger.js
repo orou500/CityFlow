@@ -1,17 +1,11 @@
-import { updateMissionProgress } from '../engine/missionProcessing.js';
-import { cacheDel } from './cache.js';
-import { cacheKeys } from './cacheKeys.js';
+import { processPlayerProgress } from './playerProgress.js';
 
 export function triggerMissionProgress(userId, triggerType) {
   const userIdStr = userId?.toString?.() || userId;
   if (!userIdStr) return;
 
-  updateMissionProgress(userId, triggerType).catch((err) => {
-    console.error(`[MISSION_TRIGGER] Error updating progress for ${userIdStr}:`, err);
-  });
-
-  cacheDel(cacheKeys.missionDashboard(userIdStr)).catch((err) => {
-    console.error(`[MISSION_TRIGGER] Error invalidating cache for ${userIdStr}:`, err.message);
+  processPlayerProgress(userId, triggerType).catch((err) => {
+    console.error(`[MISSION_TRIGGER] Error in processPlayerProgress for ${userIdStr}:`, err);
   });
 }
 

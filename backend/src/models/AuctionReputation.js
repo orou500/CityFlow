@@ -18,7 +18,6 @@ const auctionReputationSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-auctionReputationSchema.index({ userId: 1 });
 auctionReputationSchema.index({ auctionsWon: -1 });
 auctionReputationSchema.index({ totalVolume: -1 });
 

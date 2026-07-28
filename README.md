@@ -229,14 +229,24 @@ cd android
 ./gradlew assembleDebug
 ```
 
-The app connects to `http://10.0.2.2:5000` (emulator loopback) by default. For real devices, set `VITE_API_URL` environment variable.
+### API URL Resolution
+
+| Build | Platform | URL |
+|-------|----------|-----|
+| Development (`npm run dev`) | Web (Vite proxy) | `/api` |
+| Production (`npm run build`) | Web (Nginx reverse proxy) | `/api` |
+| Dev + Android emulator | Native | `http://10.0.2.2:5000` |
+| Dev + iOS simulator | Native | `http://localhost:5000` |
+| **Production APK** | **Native (Android/iOS)** | **`https://cityflow.sizops.co.il/api`** |
+
+Override via `VITE_API_URL` environment variable at build time for any platform.
 
 ### Mobile Features
 
 | Feature                | Implementation                                                      |
 | ---------------------- | ------------------------------------------------------------------- |
 | **Platform Detection** | `isNativePlatform()`, `isAndroid()`, `isIOS()`, `isWeb()`           |
-| **API URL Resolution** | `VITE_API_URL` env > emulator loopback > localhost > production     |
+| **API URL Resolution** | `VITE_API_URL` env > dev native URLs > production API fallback (Android production APK auto-connects to `cityflow.sizops.co.il`)     |
 | **Token Storage**      | Dual-synced: Capacitor Preferences (native) + localStorage (web)    |
 | **Push Notifications** | FCM (Android) / APNs (iOS) via Firebase; auto-registered on login   |
 | **Biometric Auth**     | Fingerprint/face unlock via `@capgo/capacitor-native-biometric`     |

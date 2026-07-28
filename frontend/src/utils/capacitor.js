@@ -38,9 +38,9 @@ export function getApiBaseUrl() {
   // 1. Prioritize explicit environment variable
   if (envApi) return envApi;
 
-  // 2. Android default: emulator loopback (override with VITE_API_URL for real devices)
+  // 2. Android: emulator loopback in dev, PRODUCTION_API in production builds
   if (platform === 'android') {
-    return 'http://10.0.2.2:5000';
+    return isDev ? 'http://10.0.2.2:5000' : PRODUCTION_API;
   }
 
   // 3. iOS dev fallback

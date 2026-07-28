@@ -3,7 +3,7 @@ import User from '../models/User.js';
 import FriendRequest from '../models/FriendRequest.js';
 import { enqueueNotification } from '../utils/notificationQueue.js';
 import { authenticate } from '../middleware/auth.js';
-import { awardXp } from '../utils/leveling.js';
+import { processPlayerProgress } from '../utils/playerProgress.js';
 
 const router = Router();
 
@@ -76,7 +76,7 @@ router.post('/accept/:requestId', async (req, res) => {
 
     if (!alreadyFriends) {
       const user = await User.findById(req.user._id);
-      await awardXp(user, 5, 'friend_add');
+      await processPlayerProgress(user._id, 'friend_add');
       user.lifetimeStats.totalFriendsAdded += 1;
       await user.save();
     }

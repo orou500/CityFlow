@@ -1,8 +1,9 @@
 import { Router } from 'express';
 import User from '../models/User.js';
+import Transaction from '../models/Transaction.js';
 import { authenticate } from '../middleware/auth.js';
 import { awardXp } from '../utils/leveling.js';
-import { triggerMissionProgress } from '../utils/missionTrigger.js';
+import { processPlayerProgress } from '../utils/playerProgress.js';
 
 const router = Router();
 
@@ -71,7 +72,14 @@ router.post('/claim', authenticate, async (req, res) => {
 
     const xpResult = await awardXp(user, xp, 'period_bonus');
 
-    triggerMissionProgress(user._id, 'bonus_claim');
+    await Transaction.create({
+      buyerId: user._id,
+      type: 'period_bonus',
+      price: money,
+      description: 'Period bonus claim',
+    });
+
+    await processPlayerProgress(user._id, 'bonus_claim', { skipXp: true });
 
     res.json({
       money,

@@ -11,7 +11,8 @@ import { rateLimit } from '../middleware/rateLimit.js';
 import { downloadOAuthAvatar } from '../services/avatarDownload.js';
 import { validatePassword } from '../utils/validatePassword.js';
 import { awardXp } from '../utils/leveling.js';
-import { triggerMissionProgress } from '../utils/missionTrigger.js';
+import { processPlayerProgress } from '../utils/playerProgress.js';
+import Transaction from '../models/Transaction.js';
 
 const router = Router();
 
@@ -141,7 +142,8 @@ router.post('/login', loginLimiter, async (req, res) => {
       }
     }
     await User.updateOne({ _id: user._id }, { $set: { lastLoginAt: new Date() } });
-    triggerMissionProgress(user._id, 'login');
+    await processPlayerProgress(user._id, 'login');
+    await Transaction.create({ buyerId: user._id, price: 0, type: 'login' }).catch(() => {});
 
     if (user.avatar && (user.avatar.startsWith('http://') || user.avatar.startsWith('https://'))) {
       const localPath = await downloadOAuthAvatar(user._id, user.avatar);
@@ -191,6 +193,7 @@ router.get('/verify-email', async (req, res) => {
     await user.save({ validateBeforeSave: false });
 
     await awardXp(user, 10, 'email_verified');
+    await processPlayerProgress(user._id, 'email_verified', { skipXp: true });
 
     const template = emailTemplates.accountActivated({ username: user.username });
     sendEmail({ to: user.email, ...template }).catch((err) => {

@@ -11,6 +11,5 @@ const stockHoldingSchema = new mongoose.Schema(
 );
 
 stockHoldingSchema.index({ userId: 1, companyId: 1 }, { unique: true });
-stockHoldingSchema.index({ userId: 1 });
 
 export default mongoose.model('StockHolding', stockHoldingSchema);

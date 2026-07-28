@@ -8,7 +8,8 @@ import { isMaintenanceMode } from '../models/GameState.js';
 import { sendEmail } from '../services/email.js';
 import emailTemplates from '../services/emailTemplates.js';
 import { downloadOAuthAvatar } from '../services/avatarDownload.js';
-import { triggerMissionProgress } from '../utils/missionTrigger.js';
+import { processPlayerProgress } from '../utils/playerProgress.js';
+import Transaction from '../models/Transaction.js';
 
 const router = Router();
 
@@ -165,7 +166,8 @@ async function handleOAuthCallback({ provider, providerId, email, name, avatar }
   }
 
   await User.updateOne({ _id: user._id }, { $set: { lastLoginAt: new Date() } });
-  triggerMissionProgress(user._id, 'login');
+  await processPlayerProgress(user._id, 'login');
+  await Transaction.create({ buyerId: user._id, price: 0, type: 'login' }).catch(() => {});
 
   const token = generateToken(user._id);
   const params = new URLSearchParams({ token });
@@ -180,7 +182,6 @@ router.get('/google', (req, res) => {
   }
 
   const callbackUrl = getGoogleCallbackUrl(req);
-  console.log('[OAUTH] Google redirect_uri:', callbackUrl);
 
   const state = signState({ provider: 'google' });
 
@@ -264,7 +265,6 @@ router.get('/discord', (req, res) => {
   }
 
   const callbackUrl = getDiscordCallbackUrl(req);
-  console.log('[OAUTH] Discord redirect_uri:', callbackUrl);
 
   const state = signState({ provider: 'discord' });
 

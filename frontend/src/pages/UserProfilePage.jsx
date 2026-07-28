@@ -653,7 +653,15 @@ export default function UserProfilePage() {
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
-              <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">Lv.{profileUser.level || 1}</span>
+              <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{t('profile.level')} {profileUser.level || 1}</span>
+              {profileUser.prestigeLevel > 0 && (
+                <span className="text-sm font-semibold text-purple-500">✦ {t('profile.prestige')} {profileUser.prestigeLevel}</span>
+              )}
+              {profileUser.title && (
+                <span className="text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full">
+                  {profileUser.title}
+                </span>
+              )}
               <span className="text-sm text-gray-500 dark:text-gray-400">
                 {formatCompact(profileUser.xp || 0)} / {formatCompact(profileUser.xpToNextLevel || 100)} XP
               </span>
@@ -782,12 +790,17 @@ export default function UserProfilePage() {
 
         {profileUser.achievements?.length > 0 && (
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">{t('profile.achievements')}</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">{t('profile.achievements')}</h2>
+              {profileUser.achievementPoints > 0 && (
+                <span className="text-sm text-blue-600 dark:text-blue-400 font-medium">{profileUser.achievementPoints} pts</span>
+              )}
+            </div>
             <div className="flex flex-wrap gap-2">
               {profileUser.achievements.map((a, i) => (
                 <span
                   key={i}
-                  className="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-sm px-3 py-1 rounded-full"
+                  className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-sm px-3 py-1 rounded-full border border-green-200 dark:border-green-800"
                 >
                   {a}
                 </span>

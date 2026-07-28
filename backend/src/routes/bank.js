@@ -7,7 +7,7 @@ import CreditScoreHistory from '../models/CreditScoreHistory.js';
 import { authenticate } from '../middleware/auth.js';
 import { awardXp } from '../utils/leveling.js';
 import { onLoanAction } from '../utils/cacheInvalidation.js';
-import { triggerMissionProgress } from '../utils/missionTrigger.js';
+import { processPlayerProgress } from '../utils/playerProgress.js';
 import { trackEvent, EVENTS } from '../utils/analytics.js';
 import {
   getLoanProducts,
@@ -190,7 +190,7 @@ router.post('/apply', authenticate, async (req, res) => {
     await onLoanAction(user._id);
     trackEvent(EVENTS.LOAN_APPLIED, { userId: user._id, principal, durationTicks });
 
-    triggerMissionProgress(user._id, 'loan_take');
+    await processPlayerProgress(user._id, 'loan_take', { skipXp: true });
 
     const loans = await Loan.find({ userId: user._id, active: true });
 
@@ -237,7 +237,7 @@ router.post('/repay', authenticate, async (req, res) => {
     await onLoanAction(user._id);
     trackEvent(EVENTS.LOAN_REPAID, { userId: user._id, loanId, amount: repayAmount });
 
-    triggerMissionProgress(user._id, 'loan_repay');
+    await processPlayerProgress(user._id, 'loan_repay', { skipXp: true });
 
     res.json({ loan, balance: user.balance, creditScore: user.creditScore });
   } catch (err) {

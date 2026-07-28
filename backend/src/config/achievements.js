@@ -1,0 +1,370 @@
+export const ACHIEVEMENT_CATEGORIES = [
+  'beginner',
+  'investor',
+  'wealth',
+  'auctions',
+  'companies',
+  'banking',
+  'development',
+  'districts',
+  'intelligence',
+  'stocks',
+  'prestige',
+];
+
+export const ACHIEVEMENT_DEFINITIONS = [
+  // ─── BEGINNER ───────────────────────────────
+  {
+    id: 'first_property_ach',
+    name: 'Property Owner',
+    description: 'Own your first property',
+    category: 'beginner',
+    points: 10,
+    icon: '🏠',
+    condition: { type: 'properties_owned', target: 1 },
+    rewardBadge: 'property_owner',
+  },
+  {
+    id: 'first_rent_ach',
+    name: 'Landlord',
+    description: 'Collect rent for the first time',
+    category: 'beginner',
+    points: 10,
+    icon: '💰',
+    condition: { type: 'total_rent_collected', target: 1 },
+  },
+
+  // ─── INVESTOR ──────────────────────────────
+  {
+    id: 'investor_50',
+    name: 'Serious Investor',
+    description: 'Own 50 properties',
+    category: 'investor',
+    points: 50,
+    icon: '🏘️',
+    condition: { type: 'properties_owned', target: 50 },
+    rewardBadge: 'serious_investor',
+  },
+  {
+    id: 'investor_500',
+    name: 'Magnate',
+    description: 'Own 500 properties',
+    category: 'investor',
+    points: 200,
+    icon: '🏙️',
+    condition: { type: 'properties_owned', target: 500 },
+    rewardBadge: 'magnate',
+    hidden: true,
+  },
+
+  // ─── WEALTH ────────────────────────────────
+  {
+    id: 'wealth_1m',
+    name: 'Millionaire',
+    description: 'Reach £1M net worth',
+    category: 'wealth',
+    points: 20,
+    icon: '💵',
+    condition: { type: 'net_worth', target: 1000000 },
+  },
+  {
+    id: 'wealth_10m',
+    name: 'Multi-Millionaire',
+    description: 'Reach £10M net worth',
+    category: 'wealth',
+    points: 50,
+    icon: '💰',
+    condition: { type: 'net_worth', target: 10000000 },
+  },
+  {
+    id: 'wealth_100m',
+    name: 'Centimillionaire',
+    description: 'Reach £100M net worth',
+    category: 'wealth',
+    points: 150,
+    icon: '💎',
+    condition: { type: 'net_worth', target: 100000000 },
+    rewardBadge: 'centimillionaire',
+  },
+  {
+    id: 'tycoon_ach',
+    name: 'Tycoon',
+    description: 'Reach $100M net worth',
+    category: 'wealth',
+    points: 200,
+    icon: '🏆',
+    condition: { type: 'net_worth', target: 100000000 },
+    rewardTitle: 'Tycoon',
+  },
+  {
+    id: 'wealth_1b',
+    name: 'Billionaire',
+    description: 'Reach £1B net worth',
+    category: 'wealth',
+    points: 500,
+    icon: '👑',
+    condition: { type: 'net_worth', target: 1000000000 },
+    rewardBadge: 'billionaire_ach',
+    rewardTitle: 'Billionaire',
+    hidden: true,
+  },
+
+  // ─── AUCTIONS ──────────────────────────────
+  {
+    id: 'auction_25',
+    name: 'Auction Enthusiast',
+    description: 'Win 25 auctions',
+    category: 'auctions',
+    points: 50,
+    icon: '🔨',
+    condition: { type: 'auctions_won', target: 25 },
+  },
+  {
+    id: 'auction_100',
+    name: 'Auction Legend',
+    description: 'Win 100 auctions',
+    category: 'auctions',
+    points: 200,
+    icon: '🏆',
+    condition: { type: 'auctions_won', target: 100 },
+    rewardBadge: 'auction_legend_ach',
+    hidden: true,
+  },
+
+  // ─── COMPANIES ─────────────────────────────
+  {
+    id: 'company_founder_ach',
+    name: 'Company Founder',
+    description: 'Create a Real Estate Company',
+    category: 'companies',
+    points: 30,
+    icon: '🏢',
+    condition: { type: 'companies_created', target: 1 },
+    rewardBadge: 'founder_ach',
+  },
+  {
+    id: 'company_ceo',
+    name: 'CEO',
+    description: 'Become CEO of a company',
+    category: 'companies',
+    points: 20,
+    icon: '👔',
+    condition: { type: 'company_role_ceo', target: 1 },
+  },
+  {
+    id: 'company_ipo',
+    name: 'Public Company',
+    description: 'Take a company public via IPO',
+    category: 'companies',
+    points: 100,
+    icon: '📈',
+    condition: { type: 'company_ipo_completed', target: 1 },
+    rewardBadge: 'public_company',
+    hidden: true,
+  },
+
+  // ─── BANKING ───────────────────────────────
+  {
+    id: 'credit_master',
+    name: 'Credit Master',
+    description: 'Reach a credit score of 800',
+    category: 'banking',
+    points: 40,
+    icon: '⭐',
+    condition: { type: 'credit_score', target: 800 },
+    rewardBadge: 'credit_master',
+  },
+  {
+    id: 'debt_free',
+    name: 'Debt Free',
+    description: 'Pay off all loans',
+    category: 'banking',
+    points: 50,
+    icon: '✅',
+    condition: { type: 'active_loans', target: 0 },
+  },
+  {
+    id: 'loan_50',
+    name: 'Borrower Extraordinaire',
+    description: 'Take 50 loans',
+    category: 'banking',
+    points: 80,
+    icon: '🏦',
+    condition: { type: 'total_loans_taken', target: 50 },
+    rewardBadge: 'borrower_extraordinaire',
+  },
+
+  // ─── DEVELOPMENT ───────────────────────────
+  {
+    id: 'developer_10',
+    name: 'Builder',
+    description: 'Complete 10 developments',
+    category: 'development',
+    points: 30,
+    icon: '🔨',
+    condition: { type: 'total_construction_completed', target: 10 },
+  },
+  {
+    id: 'developer_50',
+    name: 'Architect',
+    description: 'Complete 50 developments',
+    category: 'development',
+    points: 100,
+    icon: '🏗️',
+    condition: { type: 'total_construction_completed', target: 50 },
+    rewardBadge: 'architect',
+  },
+  {
+    id: 'developer_500',
+    name: 'Mega Developer',
+    description: 'Complete 500 developments',
+    category: 'development',
+    points: 500,
+    icon: '🌆',
+    condition: { type: 'total_construction_completed', target: 500 },
+    rewardBadge: 'mega_developer',
+    rewardTitle: 'Mega Developer',
+    hidden: true,
+  },
+
+  // ─── DISTRICTS ─────────────────────────────
+  {
+    id: 'world_traveler_ach',
+    name: 'World Traveler',
+    description: 'Own properties in 3 different cities',
+    category: 'districts',
+    points: 40,
+    icon: '✈️',
+    condition: { type: 'unique_cities', target: 3 },
+    rewardTitle: 'World Traveler',
+  },
+  {
+    id: 'district_20',
+    name: 'District Explorer',
+    description: 'Own property in 20 districts',
+    category: 'districts',
+    points: 40,
+    icon: '🗺️',
+    condition: { type: 'unique_districts', target: 20 },
+  },
+  {
+    id: 'district_power_ach',
+    name: 'District Power',
+    description: 'Become the largest investor in a district',
+    category: 'districts',
+    points: 80,
+    icon: '⚡',
+    condition: { type: 'district_leader', target: 1 },
+    rewardTitle: 'District Power',
+    rewardBadge: 'district_leader',
+  },
+  {
+    id: 'district_all',
+    name: 'District King',
+    description: 'Own property in all districts',
+    category: 'districts',
+    points: 150,
+    icon: '👑',
+    condition: { type: 'unique_districts', target: 50 },
+    rewardBadge: 'district_king',
+    rewardTitle: 'District King',
+  },
+
+  // ─── INTELLIGENCE ──────────────────────────
+  {
+    id: 'market_guru_ach',
+    name: 'Market Guru',
+    description: 'Purchase 20 market reports',
+    category: 'intelligence',
+    points: 30,
+    icon: '💹',
+    condition: { type: 'reports_purchased', target: 20 },
+    rewardTitle: 'Market Guru',
+  },
+  {
+    id: 'analyst_50',
+    name: 'Master Analyst',
+    description: 'Purchase 50 market reports',
+    category: 'intelligence',
+    points: 50,
+    icon: '📊',
+    condition: { type: 'reports_purchased', target: 50 },
+    rewardBadge: 'master_analyst',
+  },
+  {
+    id: 'analyst_95',
+    name: 'Precision Forecaster',
+    description: 'Reach 95% forecast accuracy',
+    category: 'intelligence',
+    points: 150,
+    icon: '🎯',
+    condition: { type: 'forecast_accuracy_95', target: 1 },
+    rewardBadge: 'precision_forecaster',
+  },
+
+  // ─── PRESTIGE ──────────────────────────────
+  {
+    id: 'prestige_1',
+    name: 'New Beginning',
+    description: 'Prestige for the first time',
+    category: 'prestige',
+    points: 100,
+    icon: '🌟',
+    condition: { type: 'prestige_level', target: 1 },
+    rewardBadge: 'prestige_1',
+    rewardTitle: 'Pioneer',
+  },
+  {
+    id: 'prestige_5',
+    name: 'Phoenix',
+    description: 'Reach Prestige Level 5',
+    category: 'prestige',
+    points: 500,
+    icon: '🔥',
+    condition: { type: 'prestige_level', target: 5 },
+    rewardBadge: 'prestige_5',
+    rewardTitle: 'Phoenix',
+    hidden: true,
+  },
+  {
+    id: 'prestige_10',
+    name: 'Immortal',
+    description: 'Reach Prestige Level 10',
+    category: 'prestige',
+    points: 2000,
+    icon: '💫',
+    condition: { type: 'prestige_level', target: 10 },
+    rewardBadge: 'prestige_10',
+    rewardTitle: 'Immortal',
+    hidden: true,
+  },
+
+  // ─── STOCK MARKET (placeholder/hidden) ─────
+  {
+    id: 'stock_million',
+    name: 'Stock Mogul',
+    description: 'Reach £1M in stock portfolio value',
+    category: 'stocks',
+    points: 100,
+    icon: '📈',
+    condition: { type: 'stock_portfolio_value', target: 1000000 },
+    rewardBadge: 'stock_mogul',
+    hidden: true,
+  },
+];
+
+export const MAX_LEVEL = 100;
+export const PRESTIGE_REQUIREMENT_LEVEL = 100;
+export const MAX_PRESTIGE = 10;
+
+export function getAchievementById(id) {
+  return ACHIEVEMENT_DEFINITIONS.find((a) => a.id === id);
+}
+
+export function getAchievementsByCategory(category) {
+  return ACHIEVEMENT_DEFINITIONS.filter((a) => a.category === category && !a.hidden);
+}
+
+export function getVisibleAchievements() {
+  return ACHIEVEMENT_DEFINITIONS.filter((a) => !a.hidden);
+}
