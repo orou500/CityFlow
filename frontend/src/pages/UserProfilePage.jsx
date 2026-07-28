@@ -653,9 +653,13 @@ export default function UserProfilePage() {
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
-              <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{t('profile.level')} {profileUser.level || 1}</span>
+              <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {t('profile.level')} {profileUser.level || 1}
+              </span>
               {profileUser.prestigeLevel > 0 && (
-                <span className="text-sm font-semibold text-purple-500">✦ {t('profile.prestige')} {profileUser.prestigeLevel}</span>
+                <span className="text-sm font-semibold text-purple-500">
+                  ✦ {t('profile.prestige')} {profileUser.prestigeLevel}
+                </span>
               )}
               {profileUser.title && (
                 <span className="text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full">
@@ -793,7 +797,9 @@ export default function UserProfilePage() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-gray-900 dark:text-white">{t('profile.achievements')}</h2>
               {profileUser.achievementPoints > 0 && (
-                <span className="text-sm text-blue-600 dark:text-blue-400 font-medium">{profileUser.achievementPoints} pts</span>
+                <span className="text-sm text-blue-600 dark:text-blue-400 font-medium">
+                  {profileUser.achievementPoints} pts
+                </span>
               )}
             </div>
             <div className="flex flex-wrap gap-2">

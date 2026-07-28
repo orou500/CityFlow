@@ -95,9 +95,7 @@ export default function CareerPage() {
     );
   }
 
-  const xpPercent = career.xpToNextLevel > 0
-    ? Math.min(Math.round((career.xp / career.xpToNextLevel) * 100), 100)
-    : 0;
+  const xpPercent = career.xpToNextLevel > 0 ? Math.min(Math.round((career.xp / career.xpToNextLevel) * 100), 100) : 0;
 
   const tabs = [
     { id: 'overview', label: t('career.overview') },
@@ -112,7 +110,9 @@ export default function CareerPage() {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-primary">{t('career.title')}</h1>
           <div className="flex items-center gap-2 text-sm text-muted">
-            <span className="font-semibold text-blue-600 dark:text-blue-400">{t('career.achievementPoints')}: {career.achievementPoints}/{career.totalAchievementPoints}</span>
+            <span className="font-semibold text-blue-600 dark:text-blue-400">
+              {t('career.achievementPoints')}: {career.achievementPoints}/{career.totalAchievementPoints}
+            </span>
           </div>
         </div>
 
@@ -145,8 +145,12 @@ export default function CareerPage() {
             />
           </div>
           <div className="flex justify-between mt-1 text-xs text-muted">
-            <span>{xpPercent}% {t('career.toNextLevel')}</span>
-            <span>{t('career.maxLevel')}: {career.maxLevel}</span>
+            <span>
+              {xpPercent}% {t('career.toNextLevel')}
+            </span>
+            <span>
+              {t('career.maxLevel')}: {career.maxLevel}
+            </span>
           </div>
         </div>
 
@@ -186,7 +190,9 @@ export default function CareerPage() {
                         <span className="text-sm font-medium text-primary">{t(`career.categories.${cat}`)}</span>
                       </div>
                       <div className="flex items-center justify-between text-xs text-muted mb-1">
-                        <span>{earned}/{total}</span>
+                        <span>
+                          {earned}/{total}
+                        </span>
                         <span>{Math.round((earned / total) * 100)}%</span>
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
@@ -206,7 +212,9 @@ export default function CareerPage() {
               <h2 className="text-lg font-bold text-primary mb-4">{t('career.stats')}</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center">
-                  <div className="text-xl font-bold text-primary">{career.earnedAchievementCount}/{career.totalAchievementCount}</div>
+                  <div className="text-xl font-bold text-primary">
+                    {career.earnedAchievementCount}/{career.totalAchievementCount}
+                  </div>
                   <div className="text-xs text-muted mt-1">{t('career.achievementsUnlocked')}</div>
                 </div>
                 <div className="text-center">
@@ -246,7 +254,9 @@ export default function CareerPage() {
                     <span className="text-xl shrink-0">{ach.icon}</span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className={`text-sm font-medium ${ach.earned ? 'text-primary' : 'text-muted'}`}>{ach.name}</p>
+                        <p className={`text-sm font-medium ${ach.earned ? 'text-primary' : 'text-muted'}`}>
+                          {ach.name}
+                        </p>
                         {ach.earned && <span className="text-green-500 text-xs">✓</span>}
                       </div>
                       <p className="text-xs text-muted mt-0.5">{ach.description}</p>
@@ -262,9 +272,7 @@ export default function CareerPage() {
                             {t('career.titleLabel')}
                           </span>
                         )}
-                        {ach.hidden && !ach.earned && (
-                          <span className="text-xs text-muted">???</span>
-                        )}
+                        {ach.hidden && !ach.earned && <span className="text-xs text-muted">???</span>}
                       </div>
                     </div>
                   </div>
@@ -279,7 +287,9 @@ export default function CareerPage() {
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
             <h2 className="text-lg font-bold text-primary mb-4">{t('career.selectTitle')}</h2>
             {titleMsg && (
-              <p className={`text-sm mb-3 ${titleMsg.includes('Updated') || titleMsg.includes('success') ? 'text-green-500' : 'text-red-500'}`}>
+              <p
+                className={`text-sm mb-3 ${titleMsg.includes('Updated') || titleMsg.includes('success') ? 'text-green-500' : 'text-red-500'}`}
+              >
                 {titleMsg}
               </p>
             )}
@@ -308,9 +318,7 @@ export default function CareerPage() {
                 </button>
               ))}
             </div>
-            {career.titles.length === 0 && (
-              <p className="text-sm text-muted">{t('career.noTitlesEarned')}</p>
-            )}
+            {career.titles.length === 0 && <p className="text-sm text-muted">{t('career.noTitlesEarned')}</p>}
           </div>
         )}
 
@@ -319,7 +327,9 @@ export default function CareerPage() {
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
             <h2 className="text-lg font-bold text-primary mb-4">{t('career.prestigeSystem')}</h2>
             {prestigeMsg && (
-              <p className={`text-sm mb-3 ${prestigeMsg.includes('success') || prestigeMsg.includes('Prestige') ? 'text-green-500' : 'text-red-500'}`}>
+              <p
+                className={`text-sm mb-3 ${prestigeMsg.includes('success') || prestigeMsg.includes('Prestige') ? 'text-green-500' : 'text-red-500'}`}
+              >
                 {prestigeMsg}
               </p>
             )}
@@ -327,7 +337,9 @@ export default function CareerPage() {
               <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-primary">{t('career.currentPrestige')}</span>
-                  <span className="text-lg font-bold text-purple-500">{career.prestigeLevel} / {career.maxPrestige}</span>
+                  <span className="text-lg font-bold text-purple-500">
+                    {career.prestigeLevel} / {career.maxPrestige}
+                  </span>
                 </div>
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
                   <div
@@ -340,12 +352,18 @@ export default function CareerPage() {
               <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
                 <p className="text-sm text-muted mb-3">{t('career.prestigeDescription')}</p>
                 <ul className="text-sm text-muted space-y-1 mb-4">
-                  <li>• {t('career.prestigeRequirement')}: {t('career.level')} {career.prestigeRequirementLevel}</li>
+                  <li>
+                    • {t('career.prestigeRequirement')}: {t('career.level')} {career.prestigeRequirementLevel}
+                  </li>
                   <li>• {t('career.prestigeRewards')}</li>
                 </ul>
                 <button
                   onClick={handlePrestige}
-                  disabled={prestigeLoading || career.level < career.prestigeRequirementLevel || career.prestigeLevel >= career.maxPrestige}
+                  disabled={
+                    prestigeLoading ||
+                    career.level < career.prestigeRequirementLevel ||
+                    career.prestigeLevel >= career.maxPrestige
+                  }
                   className="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {prestigeLoading ? t('common.loading') : t('career.prestigeButton')}
