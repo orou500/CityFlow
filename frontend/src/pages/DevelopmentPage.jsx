@@ -6,6 +6,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { translateError } from '../i18n/errors';
 import { formatMoney, formatDiff, formatDiffExact, formatCompact } from '../utils/format';
 import CompactValue from '../components/CompactValue';
+import PropertyImage from '../components/PropertyImage';
 
 export default function DevelopmentPage() {
   const { t } = useTranslation();
@@ -274,6 +275,7 @@ export default function DevelopmentPage() {
                     setTab('start');
                   }}
                 >
+                  <PropertyImage property={land} alt={land.name} className="w-full h-28 object-cover rounded mb-3" />
                   <h3 className="font-semibold text-gray-900 dark:text-white">{land.name}</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                     {land.cityId?.name || t('development.unknown')} {land.location ? `- ${land.location}` : ''}
@@ -308,6 +310,11 @@ export default function DevelopmentPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-1">
                 <div className="bg-white dark:bg-gray-900 rounded-lg p-4">
+                  <PropertyImage
+                    property={selectedLand}
+                    alt={selectedLand.name}
+                    className="w-full h-28 object-cover rounded mb-3"
+                  />
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-3">{t('development.selectedLand')}</h3>
                   <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{selectedLand.name}</p>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -359,6 +366,11 @@ export default function DevelopmentPage() {
                               className="bg-gray-50 dark:bg-gray-800 rounded p-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors"
                               onClick={() => handleSelectProject(proj)}
                             >
+                              <PropertyImage
+                                property={{ type: 'commercial', buildingType: proj.id, name: proj.name }}
+                                alt={proj.name}
+                                className="w-full h-24 object-cover rounded mb-2"
+                              />
                               <p className="font-semibold text-gray-900 dark:text-white">
                                 {t(`development.proj.${proj.id}.name`, proj.name)}
                               </p>
@@ -593,6 +605,7 @@ export default function DevelopmentPage() {
                     className="bg-white dark:bg-gray-900 rounded-lg p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-850 transition-colors"
                     onClick={() => navigate(`/property/${b._id}`)}
                   >
+                    <PropertyImage property={b} alt={b.name} className="w-full h-28 object-cover rounded mb-3" />
                     <h3 className="font-semibold text-gray-900 dark:text-white">{b.name}</h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                       {b.cityId?.name || t('development.unknown')}
@@ -654,6 +667,7 @@ export default function DevelopmentPage() {
                     setImprovementModal(b._id);
                   }}
                 >
+                  <PropertyImage property={b} alt={b.name} className="w-full h-24 object-cover rounded mb-3" />
                   <h3 className="font-semibold text-gray-900 dark:text-white">{b.name}</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                     {b.cityId?.name || t('development.unknown')}

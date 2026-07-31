@@ -18,7 +18,7 @@ cityflow/
 │       ├── engine/          # Simulation logic (tick, market, season reset, property generation, valuation, credit score, company processing, city contracts, treasury investments, property risk, auction processing)
 │       ├── middleware/       # JWT auth, admin guards, Redis rate limiter, maintenance
 │       ├── models/          # Mongoose schemas (User, Property, City, Season, GameState, Company, RealEstateCompany, etc.)
-│       ├── routes/          # REST API endpoints (29 route files)
+│       ├── routes/          # REST API endpoints (34 route files)
 │       ├── services/        # Email (Brevo SMTP), push notifications (Firebase), avatar download, HTML templates
 │       ├── socket/          # Socket.IO server, Redis adapter, event constants, room management
 │       ├── test/            # Test setup, helpers, and MongoDB Memory Server config
@@ -31,7 +31,7 @@ cityflow/
 │       ├── components/      # Reusable UI (Navbar, Sidebar, WorldMap, OnboardingWrapper, Toast, etc.)
 │       ├── hooks/           # Custom hooks (useSocket, useCompanySocket, useSocketEvent, useNativeAvatarUrl)
 │       ├── i18n/            # Internationalization (en, he)
-│       ├── pages/           # 38 route-level page components
+│       ├── pages/           # 46 route-level page components
 │       ├── store/           # Zustand state management (auth, game, company, leaderboard, audio)
 │       └── utils/           # Socket.IO client, format utilities, Capacitor platform utils, push/biometric/network/deep link helpers
 ├── discord-bot/             # CityFlow Discord bot (Node.js, Discord.js 14, MongoDB, 31 slash commands)
@@ -92,7 +92,14 @@ cityflow/
 | **Rate Limiting**              | Per-IP rate limiting on registration, login, and email-sending endpoints                                                                                                                                                                                                                                                                                                                    |
 | **Strong Password Policy**     | Enforced 8+ characters with uppercase, lowercase, and number requirements                                                                                                                                                                                                                                                                                                                   |
 | **Legal & Compliance**         | Terms of Service, Privacy Policy, Cookie Policy pages with registration acceptance                                                                                                                                                                                                                                                                                                          |
-| **Onboarding**                 | 12-step guided tour for new players covering all game features                                                                                                                                                                                                                                                                                                                              |
+| **Onboarding**                 | 13-step guided tour for new players covering all game features (world map, marketplace, property details, dashboard, bank, rent, development, leveling, events, seasons, friends, auctions)                                                                                                                                                                                                    |
+| **Marketplace Size Filter**    | Filter properties by minimum/maximum size (sq ft) on the marketplace with URL-synced query parameters                                                                                                                                                                                                                                                                                        |
+| **Missions**                   | Goal-oriented missions with 22 condition types (buying, rent, auctions, development, company activity); automatic progress tracking from gameplay actions and engine ticks; claimable rewards with atomic completed→claimed transitions preventing double-claims                                                                                                                               |
+| **Career Progression**         | Persistent career page tracking lifetime stats, achievements, and leveling; all gameplay and engine events flow through a unified XP pipeline with `career:updated` socket events                                                                                                                                                                                                              |
+| **District Control**           | Neighborhood districts with player influence scores, rankings, and territory competition                                                                                                                                                                                                                                                                                                    |
+| **Market Intelligence**        | Advanced market analysis page with trends, demand heatmaps, and investment signals                                                                                                                                                                                                                                                                                                         |
+| **Competitive Events**         | Time-limited multiplayer events with objectives, rankings, and rewards                                                                                                                                                                                                                                                                                                                      |
+| **Donations & Supporter Tiers**| Support the project; supporter recognition page and tiers                                                                                                                                                                                                                                                                                                                                  |
 | **Admin Panel**                | Full control over simulation, users, properties, cities, events, seasons, email testing, manual tick execution; sortable user tables                                                                                                                                                                                                                                                        |
 | **Backup & Restore**           | Admin-only database backup/restore with gzip-compressed exports, upload/download, auto-retention, and full-fidelity restore                                                                                                                                                                                                                                                                 |
 | **Maintenance Mode**           | Admin-toggleable maintenance mode with custom message, 503 backend protection, logged-in user banner                                                                                                                                                                                                                                                                                        |
@@ -783,6 +790,108 @@ All routes except `GET /` require authentication.
 | GET    | `/email/status`                        | Get SMTP connection status              |
 | POST   | `/email/test`                          | Send a test email                       |
 
+### Auctions (`/api/auctions`)
+
+| Method | Path                                | Description                                                   |
+| ------ | ----------------------------------- | ------------------------------------------------------------- |
+| GET    | `/featured`                         | Featured auctions (scored: value, bids, watchers, rarity)     |
+| GET    | `/analytics`                        | Global auction stats                                          |
+| GET    | `/`                                 | List auctions (filter by status, page)                        |
+| GET    | `/:id`                              | Auction detail                                                |
+| POST   | `/`                                 | Create an auction (property listing, rate-limited)            |
+| POST   | `/:id/bid`                          | Place a bid (anti-sniping extends ending auctions)            |
+| POST   | `/:id/watch`                        | Add/remove auction to watchlist                               |
+| POST   | `/:id/cancel`                       | Cancel an auction                                             |
+| POST   | `/:id/company-bid`                  | Propose a company auction bid (member vote)                   |
+| POST   | `/:id/company-bid/:reqId/vote`      | Vote on a company bid proposal                                |
+| GET    | `/reputation/:userId`               | Seller auction reputation                                     |
+| GET    | `/history/list`                     | Auction history (limit, pagination)                           |
+| GET    | `/my/bids`                          | User's bid history                                            |
+| GET    | `/my/watchlist`                     | User's watchlist (max 50)                                     |
+
+### Missions (`/api/missions`)
+
+| Method | Path                    | Description                                        |
+| ------ | ----------------------- | -------------------------------------------------- |
+| GET    | `/definitions`          | Mission catalog (22 condition types)               |
+| GET    | `/dashboard`            | Active missions with progress                      |
+| GET    | `/active`               | Currently active missions                          |
+| GET    | `/completed`            | Completed missions                                |
+| GET    | `/claimed`              | Claimed missions                                  |
+| GET    | `/chain/:chainId`       | Mission chain by ID                               |
+| GET    | `/stats`                | Mission statistics                                |
+| POST   | `/claim/:missionId`     | Claim reward (atomic completed→claimed)           |
+| POST   | `/refresh`              | Refresh daily/weekly missions                     |
+| POST   | `/admin/reset-periods`  | Reset mission periods (admin)                     |
+
+### Career (`/api/career`)
+
+| Method | Path                    | Description                                        |
+| ------ | ----------------------- | -------------------------------------------------- |
+| GET    | `/`                     | Career stats, titles, prestige, achievements       |
+| GET    | `/achievements`         | Earned achievements list                          |
+| POST   | `/title`                | Set active title                                  |
+| POST   | `/prestige`             | Prestige reset for career bonuses                 |
+| POST   | `/check-achievements`   | Re-run achievement checks                         |
+
+### Districts (`/api/districts`)
+
+| Method | Path                     | Description                                    |
+| ------ | ------------------------ | ---------------------------------------------- |
+| GET    | `/`                      | List all districts                             |
+| GET    | `/leaderboard/top`       | Top districts by influence                     |
+| GET    | `/city/:cityId`          | Districts within a city                        |
+| GET    | `/:id`                   | District detail (public, optional auth)        |
+| GET    | `/:id/history`           | District influence history                     |
+| GET    | `/:id/influence`         | Player influence breakdown for a district      |
+
+### Leaderboards (`/api/leaderboards`)
+
+| Method | Path                     | Description                                    |
+| ------ | ------------------------ | ---------------------------------------------- |
+| GET    | `/rankings/:category`    | Rankings for a category (net-worth, etc.)      |
+| GET    | `/my-rank`               | Current user rank across categories            |
+| GET    | `/history/:category`     | Ranking history                                |
+| GET    | `/player/:userId`        | Player ranks across categories                 |
+| GET    | `/summary`               | Leaderboard summary                            |
+
+### Market Intelligence (`/api/market-intelligence`)
+
+| Method | Path                     | Description                                    |
+| ------ | ------------------------ | ---------------------------------------------- |
+| GET    | `/catalog`               | Available report catalog                       |
+| GET    | `/trends/:cityId`        | City market trends                             |
+| POST   | `/purchase`              | Purchase a market report                       |
+| GET    | `/reports`               | User's purchased reports                       |
+| GET    | `/reports/:id`           | Report details                                |
+| GET    | `/performance`           | Report/strategy performance summary            |
+
+### Transactions (`/api/transactions`)
+
+| Method | Path           | Description                              |
+| ------ | -------------- | ---------------------------------------- |
+| GET    | `/user/:id`    | User transaction history (authenticated) |
+
+### Property Management (`/api/management`)
+
+| Method | Path                      | Description                       |
+| ------ | ------------------------- | --------------------------------- |
+| GET    | `/:propertyId`            | Property management overview      |
+| GET    | `/:propertyId/history`    | Property management history       |
+| POST   | `/:propertyId/rent`       | Set property rent                 |
+| POST   | `/:propertyId/maintenance`| Set property maintenance level    |
+
+### Donations (`/api/donations`)
+
+| Method | Path                 | Description                              |
+| ------ | -------------------- | ---------------------------------------- |
+| GET    | `/config`            | Donation configuration                   |
+| POST   | `/create`            | Create a donation intent                 |
+| POST   | `/capture`           | Capture a completed donation             |
+| GET    | `/history`           | User donation history                    |
+| GET    | `/top-supporters`    | Top supporters (public, optional auth)   |
+| GET    | `/admin/stats`       | Donation stats (admin)                   |
+
 ## Database Models
 
 ### User
@@ -1040,10 +1149,17 @@ All routes except `GET /` require authentication.
 | `/marketplace`               | Marketplace             | Yes           |
 | `/stocks`                    | StockMarket             | Yes           |
 | `/stocks/portfolio`          | StockPortfolio          | Yes           |
-| `/stocks/company/:id`        | CompanyPage             | Yes           |
-| `/indexes`                   | IndexMarket             | Yes           |
-| `/indexes/portfolio`         | IndexPortfolio          | Yes           |
-| `/indexes/:id`               | IndexPage               | Yes           |
+| `/company/:id`               | CompanyPage             | Yes           |
+| `/index/:id`                 | IndexPage               | Yes           |
+| `/leaderboards`              | LeaderboardPage         | Yes           |
+| `/events`                    | CompetitiveEventsPage   | Yes           |
+| `/auctions`                  | AuctionDashboardPage    | Yes           |
+| `/auctions/:id`              | AuctionDashboardPage    | Yes           |
+| `/districts`                 | DistrictListPage        | Yes           |
+| `/district/:id`              | DistrictPage            | Yes           |
+| `/market-intelligence`       | MarketIntelligencePage  | Yes           |
+| `/missions`                  | MissionsPage            | Yes           |
+| `/career`                    | CareerPage              | Yes           |
 | `/friends`                   | FriendsPage             | Yes           |
 | `/notifications`             | NotificationsPage       | Yes           |
 | `/profile`                   | UserProfilePage (own)   | Yes           |
@@ -1058,6 +1174,8 @@ All routes except `GET /` require authentication.
 | `/reset-password`            | ResetPasswordPage       | Guest only    |
 | `/verify-email`              | VerifyEmailPage         | No            |
 | `/contributors`              | ContributorsPage        | No            |
+| `/donate`                    | DonationsPage           | No            |
+| `/supporters`                | SupporterRecognitionPage| No            |
 | `/oauth/accept-terms`        | OAuthAcceptTermsPage    | No            |
 | `/auth/callback`             | OAuthCallbackPage       | No            |
 | `/admin`                     | AdminPage               | Admin only    |

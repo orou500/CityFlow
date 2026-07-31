@@ -41,6 +41,8 @@ router.get('/', optionalAuth, async (req, res) => {
       limit = '21',
       forSale,
       owned,
+      minSize,
+      maxSize,
     } = req.query;
 
     const filter = {};
@@ -57,6 +59,12 @@ router.get('/', optionalAuth, async (req, res) => {
       filter.currentPrice = {};
       if (minPrice) filter.currentPrice.$gte = parseFloat(minPrice);
       if (maxPrice) filter.currentPrice.$lte = parseFloat(maxPrice);
+    }
+
+    if (minSize || maxSize) {
+      filter.size = {};
+      if (minSize) filter.size.$gte = parseFloat(minSize);
+      if (maxSize) filter.size.$lte = parseFloat(maxSize);
     }
 
     if (type && ['apartment', 'house', 'commercial', 'land'].includes(type)) {
@@ -475,6 +483,9 @@ router.post('/grade/upgrade', authenticate, async (req, res) => {
       type: 'system',
       title: 'Property Grade Upgraded',
       message: `"${property.name}" upgraded to Grade ${GRADE_NAMES[newGrade - 1]}. Value: $${prevPrice.toLocaleString()} → $${property.currentPrice.toLocaleString()}. Rent: $${prevRent.toLocaleString()} → $${property.rent.toLocaleString()}.`,
+      route: `/property/${property._id}`,
+      entityType: 'property',
+      entityId: property._id,
       relatedId: property._id,
       global: false,
     });

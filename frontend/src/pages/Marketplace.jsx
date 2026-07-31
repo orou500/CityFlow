@@ -3,8 +3,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
 import { translateError } from '../i18n/errors';
-import { formatMoney } from '../utils/format';
+import { formatMoney, formatCompact } from '../utils/format';
 import { getApiBaseUrl } from '../utils/capacitor';
+import PropertyImage from '../components/PropertyImage';
 
 const API = getApiBaseUrl();
 
@@ -29,43 +30,54 @@ function PropertyCard({ p, cities, propertyTypes, onBuy, t, user, navigate }) {
   const isBankOwned = !p.ownerId;
 
   return (
-    <div className="bg-white dark:bg-gray-900 p-4 rounded flex flex-col gap-2 h-full">
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2 flex-wrap">
-          <h3
-            className="font-semibold cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate"
-            onClick={() => navigate(`/property/${p._id}`)}
-          >
-            {p.name}
-          </h3>
-          {isBankOwned && (
-            <span className="text-xs bg-blue-900 text-blue-300 px-2 py-0.5 rounded shrink-0">
-              {t('marketplace.bank')}
+    <div className="bg-white dark:bg-gray-900 rounded flex flex-col overflow-hidden h-full">
+      <PropertyImage property={p} alt={p.name} className="w-full h-36 object-cover" />
+      <div className="p-4 flex flex-col gap-2 flex-1">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3
+              className="font-semibold cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate"
+              onClick={() => navigate(`/property/${p._id}`)}
+            >
+              {p.name}
+            </h3>
+            {isBankOwned && (
+              <span className="text-xs bg-blue-900 text-blue-300 px-2 py-0.5 rounded shrink-0">
+                {t('marketplace.bank')}
+              </span>
+            )}
+          </div>
+          <div className="flex gap-2 text-sm text-gray-500 dark:text-gray-400 mt-1 flex-wrap">
+            <span>{cityName}</span>
+            <span>·</span>
+            <span>{propertyTypes[p.type] || p.type}</span>
+            <span>·</span>
+            <span>
+              {t('city.rent')}: {formatMoney(p.rent)}
             </span>
+            {p.size > 0 && (
+              <>
+                <span>·</span>
+                <span>
+                  {formatCompact(p.size)} {t('development.sqft')}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800">
+          <p className="text-lg font-bold text-orange-500 dark:text-orange-400">{formatMoney(p.currentPrice)}</p>
+          {user ? (
+            <button
+              onClick={() => onBuy(p._id)}
+              className="bg-orange-500 hover:bg-orange-400 text-gray-900 dark:text-white text-sm px-4 py-1.5 rounded transition-colors"
+            >
+              {t('marketplace.buy')}
+            </button>
+          ) : (
+            <p className="text-xs text-gray-400 dark:text-gray-500">{t('nav.login')}</p>
           )}
         </div>
-        <div className="flex gap-2 text-sm text-gray-500 dark:text-gray-400 mt-1 flex-wrap">
-          <span>{cityName}</span>
-          <span>·</span>
-          <span>{propertyTypes[p.type] || p.type}</span>
-          <span>·</span>
-          <span>
-            {t('city.rent')}: {formatMoney(p.rent)}
-          </span>
-        </div>
-      </div>
-      <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800">
-        <p className="text-lg font-bold text-orange-500 dark:text-orange-400">{formatMoney(p.currentPrice)}</p>
-        {user ? (
-          <button
-            onClick={() => onBuy(p._id)}
-            className="bg-orange-500 hover:bg-orange-400 text-gray-900 dark:text-white text-sm px-4 py-1.5 rounded transition-colors"
-          >
-            {t('marketplace.buy')}
-          </button>
-        ) : (
-          <p className="text-xs text-gray-400 dark:text-gray-500">{t('nav.login')}</p>
-        )}
       </div>
     </div>
   );
@@ -88,6 +100,8 @@ export default function Marketplace() {
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [minPrice, setMinPrice] = useState(searchParams.get('minPrice') || '');
   const [maxPrice, setMaxPrice] = useState(searchParams.get('maxPrice') || '');
+  const [minSize, setMinSize] = useState(searchParams.get('minSize') || '');
+  const [maxSize, setMaxSize] = useState(searchParams.get('maxSize') || '');
   const [country, setCountry] = useState(searchParams.get('country') || '');
   const [city, setCity] = useState(searchParams.get('city') || '');
   const [type, setType] = useState(searchParams.get('type') || '');
@@ -130,6 +144,8 @@ export default function Marketplace() {
     if (search) params.search = search;
     if (minPrice) params.minPrice = minPrice;
     if (maxPrice) params.maxPrice = maxPrice;
+    if (minSize) params.minSize = minSize;
+    if (maxSize) params.maxSize = maxSize;
     if (country) params.country = country;
     if (city) params.city = city;
     if (type) params.type = type;
@@ -145,6 +161,8 @@ export default function Marketplace() {
     setSearch('');
     setMinPrice('');
     setMaxPrice('');
+    setMinSize('');
+    setMaxSize('');
     setCountry('');
     setCity('');
     setType('');
@@ -161,7 +179,7 @@ export default function Marketplace() {
     const params = Object.fromEntries(searchParams.entries());
     params.page = String(p);
     setSearchParams(params);
-    loadProperties({ ...searchParams, page: String(p) });
+    loadProperties(params);
   };
 
   useEffect(() => {
@@ -260,6 +278,28 @@ export default function Marketplace() {
               value={maxPrice}
               onChange={(e) => setMaxPrice(e.target.value)}
               placeholder="$999,999,999"
+              className={INPUT_STYLE}
+              min="0"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t('marketplace.minSize')}</label>
+            <input
+              type="number"
+              value={minSize}
+              onChange={(e) => setMinSize(e.target.value)}
+              placeholder="0"
+              className={INPUT_STYLE}
+              min="0"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t('marketplace.maxSize')}</label>
+            <input
+              type="number"
+              value={maxSize}
+              onChange={(e) => setMaxSize(e.target.value)}
+              placeholder="100,000"
               className={INPUT_STYLE}
               min="0"
             />

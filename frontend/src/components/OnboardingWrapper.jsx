@@ -148,12 +148,44 @@ export default function OnboardingWrapper({ children }) {
     setTourRunning(true);
   }
 
+  const updatePositions = useCallback(() => {
+    if (!tourRunning || !tooltipRef.current) return;
+    const currentStep = steps[stepIndex];
+    const tooltip = tooltipRef.current;
+    const tw = tooltip.offsetWidth || 380;
+    const th = tooltip.offsetHeight || 200;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    if (currentStep.target === 'body') {
+      setSpotlight(null);
+      setTooltipPos({ top: Math.max(12, (vh - th) / 2), left: Math.max(12, (vw - tw) / 2) });
+      return;
+    }
+
+    const target = getTarget(currentStep.target);
+    if (!target) {
+      setSpotlight(null);
+      setTooltipPos({ top: vh / 3, left: (vw - tw) / 2 });
+      return;
+    }
+
+    const rect = target.getBoundingClientRect();
+    setSpotlight({
+      top: rect.top,
+      left: rect.left,
+      width: rect.width,
+      height: rect.height,
+      bottom: rect.bottom,
+      right: rect.right,
+    });
+    setTooltipPos(getTooltipPosition(rect, tw, th, vw, vh));
+  }, [tourRunning, stepIndex, steps]);
+
   const scrollToTarget = useCallback((selector) => {
     const el = getTarget(selector);
     if (el && el !== document.body) {
-      const rect = el.getBoundingClientRect();
-      const scrollY = window.scrollY + rect.top - 100;
-      window.scrollTo({ top: Math.max(0, scrollY), behavior: 'smooth' });
+      el.scrollIntoView({ block: 'center', behavior: 'smooth', inline: 'nearest' });
     }
   }, []);
 
@@ -161,88 +193,40 @@ export default function OnboardingWrapper({ children }) {
     if (!tourRunning) return;
     const currentStep = steps[stepIndex];
     const target = getTarget(currentStep.target);
-
-    if (target === document.body || !target) {
-      setSpotlight(null);
-    } else {
-      const rect = target.getBoundingClientRect();
-      setSpotlight({
-        top: rect.top,
-        left: rect.left,
-        width: rect.width,
-        height: rect.height,
-        bottom: rect.bottom,
-        right: rect.right,
-      });
+    if (target && target !== document.body) {
       scrollToTarget(currentStep.target);
     }
-  }, [tourRunning, stepIndex, scrollToTarget, steps]);
+    updatePositions();
+  }, [tourRunning, stepIndex, scrollToTarget, updatePositions]);
 
   useLayoutEffect(() => {
-    if (!tourRunning || !tooltipRef.current) return;
-
-    const currentStep = steps[stepIndex];
-    const tooltip = tooltipRef.current;
-    const tooltipWidth = tooltip.offsetWidth || 380;
-    const tooltipHeight = tooltip.offsetHeight || 200;
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-
-    if (currentStep.target === 'body') {
-      setTooltipPos({
-        top: Math.max(12, (vh - tooltipHeight) / 2),
-        left: Math.max(12, (vw - tooltipWidth) / 2),
-      });
-      return;
-    }
-
-    const target = getTarget(currentStep.target);
-    if (!target) {
-      setTooltipPos({ top: vh / 3, left: (vw - tooltipWidth) / 2 });
-      return;
-    }
-
-    setTooltipPos(getTooltipPosition(target.getBoundingClientRect(), tooltipWidth, tooltipHeight, vw, vh));
-  }, [tourRunning, stepIndex, isRtl, steps]);
+    if (!tourRunning) return;
+    updatePositions();
+  }, [tourRunning, stepIndex, isRtl, updatePositions]);
 
   useEffect(() => {
     if (!tourRunning) return;
+    let raf = null;
+    function handleScroll() {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = null;
+        updatePositions();
+      });
+    }
     function handleKey(e) {
       if (e.key === 'Escape') completeOnboarding();
     }
-    function handleResize() {
-      if (!tooltipRef.current) return;
-      const currentStep = steps[stepIndex];
-      const target = getTarget(currentStep.target);
-      if (target && target !== document.body) {
-        const rect = target.getBoundingClientRect();
-        setSpotlight({
-          top: rect.top,
-          left: rect.left,
-          width: rect.width,
-          height: rect.height,
-          bottom: rect.bottom,
-          right: rect.right,
-        });
-      }
-      const tooltip = tooltipRef.current;
-      const tw = tooltip.offsetWidth || 380;
-      const th = tooltip.offsetHeight || 200;
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-      if (currentStep.target === 'body') {
-        setTooltipPos({ top: Math.max(12, (vh - th) / 2), left: Math.max(12, (vw - tw) / 2) });
-      } else if (target && target !== document.body) {
-        setTooltipPos(getTooltipPosition(target.getBoundingClientRect(), tw, th, vw, vh));
-      }
-    }
     window.addEventListener('keydown', handleKey);
-    window.addEventListener('resize', handleResize);
+    window.addEventListener('resize', handleScroll);
+    window.addEventListener('scroll', handleScroll, true);
     return () => {
       window.removeEventListener('keydown', handleKey);
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('resize', handleScroll);
+      window.removeEventListener('scroll', handleScroll, true);
+      if (raf) cancelAnimationFrame(raf);
     };
-  }, [tourRunning, stepIndex, steps]);
+  }, [tourRunning, stepIndex, updatePositions]);
 
   function handleNext() {
     if (stepIndex < steps.length - 1) setStepIndex((i) => i + 1);
