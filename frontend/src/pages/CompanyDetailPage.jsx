@@ -642,23 +642,26 @@ export default function CompanyDetailPage() {
             <div className="col-span-2 md:col-span-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4">
               <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{t('companies.ownership')}</h3>
               <div className="space-y-2">
-                  {company.shareBreakdown.map((s, idx) => (
-                    <div key={s.userId || `treasury-${idx}`} className="flex items-center justify-between gap-2">
-                      <span className="text-sm text-gray-700 dark:text-gray-300 truncate min-w-0">
-                        {s.isTreasury
-                          ? t('companies.treasuryOwnership')
-                          : typeof s.userId === 'object' && s.userId?.username
-                            ? s.userId.username
-                            : 'Unknown'}
-                      </span>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <div className="w-20 sm:w-32 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                          <div className={`h-2 rounded-full ${s.isTreasury ? 'bg-green-500' : 'bg-blue-600'}`} style={{ width: `${s.percentage}%` }} />
-                        </div>
-                        <span className="text-xs text-gray-500 dark:text-gray-400 w-12 text-right">{s.percentage}%</span>
+                {company.shareBreakdown.map((s, idx) => (
+                  <div key={s.userId || `treasury-${idx}`} className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-gray-700 dark:text-gray-300 truncate min-w-0">
+                      {s.isTreasury
+                        ? t('companies.treasuryOwnership')
+                        : typeof s.userId === 'object' && s.userId?.username
+                          ? s.userId.username
+                          : 'Unknown'}
+                    </span>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="w-20 sm:w-32 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full ${s.isTreasury ? 'bg-green-500' : 'bg-blue-600'}`}
+                          style={{ width: `${s.percentage}%` }}
+                        />
                       </div>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 w-12 text-right">{s.percentage}%</span>
                     </div>
-                  ))}
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -673,24 +676,37 @@ export default function CompanyDetailPage() {
                 </div>
                 <div>
                   <span className="text-xs text-gray-500 dark:text-gray-400">{t('companies.monthlyPayroll')}</span>
-                  <div className="text-lg font-bold text-gray-900 dark:text-white">{formatMoney(company.employees.totalPayroll)}</div>
+                  <div className="text-lg font-bold text-gray-900 dark:text-white">
+                    {formatMoney(company.employees.totalPayroll)}
+                  </div>
                 </div>
                 <div>
                   <span className="text-xs text-gray-500 dark:text-gray-400">{t('companies.salaryPerEmployee')}</span>
-                  <div className="text-lg font-bold text-gray-900 dark:text-white">{formatMoney(company.employees.monthlySalaryPerEmployee)}</div>
+                  <div className="text-lg font-bold text-gray-900 dark:text-white">
+                    {formatMoney(company.employees.monthlySalaryPerEmployee)}
+                  </div>
                 </div>
                 <div>
                   <span className="text-xs text-gray-500 dark:text-gray-400">{t('companies.maxEmployees')}</span>
-                  <div className="text-lg font-bold text-gray-900 dark:text-white">{company.employees.maxEmployees}</div>
+                  <div className="text-lg font-bold text-gray-900 dark:text-white">
+                    {company.employees.maxEmployees}
+                  </div>
                 </div>
               </div>
               {company.employees.departments && company.employees.departments.length > 0 && (
                 <div className="mt-3 space-y-1">
-                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{t('companies.departments')}</span>
+                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                    {t('companies.departments')}
+                  </span>
                   {company.employees.departments.map((dept, idx) => (
-                    <div key={idx} className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400"
+                    >
                       <span>{dept.name}</span>
-                      <span>{dept.count} employees · {formatMoney(dept.budget)}</span>
+                      <span>
+                        {dept.count} employees · {formatMoney(dept.budget)}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -986,9 +1002,7 @@ export default function CompanyDetailPage() {
                     {ipoLoading ? t('common.loading') : t('companies.initiateIPO')}
                   </button>
                 </div>
-                {ipoError && (
-                  <p className="mt-2 text-xs text-red-600 dark:text-red-400">{ipoError}</p>
-                )}
+                {ipoError && <p className="mt-2 text-xs text-red-600 dark:text-red-400">{ipoError}</p>}
               </div>
             )
           )}

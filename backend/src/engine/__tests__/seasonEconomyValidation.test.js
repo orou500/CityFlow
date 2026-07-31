@@ -35,7 +35,8 @@ describe('Season Reset — Economy Validation', () => {
     await GameState.findOneAndUpdate({ key: 'global' }, { $set: { tickNumber: 720 } }, { upsert: true, new: true });
 
     city = await City.create({
-      name: 'Econ City', country: 'Testland',
+      name: 'Econ City',
+      country: 'Testland',
       coordinates: { lat: 0, lng: 0 },
       population: 500000,
     });
@@ -45,16 +46,31 @@ describe('Season Reset — Economy Validation', () => {
 
   it('distributes company value to shareholders by exact ownership percentage', async () => {
     const founder = await User.create({
-      username: 'ceo_econ', email: 'ceo@econ.test', password: 'test',
-      balance: 0, level: 30, emailVerified: true, emailVerifiedAt: new Date(),
+      username: 'ceo_econ',
+      email: 'ceo@econ.test',
+      password: 'test',
+      balance: 0,
+      level: 30,
+      emailVerified: true,
+      emailVerifiedAt: new Date(),
     });
     const memberA = await User.create({
-      username: 'memberA_econ', email: 'a@econ.test', password: 'test',
-      balance: 0, level: 20, emailVerified: true, emailVerifiedAt: new Date(),
+      username: 'memberA_econ',
+      email: 'a@econ.test',
+      password: 'test',
+      balance: 0,
+      level: 20,
+      emailVerified: true,
+      emailVerifiedAt: new Date(),
     });
     const memberB = await User.create({
-      username: 'memberB_econ', email: 'b@econ.test', password: 'test',
-      balance: 0, level: 20, emailVerified: true, emailVerifiedAt: new Date(),
+      username: 'memberB_econ',
+      email: 'b@econ.test',
+      password: 'test',
+      balance: 0,
+      level: 20,
+      emailVerified: true,
+      emailVerifiedAt: new Date(),
     });
 
     const company = await RealEstateCompany.create({
@@ -96,8 +112,13 @@ describe('Season Reset — Economy Validation', () => {
 
   it('reduces liquidation value by outstanding debt', async () => {
     const founder = await User.create({
-      username: 'debt_ceo', email: 'debt_ceo@test.com', password: 'test',
-      balance: 0, level: 30, emailVerified: true, emailVerifiedAt: new Date(),
+      username: 'debt_ceo',
+      email: 'debt_ceo@test.com',
+      password: 'test',
+      balance: 0,
+      level: 30,
+      emailVerified: true,
+      emailVerifiedAt: new Date(),
     });
 
     const company = await RealEstateCompany.create({
@@ -139,12 +160,22 @@ describe('Season Reset — Economy Validation', () => {
 
   it('distributes IPO market cap to shareholders with locked CEO shares included', async () => {
     const founder = await User.create({
-      username: 'ipo_ceo', email: 'ipo_ceo@test.com', password: 'test',
-      balance: 0, level: 30, emailVerified: true, emailVerifiedAt: new Date(),
+      username: 'ipo_ceo',
+      email: 'ipo_ceo@test.com',
+      password: 'test',
+      balance: 0,
+      level: 30,
+      emailVerified: true,
+      emailVerifiedAt: new Date(),
     });
     const investor = await User.create({
-      username: 'ipo_inv', email: 'ipo_inv@test.com', password: 'test',
-      balance: 0, level: 20, emailVerified: true, emailVerifiedAt: new Date(),
+      username: 'ipo_inv',
+      email: 'ipo_inv@test.com',
+      password: 'test',
+      balance: 0,
+      level: 20,
+      emailVerified: true,
+      emailVerifiedAt: new Date(),
     });
 
     // Create a stock (IPO) company
@@ -193,9 +224,13 @@ describe('Season Reset — Economy Validation', () => {
 
   it('includes liquidation payouts in net worth exactly once (no double-count)', async () => {
     const founder = await User.create({
-      username: 'carryover_user', email: 'co@test.com', password: 'test',
-      balance: 100_000_000, level: 30,
-      emailVerified: true, emailVerifiedAt: new Date(),
+      username: 'carryover_user',
+      email: 'co@test.com',
+      password: 'test',
+      balance: 100_000_000,
+      level: 30,
+      emailVerified: true,
+      emailVerifiedAt: new Date(),
     });
 
     // Create company with value
@@ -213,14 +248,25 @@ describe('Season Reset — Economy Validation', () => {
 
     // Create IPO company
     const stockCompany = await Company.create({
-      name: 'Carryover IPO', ticker: 'CIPO', industry: 'finance', size: 'medium',
-      sharePrice: 50, previousSharePrice: 50,
-      marketCap: 50_000_000, sharesOutstanding: 1_000_000,
-      isIPO: true, active: true, hqCityId: city._id, foundedTick: 0,
+      name: 'Carryover IPO',
+      ticker: 'CIPO',
+      industry: 'finance',
+      size: 'medium',
+      sharePrice: 50,
+      previousSharePrice: 50,
+      marketCap: 50_000_000,
+      sharesOutstanding: 1_000_000,
+      isIPO: true,
+      active: true,
+      hqCityId: city._id,
+      foundedTick: 0,
     });
     await StockHolding.create({
-      userId: founder._id, companyId: stockCompany._id,
-      shares: 200_000, avgBuyPrice: 40, locked: false,
+      userId: founder._id,
+      companyId: stockCompany._id,
+      shares: 200_000,
+      avgBuyPrice: 40,
+      locked: false,
     });
 
     // Simulate full season reset end-to-end
@@ -246,9 +292,13 @@ describe('Season Reset — Economy Validation', () => {
 
   it('does not double-count liquidation payouts', async () => {
     const founder = await User.create({
-      username: 'no_double', email: 'nd@test.com', password: 'test',
-      balance: 50_000_000, level: 30,
-      emailVerified: true, emailVerifiedAt: new Date(),
+      username: 'no_double',
+      email: 'nd@test.com',
+      password: 'test',
+      balance: 50_000_000,
+      level: 30,
+      emailVerified: true,
+      emailVerifiedAt: new Date(),
     });
 
     const company = await RealEstateCompany.create({
@@ -304,12 +354,22 @@ describe('Season Reset — Economy Validation', () => {
 
   it('preserves company identity and clears all economic data', async () => {
     const founder = await User.create({
-      username: 'legacy_founder', email: 'lf@test.com', password: 'test',
-      balance: 0, level: 30, emailVerified: true, emailVerifiedAt: new Date(),
+      username: 'legacy_founder',
+      email: 'lf@test.com',
+      password: 'test',
+      balance: 0,
+      level: 30,
+      emailVerified: true,
+      emailVerifiedAt: new Date(),
     });
     const member = await User.create({
-      username: 'legacy_member', email: 'lm@test.com', password: 'test',
-      balance: 0, level: 20, emailVerified: true, emailVerifiedAt: new Date(),
+      username: 'legacy_member',
+      email: 'lm@test.com',
+      password: 'test',
+      balance: 0,
+      level: 20,
+      emailVerified: true,
+      emailVerifiedAt: new Date(),
     });
 
     const company = await RealEstateCompany.create({
@@ -322,9 +382,18 @@ describe('Season Reset — Economy Validation', () => {
         { userId: member._id, role: 'director', shares: 300 },
       ],
       shares: { totalShares: 1000, treasuryShares: 0, parValue: 100 },
-      treasury: { balance: 100_000_000, transactions: [{ type: 'deposit', amount: 100_000_000, description: 'seed', tick: 0 }] },
+      treasury: {
+        balance: 100_000_000,
+        transactions: [{ type: 'deposit', amount: 100_000_000, description: 'seed', tick: 0 }],
+      },
       stats: { netWorth: 100_000_000, propertiesOwned: 5, totalRentalIncome: 500_000 },
-      employees: { count: 50, maxEmployees: 100, monthlySalaryPerEmployee: 5000, totalPayroll: 250_000, departments: [{ name: 'Ops', count: 30, budget: 150_000 }] },
+      employees: {
+        count: 50,
+        maxEmployees: 100,
+        monthlySalaryPerEmployee: 5000,
+        totalPayroll: 250_000,
+        departments: [{ name: 'Ops', count: 30, budget: 150_000 }],
+      },
       level: 15,
       xp: 10000,
       reputation: 800,
@@ -384,9 +453,13 @@ describe('Season Reset — Economy Validation', () => {
 
   it('completes full season reset with no orphan data', async () => {
     const founder = await User.create({
-      username: 'fullreset_user', email: 'fr@test.com', password: 'test',
-      balance: 50_000_000, level: 30,
-      emailVerified: true, emailVerifiedAt: new Date(),
+      username: 'fullreset_user',
+      email: 'fr@test.com',
+      password: 'test',
+      balance: 50_000_000,
+      level: 30,
+      emailVerified: true,
+      emailVerifiedAt: new Date(),
     });
 
     // Create RE company with properties
@@ -402,31 +475,56 @@ describe('Season Reset — Economy Validation', () => {
       foundedTick: 0,
     });
     await Property.create({
-      name: 'Co Asset', type: 'commercial', cityId: city._id,
-      ownerId: founder._id, companyId: reCompany._id,
-      currentPrice: 50_000_000, basePrice: 50_000_000,
+      name: 'Co Asset',
+      type: 'commercial',
+      cityId: city._id,
+      ownerId: founder._id,
+      companyId: reCompany._id,
+      currentPrice: 50_000_000,
+      basePrice: 50_000_000,
     });
     await Loan.create({
-      userId: founder._id, companyId: reCompany._id,
-      principal: 20_000_000, remainingBalance: 20_000_000,
-      active: true, type: 'business', interestRate: 0.08,
-      durationTicks: 12, ticksRemaining: 10, paymentPerTick: 2_000_000,
+      userId: founder._id,
+      companyId: reCompany._id,
+      principal: 20_000_000,
+      remainingBalance: 20_000_000,
+      active: true,
+      type: 'business',
+      interestRate: 0.08,
+      durationTicks: 12,
+      ticksRemaining: 10,
+      paymentPerTick: 2_000_000,
     });
 
     // Create IPO company with holdings
     const stockCo = await Company.create({
-      name: 'FullReset IPO', ticker: 'FRIP', industry: 'finance', size: 'medium',
-      sharePrice: 20, previousSharePrice: 20,
-      marketCap: 20_000_000, sharesOutstanding: 1_000_000,
-      isIPO: true, active: true, hqCityId: city._id, foundedTick: 0,
+      name: 'FullReset IPO',
+      ticker: 'FRIP',
+      industry: 'finance',
+      size: 'medium',
+      sharePrice: 20,
+      previousSharePrice: 20,
+      marketCap: 20_000_000,
+      sharesOutstanding: 1_000_000,
+      isIPO: true,
+      active: true,
+      hqCityId: city._id,
+      foundedTick: 0,
     });
     await StockHolding.create({
-      userId: founder._id, companyId: stockCo._id,
-      shares: 100_000, avgBuyPrice: 15, locked: false,
+      userId: founder._id,
+      companyId: stockCo._id,
+      shares: 100_000,
+      avgBuyPrice: 15,
+      locked: false,
     });
     await StockTransaction.create({
-      userId: founder._id, companyId: stockCo._id,
-      type: 'buy', shares: 100_000, price: 15, total: 1_500_000,
+      userId: founder._id,
+      companyId: stockCo._id,
+      type: 'buy',
+      shares: 100_000,
+      price: 15,
+      total: 1_500_000,
     });
 
     // Run full season reset

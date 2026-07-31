@@ -222,7 +222,13 @@ router.put('/users/:id/level', async (req, res) => {
     user.xp = 0;
     user.xpToNextLevel = getXpForLevel(level);
     await user.save();
-    res.json({ _id: user._id, username: user.username, level: user.level, xp: user.xp, xpToNextLevel: user.xpToNextLevel });
+    res.json({
+      _id: user._id,
+      username: user.username,
+      level: user.level,
+      xp: user.xp,
+      xpToNextLevel: user.xpToNextLevel,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

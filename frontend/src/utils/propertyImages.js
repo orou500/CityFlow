@@ -60,7 +60,10 @@ const KEYWORD_RULES = {
 
 function matchKeyword(name, rules) {
   if (!name) return null;
-  const words = name.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  const words = name
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
   for (const rule of rules) {
     if (rule.keywords.some((k) => words.includes(k))) return rule.image;
   }

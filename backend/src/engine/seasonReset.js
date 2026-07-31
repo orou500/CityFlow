@@ -331,9 +331,15 @@ export async function liquidateRealEstateCompanies() {
     await User.bulkWrite(userBulkOps);
   }
 
-  console.log(`[SEASON] Liquidated ${companies.length} companies, paid $${[...payoutByUser.values()].reduce((a, b) => a + b, 0)} to members`);
+  console.log(
+    `[SEASON] Liquidated ${companies.length} companies, paid $${[...payoutByUser.values()].reduce((a, b) => a + b, 0)} to members`,
+  );
 
-  return { liquidated: companies.length, totalPayout: [...payoutByUser.values()].reduce((a, b) => a + b, 0), hallOfFame: hallOfFameEntries };
+  return {
+    liquidated: companies.length,
+    totalPayout: [...payoutByUser.values()].reduce((a, b) => a + b, 0),
+    hallOfFame: hallOfFameEntries,
+  };
 }
 
 // ─── PUBLIC COMPANY (IPO) LIQUIDATION ──────────────────────────
@@ -343,14 +349,17 @@ export async function liquidatePublicCompanies() {
   if (ipoCompanies.length === 0) return { liquidated: 0, totalPayout: 0, hallOfFame: [] };
 
   const ipoIds = ipoCompanies.map((c) => c._id);
-  const allHoldings = await StockHolding.find({ companyId: { $in: ipoIds } }).populate('companyId', 'sharePrice sharesOutstanding marketCap');
+  const allHoldings = await StockHolding.find({ companyId: { $in: ipoIds } }).populate(
+    'companyId',
+    'sharePrice sharesOutstanding marketCap',
+  );
 
   const payoutByUser = new Map();
   const hallOfFameEntries = [];
 
   for (const ipo of ipoCompanies) {
     const holdings = allHoldings.filter((h) => h.companyId?._id?.toString() === ipo._id.toString());
-    const companyValue = ipo.marketCap || (ipo.sharePrice * ipo.sharesOutstanding) || 0;
+    const companyValue = ipo.marketCap || ipo.sharePrice * ipo.sharesOutstanding || 0;
     const totalSharesHeld = holdings.reduce((s, h) => s + h.shares, 0);
 
     hallOfFameEntries.push({
@@ -390,9 +399,15 @@ export async function liquidatePublicCompanies() {
   // Clear all IPO stock holdings so they aren't double-counted in subsequent steps
   await StockHolding.deleteMany({ companyId: { $in: ipoIds } });
 
-  console.log(`[SEASON] Liquidated ${ipoCompanies.length} public companies, paid $${[...payoutByUser.values()].reduce((a, b) => a + b, 0)} to shareholders`);
+  console.log(
+    `[SEASON] Liquidated ${ipoCompanies.length} public companies, paid $${[...payoutByUser.values()].reduce((a, b) => a + b, 0)} to shareholders`,
+  );
 
-  return { liquidated: ipoCompanies.length, totalPayout: [...payoutByUser.values()].reduce((a, b) => a + b, 0), hallOfFame: hallOfFameEntries };
+  return {
+    liquidated: ipoCompanies.length,
+    totalPayout: [...payoutByUser.values()].reduce((a, b) => a + b, 0),
+    hallOfFame: hallOfFameEntries,
+  };
 }
 
 // ─── RESET COMPANY ECONOMY (keep identity, members, roles) ────
@@ -416,14 +431,36 @@ export async function resetCompanyEconomy() {
     company.xpToNextLevel = 500;
     company.reputation = 0;
     company.stats = {
-      netWorth: 0, propertiesOwned: 0, totalRentalIncome: 0,
-      totalTreasuryDeposits: 0, activeProjects: 0, totalLoanBalance: 0,
-      totalDevelopments: 0, contractsCompleted: 0, loansRepaid: 0,
-      totalVotes: 0, ticksExisted: 0,
+      netWorth: 0,
+      propertiesOwned: 0,
+      totalRentalIncome: 0,
+      totalTreasuryDeposits: 0,
+      activeProjects: 0,
+      totalLoanBalance: 0,
+      totalDevelopments: 0,
+      contractsCompleted: 0,
+      loansRepaid: 0,
+      totalVotes: 0,
+      ticksExisted: 0,
     };
     company.shares = { totalShares: 1000, treasuryShares: 1000, parValue: 100 };
-    company.employees = { count: 0, maxEmployees: 10, monthlySalaryPerEmployee: 5000, totalPayroll: 0, departments: [] };
-    company.ipo = { listed: false, sharePrice: 0, sharesOutstanding: 0, dividendsPaid: 0, lastDividendPerShare: 0, lastDividendTick: 0, listFee: 0, ipoValue: 0 };
+    company.employees = {
+      count: 0,
+      maxEmployees: 10,
+      monthlySalaryPerEmployee: 5000,
+      totalPayroll: 0,
+      departments: [],
+    };
+    company.ipo = {
+      listed: false,
+      sharePrice: 0,
+      sharesOutstanding: 0,
+      dividendsPaid: 0,
+      lastDividendPerShare: 0,
+      lastDividendTick: 0,
+      listFee: 0,
+      ipoValue: 0,
+    };
     company.maxMembers = 10;
 
     // Clear pending requests (members stay, but old requests reset)
@@ -511,9 +548,14 @@ export async function archiveSeason(seasonId) {
   // Collect Hall of Fame data from companies (still active before liquidation)
   const reCompanies = await RealEstateCompany.find({ active: true }).lean();
   const largestCompany = reCompanies.sort((a, b) => (b.stats?.netWorth || 0) - (a.stats?.netWorth || 0))[0] || null;
-  const biggestIpo = reCompanies.filter((c) => c.ipo?.listed).sort((a, b) => (b.ipo?.ipoValue || 0) - (a.ipo?.ipoValue || 0))[0] || null;
-  const mostProperties = reCompanies.sort((a, b) => (b.stats?.propertiesOwned || 0) - (a.stats?.propertiesOwned || 0))[0] || null;
-  const bestPublic = await Company.findOne({ isIPO: true, active: true }).sort({ marketCap: -1 }).lean().catch(() => null);
+  const biggestIpo =
+    reCompanies.filter((c) => c.ipo?.listed).sort((a, b) => (b.ipo?.ipoValue || 0) - (a.ipo?.ipoValue || 0))[0] || null;
+  const mostProperties =
+    reCompanies.sort((a, b) => (b.stats?.propertiesOwned || 0) - (a.stats?.propertiesOwned || 0))[0] || null;
+  const bestPublic = await Company.findOne({ isIPO: true, active: true })
+    .sort({ marketCap: -1 })
+    .lean()
+    .catch(() => null);
 
   const playerRankingsWithRank = playerRankings.map((p, i) => ({ ...p, rank: i + 1 }));
 
@@ -538,10 +580,26 @@ export async function archiveSeason(seasonId) {
     totalTransactions,
     summary: `Season ${season.number} lasted ${tickCount} months with ${totalPlayers} players.`,
     hallOfFame: {
-      largestCompany: largestCompany ? { name: largestCompany.name, netWorth: largestCompany.stats?.netWorth || 0, founderId: largestCompany.founderId } : null,
-      biggestIpo: biggestIpo ? { name: biggestIpo.name, ipoValue: biggestIpo.ipo?.ipoValue || 0, ticker: biggestIpo.ipo?.ticker || '' } : null,
-      mostProperties: mostProperties ? { name: mostProperties.name, count: mostProperties.stats?.propertiesOwned || 0, founderId: mostProperties.founderId } : null,
-      bestPublicCompany: bestPublic ? { name: bestPublic.name, ticker: bestPublic.ticker, marketCap: bestPublic.marketCap } : null,
+      largestCompany: largestCompany
+        ? {
+            name: largestCompany.name,
+            netWorth: largestCompany.stats?.netWorth || 0,
+            founderId: largestCompany.founderId,
+          }
+        : null,
+      biggestIpo: biggestIpo
+        ? { name: biggestIpo.name, ipoValue: biggestIpo.ipo?.ipoValue || 0, ticker: biggestIpo.ipo?.ticker || '' }
+        : null,
+      mostProperties: mostProperties
+        ? {
+            name: mostProperties.name,
+            count: mostProperties.stats?.propertiesOwned || 0,
+            founderId: mostProperties.founderId,
+          }
+        : null,
+      bestPublicCompany: bestPublic
+        ? { name: bestPublic.name, ticker: bestPublic.ticker, marketCap: bestPublic.marketCap }
+        : null,
     },
   };
 

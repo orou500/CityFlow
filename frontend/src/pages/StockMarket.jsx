@@ -63,10 +63,7 @@ function PublicCompaniesTab() {
 
   async function loadData() {
     try {
-      const [companiesData, statsData] = await Promise.all([
-        api('/stocks/public'),
-        api('/stocks/public/statistics'),
-      ]);
+      const [companiesData, statsData] = await Promise.all([api('/stocks/public'), api('/stocks/public/statistics')]);
       setCompanies(companiesData);
       setStats(statsData);
     } catch (e) {
@@ -105,7 +102,10 @@ function PublicCompaniesTab() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
             <div className="text-xs text-gray-500 dark:text-gray-400">{t('stocks.totalMarketCap')}</div>
-            <div className="text-lg font-semibold text-gray-900 dark:text-white" title={formatMoneyExact(stats.totalMarketCap)}>
+            <div
+              className="text-lg font-semibold text-gray-900 dark:text-white"
+              title={formatMoneyExact(stats.totalMarketCap)}
+            >
               {formatMoney(stats.totalMarketCap)}
             </div>
           </div>
@@ -119,7 +119,8 @@ function PublicCompaniesTab() {
               <div className="text-lg font-semibold text-green-500">
                 <Link to={`/company/${stats.gainers[0]._id}`} className="hover:underline">
                   {stats.gainers[0].ticker}
-                </Link> +{stats.gainers[0].dayChangePercent}%
+                </Link>{' '}
+                +{stats.gainers[0].dayChangePercent}%
               </div>
             ) : (
               <div className="text-lg font-semibold text-gray-400">-</div>
@@ -131,7 +132,8 @@ function PublicCompaniesTab() {
               <div className="text-lg font-semibold text-red-500">
                 <Link to={`/company/${stats.losers[0]._id}`} className="hover:underline">
                   {stats.losers[0].ticker}
-                </Link> {stats.losers[0].dayChangePercent}%
+                </Link>{' '}
+                {stats.losers[0].dayChangePercent}%
               </div>
             ) : (
               <div className="text-lg font-semibold text-gray-400">-</div>
@@ -204,10 +206,14 @@ function PublicCompaniesTab() {
                   </td>
                   <td className="hidden sm:table-cell px-4 py-3 text-right">
                     <span className={c.dayChangePercent >= 0 ? 'text-green-500' : 'text-red-500'}>
-                      {c.dayChangePercent >= 0 ? '+' : ''}{c.dayChangePercent}%
+                      {c.dayChangePercent >= 0 ? '+' : ''}
+                      {c.dayChangePercent}%
                     </span>
                   </td>
-                  <td className="hidden sm:table-cell px-4 py-3 text-right text-gray-500 dark:text-gray-400" title={formatMoneyExact(c.marketCap)}>
+                  <td
+                    className="hidden sm:table-cell px-4 py-3 text-right text-gray-500 dark:text-gray-400"
+                    title={formatMoneyExact(c.marketCap)}
+                  >
                     {formatMoney(c.marketCap)}
                   </td>
                   <td className="hidden md:table-cell px-4 py-3 text-right text-gray-500 dark:text-gray-400">
@@ -215,7 +221,8 @@ function PublicCompaniesTab() {
                   </td>
                   <td className="hidden md:table-cell px-4 py-3 text-right">
                     <span className={c.totalReturn >= 0 ? 'text-green-500' : 'text-red-500'}>
-                      {c.totalReturn >= 0 ? '+' : ''}{c.totalReturn}%
+                      {c.totalReturn >= 0 ? '+' : ''}
+                      {c.totalReturn}%
                     </span>
                   </td>
                   <td className="hidden lg:table-cell px-4 py-3 text-right text-gray-500 dark:text-gray-400">
@@ -326,7 +333,9 @@ function CompaniesTab() {
 
       {overview && Object.keys(overview.industries).length > 0 && (
         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{t('stocks.industryPerformance')}</h3>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+            {t('stocks.industryPerformance')}
+          </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {Object.entries(overview.industries).map(([key, ind]) => (
               <div key={key} className="flex items-center gap-2">
@@ -334,7 +343,8 @@ function CompaniesTab() {
                 <div>
                   <div className="text-xs text-gray-500 dark:text-gray-400 capitalize">{key}</div>
                   <div className={`text-sm font-medium ${ind.avgChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                    {ind.avgChange >= 0 ? '+' : ''}{ind.avgChange}%
+                    {ind.avgChange >= 0 ? '+' : ''}
+                    {ind.avgChange}%
                   </div>
                 </div>
               </div>
@@ -357,7 +367,9 @@ function CompaniesTab() {
         >
           <option value="">{t('stocks.allIndustries')}</option>
           {Object.keys(INDUSTRY_COLORS).map((ind) => (
-            <option key={ind} value={ind}>{ind}</option>
+            <option key={ind} value={ind}>
+              {ind}
+            </option>
           ))}
         </select>
         <select
@@ -408,7 +420,8 @@ function CompaniesTab() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <span className={c.dayChangePercent >= 0 ? 'text-green-500' : 'text-red-500'}>
-                      {c.dayChangePercent >= 0 ? '+' : ''}{c.dayChangePercent}%
+                      {c.dayChangePercent >= 0 ? '+' : ''}
+                      {c.dayChangePercent}%
                     </span>
                   </td>
                   <td
@@ -547,7 +560,9 @@ function IndexesTab() {
                     </Link>
                   </td>
                   <td className="hidden sm:table-cell px-4 py-3">
-                    <span className={`text-xs px-2 py-0.5 rounded capitalize ${INDEX_TYPE_COLORS[idx.type]}`}>{idx.type}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded capitalize ${INDEX_TYPE_COLORS[idx.type]}`}>
+                      {idx.type}
+                    </span>
                   </td>
                   <td
                     className="px-4 py-3 text-right text-gray-900 dark:text-white font-medium"
@@ -557,12 +572,14 @@ function IndexesTab() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <span className={idx.dayChangePercent >= 0 ? 'text-green-500' : 'text-red-500'}>
-                      {idx.dayChangePercent >= 0 ? '+' : ''}{idx.dayChangePercent}%
+                      {idx.dayChangePercent >= 0 ? '+' : ''}
+                      {idx.dayChangePercent}%
                     </span>
                   </td>
                   <td className="hidden sm:table-cell px-4 py-3 text-right">
                     <span className={idx.totalReturn >= 0 ? 'text-green-500' : 'text-red-500'}>
-                      {idx.totalReturn >= 0 ? '+' : ''}{idx.totalReturn}%
+                      {idx.totalReturn >= 0 ? '+' : ''}
+                      {idx.totalReturn}%
                     </span>
                   </td>
                   <td className="hidden md:table-cell px-4 py-3 text-right text-gray-500 dark:text-gray-400">

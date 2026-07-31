@@ -177,13 +177,15 @@ export async function executeTick() {
     if (publicCompanyResults.length > 0) {
       emitToAll(SOCKET_EVENTS.PUBLIC_COMPANY_PRICES, {
         tickNumber,
-        companies: publicCompanyResults.filter((r) => r.status === 'ok').map((r) => ({
-          ticker: r.ticker,
-          price: r.price,
-          change: r.priceChange,
-          volume: r.volume,
-          shareholders: r.shareholders,
-        })),
+        companies: publicCompanyResults
+          .filter((r) => r.status === 'ok')
+          .map((r) => ({
+            ticker: r.ticker,
+            price: r.price,
+            change: r.priceChange,
+            volume: r.volume,
+            shareholders: r.shareholders,
+          })),
       });
     }
 

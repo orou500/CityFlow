@@ -16,8 +16,17 @@ describe('Public Company Long-Term Simulation', () => {
   let hqCity;
 
   beforeEach(async () => {
-    await GameState.findOneAndUpdate({}, { tickNumber: 1000, $setOnInsert: { season: 1 } }, { upsert: true, new: true });
-    hqCity = await City.create({ name: 'Sim City', country: 'Simland', coordinates: { lat: 0, lng: 0 }, description: 'sim' });
+    await GameState.findOneAndUpdate(
+      {},
+      { tickNumber: 1000, $setOnInsert: { season: 1 } },
+      { upsert: true, new: true },
+    );
+    hqCity = await City.create({
+      name: 'Sim City',
+      country: 'Simland',
+      coordinates: { lat: 0, lng: 0 },
+      description: 'sim',
+    });
     await Company.deleteMany({});
     await RealEstateCompany.deleteMany({});
     await StockHolding.deleteMany({});
@@ -27,7 +36,11 @@ describe('Public Company Long-Term Simulation', () => {
   });
 
   async function createSimCompany(name, rentalIncome, membersCount = 5) {
-    const founder = await User.create({ username: `sim_${name}_founder`, email: `sim_${name}@t.com`, password: 'Pass1234' });
+    const founder = await User.create({
+      username: `sim_${name}_founder`,
+      email: `sim_${name}@t.com`,
+      password: 'test',
+    });
     const reCompany = await RealEstateCompany.create({
       name: `${name} RE`,
       founderId: founder._id,
@@ -95,7 +108,7 @@ describe('Public Company Long-Term Simulation', () => {
       const user = await User.create({
         username: `sim_investor_${stockCompany.ticker}_${i}`,
         email: `sim_i_${stockCompany.ticker}_${i}@t.com`,
-        password: 'Pass1234',
+        password: 'test',
         balance: 10_000_000,
       });
       await StockHolding.create({
@@ -292,7 +305,7 @@ describe('Public Company Long-Term Simulation', () => {
       const user = await User.create({
         username: `sim_trader_${i}`,
         email: `trader_${i}@t.com`,
-        password: 'Pass1234',
+        password: 'test',
         balance: 20_000_000,
       });
       users.push(user);

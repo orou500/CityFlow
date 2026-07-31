@@ -292,7 +292,11 @@ describe('Company Progression System', () => {
       const res = await request(app)
         .post('/real-estate-companies')
         .set(authHeader(token))
-        .send({ name: `ProgTest_${Date.now()}_${Math.random().toString(36).slice(2)}`, description: 'Test', hqCityId: city._id });
+        .send({
+          name: `ProgTest_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+          description: 'Test',
+          hqCityId: city._id,
+        });
       expect(res.status).toBe(201);
       const company = await RealEstateCompany.findById(res.body._id);
       return { company, token, user };

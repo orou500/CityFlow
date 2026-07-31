@@ -240,7 +240,16 @@ async function processInvestmentProposal(investment, tickNumber, globalEconomicI
         companyId: company._id,
         userId: investment.proposal.proposedBy,
         action: 'investment_approved',
-        details: { reason: 'expired_auto_yes', investmentId: investment._id, name: investment.name, principal: investment.principal, activeYesVotes: updatedYesVotes - autoCount, autoYesVotes: autoCount, noVotes: updatedNoVotes, totalVoters },
+        details: {
+          reason: 'expired_auto_yes',
+          investmentId: investment._id,
+          name: investment.name,
+          principal: investment.principal,
+          activeYesVotes: updatedYesVotes - autoCount,
+          autoYesVotes: autoCount,
+          noVotes: updatedNoVotes,
+          totalVoters,
+        },
         tick: tickNumber,
       });
 
@@ -265,7 +274,15 @@ async function processInvestmentProposal(investment, tickNumber, globalEconomicI
       await CompanyAuditLog.create({
         companyId: company._id,
         action: 'investment_rejected',
-        details: { reason: 'expired_auto_yes_insufficient', investmentId: investment._id, name: investment.name, activeYesVotes: updatedYesVotes - autoCount, autoYesVotes: autoCount, noVotes: updatedNoVotes, totalVoters },
+        details: {
+          reason: 'expired_auto_yes_insufficient',
+          investmentId: investment._id,
+          name: investment.name,
+          activeYesVotes: updatedYesVotes - autoCount,
+          autoYesVotes: autoCount,
+          noVotes: updatedNoVotes,
+          totalVoters,
+        },
         tick: tickNumber,
       });
 

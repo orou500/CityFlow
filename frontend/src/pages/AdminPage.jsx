@@ -846,7 +846,10 @@ export default function AdminPage() {
                               {t('common.save')}
                             </button>
                             <button
-                              onClick={() => { setEditUserId(null); setEditingLevel(false); }}
+                              onClick={() => {
+                                setEditUserId(null);
+                                setEditingLevel(false);
+                              }}
                               className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                             >
                               X
@@ -872,7 +875,10 @@ export default function AdminPage() {
                               {t('common.save')}
                             </button>
                             <button
-                              onClick={() => { setEditUserId(null); setEditingCreatedAt(false); }}
+                              onClick={() => {
+                                setEditUserId(null);
+                                setEditingCreatedAt(false);
+                              }}
                               className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                             >
                               X

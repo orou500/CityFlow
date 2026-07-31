@@ -280,7 +280,9 @@ export default function StockPortfolio() {
       {tab === 'dividends' && (
         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
           {claimResult && (
-            <div className={`px-4 py-2 text-sm ${claimResult.success ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'}`}>
+            <div
+              className={`px-4 py-2 text-sm ${claimResult.success ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'}`}
+            >
               {claimResult.success
                 ? `${t('stocks.dividendClaimed')}: $${claimResult.totalClaimed?.toLocaleString()}`
                 : claimResult.error}
@@ -314,7 +316,8 @@ export default function StockPortfolio() {
               </thead>
               <tbody>
                 {(dividends?.dividends || []).map((d, i) => (
-                  <tr key={d.companyId || i}
+                  <tr
+                    key={d.companyId || i}
                     className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
                   >
                     <td className="px-4 py-3">
@@ -322,9 +325,15 @@ export default function StockPortfolio() {
                       <div className="text-xs text-gray-500 dark:text-gray-400">{d.ticker}</div>
                     </td>
                     <td className="px-4 py-3 text-right text-gray-900 dark:text-white">{formatCount(d.shares)}</td>
-                    <td className="px-4 py-3 text-right text-gray-900 dark:text-white">${d.dividendPerShare?.toFixed(2)}</td>
-                    <td className="px-4 py-3 text-right text-green-600 dark:text-green-400 font-medium">${d.unclaimed?.toLocaleString()}</td>
-                    <td className="hidden sm:table-cell px-4 py-3 text-right text-gray-500 dark:text-gray-400">{d.dividendYield?.toFixed(2)}%</td>
+                    <td className="px-4 py-3 text-right text-gray-900 dark:text-white">
+                      ${d.dividendPerShare?.toFixed(2)}
+                    </td>
+                    <td className="px-4 py-3 text-right text-green-600 dark:text-green-400 font-medium">
+                      ${d.unclaimed?.toLocaleString()}
+                    </td>
+                    <td className="hidden sm:table-cell px-4 py-3 text-right text-gray-500 dark:text-gray-400">
+                      {d.dividendYield?.toFixed(2)}%
+                    </td>
                   </tr>
                 ))}
               </tbody>

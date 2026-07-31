@@ -30,7 +30,11 @@ router.post('/buy', async (req, res) => {
 
     if (company.isIPO && company.realEstateCompanyId) {
       const reCompany = await RealEstateCompany.findById(company.realEstateCompanyId);
-      if (reCompany && reCompany.members && reCompany.members.some((m) => m.userId.toString() === req.user._id.toString())) {
+      if (
+        reCompany &&
+        reCompany.members &&
+        reCompany.members.some((m) => m.userId.toString() === req.user._id.toString())
+      ) {
         return res.status(400).json({ error: 'Company members cannot buy their own company shares' });
       }
     }
@@ -84,9 +88,12 @@ router.post('/buy', async (req, res) => {
     });
 
     if (company.isIPO) {
-      await Company.updateOne({ _id: company._id }, {
-        $inc: { tradingVolume: shares, totalTrades: 1 },
-      });
+      await Company.updateOne(
+        { _id: company._id },
+        {
+          $inc: { tradingVolume: shares, totalTrades: 1 },
+        },
+      );
     }
 
     await processPlayerProgress(req.user._id, 'stocks_buy');
@@ -102,7 +109,10 @@ router.post('/buy', async (req, res) => {
     });
   } catch (err) {
     if (companyId && shares && shares > 0 && company?.isIPO) {
-      Company.updateOne({ _id: companyId, totalSharesHeld: { $gte: shares } }, { $inc: { totalSharesHeld: -shares } }).catch(() => {});
+      Company.updateOne(
+        { _id: companyId, totalSharesHeld: { $gte: shares } },
+        { $inc: { totalSharesHeld: -shares } },
+      ).catch(() => {});
     }
     res.status(500).json({ error: err.message });
   }
@@ -175,13 +185,14 @@ router.post('/sell', async (req, res) => {
     await cacheDel(cacheKeys.stockPortfolio(req.user._id));
 
     res.json({
-      holding: holding.shares > 0
-        ? {
-            shares: holding.shares,
-            avgBuyPrice: holding.avgBuyPrice,
-            currentValue: holding.shares * company.sharePrice,
-          }
-        : null,
+      holding:
+        holding.shares > 0
+          ? {
+              shares: holding.shares,
+              avgBuyPrice: holding.avgBuyPrice,
+              currentValue: holding.shares * company.sharePrice,
+            }
+          : null,
       balance: user.balance,
     });
   } catch (err) {
@@ -234,8 +245,20 @@ router.get('/public/statistics', async (_req, res) => {
       totalVolume,
       totalTrades,
       avgDividendYield: avgYieldCount > 0 ? Math.round((avgYield / avgYieldCount) * 100) / 100 : 0,
-      gainers: gainers.map((c) => ({ _id: c._id, ticker: c.ticker, name: c.name, dayChangePercent: c.dayChangePercent, sharePrice: c.sharePrice })),
-      losers: losers.map((c) => ({ _id: c._id, ticker: c.ticker, name: c.name, dayChangePercent: c.dayChangePercent, sharePrice: c.sharePrice })),
+      gainers: gainers.map((c) => ({
+        _id: c._id,
+        ticker: c.ticker,
+        name: c.name,
+        dayChangePercent: c.dayChangePercent,
+        sharePrice: c.sharePrice,
+      })),
+      losers: losers.map((c) => ({
+        _id: c._id,
+        ticker: c.ticker,
+        name: c.name,
+        dayChangePercent: c.dayChangePercent,
+        sharePrice: c.sharePrice,
+      })),
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

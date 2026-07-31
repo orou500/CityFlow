@@ -48,7 +48,7 @@ describe('Stock Routes', () => {
           await User.create({
             username: `f_${Date.now()}`,
             email: `f_${Date.now()}@t.com`,
-            password: 'Pass1234',
+            password: 'test',
           })
         )._id,
         members: [],

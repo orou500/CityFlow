@@ -209,7 +209,7 @@ export default function MissionsPage() {
     fetchStats,
   } = useMissionStore();
   const [searchParams] = useSearchParams();
-const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'active');
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'active');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [difficultyFilter, setDifficultyFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');

@@ -111,9 +111,15 @@ describe('Real Estate Companies', () => {
     it('rejects duplicate company names', async () => {
       const founder = await createFounder();
       const name = `DupeCompany_${Date.now()}`;
-      await request(app).post('/real-estate-companies').set(authHeader(founder.token)).send({ name, hqCityId: testCityId });
+      await request(app)
+        .post('/real-estate-companies')
+        .set(authHeader(founder.token))
+        .send({ name, hqCityId: testCityId });
 
-      const res = await request(app).post('/real-estate-companies').set(authHeader(founder.token)).send({ name, hqCityId: testCityId });
+      const res = await request(app)
+        .post('/real-estate-companies')
+        .set(authHeader(founder.token))
+        .send({ name, hqCityId: testCityId });
 
       expect(res.status).toBe(400);
       expect(res.body.error).toMatch(/already exists/i);
@@ -1014,7 +1020,10 @@ describe('Real Estate Companies', () => {
 
       for (let i = 0; i < 9; i++) {
         const { user: m } = await createAuthenticatedUser();
-        await addMemberToCompany(testCompany._id, founderToken, { user: m, token: (await createAuthenticatedUser()).token });
+        await addMemberToCompany(testCompany._id, founderToken, {
+          user: m,
+          token: (await createAuthenticatedUser()).token,
+        });
       }
       await addMemberToCompany(testCompany._id, founderToken, { user: founder.user, token: founderToken });
 
@@ -1039,10 +1048,7 @@ describe('Real Estate Companies', () => {
       company.ipo = { listed: true };
       await company.save();
 
-      const res = await request(app)
-        .post(`/real-estate-companies/${company._id}/ipo`)
-        .set(authHeader(token))
-        .send({});
+      const res = await request(app).post(`/real-estate-companies/${company._id}/ipo`).set(authHeader(token)).send({});
       expect(res.status).toBe(400);
       expect(res.body.error).toContain('already publicly listed');
     });
@@ -1059,10 +1065,7 @@ describe('Real Estate Companies', () => {
         await addMemberToCompany(company._id, token, member);
       }
 
-      const res = await request(app)
-        .post(`/real-estate-companies/${company._id}/ipo`)
-        .set(authHeader(token))
-        .send({});
+      const res = await request(app).post(`/real-estate-companies/${company._id}/ipo`).set(authHeader(token)).send({});
       expect(res.status).toBe(400);
       expect(res.body.error).toContain('IPO costs');
     });
@@ -1073,10 +1076,7 @@ describe('Real Estate Companies', () => {
       company.level = 10;
       await company.save();
 
-      const res = await request(app)
-        .post(`/real-estate-companies/${company._id}/ipo`)
-        .set(authHeader(token))
-        .send({});
+      const res = await request(app).post(`/real-estate-companies/${company._id}/ipo`).set(authHeader(token)).send({});
       expect(res.status).toBe(400);
       expect(res.body.error).toContain('Level 15');
     });
@@ -1087,10 +1087,7 @@ describe('Real Estate Companies', () => {
       company.level = 15;
       await company.save();
 
-      const res = await request(app)
-        .post(`/real-estate-companies/${company._id}/ipo`)
-        .set(authHeader(token))
-        .send({});
+      const res = await request(app).post(`/real-estate-companies/${company._id}/ipo`).set(authHeader(token)).send({});
       expect(res.status).toBe(400);
       expect(res.body.error).toContain('5 members');
     });
@@ -1116,10 +1113,7 @@ describe('Real Estate Companies', () => {
         });
       }
 
-      const res = await request(app)
-        .post(`/real-estate-companies/${company._id}/ipo`)
-        .set(authHeader(token))
-        .send({});
+      const res = await request(app).post(`/real-estate-companies/${company._id}/ipo`).set(authHeader(token)).send({});
       expect(res.status).toBe(400);
       expect(res.body.error).toContain('10 properties');
     });

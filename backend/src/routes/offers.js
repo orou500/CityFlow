@@ -15,7 +15,15 @@ const router = Router();
 router.use(authenticate);
 
 async function notify(userId, type, title, message, relatedId) {
-  await enqueueNotification({ userId, type, title, message, relatedId, route: '/marketplace', entityType: 'marketplace' });
+  await enqueueNotification({
+    userId,
+    type,
+    title,
+    message,
+    relatedId,
+    route: '/marketplace',
+    entityType: 'marketplace',
+  });
 }
 
 router.post('/create', async (req, res) => {

@@ -97,7 +97,7 @@ export default function NotificationsPage() {
     // Priority 4: use TYPE_CONFIG fallback
     const cfg = TYPE_CONFIG[notification.type];
     if (cfg?.route) {
-      const tabParam = (cfg.tab || notification.tab) ? `?tab=${cfg.tab || notification.tab}` : '';
+      const tabParam = cfg.tab || notification.tab ? `?tab=${cfg.tab || notification.tab}` : '';
       navigate(`${cfg.route}${tabParam}`);
     }
   };

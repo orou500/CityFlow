@@ -147,7 +147,9 @@ export default function CompanyPage() {
               <span className="capitalize">{company.industry}</span>
               <span className="capitalize">{company.size}</span>
               {isIPO && (
-                <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded">IPO</span>
+                <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded">
+                  IPO
+                </span>
               )}
             </div>
           </div>
@@ -162,7 +164,8 @@ export default function CompanyPage() {
           <div className="text-xs text-gray-500 dark:text-gray-400">{t('stocks.sharePrice')}</div>
           <div className="text-xl font-bold text-gray-900 dark:text-white">${company.sharePrice?.toFixed(2)}</div>
           <div className={`text-sm ${priceChangeColor}`}>
-            {company.dayChange >= 0 ? '+' : ''}{company.dayChange?.toFixed(2)} ({company.dayChangePercent}%)
+            {company.dayChange >= 0 ? '+' : ''}
+            {company.dayChange?.toFixed(2)} ({company.dayChangePercent}%)
           </div>
         </div>
         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
@@ -189,7 +192,10 @@ export default function CompanyPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
             <div className="text-xs text-gray-500 dark:text-gray-400">{t('stocks.tradingVolume')}</div>
-            <div className="text-lg font-semibold text-gray-900 dark:text-white" title={formatMoneyExact(displayStats.tradingVolume)}>
+            <div
+              className="text-lg font-semibold text-gray-900 dark:text-white"
+              title={formatMoneyExact(displayStats.tradingVolume)}
+            >
               {formatCount(displayStats.tradingVolume || 0)} shares
             </div>
           </div>
@@ -288,17 +294,25 @@ export default function CompanyPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
             <div>
               <div className="text-blue-600 dark:text-blue-400">{t('stocks.shares')}</div>
-              <div className="font-medium text-gray-900 dark:text-white" title={company.userHolding.shares.toLocaleString()}>
+              <div
+                className="font-medium text-gray-900 dark:text-white"
+                title={company.userHolding.shares.toLocaleString()}
+              >
                 {formatCount(company.userHolding.shares)}
               </div>
             </div>
             <div>
               <div className="text-blue-600 dark:text-blue-400">{t('stocks.avgBuyPrice')}</div>
-              <div className="font-medium text-gray-900 dark:text-white">${company.userHolding.avgBuyPrice?.toFixed(2)}</div>
+              <div className="font-medium text-gray-900 dark:text-white">
+                ${company.userHolding.avgBuyPrice?.toFixed(2)}
+              </div>
             </div>
             <div>
               <div className="text-blue-600 dark:text-blue-400">{t('stocks.currentValue')}</div>
-              <div className="font-medium text-gray-900 dark:text-white" title={formatMoneyExact(company.userHolding.currentValue)}>
+              <div
+                className="font-medium text-gray-900 dark:text-white"
+                title={formatMoneyExact(company.userHolding.currentValue)}
+              >
                 {formatMoney(company.userHolding.currentValue)}
               </div>
             </div>
@@ -306,7 +320,9 @@ export default function CompanyPage() {
               <div className="text-blue-600 dark:text-blue-400">{t('stocks.profitLoss')}</div>
               <div className={`font-medium ${company.userHolding.profitLoss >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                 {company.userHolding.profitLoss >= 0 ? '+' : ''}
-                <span title={formatMoneyExact(company.userHolding.profitLoss)}>{formatMoney(company.userHolding.profitLoss)}</span>
+                <span title={formatMoneyExact(company.userHolding.profitLoss)}>
+                  {formatMoney(company.userHolding.profitLoss)}
+                </span>
               </div>
             </div>
           </div>
@@ -377,19 +393,21 @@ export default function CompanyPage() {
       </div>
 
       <div className="flex gap-1 overflow-x-auto border-b border-gray-200 dark:border-gray-700">
-        {['overview', 'history', 'financials', 'events'].filter((t2) => t2 !== 'financials' || isIPO).map((t2) => (
-          <button
-            key={t2}
-            onClick={() => setTab(t2)}
-            className={`px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
-              tab === t2
-                ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-500'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-            }`}
-          >
-            {t(`stocks.tab${t2.charAt(0).toUpperCase() + t2.slice(1)}`)}
-          </button>
-        ))}
+        {['overview', 'history', 'financials', 'events']
+          .filter((t2) => t2 !== 'financials' || isIPO)
+          .map((t2) => (
+            <button
+              key={t2}
+              onClick={() => setTab(t2)}
+              className={`px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
+                tab === t2
+                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-500'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              {t(`stocks.tab${t2.charAt(0).toUpperCase() + t2.slice(1)}`)}
+            </button>
+          ))}
       </div>
 
       {tab === 'overview' && (
@@ -408,7 +426,8 @@ export default function CompanyPage() {
               <div className="flex justify-between">
                 <span className="text-gray-500 dark:text-gray-400">{t('stocks.totalReturn')}</span>
                 <span className={company.totalReturn >= 0 ? 'text-green-500' : 'text-red-500'}>
-                  {company.totalReturn >= 0 ? '+' : ''}{company.totalReturn}%
+                  {company.totalReturn >= 0 ? '+' : ''}
+                  {company.totalReturn}%
                 </span>
               </div>
               <div className="flex justify-between">
@@ -423,11 +442,15 @@ export default function CompanyPage() {
                 <>
                   <div className="flex justify-between">
                     <span className="text-gray-500 dark:text-gray-400">{t('stocks.dividendYield')}</span>
-                    <span className="text-gray-900 dark:text-white">{company.dividendYield ? `${company.dividendYield}%` : '-'}</span>
+                    <span className="text-gray-900 dark:text-white">
+                      {company.dividendYield ? `${company.dividendYield}%` : '-'}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500 dark:text-gray-400">{t('stocks.dividendPerShare')}</span>
-                    <span className="text-gray-900 dark:text-white">{company.dividendPerShare ? `$${company.dividendPerShare.toFixed(2)}` : '-'}</span>
+                    <span className="text-gray-900 dark:text-white">
+                      {company.dividendPerShare ? `$${company.dividendPerShare.toFixed(2)}` : '-'}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500 dark:text-gray-400">{t('stocks.ipoPrice')}</span>
@@ -458,15 +481,21 @@ export default function CompanyPage() {
       {tab === 'financials' && isIPO && displayStats && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{t('stocks.financialOverview')}</h3>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+              {t('stocks.financialOverview')}
+            </h3>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-500 dark:text-gray-400">{t('stocks.revenue')}</span>
-                <span className="text-gray-900 dark:text-white" title={formatMoneyExact(displayStats.revenue)}>{formatMoney(displayStats.revenue)}</span>
+                <span className="text-gray-900 dark:text-white" title={formatMoneyExact(displayStats.revenue)}>
+                  {formatMoney(displayStats.revenue)}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500 dark:text-gray-400">{t('stocks.marketCap')}</span>
-                <span className="text-gray-900 dark:text-white" title={formatMoneyExact(displayStats.marketCap)}>{formatMoney(displayStats.marketCap)}</span>
+                <span className="text-gray-900 dark:text-white" title={formatMoneyExact(displayStats.marketCap)}>
+                  {formatMoney(displayStats.marketCap)}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500 dark:text-gray-400">{t('stocks.sharePrice')}</span>
@@ -478,11 +507,15 @@ export default function CompanyPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500 dark:text-gray-400">{t('stocks.sharesOutstanding')}</span>
-                <span className="text-gray-900 dark:text-white">{formatCount(displayStats.sharesOutstanding || 0)}</span>
+                <span className="text-gray-900 dark:text-white">
+                  {formatCount(displayStats.sharesOutstanding || 0)}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500 dark:text-gray-400">{t('stocks.dividendPerShare')}</span>
-                <span className="text-gray-900 dark:text-white">${(displayStats.dividendPerShare || 0).toFixed(2)}</span>
+                <span className="text-gray-900 dark:text-white">
+                  ${(displayStats.dividendPerShare || 0).toFixed(2)}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500 dark:text-gray-400">{t('stocks.dividendYield')}</span>
@@ -491,7 +524,8 @@ export default function CompanyPage() {
               <div className="flex justify-between">
                 <span className="text-gray-500 dark:text-gray-400">{t('stocks.totalReturn')}</span>
                 <span className={displayStats.totalReturn >= 0 ? 'text-green-500' : 'text-red-500'}>
-                  {displayStats.totalReturn >= 0 ? '+' : ''}{displayStats.totalReturn}%
+                  {displayStats.totalReturn >= 0 ? '+' : ''}
+                  {displayStats.totalReturn}%
                 </span>
               </div>
             </div>
@@ -513,7 +547,9 @@ export default function CompanyPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500 dark:text-gray-400">{t('stocks.sharesOutstanding')}</span>
-                <span className="text-gray-900 dark:text-white">{formatCount(displayStats.sharesOutstanding || 0)}</span>
+                <span className="text-gray-900 dark:text-white">
+                  {formatCount(displayStats.sharesOutstanding || 0)}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500 dark:text-gray-400">{t('stocks.shareholders')}</span>
@@ -550,21 +586,33 @@ export default function CompanyPage() {
                 </tr>
               </thead>
               <tbody>
-                {history.slice().reverse().map((h, i) => (
-                  <tr key={i} className="border-b border-gray-100 dark:border-gray-800">
-                    <td className="px-3 py-2 text-gray-900 dark:text-white">{h.tick}</td>
-                    <td className="px-3 py-2 text-right text-gray-900 dark:text-white">${h.price?.toFixed(2)}</td>
-                    <td className="hidden sm:table-cell px-3 py-2 text-right text-gray-500 dark:text-gray-400" title={h.employees?.toLocaleString()}>
-                      {formatCount(h.employees)}
-                    </td>
-                    <td className="hidden sm:table-cell px-3 py-2 text-right text-gray-500 dark:text-gray-400" title={formatMoneyExact(h.revenue)}>
-                      {formatMoney(h.revenue)}
-                    </td>
-                    <td className="hidden md:table-cell px-3 py-2 text-right text-gray-500 dark:text-gray-400" title={formatMoneyExact(h.marketCap)}>
-                      {formatMoney(h.marketCap)}
-                    </td>
-                  </tr>
-                ))}
+                {history
+                  .slice()
+                  .reverse()
+                  .map((h, i) => (
+                    <tr key={i} className="border-b border-gray-100 dark:border-gray-800">
+                      <td className="px-3 py-2 text-gray-900 dark:text-white">{h.tick}</td>
+                      <td className="px-3 py-2 text-right text-gray-900 dark:text-white">${h.price?.toFixed(2)}</td>
+                      <td
+                        className="hidden sm:table-cell px-3 py-2 text-right text-gray-500 dark:text-gray-400"
+                        title={h.employees?.toLocaleString()}
+                      >
+                        {formatCount(h.employees)}
+                      </td>
+                      <td
+                        className="hidden sm:table-cell px-3 py-2 text-right text-gray-500 dark:text-gray-400"
+                        title={formatMoneyExact(h.revenue)}
+                      >
+                        {formatMoney(h.revenue)}
+                      </td>
+                      <td
+                        className="hidden md:table-cell px-3 py-2 text-right text-gray-500 dark:text-gray-400"
+                        title={formatMoneyExact(h.marketCap)}
+                      >
+                        {formatMoney(h.marketCap)}
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           ) : (
@@ -577,23 +625,40 @@ export default function CompanyPage() {
         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
           {events.length > 0 ? (
             <div className="space-y-2">
-              {events.slice().reverse().map((e, i) => (
-                <div key={i} className="flex items-start gap-3 text-sm py-2 border-b border-gray-100 dark:border-gray-800 last:border-0">
-                  <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
-                    e.severity === 'positive' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
-                    e.severity === 'negative' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
-                    e.severity === 'major' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' :
-                    'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
-                  }`}>
-                    {e.type?.replace(/_/g, ' ')}
-                  </span>
-                  <div className="flex-1">
-                    <div className="text-gray-900 dark:text-white font-medium">{e.headline}</div>
-                    {e.description && <div className="text-gray-500 dark:text-gray-400 text-xs mt-0.5">{e.description}</div>}
+              {events
+                .slice()
+                .reverse()
+                .map((e, i) => (
+                  <div
+                    key={i}
+                    className="flex items-start gap-3 text-sm py-2 border-b border-gray-100 dark:border-gray-800 last:border-0"
+                  >
+                    <span
+                      className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                        e.severity === 'positive'
+                          ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                          : e.severity === 'negative'
+                            ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                            : e.severity === 'major'
+                              ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+                              : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                      }`}
+                    >
+                      {e.type?.replace(/_/g, ' ')}
+                    </span>
+                    <div className="flex-1">
+                      <div className="text-gray-900 dark:text-white font-medium">{e.headline}</div>
+                      {e.description && (
+                        <div className="text-gray-500 dark:text-gray-400 text-xs mt-0.5">{e.description}</div>
+                      )}
+                    </div>
+                    {e.tick && (
+                      <span className="text-gray-400 text-xs whitespace-nowrap">
+                        {t('stocks.tick')} {e.tick}
+                      </span>
+                    )}
                   </div>
-                  {e.tick && <span className="text-gray-400 text-xs whitespace-nowrap">{t('stocks.tick')} {e.tick}</span>}
-                </div>
-              ))}
+                ))}
             </div>
           ) : (
             <div className="text-center py-8 text-gray-400">{t('stocks.noEvents')}</div>

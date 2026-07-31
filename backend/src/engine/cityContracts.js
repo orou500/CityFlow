@@ -261,7 +261,15 @@ export async function processContractProposals(tickNumber) {
         await CompanyAuditLog.create({
           companyId: company._id,
           action: 'contract_approved',
-          details: { reason: 'expired_auto_yes', contractId: contract._id, name: contract.name, activeYesVotes: yesVotes - autoCount, autoYesVotes: autoCount, noVotes, totalVoters },
+          details: {
+            reason: 'expired_auto_yes',
+            contractId: contract._id,
+            name: contract.name,
+            activeYesVotes: yesVotes - autoCount,
+            autoYesVotes: autoCount,
+            noVotes,
+            totalVoters,
+          },
           tick: tickNumber,
         });
 
@@ -286,7 +294,15 @@ export async function processContractProposals(tickNumber) {
         await CompanyAuditLog.create({
           companyId: company._id,
           action: 'contract_rejected',
-          details: { reason: 'expired_auto_yes_insufficient', contractId: contract._id, name: contract.name, activeYesVotes: yesVotes - autoCount, autoYesVotes: autoCount, noVotes, totalVoters },
+          details: {
+            reason: 'expired_auto_yes_insufficient',
+            contractId: contract._id,
+            name: contract.name,
+            activeYesVotes: yesVotes - autoCount,
+            autoYesVotes: autoCount,
+            noVotes,
+            totalVoters,
+          },
           tick: tickNumber,
         });
 

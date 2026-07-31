@@ -995,7 +995,9 @@ export default function PropertyPage() {
                 {property.lastPurchasePrice && (
                   <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
                     <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.purchasePrice')}</p>
-                    <p className="font-semibold break-words whitespace-normal">{formatMoney(property.lastPurchasePrice)}</p>
+                    <p className="font-semibold break-words whitespace-normal">
+                      {formatMoney(property.lastPurchasePrice)}
+                    </p>
                   </div>
                 )}
                 {property.lastPurchaseDate && (
@@ -1038,7 +1040,9 @@ export default function PropertyPage() {
                 {property.lastPurchasePrice > 0 && (
                   <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
                     <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.purchasePrice')}</p>
-                    <p className="font-semibold break-words whitespace-normal">{formatMoney(property.lastPurchasePrice)}</p>
+                    <p className="font-semibold break-words whitespace-normal">
+                      {formatMoney(property.lastPurchasePrice)}
+                    </p>
                   </div>
                 )}
                 {totalInvestment > 0 && (

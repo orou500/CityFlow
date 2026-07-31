@@ -8,11 +8,7 @@ import Property from '../../models/Property.js';
 import City from '../../models/City.js';
 import Loan from '../../models/Loan.js';
 import GameState from '../../models/GameState.js';
-import {
-  liquidateRealEstateCompanies,
-  liquidatePublicCompanies,
-  resetCompanyEconomy,
-} from '../seasonReset.js';
+import { liquidateRealEstateCompanies, liquidatePublicCompanies, resetCompanyEconomy } from '../seasonReset.js';
 
 describe('Season Reset — Company Liquidation', () => {
   let city;
@@ -94,14 +90,22 @@ describe('Season Reset — Company Liquidation', () => {
 
     // Add company-owned properties
     const prop1 = await Property.create({
-      name: 'Company HQ', type: 'commercial', cityId: city._id,
-      ownerId: founder._id, companyId: company._id,
-      currentPrice: 30_000_000, basePrice: 30_000_000,
+      name: 'Company HQ',
+      type: 'commercial',
+      cityId: city._id,
+      ownerId: founder._id,
+      companyId: company._id,
+      currentPrice: 30_000_000,
+      basePrice: 30_000_000,
     });
     const prop2 = await Property.create({
-      name: 'Warehouse', type: 'commercial', cityId: city._id,
-      ownerId: founder._id, companyId: company._id,
-      currentPrice: 20_000_000, basePrice: 20_000_000,
+      name: 'Warehouse',
+      type: 'commercial',
+      cityId: city._id,
+      ownerId: founder._id,
+      companyId: company._id,
+      currentPrice: 20_000_000,
+      basePrice: 20_000_000,
     });
 
     // Record balances before liquidation
@@ -247,7 +251,10 @@ describe('Season Reset — Company Liquidation', () => {
         { userId: member2._id, role: 'member', shares: 100 },
       ],
       shares: { totalShares: 1000, treasuryShares: 0, parValue: 100 },
-      treasury: { balance: 50_000_000, transactions: [{ type: 'deposit', amount: 50_000_000, description: 'test', tick: 0 }] },
+      treasury: {
+        balance: 50_000_000,
+        transactions: [{ type: 'deposit', amount: 50_000_000, description: 'test', tick: 0 }],
+      },
       stats: { netWorth: 50_000_000, propertiesOwned: 3, totalRentalIncome: 10_000 },
       level: 10,
       xp: 5000,
@@ -306,22 +313,37 @@ describe('Season Reset — Company Liquidation', () => {
     });
 
     await Property.create({
-      name: 'Company Asset', type: 'commercial', cityId: city._id,
-      ownerId: founder._id, companyId: company._id,
-      currentPrice: 80_000_000, basePrice: 80_000_000,
+      name: 'Company Asset',
+      type: 'commercial',
+      cityId: city._id,
+      ownerId: founder._id,
+      companyId: company._id,
+      currentPrice: 80_000_000,
+      basePrice: 80_000_000,
     });
 
     // Create IPO company
     const stockCompany = await Company.create({
-      name: 'Test IPO Co', ticker: 'TIC', industry: 'finance', size: 'medium',
-      sharePrice: 50, previousSharePrice: 50,
-      marketCap: 50_000_000, sharesOutstanding: 1_000_000,
-      isIPO: true, active: true, hqCityId: city._id, foundedTick: 0,
+      name: 'Test IPO Co',
+      ticker: 'TIC',
+      industry: 'finance',
+      size: 'medium',
+      sharePrice: 50,
+      previousSharePrice: 50,
+      marketCap: 50_000_000,
+      sharesOutstanding: 1_000_000,
+      isIPO: true,
+      active: true,
+      hqCityId: city._id,
+      foundedTick: 0,
     });
 
     await StockHolding.create({
-      userId: member1._id, companyId: stockCompany._id,
-      shares: 10_000, avgBuyPrice: 45, locked: false,
+      userId: member1._id,
+      companyId: stockCompany._id,
+      shares: 10_000,
+      avgBuyPrice: 45,
+      locked: false,
     });
 
     // Record starting balances

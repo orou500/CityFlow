@@ -163,17 +163,19 @@ export async function expireUncollectedRent() {
   }));
   await User.bulkWrite(ops);
 
-  await Promise.all(expired.map((u) =>
-    enqueueNotification({
-      userId: u._id,
-      type: 'system',
-      title: 'Rent Expired',
-      message: `You failed to collect $${u.uncollectedRent.toLocaleString()} in rent within 24 hours. The rent has been forfeited.`,
-      route: '/dashboard',
-      entityType: 'dashboard',
-      global: false,
-    })
-  ));
+  await Promise.all(
+    expired.map((u) =>
+      enqueueNotification({
+        userId: u._id,
+        type: 'system',
+        title: 'Rent Expired',
+        message: `You failed to collect $${u.uncollectedRent.toLocaleString()} in rent within 24 hours. The rent has been forfeited.`,
+        route: '/dashboard',
+        entityType: 'dashboard',
+        global: false,
+      }),
+    ),
+  );
 
   console.log(`[RENT] Expired uncollected rent for ${expired.length} users`);
   return expired.length;
@@ -202,17 +204,19 @@ export async function sendRentExpiryWarnings() {
 
   if (toWarn.length === 0) return 0;
 
-  await Promise.all(toWarn.map((u) =>
-    enqueueNotification({
-      userId: u._id,
-      type: 'system',
-      title: 'Rent Collection Warning',
-      message: `You have $${u.uncollectedRent.toLocaleString()} in uncollected rent. Collect it within the next hour or it will be forfeited!`,
-      route: '/dashboard',
-      entityType: 'dashboard',
-      global: false,
-    })
-  ));
+  await Promise.all(
+    toWarn.map((u) =>
+      enqueueNotification({
+        userId: u._id,
+        type: 'system',
+        title: 'Rent Collection Warning',
+        message: `You have $${u.uncollectedRent.toLocaleString()} in uncollected rent. Collect it within the next hour or it will be forfeited!`,
+        route: '/dashboard',
+        entityType: 'dashboard',
+        global: false,
+      }),
+    ),
+  );
 
   console.log(`[RENT] Sent rent expiry warnings to ${toWarn.length} users`);
   return toWarn.length;

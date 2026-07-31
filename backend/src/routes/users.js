@@ -94,7 +94,12 @@ router.get('/:username', authenticate, async (req, res) => {
     }, {});
     MISSION_DEFINITIONS.forEach((m) => {
       if (m.rewards?.badge && !achievementDefs[m.rewards.badge]) {
-        achievementDefs[m.rewards.badge] = { id: m.rewards.badge, name: m.name, description: m.description, icon: m.icon || '🎖️' };
+        achievementDefs[m.rewards.badge] = {
+          id: m.rewards.badge,
+          name: m.name,
+          description: m.description,
+          icon: m.icon || '🎖️',
+        };
       }
     });
     const enrichedAchievements = (user.achievements || []).map((id) => {

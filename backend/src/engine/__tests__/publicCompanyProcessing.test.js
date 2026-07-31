@@ -15,14 +15,23 @@ describe('Public Company Processing', () => {
 
   beforeEach(async () => {
     await GameState.findOneAndUpdate({}, { tickNumber: 100, $setOnInsert: { season: 1 } }, { upsert: true, new: true });
-    hqCity = await City.create({ name: 'Test City', country: 'Testland', coordinates: { lat: 0, lng: 0 }, description: 'test' });
+    hqCity = await City.create({
+      name: 'Test City',
+      country: 'Testland',
+      coordinates: { lat: 0, lng: 0 },
+      description: 'test',
+    });
     await Company.deleteMany({});
     await RealEstateCompany.deleteMany({});
     await StockHolding.deleteMany({});
   });
 
   async function createTestPublicCompany(overrides = {}) {
-    const founder = await User.create({ username: `founder_${Date.now()}`, email: `f_${Date.now()}@t.com`, password: 'Pass1234' });
+    const founder = await User.create({
+      username: `founder_${Date.now()}`,
+      email: `f_${Date.now()}@t.com`,
+      password: 'test',
+    });
     const reCompany = await RealEstateCompany.create({
       name: `Test RE Corp ${Date.now()}`,
       founderId: founder._id,
@@ -94,7 +103,11 @@ describe('Public Company Processing', () => {
     reCompany.stats.totalRentalIncome = 10_000_000;
     await reCompany.save();
 
-    const user = await User.create({ username: `investor_${Date.now()}`, email: `i_${Date.now()}@t.com`, password: 'Pass1234' });
+    const user = await User.create({
+      username: `investor_${Date.now()}`,
+      email: `i_${Date.now()}@t.com`,
+      password: 'test',
+    });
     await StockHolding.create({ userId: user._id, companyId: stockCompany._id, shares: 1000, avgBuyPrice: 50 });
 
     const results = await processPublicCompanies(100);

@@ -61,12 +61,20 @@ export async function simulateCities(activeEvents) {
     const econMod = ECON_MOD[city.economicCondition] || 0;
     const reversionForce = 0.02 * (1.0 - city.supplyIndex);
     const developmentPush = city.developmentRate * 0.5;
-    const demandPull = Math.max(0, (city.demandIndex - 1.0)) * 0.03;
+    const demandPull = Math.max(0, city.demandIndex - 1.0) * 0.03;
     const growthContribution = city.growthRate * 2;
     const saturationPenalty = Math.max(0, totalProperties / Math.max(1, city.totalCapacity) - 0.7) * 0.05;
     const noise = (Math.random() - 0.5) * 0.02;
 
-    const supplyDelta = reversionForce + developmentPush + demandPull + growthContribution + econMod + supplyMod - saturationPenalty + noise;
+    const supplyDelta =
+      reversionForce +
+      developmentPush +
+      demandPull +
+      growthContribution +
+      econMod +
+      supplyMod -
+      saturationPenalty +
+      noise;
 
     city.supplyIndex = clamp(city.supplyIndex + supplyDelta, 0.3, 3.0);
 

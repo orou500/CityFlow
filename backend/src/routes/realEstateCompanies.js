@@ -368,7 +368,11 @@ router.get('/:id', async (req, res) => {
 
         if (!company) return null;
 
-        const shareBreakdown = computeShares(company.members, company.shares?.totalShares, company.shares?.treasuryShares);
+        const shareBreakdown = computeShares(
+          company.members,
+          company.shares?.totalShares,
+          company.shares?.treasuryShares,
+        );
 
         const properties = await Property.find({ companyId: company._id })
           .populate('cityId', 'name country')
@@ -594,7 +598,9 @@ router.post('/:id/employees/hire', async (req, res) => {
 
     const salaryCost = count * (company.employees.monthlySalaryPerEmployee || 5000);
     if (company.treasury.balance < salaryCost) {
-      return res.status(400).json({ error: `Insufficient treasury balance for first month salary ($${salaryCost.toLocaleString()})` });
+      return res
+        .status(400)
+        .json({ error: `Insufficient treasury balance for first month salary ($${salaryCost.toLocaleString()})` });
     }
 
     company.employees.count = newTotal;
@@ -636,7 +642,13 @@ router.post('/:id/employees/fire', async (req, res) => {
     await company.save();
 
     const gameState = await getGameState();
-    await addAuditLog(company._id, req.user._id, 'employees_fired', { count, remaining: company.employees.count }, gameState.tickNumber);
+    await addAuditLog(
+      company._id,
+      req.user._id,
+      'employees_fired',
+      { count, remaining: company.employees.count },
+      gameState.tickNumber,
+    );
     await invalidateCompany(company._id);
 
     res.json({ employees: company.employees });
@@ -665,7 +677,13 @@ router.put('/:id/employees/salary', async (req, res) => {
     await company.save();
 
     const gameState = await getGameState();
-    await addAuditLog(company._id, req.user._id, 'salary_updated', { monthlySalary, totalPayroll: company.employees.totalPayroll }, gameState.tickNumber);
+    await addAuditLog(
+      company._id,
+      req.user._id,
+      'salary_updated',
+      { monthlySalary, totalPayroll: company.employees.totalPayroll },
+      gameState.tickNumber,
+    );
     await invalidateCompany(company._id);
 
     res.json({ employees: company.employees });
@@ -3308,7 +3326,9 @@ router.post('/:id/ipo', async (req, res) => {
 
     const cities = await City.find().lean();
     if (cities.length === 0) {
-      return res.status(400).json({ error: 'No cities exist on the world map. Cannot create public company without a headquarters city.' });
+      return res
+        .status(400)
+        .json({ error: 'No cities exist on the world map. Cannot create public company without a headquarters city.' });
     }
     const hqCity = cities[0];
 
@@ -3331,7 +3351,14 @@ router.post('/:id/ipo', async (req, res) => {
       revenue: Math.round(annualRent * 12) || 100000,
       employees: company.employees?.count || company.members.length * 10,
       hqCityId: hqCity._id,
-      offices: [{ cityId: hqCity._id, type: 'headquarters', employees: company.employees?.count || company.members.length * 4, openedTick: 0 }],
+      offices: [
+        {
+          cityId: hqCity._id,
+          type: 'headquarters',
+          employees: company.employees?.count || company.members.length * 4,
+          openedTick: 0,
+        },
+      ],
       sharePrice,
       previousSharePrice: sharePrice,
       marketCap,
@@ -3388,7 +3415,8 @@ router.post('/:id/ipo', async (req, res) => {
     const totalHeldByInsiders = ceoLockedShares + distributedToMembers;
 
     stockCompany.totalSharesHeld = totalHeldByInsiders;
-    stockCompany.floatPercentage = sharesOutstanding > 0 ? Math.round((actualPublicShares / sharesOutstanding) * 100) : 0;
+    stockCompany.floatPercentage =
+      sharesOutstanding > 0 ? Math.round((actualPublicShares / sharesOutstanding) * 100) : 0;
     await stockCompany.save();
 
     company.ipo = {
@@ -3491,7 +3519,9 @@ router.post('/:id/secondary-offering', async (req, res) => {
       return res.status(400).json({ error: 'Invalid share count' });
     }
     if (newShares > Math.floor(stockCompany.sharesOutstanding * 0.2)) {
-      return res.status(400).json({ error: 'Cannot issue more than 20% of current outstanding shares in a single offering' });
+      return res
+        .status(400)
+        .json({ error: 'Cannot issue more than 20% of current outstanding shares in a single offering' });
     }
     if (!price || price <= 0) {
       return res.status(400).json({ error: 'Invalid offering price' });
@@ -3517,18 +3547,21 @@ router.post('/:id/secondary-offering', async (req, res) => {
     }
 
     // Issue new shares to public market
-    const totalInsiderShares = (ceoHolding?.shares || 0) + (await StockHolding.find({
-      companyId: stockCompany._id,
-      userId: { $ne: company.founderId },
-    }).then((h) => h.reduce((s, hh) => s + hh.shares, 0)));
+    const totalInsiderShares =
+      (ceoHolding?.shares || 0) +
+      (await StockHolding.find({
+        companyId: stockCompany._id,
+        userId: { $ne: company.founderId },
+      }).then((h) => h.reduce((s, hh) => s + hh.shares, 0)));
 
     stockCompany.sharesOutstanding = totalNewShares;
     stockCompany.sharePrice = price;
     stockCompany.previousSharePrice = stockCompany.sharePrice;
     stockCompany.marketCap = newMarketCap;
-    stockCompany.floatPercentage = stockCompany.sharesOutstanding > 0
-      ? Math.round(((stockCompany.sharesOutstanding - totalInsiderShares) / stockCompany.sharesOutstanding) * 100)
-      : 0;
+    stockCompany.floatPercentage =
+      stockCompany.sharesOutstanding > 0
+        ? Math.round(((stockCompany.sharesOutstanding - totalInsiderShares) / stockCompany.sharesOutstanding) * 100)
+        : 0;
     await stockCompany.save();
 
     const gameState = await getGameState();

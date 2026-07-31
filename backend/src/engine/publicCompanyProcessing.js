@@ -76,12 +76,7 @@ export async function processPublicCompanies(tickNumber) {
       const sharesOutstanding = stockCompany.sharesOutstanding || 1;
       const previousPrice = stockCompany.sharePrice;
 
-      const intrinsicValue = Math.max(1, Math.round(
-        propertyValue * 1.5
-        + treasury
-        + annualRent * 2
-        - totalDebt * 0.8
-      ));
+      const intrinsicValue = Math.max(1, Math.round(propertyValue * 1.5 + treasury + annualRent * 2 - totalDebt * 0.8));
       const intrinsicPerShare = intrinsicValue / sharesOutstanding;
 
       const dividendBoost = (stockCompany.dividendYield || 0) > 0 ? 0.005 : -0.002;
@@ -95,24 +90,27 @@ export async function processPublicCompanies(tickNumber) {
       const randomWalk = (Math.random() - 0.5) * 2 * vol;
 
       const resilience = previousPrice > 1 ? 1 / (1 + Math.abs(normalizedDrift) * 3) : 1;
-      const priceChange = previousPrice * (normalizedDrift + dividendBoost + growthBoost + debtPenalty + randomWalk * resilience);
+      const priceChange =
+        previousPrice * (normalizedDrift + dividendBoost + growthBoost + debtPenalty + randomWalk * resilience);
       const newPrice = Math.max(0.01, Math.round((previousPrice + priceChange) * 100) / 100);
 
-      const currentShareholders = await StockHolding.countDocuments({ companyId: stockCompany._id, shares: { $gt: 0 } });
+      const currentShareholders = await StockHolding.countDocuments({
+        companyId: stockCompany._id,
+        shares: { $gt: 0 },
+      });
       const totalHeldShares = stockCompany.totalSharesHeld || 0;
 
       const volumeFromTrades = stockCompany.tradingVolume || 0;
 
       const previousPriceBeforeUpdate = stockCompany.sharePrice;
       const dayChange = Math.round((newPrice - previousPriceBeforeUpdate) * 100) / 100;
-      const dayChangePercent = previousPriceBeforeUpdate > 0
-        ? Math.round(((newPrice - previousPriceBeforeUpdate) / previousPriceBeforeUpdate) * 10000) / 100
-        : 0;
+      const dayChangePercent =
+        previousPriceBeforeUpdate > 0
+          ? Math.round(((newPrice - previousPriceBeforeUpdate) / previousPriceBeforeUpdate) * 10000) / 100
+          : 0;
 
       const ipoPrice = stockCompany.ipoPrice || stockCompany.sharePrice;
-      const totalReturn = ipoPrice > 0
-        ? Math.round(((newPrice - ipoPrice) / ipoPrice) * 10000) / 100
-        : 0;
+      const totalReturn = ipoPrice > 0 ? Math.round(((newPrice - ipoPrice) / ipoPrice) * 10000) / 100 : 0;
 
       const performanceEntry = {
         tick: tickNumber,
@@ -123,7 +121,8 @@ export async function processPublicCompanies(tickNumber) {
       };
 
       const high52Week = newPrice > stockCompany.high52Week ? newPrice : stockCompany.high52Week;
-      const low52Week = stockCompany.low52Week === 0 || newPrice < stockCompany.low52Week ? newPrice : stockCompany.low52Week;
+      const low52Week =
+        stockCompany.low52Week === 0 || newPrice < stockCompany.low52Week ? newPrice : stockCompany.low52Week;
 
       let dividendPerShare = 0;
       let actualDividendDistributed = 0;
@@ -156,7 +155,12 @@ export async function processPublicCompanies(tickNumber) {
               };
             });
             await StockHolding.bulkWrite(bulkOps);
-            dividendEvents.push({ companyId: stockCompany._id, ticker: stockCompany.ticker, perShare, holdersInBatch: holdings.length });
+            dividendEvents.push({
+              companyId: stockCompany._id,
+              ticker: stockCompany.ticker,
+              perShare,
+              holdersInBatch: holdings.length,
+            });
             skip += HOLDINGS_BATCH_SIZE;
           }
 
@@ -173,7 +177,7 @@ export async function processPublicCompanies(tickNumber) {
             type: 'dividend_paid',
             severity: 'positive',
             headline: `${stockCompany.ticker} paid $${perShare.toFixed(2)} per share dividend`,
-            description: `${stockCompany.name} distributed $${(actualDividendDistributed).toLocaleString()} in dividends to shareholders.`,
+            description: `${stockCompany.name} distributed $${actualDividendDistributed.toLocaleString()} in dividends to shareholders.`,
             metadata: { perShare, totalPool: actualDividendDistributed },
           });
         }
@@ -214,9 +218,12 @@ export async function processPublicCompanies(tickNumber) {
       }
 
       const previousVolHistory = stockCompany.volumeHistory || [];
-      const avgDailyVolume = previousVolHistory.length > 0
-        ? Math.round(previousVolHistory.slice(-4).reduce((s, e) => s + e.volume, 0) / Math.min(previousVolHistory.length, 4))
-        : 0;
+      const avgDailyVolume =
+        previousVolHistory.length > 0
+          ? Math.round(
+              previousVolHistory.slice(-4).reduce((s, e) => s + e.volume, 0) / Math.min(previousVolHistory.length, 4),
+            )
+          : 0;
       const weeklyVolume = previousVolHistory.slice(-28).reduce((s, e) => s + e.volume, 0);
       const monthlyVolume = previousVolHistory.reduce((s, e) => s + e.volume, 0);
 
@@ -232,17 +239,20 @@ export async function processPublicCompanies(tickNumber) {
         revenue: Math.round(Math.max(revenue * 12, 10000)),
         employees: reCompany.members.length * 10,
         dividendPerShare,
-        dividendYield: newPrice > 0 && dividendPerShare > 0
-          ? Math.round(((dividendPerShare * DIVIDEND_YIELD_ANNUALIZED_TICKS) / newPrice) * 10000) / 100
-          : 0,
-        totalDividendsPaid: dividendPerShare > 0
-          ? stockCompany.totalDividendsPaid + actualDividendDistributed
-          : stockCompany.totalDividendsPaid,
+        dividendYield:
+          newPrice > 0 && dividendPerShare > 0
+            ? Math.round(((dividendPerShare * DIVIDEND_YIELD_ANNUALIZED_TICKS) / newPrice) * 10000) / 100
+            : 0,
+        totalDividendsPaid:
+          dividendPerShare > 0
+            ? stockCompany.totalDividendsPaid + actualDividendDistributed
+            : stockCompany.totalDividendsPaid,
         lastDividendTick: dividendPerShare > 0 ? tickNumber : stockCompany.lastDividendTick,
         activeShareholders: currentShareholders,
-        floatPercentage: sharesOutstanding > 0
-          ? Math.round(((sharesOutstanding - totalHeldShares) / sharesOutstanding) * 10000) / 100
-          : 100,
+        floatPercentage:
+          sharesOutstanding > 0
+            ? Math.round(((sharesOutstanding - totalHeldShares) / sharesOutstanding) * 10000) / 100
+            : 100,
         tradingVolume: 0,
         totalTrades: stockCompany.totalTrades || 0,
         avgDailyVolume,
@@ -251,20 +261,25 @@ export async function processPublicCompanies(tickNumber) {
       };
 
       if (volumeFromTrades > 0) {
-        const updatedVolHistory = [...previousVolHistory, { tick: tickNumber, volume: volumeFromTrades, trades: stockCompany.totalTrades || 0 }]
-          .slice(-VOLUME_HISTORY_MAX);
+        const updatedVolHistory = [
+          ...previousVolHistory,
+          { tick: tickNumber, volume: volumeFromTrades, trades: stockCompany.totalTrades || 0 },
+        ].slice(-VOLUME_HISTORY_MAX);
         updateFields.volumeHistory = updatedVolHistory;
       }
 
-      await Company.updateOne({ _id: stockCompany._id }, {
-        $set: updateFields,
-        $push: {
-          performance: {
-            $each: [performanceEntry],
-            $slice: -PERFORMANCE_MAX_ENTRIES,
+      await Company.updateOne(
+        { _id: stockCompany._id },
+        {
+          $set: updateFields,
+          $push: {
+            performance: {
+              $each: [performanceEntry],
+              $slice: -PERFORMANCE_MAX_ENTRIES,
+            },
           },
         },
-      });
+      );
 
       priceUpdates.push({
         companyId: stockCompany._id,

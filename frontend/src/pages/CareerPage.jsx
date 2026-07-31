@@ -28,7 +28,7 @@ export default function CareerPage() {
   const { fetchDashboard } = useMissionStore();
   const [loading, setLoading] = useState(true);
   const [searchParams] = useSearchParams();
-const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'overview');
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'overview');
   const [titleMsg, setTitleMsg] = useState('');
   const [prestigeMsg, setPrestigeMsg] = useState('');
   const [prestigeLoading, setPrestigeLoading] = useState(false);

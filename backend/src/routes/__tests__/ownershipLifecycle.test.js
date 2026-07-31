@@ -86,7 +86,8 @@ describe('Ownership Lifecycle', () => {
     const member1 = await addMember(company._id, founder.token);
     const afterFirst = await RealEstateCompany.findById(company._id);
 
-    const member1Shares = afterFirst.members.find((m) => m.userId.toString() === member1.user._id.toString())?.shares || 0;
+    const member1Shares =
+      afterFirst.members.find((m) => m.userId.toString() === member1.user._id.toString())?.shares || 0;
     expect(member1Shares).toBeGreaterThan(0);
     expect(member1Shares).toBeLessThanOrEqual(50);
     expect(afterFirst.shares.treasuryShares).toBe(initialTreasury - member1Shares);
@@ -107,13 +108,11 @@ describe('Ownership Lifecycle', () => {
     const member = await addMember(company._id, founder.token);
 
     const beforeLeave = await RealEstateCompany.findById(company._id);
-    const memberShares = beforeLeave.members.find((m) => m.userId.toString() === member.user._id.toString())?.shares || 0;
+    const memberShares =
+      beforeLeave.members.find((m) => m.userId.toString() === member.user._id.toString())?.shares || 0;
     const treasuryBefore = beforeLeave.shares.treasuryShares;
 
-    await request(app)
-      .post(`/real-estate-companies/${company._id}/leave`)
-      .set(authHeader(member.token))
-      .send({});
+    await request(app).post(`/real-estate-companies/${company._id}/leave`).set(authHeader(member.token)).send({});
 
     const afterLeave = await RealEstateCompany.findById(company._id);
     expect(afterLeave.shares.treasuryShares).toBe(treasuryBefore + memberShares);
@@ -136,10 +135,7 @@ describe('Ownership Lifecycle', () => {
     const founderShares = before.members.find((m) => m.userId.toString() === founder.user._id.toString())?.shares || 0;
     const treasuryBefore = before.shares.treasuryShares;
 
-    await request(app)
-      .post(`/real-estate-companies/${company._id}/leave`)
-      .set(authHeader(founder.token))
-      .send({});
+    await request(app).post(`/real-estate-companies/${company._id}/leave`).set(authHeader(founder.token)).send({});
 
     const after = await RealEstateCompany.findById(company._id);
     const newCeo = after.members.find((m) => m.role === 'ceo');
@@ -393,7 +389,11 @@ describe('Ownership Lifecycle', () => {
 
     const stockCompanyId = ipoRes.body.stockCompany._id;
     const beforeOffering = await Company.findById(stockCompanyId);
-    const beforeCeoHolding = await StockHolding.findOne({ userId: founder.user._id, companyId: stockCompanyId, locked: true });
+    const beforeCeoHolding = await StockHolding.findOne({
+      userId: founder.user._id,
+      companyId: stockCompanyId,
+      locked: true,
+    });
     const beforeCeoPct = (beforeCeoHolding.shares / beforeOffering.sharesOutstanding) * 100;
     expect(beforeCeoPct).toBeGreaterThanOrEqual(50.9);
 
@@ -412,7 +412,11 @@ describe('Ownership Lifecycle', () => {
     expect(afterOffering.sharePrice).toBe(offeringPrice);
 
     // CEO still has >= 51%
-    const afterCeoHolding = await StockHolding.findOne({ userId: founder.user._id, companyId: stockCompanyId, locked: true });
+    const afterCeoHolding = await StockHolding.findOne({
+      userId: founder.user._id,
+      companyId: stockCompanyId,
+      locked: true,
+    });
     const afterCeoPct = (afterCeoHolding.shares / afterOffering.sharesOutstanding) * 100;
     expect(afterCeoPct).toBeGreaterThanOrEqual(50.9);
 
@@ -424,10 +428,16 @@ describe('Ownership Lifecycle', () => {
     expect(afterOffering.totalSharesHeld).toBe(beforeOffering.totalSharesHeld);
 
     // Float percentage recalculated
-    const ceoHolding = await StockHolding.findOne({ userId: founder.user._id, companyId: stockCompanyId, locked: true });
+    const ceoHolding = await StockHolding.findOne({
+      userId: founder.user._id,
+      companyId: stockCompanyId,
+      locked: true,
+    });
     const memberHoldings = await StockHolding.find({ companyId: stockCompanyId, userId: { $ne: founder.user._id } });
     const totalInsiderShares = ceoHolding.shares + memberHoldings.reduce((s, h) => s + h.shares, 0);
-    const expectedFloatPct = Math.round(((afterOffering.sharesOutstanding - totalInsiderShares) / afterOffering.sharesOutstanding) * 100);
+    const expectedFloatPct = Math.round(
+      ((afterOffering.sharesOutstanding - totalInsiderShares) / afterOffering.sharesOutstanding) * 100,
+    );
     expect(afterOffering.floatPercentage).toBe(expectedFloatPct);
   });
 

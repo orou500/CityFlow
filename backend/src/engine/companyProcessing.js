@@ -773,7 +773,14 @@ export async function processCompanyLoanRequests(tickNumber) {
           await CompanyAuditLog.create({
             companyId: company._id,
             action: 'loan_approved',
-            details: { reason: 'expired_auto_yes', activeYesVotes: yesVotes - autoCount, autoYesVotes: autoCount, noVotes, totalVoters, principal: lr.principal },
+            details: {
+              reason: 'expired_auto_yes',
+              activeYesVotes: yesVotes - autoCount,
+              autoYesVotes: autoCount,
+              noVotes,
+              totalVoters,
+              principal: lr.principal,
+            },
             tick: tickNumber,
           });
 
@@ -795,7 +802,14 @@ export async function processCompanyLoanRequests(tickNumber) {
           await CompanyAuditLog.create({
             companyId: company._id,
             action: 'loan_rejected',
-            details: { reason: 'expired_auto_yes_insufficient', activeYesVotes: yesVotes - autoCount, autoYesVotes: autoCount, noVotes, totalVoters, principal: lr.principal },
+            details: {
+              reason: 'expired_auto_yes_insufficient',
+              activeYesVotes: yesVotes - autoCount,
+              autoYesVotes: autoCount,
+              noVotes,
+              totalVoters,
+              principal: lr.principal,
+            },
             tick: tickNumber,
           });
 
@@ -1030,7 +1044,15 @@ export async function processCompanyDevelopmentRequests(tickNumber) {
           await CompanyAuditLog.create({
             companyId: company._id,
             action: 'development_approved',
-            details: { reason: 'expired_auto_yes', actionType: dr.actionType, estimatedCost: dr.estimatedCost, activeYesVotes: yesVotes - autoCount, autoYesVotes: autoCount, noVotes, totalVoters },
+            details: {
+              reason: 'expired_auto_yes',
+              actionType: dr.actionType,
+              estimatedCost: dr.estimatedCost,
+              activeYesVotes: yesVotes - autoCount,
+              autoYesVotes: autoCount,
+              noVotes,
+              totalVoters,
+            },
             tick: tickNumber,
           });
 
@@ -1053,7 +1075,15 @@ export async function processCompanyDevelopmentRequests(tickNumber) {
           await CompanyAuditLog.create({
             companyId: company._id,
             action: 'development_rejected',
-            details: { reason: 'expired_auto_yes_insufficient', actionType: dr.actionType, estimatedCost: dr.estimatedCost, activeYesVotes: yesVotes - autoCount, autoYesVotes: autoCount, noVotes, totalVoters },
+            details: {
+              reason: 'expired_auto_yes_insufficient',
+              actionType: dr.actionType,
+              estimatedCost: dr.estimatedCost,
+              activeYesVotes: yesVotes - autoCount,
+              autoYesVotes: autoCount,
+              noVotes,
+              totalVoters,
+            },
             tick: tickNumber,
           });
 
@@ -1181,7 +1211,14 @@ export async function processCompanyPropertyPurchaseRequests(tickNumber) {
             await CompanyAuditLog.create({
               companyId: company._id,
               action: 'property_purchase_rejected',
-              details: { reason: 'expired_auto_yes_property_gone', propertyPurchaseRequestId: ppr._id, activeYesVotes: yesVotes - autoCount, autoYesVotes: autoCount, noVotes, totalVoters },
+              details: {
+                reason: 'expired_auto_yes_property_gone',
+                propertyPurchaseRequestId: ppr._id,
+                activeYesVotes: yesVotes - autoCount,
+                autoYesVotes: autoCount,
+                noVotes,
+                totalVoters,
+              },
               tick: tickNumber,
             });
 
@@ -1209,7 +1246,14 @@ export async function processCompanyPropertyPurchaseRequests(tickNumber) {
             await CompanyAuditLog.create({
               companyId: company._id,
               action: 'property_purchase_rejected',
-              details: { reason: 'expired_auto_yes_insufficient_funds', propertyPurchaseRequestId: ppr._id, activeYesVotes: yesVotes - autoCount, autoYesVotes: autoCount, noVotes, totalVoters },
+              details: {
+                reason: 'expired_auto_yes_insufficient_funds',
+                propertyPurchaseRequestId: ppr._id,
+                activeYesVotes: yesVotes - autoCount,
+                autoYesVotes: autoCount,
+                noVotes,
+                totalVoters,
+              },
               tick: tickNumber,
             });
 
@@ -1234,9 +1278,7 @@ export async function processCompanyPropertyPurchaseRequests(tickNumber) {
             const seller = await User.findById(property.ownerId);
             if (seller) {
               seller.balance += property.currentPrice;
-              seller.ownedProperties = seller.ownedProperties.filter(
-                (p) => p.toString() !== ppr.propertyId.toString(),
-              );
+              seller.ownedProperties = seller.ownedProperties.filter((p) => p.toString() !== ppr.propertyId.toString());
               await seller.save();
             }
           }
@@ -1283,7 +1325,16 @@ export async function processCompanyPropertyPurchaseRequests(tickNumber) {
           await CompanyAuditLog.create({
             companyId: company._id,
             action: 'property_purchased',
-            details: { reason: 'expired_auto_yes', propertyPurchaseRequestId: ppr._id, propertyName: property.name, price: property.currentPrice, activeYesVotes: yesVotes - autoCount, autoYesVotes: autoCount, noVotes, totalVoters },
+            details: {
+              reason: 'expired_auto_yes',
+              propertyPurchaseRequestId: ppr._id,
+              propertyName: property.name,
+              price: property.currentPrice,
+              activeYesVotes: yesVotes - autoCount,
+              autoYesVotes: autoCount,
+              noVotes,
+              totalVoters,
+            },
             tick: tickNumber,
           });
 
@@ -1306,7 +1357,14 @@ export async function processCompanyPropertyPurchaseRequests(tickNumber) {
           await CompanyAuditLog.create({
             companyId: company._id,
             action: 'property_purchase_rejected',
-            details: { reason: 'expired_auto_yes_insufficient', propertyPurchaseRequestId: ppr._id, activeYesVotes: yesVotes - autoCount, autoYesVotes: autoCount, noVotes, totalVoters },
+            details: {
+              reason: 'expired_auto_yes_insufficient',
+              propertyPurchaseRequestId: ppr._id,
+              activeYesVotes: yesVotes - autoCount,
+              autoYesVotes: autoCount,
+              noVotes,
+              totalVoters,
+            },
             tick: tickNumber,
           });
 
