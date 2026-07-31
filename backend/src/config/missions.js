@@ -571,7 +571,7 @@ export const MISSION_DEFINITIONS = [
   {
     id: 'company_create',
     name: 'Founder',
-    description: 'Join a Real Estate Company',
+    description: 'Create your own Real Estate Company',
     category: 'company',
     difficulty: 'medium',
     type: 'permanent',
@@ -579,7 +579,7 @@ export const MISSION_DEFINITIONS = [
     chainId: 'company_chain',
     chainOrder: 2,
     prerequisiteMissionId: 'company_join',
-    condition: { type: 'joined_company', target: 1 },
+    condition: { type: 'created_company', target: 1 },
     rewards: { xp: 500, balance: 50000, title: 'Company Founder' },
     icon: '🏢',
   },

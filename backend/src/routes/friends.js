@@ -16,11 +16,16 @@ async function createFriendNotification(userId, sender, type) {
       ? `${sender.displayName || sender.username} accepted your friend request.`
       : `${sender.displayName || sender.username} sent you a friend request.`;
 
+  const tab = type === 'friend_accepted' ? 'friends' : 'incoming';
   await enqueueNotification({
     userId,
     type: 'friend_request',
     title,
     message,
+    route: '/friends',
+    tab,
+    entityType: 'friends',
+    entityId: sender._id,
     relatedId: sender._id,
   });
 }

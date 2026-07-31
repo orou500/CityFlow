@@ -94,6 +94,9 @@ async function processActiveHazards(property, _tickNumber) {
           type: 'system',
           title: 'Hazard Event Ended',
           message: `The ${hazard.hazardType} affecting your property has subsided. Condition degraded by ${Math.round(hazard.conditionDamage || 0)}%.`,
+          route: `/property/${property._id}`,
+          entityType: 'property',
+          entityId: property._id,
           relatedId: property._id,
           global: false,
         });
@@ -165,6 +168,9 @@ export async function triggerHazard(property, hazardType, city, tickNumber) {
       type: 'system',
       title: `${hazardType.charAt(0).toUpperCase() + hazardType.slice(1)} Warning`,
       message: `Your property "${property.name}" is experiencing ${hazardType} activity. Condition: -${Math.round(conditionDamage)}%, Value: -$${valueDrop.toLocaleString()}.`,
+      route: `/property/${property._id}`,
+      entityType: 'property',
+      entityId: property._id,
       relatedId: property._id,
       global: false,
     });

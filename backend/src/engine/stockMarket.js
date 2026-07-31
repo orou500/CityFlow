@@ -392,7 +392,7 @@ export async function simulateStockMarket(currentTick) {
     await initializeCompanies();
   }
 
-  const companies = await Company.find({ active: true });
+  const companies = await Company.find({ active: true, isIPO: { $ne: true } });
   if (companies.length === 0) return [];
 
   const cities = await City.find();

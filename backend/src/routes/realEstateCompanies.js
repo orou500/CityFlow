@@ -52,8 +52,13 @@ import {
   onCompanyVoteCompleted,
 } from '../utils/cacheInvalidation.js';
 import { scheduleVoteExpiration, cancelDelayedJob } from '../utils/delayedJobs.js';
-import { emitToCompany } from '../socket/index.js';
+import { emitToCompany, emitToAll } from '../socket/index.js';
 import { SOCKET_EVENTS } from '../socket/events.js';
+import { publish, CHANNELS } from '../utils/pubsub.js';
+import { cacheDel } from '../utils/cache.js';
+import { cacheKeys as ck } from '../utils/cacheKeys.js';
+import StockMarketEvent from '../models/StockMarketEvent.js';
+import StockHolding from '../models/StockHolding.js';
 
 const router = Router();
 router.use(authenticate);
@@ -64,10 +69,12 @@ const MIN_FOUNDER_NET_WORTH = 5_000_000;
 const MIN_FOUNDER_PORTFOLIO = 3_000_000;
 const MIN_FOUNDER_ACCOUNT_AGE_DAYS = 28;
 const MAX_MEMBERS_BASE = 10;
-const IPO_FEE = 10_000_000;
-const MIN_IPO_LEVEL = 10;
+const IPO_FEE = 100_000_000;
+const MIN_IPO_LEVEL = 15;
 const MIN_IPO_MEMBERS = 5;
-const MIN_IPO_NET_WORTH = 20_000_000;
+const MIN_IPO_NET_WORTH = 100_000_000;
+const IPO_MIN_PROPERTIES = 10;
+const IPO_MAX_DEBT_RATIO = 0.5;
 const LOAN_REQUEST_VOTE_THRESHOLD = 0.5;
 const MAX_ACTIVE_LOANS = 5;
 const MAX_PENDING_LOAN_REQUESTS = 3;
@@ -102,13 +109,23 @@ async function addAuditLog(companyId, userId, action, details = {}, tick = 0) {
   await CompanyAuditLog.create({ companyId, userId, action, details, tick });
 }
 
-function computeShares(members) {
-  const total = members.reduce((sum, m) => sum + m.shares, 0);
-  return members.map((m) => ({
+function computeShares(members, totalShares, treasuryShares) {
+  const memberTotal = members.reduce((sum, m) => sum + m.shares, 0);
+  const effectiveTotal = totalShares || memberTotal + (treasuryShares || 0);
+  const breakdown = members.map((m) => ({
     userId: m.userId,
     shares: m.shares,
-    percentage: total > 0 ? Math.round((m.shares / total) * 10000) / 100 : 0,
+    percentage: effectiveTotal > 0 ? Math.round((m.shares / effectiveTotal) * 10000) / 100 : 0,
   }));
+  if (treasuryShares > 0) {
+    breakdown.push({
+      userId: null,
+      shares: treasuryShares,
+      percentage: effectiveTotal > 0 ? Math.round((treasuryShares / effectiveTotal) * 10000) / 100 : 0,
+      isTreasury: true,
+    });
+  }
+  return breakdown;
 }
 
 router.get('/', async (req, res) => {
@@ -208,13 +225,22 @@ router.get('/invitations', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { name, description, logo } = req.body;
+    const { name, description, logo, hqCityId } = req.body;
 
     if (!name || name.trim().length < 3) {
       return res.status(400).json({ error: 'Company name must be at least 3 characters' });
     }
     if (name.length > 50) {
       return res.status(400).json({ error: 'Company name must be 50 characters or less' });
+    }
+
+    if (!hqCityId) {
+      return res.status(400).json({ error: 'You must select a headquarters city' });
+    }
+
+    const hqCity = await City.findById(hqCityId);
+    if (!hqCity) {
+      return res.status(400).json({ error: 'Selected city not found' });
     }
 
     const existing = await RealEstateCompany.findOne({ name: { $regex: `^${name.trim()}$`, $options: 'i' } });
@@ -265,14 +291,19 @@ router.post('/', async (req, res) => {
 
     const gameState = await getGameState();
 
+    const founderShares = 700;
+    const treasuryShares = 300;
+    const totalShares = 1000;
+
     const company = await RealEstateCompany.create({
       name: name.trim(),
       description: description || '',
       logo: logo || '',
       founderId: user._id,
-      members: [{ userId: user._id, role: 'ceo', shares: 50 }],
+      hqCityId: hqCity._id,
+      members: [{ userId: user._id, role: 'ceo', shares: founderShares }],
       invitations: [],
-      shares: { totalShares: 100 },
+      shares: { totalShares, treasuryShares, parValue: 100 },
       treasury: { balance: 0, transactions: [] },
       stats: {
         netWorth: 0,
@@ -332,11 +363,16 @@ router.get('/:id', async (req, res) => {
           .populate('founderId', 'username avatar level')
           .populate('members.userId', 'username avatar level')
           .populate('invitations.userId', 'username avatar')
-          .populate('invitations.invitedBy', 'username');
+          .populate('invitations.invitedBy', 'username')
+          .populate('hqCityId', 'name country');
 
         if (!company) return null;
 
-        const shareBreakdown = computeShares(company.members);
+        const shareBreakdown = computeShares(
+          company.members,
+          company.shares?.totalShares,
+          company.shares?.treasuryShares,
+        );
 
         const properties = await Property.find({ companyId: company._id })
           .populate('cityId', 'name country')
@@ -445,6 +481,9 @@ router.post('/:id/invite', async (req, res) => {
       type: 'system',
       title: 'Company Invitation',
       message: `You have been invited to join "${company.name}"`,
+      route: `/real-estate-companies/${company._id}`,
+      entityType: 'company',
+      entityId: company._id,
       relatedId: company._id,
       global: false,
     });
@@ -491,9 +530,8 @@ router.post('/:id/invite/:invitationId/accept', async (req, res) => {
 
     invitation.status = 'accepted';
 
-    const currentSum = company.members.reduce((s, m) => s + m.shares, 0);
-    const remainingPool = company.shares.totalShares - currentSum;
-    const newMemberShares = Math.max(1, Math.floor(remainingPool / 2));
+    const newMemberShares = Math.min(50, company.shares.treasuryShares || 0);
+    company.shares.treasuryShares = Math.max(0, (company.shares.treasuryShares || 0) - newMemberShares);
     company.members.push({
       userId: req.user._id,
       role: 'recruit',
@@ -514,6 +552,10 @@ router.post('/:id/invite/:invitationId/accept', async (req, res) => {
       type: 'system',
       title: 'Member Joined',
       message: `${user.username} has joined "${company.name}"`,
+      route: `/real-estate-companies/${company._id}`,
+      tab: 'members',
+      entityType: 'company',
+      entityId: company._id,
       relatedId: company._id,
       global: false,
     });
@@ -527,6 +569,158 @@ router.post('/:id/invite/:invitationId/accept', async (req, res) => {
     });
 
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Employee Management ───────────────────────────────────────────────
+
+router.post('/:id/employees/hire', async (req, res) => {
+  try {
+    const company = await RealEstateCompany.findById(req.params.id);
+    if (!company) return res.status(404).json({ error: 'Company not found' });
+
+    const caller = getMember(company, req.user._id);
+    if (!caller || caller.role !== 'ceo') {
+      return res.status(403).json({ error: 'Only the CEO can hire employees' });
+    }
+
+    const { count } = req.body;
+    if (!count || count <= 0 || !Number.isInteger(count)) {
+      return res.status(400).json({ error: 'Invalid employee count' });
+    }
+
+    const newTotal = (company.employees.count || 0) + count;
+    if (newTotal > (company.employees.maxEmployees || 10)) {
+      return res.status(400).json({ error: `Cannot exceed maximum ${company.employees.maxEmployees} employees` });
+    }
+
+    const salaryCost = count * (company.employees.monthlySalaryPerEmployee || 5000);
+    if (company.treasury.balance < salaryCost) {
+      return res
+        .status(400)
+        .json({ error: `Insufficient treasury balance for first month salary ($${salaryCost.toLocaleString()})` });
+    }
+
+    company.employees.count = newTotal;
+    company.employees.totalPayroll = newTotal * (company.employees.monthlySalaryPerEmployee || 5000);
+    await company.save();
+
+    const gameState = await getGameState();
+    await addAuditLog(company._id, req.user._id, 'employees_hired', { count, total: newTotal }, gameState.tickNumber);
+    await invalidateCompany(company._id);
+
+    res.json({ employees: company.employees });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/:id/employees/fire', async (req, res) => {
+  try {
+    const company = await RealEstateCompany.findById(req.params.id);
+    if (!company) return res.status(404).json({ error: 'Company not found' });
+
+    const caller = getMember(company, req.user._id);
+    if (!caller || caller.role !== 'ceo') {
+      return res.status(403).json({ error: 'Only the CEO can fire employees' });
+    }
+
+    const { count } = req.body;
+    if (!count || count <= 0 || !Number.isInteger(count)) {
+      return res.status(400).json({ error: 'Invalid employee count' });
+    }
+
+    const currentCount = company.employees.count || 0;
+    if (count > currentCount) {
+      return res.status(400).json({ error: `Company only has ${currentCount} employees` });
+    }
+
+    company.employees.count = currentCount - count;
+    company.employees.totalPayroll = company.employees.count * (company.employees.monthlySalaryPerEmployee || 5000);
+    await company.save();
+
+    const gameState = await getGameState();
+    await addAuditLog(
+      company._id,
+      req.user._id,
+      'employees_fired',
+      { count, remaining: company.employees.count },
+      gameState.tickNumber,
+    );
+    await invalidateCompany(company._id);
+
+    res.json({ employees: company.employees });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.put('/:id/employees/salary', async (req, res) => {
+  try {
+    const company = await RealEstateCompany.findById(req.params.id);
+    if (!company) return res.status(404).json({ error: 'Company not found' });
+
+    const caller = getMember(company, req.user._id);
+    if (!caller || caller.role !== 'ceo') {
+      return res.status(403).json({ error: 'Only the CEO can set employee salaries' });
+    }
+
+    const { monthlySalary } = req.body;
+    if (!monthlySalary || monthlySalary < 1000 || monthlySalary > 100000) {
+      return res.status(400).json({ error: 'Monthly salary must be between $1,000 and $100,000' });
+    }
+
+    company.employees.monthlySalaryPerEmployee = monthlySalary;
+    company.employees.totalPayroll = (company.employees.count || 0) * monthlySalary;
+    await company.save();
+
+    const gameState = await getGameState();
+    await addAuditLog(
+      company._id,
+      req.user._id,
+      'salary_updated',
+      { monthlySalary, totalPayroll: company.employees.totalPayroll },
+      gameState.tickNumber,
+    );
+    await invalidateCompany(company._id);
+
+    res.json({ employees: company.employees });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/:id/employees/departments', async (req, res) => {
+  try {
+    const company = await RealEstateCompany.findById(req.params.id);
+    if (!company) return res.status(404).json({ error: 'Company not found' });
+
+    const caller = getMember(company, req.user._id);
+    if (!caller || caller.role !== 'ceo') {
+      return res.status(403).json({ error: 'Only the CEO can manage departments' });
+    }
+
+    const { departments } = req.body;
+    if (!Array.isArray(departments)) {
+      return res.status(400).json({ error: 'Departments must be an array' });
+    }
+
+    const totalDeptEmployees = departments.reduce((s, d) => s + (d.count || 0), 0);
+    if (totalDeptEmployees > (company.employees.count || 0)) {
+      return res.status(400).json({ error: 'Total department employees exceeds company employee count' });
+    }
+
+    company.employees.departments = departments.map((d) => ({
+      name: d.name,
+      count: d.count || 0,
+      budget: (d.count || 0) * (company.employees.monthlySalaryPerEmployee || 5000),
+    }));
+    await company.save();
+
+    await invalidateCompany(company._id);
+    res.json({ departments: company.employees.departments });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -569,18 +763,19 @@ router.post('/:id/leave', async (req, res) => {
       return res.status(400).json({ error: 'CEO cannot leave a company with no other members. Disband instead.' });
     }
 
+    // Return departing member's shares to treasury
+    company.shares.treasuryShares = (company.shares.treasuryShares || 0) + member.shares;
+
     if (member.role === 'ceo') {
       const nextDirector = company.members.find(
         (m) => m.role === 'director' && m.userId?.toString() !== req.user._id.toString(),
       );
       if (nextDirector) {
         nextDirector.role = 'ceo';
-        nextDirector.shares += member.shares;
       } else {
         const nextMember = company.members.find((m) => m.userId?.toString() !== req.user._id.toString());
         if (nextMember) {
           nextMember.role = 'ceo';
-          nextMember.shares += member.shares;
         }
       }
     }
@@ -635,6 +830,8 @@ router.delete('/:id/members/:userId', async (req, res) => {
       return res.status(400).json({ error: 'Cannot remove the CEO' });
     }
 
+    // Return removed member's shares to treasury
+    company.shares.treasuryShares = (company.shares.treasuryShares || 0) + targetMember.shares;
     company.members = company.members.filter((m) => m.userId?.toString() !== req.params.userId);
     await company.save();
 
@@ -658,6 +855,9 @@ router.delete('/:id/members/:userId', async (req, res) => {
       type: 'system',
       title: 'Removed from Company',
       message: `You have been removed from "${company.name}"`,
+      route: '/real-estate-companies',
+      entityType: 'company',
+      entityId: company._id,
       relatedId: company._id,
       global: false,
     });
@@ -1239,7 +1439,7 @@ router.get('/:id/stats', async (req, res) => {
           xpToNextLevel: xpForNextLevel,
           xpInCurrentLevel,
           xpNeededForLevel,
-          shareBreakdown: computeShares(company.members),
+          shareBreakdown: computeShares(company.members, company.shares?.totalShares, company.shares?.treasuryShares),
         };
       },
       cacheTTL.medium,
@@ -1285,11 +1485,16 @@ router.post('/:id/apply', async (req, res) => {
       gameState.tickNumber,
     );
 
+    const appRoute = `/real-estate-companies/${company._id}`;
     await enqueueNotification({
       userId: company.founderId,
       type: 'system',
       title: 'New Application',
       message: `${user.username} applied to join "${company.name}"`,
+      route: appRoute,
+      tab: 'members',
+      entityType: 'company',
+      entityId: company._id,
       relatedId: company._id,
       global: false,
     });
@@ -1302,6 +1507,10 @@ router.post('/:id/apply', async (req, res) => {
             type: 'system',
             title: 'New Application',
             message: `${user.username} applied to join "${company.name}"`,
+            route: appRoute,
+            tab: 'members',
+            entityType: 'company',
+            entityId: company._id,
             relatedId: company._id,
             global: false,
           });
@@ -1370,9 +1579,8 @@ router.post('/:id/applications/:appId/approve', async (req, res) => {
     application.reviewedBy = req.user._id;
     application.reviewedAt = new Date();
 
-    const currentSum = company.members.reduce((s, m) => s + m.shares, 0);
-    const remainingPool = company.shares.totalShares - currentSum;
-    const newMemberShares = Math.max(1, Math.floor(remainingPool / 2));
+    const newMemberShares = Math.min(50, company.shares.treasuryShares || 0);
+    company.shares.treasuryShares = Math.max(0, (company.shares.treasuryShares || 0) - newMemberShares);
     company.members.push({
       userId: applicant._id,
       role: 'recruit',
@@ -1398,6 +1606,10 @@ router.post('/:id/applications/:appId/approve', async (req, res) => {
       type: 'system',
       title: 'Application Approved',
       message: `Your application to join "${company.name}" has been approved!`,
+      route: `/real-estate-companies/${company._id}`,
+      tab: 'members',
+      entityType: 'company',
+      entityId: company._id,
       relatedId: company._id,
       global: false,
     });
@@ -1558,6 +1770,10 @@ router.post('/:id/loan-requests', async (req, res) => {
           type: 'company_vote',
           title: 'Loan Vote Requested',
           message: `${member.role} requested a $${principal.toLocaleString()} loan. Vote to approve.`,
+          route: `/real-estate-companies/${company._id}`,
+          tab: 'loans',
+          entityType: 'company',
+          entityId: company._id,
           relatedId: company._id,
           global: false,
         });
@@ -1569,6 +1785,10 @@ router.post('/:id/loan-requests', async (req, res) => {
       type: 'company_vote',
       title: 'Loan Proposal Submitted',
       message: `You requested a $${principal.toLocaleString()} loan. Members will vote in the company loans tab.`,
+      route: `/real-estate-companies/${company._id}`,
+      tab: 'loans',
+      entityType: 'company',
+      entityId: company._id,
       relatedId: company._id,
       global: false,
     });
@@ -2007,6 +2227,10 @@ router.post('/:id/property-purchase-requests', async (req, res) => {
           type: 'company_vote',
           title: 'Property Purchase Vote',
           message: `${member.role} proposed purchasing "${property.name}" for $${property.currentPrice.toLocaleString()}. Vote to approve.`,
+          route: `/real-estate-companies/${company._id}`,
+          tab: 'properties',
+          entityType: 'company',
+          entityId: company._id,
           relatedId: company._id,
           global: false,
         });
@@ -2018,6 +2242,10 @@ router.post('/:id/property-purchase-requests', async (req, res) => {
       type: 'company_vote',
       title: 'Property Purchase Proposal Submitted',
       message: `You proposed purchasing "${property.name}" for $${property.currentPrice.toLocaleString()}. Members will vote in the company properties tab.`,
+      route: `/real-estate-companies/${company._id}`,
+      tab: 'properties',
+      entityType: 'company',
+      entityId: company._id,
       relatedId: company._id,
       global: false,
     });
@@ -2314,6 +2542,10 @@ router.post('/:id/development-requests', async (req, res) => {
           type: 'company_vote',
           title: 'Development Vote',
           message: `${member.role} proposed "${actionLabel}" on "${property.name}" ($${estimatedCost.toLocaleString()}). Vote to approve.`,
+          route: `/real-estate-companies/${company._id}`,
+          tab: 'properties',
+          entityType: 'company',
+          entityId: company._id,
           relatedId: company._id,
           global: false,
         });
@@ -2325,6 +2557,10 @@ router.post('/:id/development-requests', async (req, res) => {
       type: 'company_vote',
       title: 'Development Proposal Submitted',
       message: `You proposed "${actionLabel}" on "${property.name}" ($${estimatedCost.toLocaleString()}). Members will vote.`,
+      route: `/real-estate-companies/${company._id}`,
+      tab: 'properties',
+      entityType: 'company',
+      entityId: company._id,
       relatedId: company._id,
       global: false,
     });
@@ -2606,6 +2842,10 @@ router.post('/:id/development-requests/:reqId/vote', async (req, res) => {
             type: 'company_vote',
             title: 'Development Approved & Executed',
             message: `Development on "${property.name}" was approved and executed ($${devReq.estimatedCost.toLocaleString()}).`,
+            route: `/real-estate-companies/${company._id}`,
+            tab: 'properties',
+            entityType: 'company',
+            entityId: company._id,
             relatedId: company._id,
             global: false,
           });
@@ -2659,7 +2899,10 @@ router.get('/:id/investments', authenticate, async (req, res) => {
       companyId: company._id,
     }).sort({ createdAt: -1 });
 
-    res.json(investments);
+    const gameState = await getGameState();
+    const currentTick = gameState?.tickNumber || 0;
+
+    res.json(investments.map((inv) => ({ ...inv.toJSON(), currentTick })));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -2823,6 +3066,10 @@ router.post('/:id/investments', authenticate, async (req, res) => {
           type: 'company_vote',
           title: 'Investment Vote',
           message: `${caller.role} proposed investment: ${product.name} — $${amount.toLocaleString()}. Vote to approve or reject.`,
+          route: `/real-estate-companies/${company._id}`,
+          tab: 'investments',
+          entityType: 'company',
+          entityId: company._id,
           relatedId: company._id,
           global: false,
         });
@@ -3016,9 +3263,7 @@ router.post('/:id/investments/:invId/cancel', authenticate, async (req, res) => 
 
 router.post('/:id/ipo', async (req, res) => {
   try {
-    const company = await RealEstateCompany.findById(req.params.id)
-      .populate('founderId', 'username')
-      .populate('members.userId', 'username');
+    const company = await RealEstateCompany.findById(req.params.id);
     if (!company) return res.status(404).json({ error: 'Company not found' });
 
     const caller = getMember(company, req.user._id);
@@ -3030,17 +3275,16 @@ router.post('/:id/ipo', async (req, res) => {
       return res.status(400).json({ error: 'Company is already publicly listed' });
     }
 
-    const user = await User.findById(req.user._id);
-    if (user.balance < IPO_FEE) {
-      return res.status(400).json({ error: `IPO costs $${IPO_FEE.toLocaleString()}. Insufficient funds.` });
-    }
-
     if (company.level < MIN_IPO_LEVEL) {
       return res.status(400).json({ error: `Company must be at least Level ${MIN_IPO_LEVEL} for IPO` });
     }
 
     if (company.members.length < MIN_IPO_MEMBERS) {
       return res.status(400).json({ error: `Company needs at least ${MIN_IPO_MEMBERS} members for IPO` });
+    }
+
+    if (company.treasury.balance < IPO_FEE) {
+      return res.status(400).json({ error: `IPO costs $${IPO_FEE.toLocaleString()}. Insufficient treasury balance.` });
     }
 
     const properties = await Property.find({ companyId: company._id });
@@ -3052,10 +3296,40 @@ router.post('/:id/ipo', async (req, res) => {
         .json({ error: `Company net worth must be at least $${MIN_IPO_NET_WORTH.toLocaleString()} for IPO` });
     }
 
-    user.balance -= IPO_FEE;
-    await user.save();
+    if (properties.length < IPO_MIN_PROPERTIES) {
+      return res.status(400).json({ error: `Company must own at least ${IPO_MIN_PROPERTIES} properties for IPO` });
+    }
 
-    const cities = await City.find();
+    const activeLoans = await Loan.find({ companyId: company._id, active: true });
+    const totalDebt = activeLoans.reduce((sum, l) => sum + l.remainingBalance, 0);
+    const debtRatio = companyNetWorth > 0 ? totalDebt / companyNetWorth : 1;
+    if (debtRatio > IPO_MAX_DEBT_RATIO) {
+      return res.status(400).json({
+        error: `Company debt ratio (${(debtRatio * 100).toFixed(0)}%) exceeds maximum (${(IPO_MAX_DEBT_RATIO * 100).toFixed(0)}%) for IPO`,
+      });
+    }
+
+    const annualRent = company.stats.totalRentalIncome || 0;
+    const valuation = Math.round(propertyValue * 1.5 + company.treasury.balance + annualRent * 2 - totalDebt);
+    const targetPrice = Math.max(1, Math.round(company.reputation * 0.5 + company.level * 0.2 + 2));
+    const sharesOutstanding = Math.round(valuation / targetPrice / 1000) * 1000;
+    const sharePrice = sharesOutstanding > 0 ? Math.round((valuation / sharesOutstanding) * 100) / 100 : 1;
+    const marketCap = Math.round(sharePrice * sharesOutstanding);
+
+    company.treasury.balance -= IPO_FEE;
+    company.treasury.transactions.push({
+      type: 'development',
+      amount: -IPO_FEE,
+      description: 'IPO listing fee',
+      tick: await getGameState().then((gs) => gs.tickNumber),
+    });
+
+    const cities = await City.find().lean();
+    if (cities.length === 0) {
+      return res
+        .status(400)
+        .json({ error: 'No cities exist on the world map. Cannot create public company without a headquarters city.' });
+    }
     const hqCity = cities[0];
 
     const tickerBase = company.name
@@ -3069,35 +3343,81 @@ router.post('/:id/ipo', async (req, res) => {
       suffix++;
     }
 
-    const sharesOutstanding = 10000 + company.members.length * 1000;
-    const sharePrice = Math.round((companyNetWorth / sharesOutstanding) * 100) / 100;
-    const marketCap = Math.round(sharePrice * sharesOutstanding);
-
     const stockCompany = await Company.create({
       name: company.name,
       ticker,
       industry: 'finance',
-      size: 'small',
-      revenue: Math.round(company.stats.totalRentalIncome * 12) || 100000,
-      employees: company.members.length * 10,
+      size: 'medium',
+      revenue: Math.round(annualRent * 12) || 100000,
+      employees: company.employees?.count || company.members.length * 10,
       hqCityId: hqCity._id,
-      offices: [{ cityId: hqCity._id, type: 'headquarters', employees: company.members.length * 4, openedTick: 0 }],
+      offices: [
+        {
+          cityId: hqCity._id,
+          type: 'headquarters',
+          employees: company.employees?.count || company.members.length * 4,
+          openedTick: 0,
+        },
+      ],
       sharePrice,
       previousSharePrice: sharePrice,
       marketCap,
       sharesOutstanding,
-      volatility: 0.04,
+      volatility: 0.03,
       performance: [],
       expansionHistory: [],
       active: true,
       foundedTick: company.foundedTick || 0,
-      description: `${company.name} - Real Estate Investment Company`,
+      description: `${company.name} — Real Estate Investment Company`,
       totalReturn: 0,
       dayChange: 0,
       dayChangePercent: 0,
       high52Week: sharePrice,
       low52Week: sharePrice,
+      realEstateCompanyId: company._id,
+      isIPO: true,
+      ipoPrice: sharePrice,
     });
+
+    // IPO Ownership Distribution: CEO 51% locked, Members 19%, Public 30%
+    const ceoLockedShares = Math.ceil(sharesOutstanding * 0.51);
+    const memberPoolShares = Math.floor(sharesOutstanding * 0.19);
+    const publicShares = sharesOutstanding - ceoLockedShares - memberPoolShares;
+
+    await StockHolding.create({
+      userId: company.founderId,
+      companyId: stockCompany._id,
+      shares: ceoLockedShares,
+      avgBuyPrice: sharePrice,
+      locked: true,
+    });
+
+    const nonCeoMembers = company.members.filter((m) => m.userId.toString() !== company.founderId.toString());
+    const nonCeoTotal = nonCeoMembers.reduce((s, m) => s + (m.shares || 0), 0);
+    let distributedToMembers = 0;
+    if (nonCeoTotal > 0) {
+      for (const member of nonCeoMembers) {
+        const memberShare = Math.floor(memberPoolShares * ((member.shares || 0) / nonCeoTotal));
+        if (memberShare > 0) {
+          await StockHolding.create({
+            userId: member.userId,
+            companyId: stockCompany._id,
+            shares: memberShare,
+            avgBuyPrice: sharePrice,
+            locked: false,
+          });
+          distributedToMembers += memberShare;
+        }
+      }
+    }
+
+    const actualPublicShares = publicShares + (memberPoolShares - distributedToMembers);
+    const totalHeldByInsiders = ceoLockedShares + distributedToMembers;
+
+    stockCompany.totalSharesHeld = totalHeldByInsiders;
+    stockCompany.floatPercentage =
+      sharesOutstanding > 0 ? Math.round((actualPublicShares / sharesOutstanding) * 100) : 0;
+    await stockCompany.save();
 
     company.ipo = {
       listed: true,
@@ -3107,6 +3427,13 @@ router.post('/:id/ipo', async (req, res) => {
       sharesOutstanding,
       listedAt: new Date(),
       listFee: IPO_FEE,
+      dividendsPaid: 0,
+      lastDividendPerShare: 0,
+      lastDividendTick: 0,
+      ipoValue: valuation,
+      ceoLockedShares,
+      memberShares: distributedToMembers,
+      publicShares: actualPublicShares,
     };
     await company.save();
 
@@ -3115,13 +3442,43 @@ router.post('/:id/ipo', async (req, res) => {
       company._id,
       req.user._id,
       'ipo_listed',
-      { ticker, sharePrice, sharesOutstanding, marketCap, ipoFee: IPO_FEE },
+      { ticker, sharePrice, sharesOutstanding, marketCap, ipoFee: IPO_FEE, valuation },
       gameState.tickNumber,
     );
 
-    await awardXp(user, 50, 'company_ipo');
+    const ipoLaunchEvent = {
+      companyId: stockCompany._id,
+      tick: gameState.tickNumber,
+      type: 'ipo_launch',
+      severity: 'major',
+      headline: `${ticker} launched its IPO at $${sharePrice.toFixed(2)} per share`,
+      description: `${company.name} went public with a valuation of $${marketCap.toLocaleString()} and ${sharesOutstanding.toLocaleString()} shares outstanding.`,
+      metadata: { sharePrice, sharesOutstanding, marketCap, valuation },
+    };
+    StockMarketEvent.create(ipoLaunchEvent).catch(() => {});
 
-    await processPlayerProgress(user._id, 'company_ipo', { skipXp: true });
+    publish(CHANNELS.PUBLIC_COMPANY_IPO_LAUNCH, {
+      companyId: stockCompany._id,
+      ticker,
+      name: company.name,
+      sharePrice,
+      marketCap,
+      sharesOutstanding,
+      reCompanyId: company._id,
+    }).catch(() => {});
+    emitToAll(SOCKET_EVENTS.PUBLIC_COMPANY_IPO_LAUNCH, {
+      companyId: stockCompany._id,
+      ticker,
+      name: company.name,
+      sharePrice,
+      marketCap,
+    });
+
+    cacheDel(ck.publicCompanies()).catch(() => {});
+    cacheDel(ck.publicCompaniesStats()).catch(() => {});
+
+    await awardXp(req.user, 50, 'company_ipo');
+    await processPlayerProgress(req.user._id, 'company_ipo', { skipXp: true });
 
     await onCompanyUpdated(company._id);
     await invalidateLeaderboards();
@@ -3129,7 +3486,124 @@ router.post('/:id/ipo', async (req, res) => {
     res.json({
       success: true,
       ipo: company.ipo,
-      stockCompany: { _id: stockCompany._id, ticker: stockCompany.ticker, sharePrice },
+      stockCompany: { _id: stockCompany._id, ticker: stockCompany.ticker, sharePrice, sharesOutstanding, marketCap },
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Secondary Offering (Controlled Share Issuance) ───────────────────
+
+router.post('/:id/secondary-offering', async (req, res) => {
+  try {
+    const company = await RealEstateCompany.findById(req.params.id);
+    if (!company) return res.status(404).json({ error: 'Company not found' });
+
+    const caller = getMember(company, req.user._id);
+    if (!caller || caller.role !== 'ceo') {
+      return res.status(403).json({ error: 'Only the CEO can initiate a secondary offering' });
+    }
+
+    if (!company.ipo?.listed) {
+      return res.status(400).json({ error: 'Company must be publicly listed for a secondary offering' });
+    }
+
+    const stockCompany = await Company.findById(company.ipo.stockCompanyId);
+    if (!stockCompany) {
+      return res.status(400).json({ error: 'Stock company not found' });
+    }
+
+    const { newShares, price } = req.body;
+    if (!newShares || newShares <= 0 || !Number.isInteger(newShares)) {
+      return res.status(400).json({ error: 'Invalid share count' });
+    }
+    if (newShares > Math.floor(stockCompany.sharesOutstanding * 0.2)) {
+      return res
+        .status(400)
+        .json({ error: 'Cannot issue more than 20% of current outstanding shares in a single offering' });
+    }
+    if (!price || price <= 0) {
+      return res.status(400).json({ error: 'Invalid offering price' });
+    }
+
+    const totalNewShares = stockCompany.sharesOutstanding + newShares;
+    const newMarketCap = Math.round(price * totalNewShares);
+
+    // Ensure CEO still has 51% after dilution
+    const ceoHolding = await StockHolding.findOne({
+      userId: company.founderId,
+      companyId: stockCompany._id,
+      locked: true,
+    });
+    if (ceoHolding) {
+      const newCeoPct = (ceoHolding.shares / totalNewShares) * 100;
+      if (newCeoPct < 51) {
+        // Allocate additional locked shares to CEO to maintain 51%
+        const neededShares = Math.ceil(totalNewShares * 0.51) - ceoHolding.shares;
+        ceoHolding.shares += neededShares;
+        await ceoHolding.save();
+      }
+    }
+
+    // Issue new shares to public market
+    const totalInsiderShares =
+      (ceoHolding?.shares || 0) +
+      (await StockHolding.find({
+        companyId: stockCompany._id,
+        userId: { $ne: company.founderId },
+      }).then((h) => h.reduce((s, hh) => s + hh.shares, 0)));
+
+    stockCompany.sharesOutstanding = totalNewShares;
+    stockCompany.sharePrice = price;
+    stockCompany.previousSharePrice = stockCompany.sharePrice;
+    stockCompany.marketCap = newMarketCap;
+    stockCompany.floatPercentage =
+      stockCompany.sharesOutstanding > 0
+        ? Math.round(((stockCompany.sharesOutstanding - totalInsiderShares) / stockCompany.sharesOutstanding) * 100)
+        : 0;
+    await stockCompany.save();
+
+    const gameState = await getGameState();
+    await CompanyAuditLog.create({
+      companyId: company._id,
+      userId: req.user._id,
+      action: 'secondary_offering',
+      details: { newShares, price, totalNewShares, newMarketCap },
+      tick: gameState.tickNumber,
+    });
+
+    const offeringEvent = {
+      companyId: stockCompany._id,
+      tick: gameState.tickNumber,
+      type: 'secondary_offering',
+      severity: 'major',
+      headline: `${stockCompany.ticker} announced a secondary offering of ${newShares.toLocaleString()} shares at $${price.toFixed(2)} per share`,
+      description: `Total shares increased to ${totalNewShares.toLocaleString()}. Market cap: $${newMarketCap.toLocaleString()}.`,
+      metadata: { newShares, price, totalNewShares, newMarketCap },
+    };
+    StockMarketEvent.create(offeringEvent).catch(() => {});
+
+    publish(CHANNELS.PUBLIC_COMPANY_IPO_LAUNCH, {
+      companyId: stockCompany._id,
+      ticker: stockCompany.ticker,
+      name: stockCompany.name,
+      sharePrice: price,
+      marketCap: newMarketCap,
+      sharesOutstanding: totalNewShares,
+      isSecondaryOffering: true,
+    }).catch(() => {});
+
+    cacheDel(ck.publicCompanies()).catch(() => {});
+    cacheDel(ck.publicCompaniesStats()).catch(() => {});
+    await invalidateLeaderboards();
+
+    res.json({
+      success: true,
+      sharesOutstanding: totalNewShares,
+      sharePrice: price,
+      marketCap: newMarketCap,
+      ceoProtected: !!ceoHolding,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

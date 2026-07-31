@@ -91,4 +91,9 @@ export const CHANNELS = {
   LOAN_APPROVED: 'cityflow:loan:approved',
   LOAN_REPAID: 'cityflow:loan:repaid',
   DEVELOPMENT_STARTED: 'cityflow:development:started',
+  PUBLIC_COMPANY_PRICES: 'cityflow:publicCompany:prices',
+  PUBLIC_COMPANY_DIVIDENDS: 'cityflow:publicCompany:dividends',
+  PUBLIC_COMPANY_EVENT: 'cityflow:publicCompany:event',
+  PUBLIC_COMPANY_IPO_LAUNCH: 'cityflow:publicCompany:ipo:launch',
+  PUBLIC_COMPANY_DELISTING: 'cityflow:publicCompany:delisting',
 };

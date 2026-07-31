@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getApiBaseUrl } from '../utils/capacitor';
 import { formatMoney, formatCompact } from '../utils/format';
+import PropertyImage from '../components/PropertyImage';
 
 const TIER_STYLES = {
   premium: { bg: 'bg-purple-100 dark:bg-purple-900/50', text: 'text-purple-700 dark:text-purple-300', icon: '👑' },
@@ -309,10 +310,15 @@ export default function DistrictPage() {
                   <Link
                     key={prop._id}
                     to={`/property/${prop._id}`}
-                    className="flex justify-between items-center bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-750 rounded-lg p-3 transition-colors"
+                    className="flex justify-between items-center gap-3 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-750 rounded-lg p-3 transition-colors"
                   >
-                    <div>
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">{prop.name}</div>
+                    <PropertyImage
+                      property={prop}
+                      alt={prop.name}
+                      className="w-14 h-14 object-cover rounded-lg shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-gray-900 dark:text-white truncate">{prop.name}</div>
                       <div className="text-xs text-gray-500 dark:text-gray-400 flex gap-1 flex-wrap">
                         <span>{prop.type}</span>
                         {prop.forSale && <span className="text-green-600 dark:text-green-400">For Sale</span>}
@@ -320,7 +326,7 @@ export default function DistrictPage() {
                         {prop.companyId && <span className="text-blue-500">· Company</span>}
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right shrink-0">
                       <div className="text-sm font-semibold text-orange-500">{formatMoney(prop.currentPrice)}</div>
                       {prop.rent > 0 && (
                         <div className="text-xs text-gray-500 dark:text-gray-400">{formatMoney(prop.rent)}/mo</div>

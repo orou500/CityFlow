@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
 import { useCareerStore } from '../store/useCareerStore';
 import { useMissionStore } from '../store/useMissionStore';
@@ -27,7 +27,8 @@ export default function CareerPage() {
   const { career, fetchCareer, setTitle, prestige } = useCareerStore();
   const { fetchDashboard } = useMissionStore();
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'overview');
   const [titleMsg, setTitleMsg] = useState('');
   const [prestigeMsg, setPrestigeMsg] = useState('');
   const [prestigeLoading, setPrestigeLoading] = useState(false);

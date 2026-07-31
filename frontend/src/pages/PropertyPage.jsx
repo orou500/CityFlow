@@ -8,6 +8,7 @@ import { translateError } from '../i18n/errors';
 import { formatMoney, formatMoneyExact, formatCompact } from '../utils/format';
 import CompactValue from '../components/CompactValue';
 import RiskDashboard from '../components/RiskDashboard';
+import PropertyImage from '../components/PropertyImage';
 import { getApiBaseUrl } from '../utils/capacitor';
 
 const API = getApiBaseUrl();
@@ -603,31 +604,55 @@ export default function PropertyPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white dark:bg-gray-900 rounded-lg p-6">
-            <h1 className="text-2xl font-bold mb-4">{property.name}</h1>
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+            <PropertyImage
+              property={property}
+              alt={property.name}
+              className="w-full max-h-[480px] object-contain bg-gray-100 dark:bg-gray-800 rounded-md mb-4"
+            />
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              <h1 className="text-2xl font-bold min-w-0 flex-1 break-words">{property.name}</h1>
+              <span className="text-xs px-2.5 py-1 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-medium capitalize shrink-0">
+                {t(`property.${property.type}`, { defaultValue: property.type })}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
                 <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.currentValue')}</p>
-                <p className="text-sm md:text-lg font-bold text-orange-500 dark:text-orange-400 truncate">
+                <p className="text-sm md:text-lg font-bold text-orange-500 dark:text-orange-400 break-words whitespace-normal">
                   <CompactValue value={property.currentPrice} />
                 </p>
               </div>
               <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
                 <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.baseValue')}</p>
-                <p className="text-sm md:text-lg font-semibold truncate">
+                <p className="text-sm md:text-lg font-semibold break-words whitespace-normal">
                   <CompactValue value={property.basePrice} />
                 </p>
               </div>
+              <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
+                <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.propertyType')}</p>
+                <p className="text-sm md:text-lg font-semibold break-words whitespace-normal">
+                  {t(`property.${property.type}`, { defaultValue: property.type })}
+                </p>
+              </div>
+              {property.size > 0 && (
+                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.propertySize')}</p>
+                  <p className="text-sm md:text-lg font-semibold break-words whitespace-normal">
+                    {formatCompact(property.size)} {t('development.sqft')}
+                  </p>
+                </div>
+              )}
               {intrinsicValue > 0 && (
                 <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
                   <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.intrinsicValue')}</p>
-                  <p className="text-sm md:text-lg font-semibold text-blue-600 dark:text-blue-400 truncate">
+                  <p className="text-sm md:text-lg font-semibold text-blue-600 dark:text-blue-400 break-words whitespace-normal">
                     <CompactValue value={intrinsicValue} />
                   </p>
                 </div>
               )}
               <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
                 <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.rentIncome')}</p>
-                <p className="text-sm md:text-lg font-semibold text-orange-500 dark:text-orange-400 truncate">
+                <p className="text-sm md:text-lg font-semibold text-orange-500 dark:text-orange-400 break-words whitespace-normal">
                   <CompactValue value={property.rent} />
                 </p>
               </div>
@@ -635,10 +660,10 @@ export default function PropertyPage() {
                 <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.condition')}</p>
                 <p className="text-sm md:text-lg font-semibold">{property.condition}%</p>
               </div>
-              <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+              <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
                 <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.propertyRating')}</p>
-                <div className="flex items-center gap-1">
-                  <span className="text-yellow-500 text-sm leading-none capitalize">
+                <div className="flex items-center gap-1 flex-wrap">
+                  <span className="text-yellow-500 text-sm leading-none capitalize break-words">
                     {improvementStatus?.propertyRating || property.propertyRating || 'standard'}
                   </span>
                 </div>
@@ -648,18 +673,24 @@ export default function PropertyPage() {
 
           <div className="bg-white dark:bg-gray-900 rounded-lg p-6">
             <h2 className="text-lg font-bold mb-3">{t('propertyDetail.marketInfo')}</h2>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.demandIndex')}</p>
-                <p className="text-lg font-semibold">{property.cityId?.demandIndex?.toFixed(2) || '—'}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
+                <p className="text-xs text-gray-500 dark:text-gray-400 break-words whitespace-normal">
+                  {t('propertyDetail.demandIndex')}
+                </p>
+                <p className="text-lg font-semibold break-words">{property.cityId?.demandIndex?.toFixed(2) || '—'}</p>
               </div>
-              <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.supplyIndex')}</p>
-                <p className="text-lg font-semibold">{property.cityId?.supplyIndex?.toFixed(2) || '—'}</p>
+              <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
+                <p className="text-xs text-gray-500 dark:text-gray-400 break-words whitespace-normal">
+                  {t('propertyDetail.supplyIndex')}
+                </p>
+                <p className="text-lg font-semibold break-words">{property.cityId?.supplyIndex?.toFixed(2) || '—'}</p>
               </div>
-              <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.growthRate')}</p>
-                <p className="text-lg font-semibold">
+              <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
+                <p className="text-xs text-gray-500 dark:text-gray-400 break-words whitespace-normal">
+                  {t('propertyDetail.growthRate')}
+                </p>
+                <p className="text-lg font-semibold break-words">
                   {property.cityId?.growthRate != null ? `${(property.cityId.growthRate * 100).toFixed(1)}%` : '—'}
                 </p>
               </div>
@@ -680,14 +711,14 @@ export default function PropertyPage() {
               <h2 className="text-lg font-bold mb-3">
                 {t('propertyDetail.buildingUnits', { count: property.units.length })}
               </h2>
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
+                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
                   <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.occupancy')}</p>
                   <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">{property.occupancy}%</p>
                 </div>
                 <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
                   <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.maintenanceCost')}</p>
-                  <p className="text-sm md:text-lg font-semibold text-red-600 dark:text-red-400 truncate">
+                  <p className="text-sm md:text-lg font-semibold text-red-600 dark:text-red-400 break-words whitespace-normal">
                     <CompactValue value={property.maintenanceCost} />
                   </p>
                 </div>
@@ -703,9 +734,9 @@ export default function PropertyPage() {
                       {pageUnits.map((unit, i) => (
                         <div
                           key={start + i}
-                          className="bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded text-sm flex justify-between items-center"
+                          className="bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded text-sm flex justify-between items-center gap-2"
                         >
-                          <div>
+                          <div className="min-w-0 break-words">
                             <span className="text-gray-500 dark:text-gray-400">
                               {t('propertyDetail.unitNumber', { number: unit.unitNumber })}
                             </span>
@@ -713,7 +744,7 @@ export default function PropertyPage() {
                               {unit.type?.replace('_', ' ')}
                             </span>
                           </div>
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-3 shrink-0">
                             <span className="text-blue-600 dark:text-blue-400">
                               {formatMoney(unit.rentPrice)}
                               {t('propertyDetail.perPeriod')}
@@ -762,27 +793,37 @@ export default function PropertyPage() {
             <div className="bg-white dark:bg-gray-900 rounded-lg p-6">
               <h2 className="text-lg font-bold mb-4">{t('propertyManagement.title')}</h2>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyManagement.qualityScore')}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 break-words whitespace-normal">
+                    {t('propertyManagement.qualityScore')}
+                  </p>
                   <p
-                    className={`text-lg font-bold ${managementData.qualityScore >= 70 ? 'text-blue-600 dark:text-blue-400' : managementData.qualityScore >= 40 ? 'text-yellow-500' : 'text-red-500'}`}
+                    className={`text-lg font-bold break-words ${managementData.qualityScore >= 70 ? 'text-blue-600 dark:text-blue-400' : managementData.qualityScore >= 40 ? 'text-yellow-500' : 'text-red-500'}`}
                   >
                     {managementData.qualityScore}/100
                   </p>
                 </div>
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyManagement.occupancy')}</p>
-                  <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{managementData.occupancy}%</p>
+                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 break-words whitespace-normal">
+                    {t('propertyManagement.occupancy')}
+                  </p>
+                  <p className="text-lg font-bold text-blue-600 dark:text-blue-400 break-words">
+                    {managementData.occupancy}%
+                  </p>
                 </div>
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyManagement.maintenanceLevel')}</p>
-                  <p className="text-lg font-bold capitalize">{managementData.maintenanceLevel}</p>
+                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 break-words whitespace-normal">
+                    {t('propertyManagement.maintenanceLevel')}
+                  </p>
+                  <p className="text-lg font-bold capitalize break-words">{managementData.maintenanceLevel}</p>
                 </div>
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyManagement.netProfit')}</p>
+                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 break-words whitespace-normal">
+                    {t('propertyManagement.netProfit')}
+                  </p>
                   <p
-                    className={`text-lg font-bold ${managementData.netProfit >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-500'}`}
+                    className={`text-lg font-bold break-words ${managementData.netProfit >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-500'}`}
                   >
                     {formatMoney(managementData.netProfit)}
                   </p>
@@ -952,27 +993,31 @@ export default function PropertyPage() {
                   <p className="font-semibold">{user.username}</p>
                 </div>
                 {property.lastPurchasePrice && (
-                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
                     <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.purchasePrice')}</p>
-                    <p className="font-semibold truncate">{formatMoney(property.lastPurchasePrice)}</p>
+                    <p className="font-semibold break-words whitespace-normal">
+                      {formatMoney(property.lastPurchasePrice)}
+                    </p>
                   </div>
                 )}
                 {property.lastPurchaseDate && (
-                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
                     <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.purchaseDate')}</p>
-                    <p className="font-semibold text-sm">{new Date(property.lastPurchaseDate).toLocaleDateString()}</p>
+                    <p className="font-semibold text-sm break-words">
+                      {new Date(property.lastPurchaseDate).toLocaleDateString()}
+                    </p>
                   </div>
                 )}
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
                   <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.totalRentEarned')}</p>
-                  <p className="font-semibold text-purple-600 dark:text-purple-400 truncate">
+                  <p className="font-semibold text-purple-600 dark:text-purple-400 break-words whitespace-normal">
                     {formatMoney(totalRentEarned)}
                   </p>
                 </div>
                 {totalInvestment > 0 && (
-                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
                     <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.totalInvestment')}</p>
-                    <p className="font-semibold text-orange-500 dark:text-orange-400 truncate">
+                    <p className="font-semibold text-orange-500 dark:text-orange-400 break-words whitespace-normal">
                       {formatMoney(totalInvestment)}
                     </p>
                   </div>
@@ -993,32 +1038,36 @@ export default function PropertyPage() {
               <h2 className="text-lg font-bold mb-4">{t('propertyDetail.investments')}</h2>
               <div className="space-y-3">
                 {property.lastPurchasePrice > 0 && (
-                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
                     <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.purchasePrice')}</p>
-                    <p className="font-semibold">{formatMoney(property.lastPurchasePrice)}</p>
+                    <p className="font-semibold break-words whitespace-normal">
+                      {formatMoney(property.lastPurchasePrice)}
+                    </p>
                   </div>
                 )}
                 {totalInvestment > 0 && (
-                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       {t('propertyDetail.totalCapitalInvested')}
                     </p>
-                    <p className="font-semibold text-orange-500 dark:text-orange-400">{formatMoney(totalInvestment)}</p>
+                    <p className="font-semibold text-orange-500 dark:text-orange-400 break-words whitespace-normal">
+                      {formatMoney(totalInvestment)}
+                    </p>
                   </div>
                 )}
                 {intrinsicValue > 0 && (
-                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
                     <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.intrinsicValue')}</p>
-                    <p className="font-semibold text-blue-600 dark:text-blue-400">
+                    <p className="font-semibold text-blue-600 dark:text-blue-400 break-words whitespace-normal">
                       <CompactValue value={intrinsicValue} />
                     </p>
                   </div>
                 )}
                 {totalInvestment > 0 && (
-                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
                     <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.unrealizedGain')}</p>
                     <p
-                      className={`font-semibold ${unrealizedGain >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}
+                      className={`font-semibold break-words whitespace-normal ${unrealizedGain >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}
                     >
                       {unrealizedGain >= 0 ? '+' : ''}
                       {formatMoney(unrealizedGain)}
@@ -1026,10 +1075,10 @@ export default function PropertyPage() {
                   </div>
                 )}
                 {totalInvestment > 0 && (
-                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
                     <p className="text-xs text-gray-500 dark:text-gray-400">{t('propertyDetail.roi')}</p>
                     <p
-                      className={`font-semibold ${roi >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}
+                      className={`font-semibold break-words whitespace-normal ${roi >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}
                     >
                       {roi >= 0 ? '+' : ''}
                       {roi.toFixed(1)}%
@@ -1050,15 +1099,15 @@ export default function PropertyPage() {
                       .map((inv, idx) => (
                         <div
                           key={idx}
-                          className="bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded text-sm flex justify-between items-center"
+                          className="bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded text-sm flex justify-between items-center gap-2"
                         >
-                          <div>
+                          <div className="min-w-0 break-words">
                             <span className="text-gray-900 dark:text-white">{inv.description || inv.type}</span>
                             {inv.tick && (
                               <span className="text-xs text-gray-400 dark:text-gray-500 ml-2">#{inv.tick}</span>
                             )}
                           </div>
-                          <span className="font-semibold text-orange-500 dark:text-orange-400">
+                          <span className="font-semibold text-orange-500 dark:text-orange-400 shrink-0 break-words">
                             {formatMoney(inv.amount)}
                           </span>
                         </div>
@@ -1094,7 +1143,7 @@ export default function PropertyPage() {
               {user && !hasManageAccess && property.forSale && (
                 <button
                   onClick={handleBuy}
-                  className="w-full bg-orange-500 hover:bg-orange-400 text-gray-900 dark:text-white text-sm py-2 rounded transition-colors"
+                  className="w-full bg-orange-500 hover:bg-orange-400 text-gray-900 dark:text-white text-sm py-2 rounded transition-colors break-words"
                 >
                   {t('propertyDetail.buyProperty')} — {formatMoney(property.currentPrice)}
                 </button>
@@ -1118,7 +1167,7 @@ export default function PropertyPage() {
               {user && hasManageAccess && (
                 <button
                   onClick={handleSell}
-                  className="w-full bg-yellow-600 hover:bg-yellow-500 text-gray-900 dark:text-white text-sm py-2 rounded transition-colors"
+                  className="w-full bg-yellow-600 hover:bg-yellow-500 text-gray-900 dark:text-white text-sm py-2 rounded transition-colors break-words"
                 >
                   {t('propertyDetail.sellProperty')} — {formatMoney(property.currentPrice)}
                 </button>
@@ -1142,10 +1191,10 @@ export default function PropertyPage() {
                       <button
                         key={imp.id}
                         onClick={() => handleOpenDevProposal('improvement', imp)}
-                        className="w-full bg-blue-600 hover:bg-blue-500 text-white text-sm py-2 rounded transition-colors flex justify-between items-center px-3"
+                        className="w-full bg-blue-600 hover:bg-blue-500 text-white text-sm py-2 rounded transition-colors flex justify-between items-center px-3 gap-2"
                       >
-                        <span>{imp.name}</span>
-                        <span className="text-blue-200 text-xs">
+                        <span className="min-w-0 break-words">{imp.name}</span>
+                        <span className="text-blue-200 text-xs shrink-0 break-words">
                           {formatMoney(Math.round(property.currentPrice * imp.baseCostPercent))}
                         </span>
                       </button>
@@ -1173,12 +1222,12 @@ export default function PropertyPage() {
                         <button
                           key={upg.type}
                           onClick={() => handleOpenDevProposal('upgrade', upg)}
-                          className="w-full bg-purple-600 hover:bg-purple-500 text-white text-sm py-2 rounded transition-colors flex justify-between items-center px-3"
+                          className="w-full bg-purple-600 hover:bg-purple-500 text-white text-sm py-2 rounded transition-colors flex justify-between items-center px-3 gap-2"
                         >
-                          <span>
+                          <span className="min-w-0 break-words">
                             {upg.name} Lv.{upg.level}
                           </span>
-                          <span className="text-purple-200 text-xs">{formatMoney(upg.cost)}</span>
+                          <span className="text-purple-200 text-xs shrink-0 break-words">{formatMoney(upg.cost)}</span>
                         </button>
                       ))}
                   </div>
@@ -1189,16 +1238,16 @@ export default function PropertyPage() {
                     <button
                       key={proj.id}
                       onClick={() => handleOpenDevProposal('construction', proj)}
-                      className="w-full bg-green-600 hover:bg-green-500 text-white text-sm py-2 rounded transition-colors flex justify-between items-center px-3"
+                      className="w-full bg-green-600 hover:bg-green-500 text-white text-sm py-2 rounded transition-colors flex justify-between items-center px-3 gap-2"
                     >
-                      <div className="flex flex-col items-start">
-                        <span>{proj.name}</span>
+                      <div className="flex flex-col items-start min-w-0">
+                        <span className="break-words">{proj.name}</span>
                         <span className="text-green-200 text-xs">
                           {proj.unitsGenerated} {t('companyDevelopment.units')} · {proj.constructionPeriods}{' '}
                           {t('companyDevelopment.months') || 'mo'}
                         </span>
                       </div>
-                      <span className="text-green-200 text-xs">
+                      <span className="text-green-200 text-xs shrink-0 break-words">
                         {formatMoney(proj.estimatedCost || proj.baseCost || 0)}
                       </span>
                     </button>

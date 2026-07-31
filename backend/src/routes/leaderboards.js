@@ -5,6 +5,8 @@ import User from '../models/User.js';
 import Season from '../models/Season.js';
 import { authenticate } from '../middleware/auth.js';
 import { cacheGet, cacheSet, cacheDelPattern } from '../utils/cache.js';
+import { ACHIEVEMENT_DEFINITIONS } from '../config/achievements.js';
+import { MISSION_DEFINITIONS } from '../config/missions.js';
 
 const router = Router();
 
@@ -27,6 +29,9 @@ router.get('/rankings/:category', async (req, res) => {
       'companyIncome',
       'companyReputation',
       'companyGrowth',
+      'ipoMarketCap',
+      'ipoDividendYield',
+      'ipoPriceGrowth',
     ];
     if (!ALL_CATEGORIES.includes(category)) {
       return res.status(400).json({ error: 'Invalid category' });
@@ -207,6 +212,36 @@ router.get('/player/:userId', async (req, res) => {
       };
     }
 
+    const achievementDefs = ACHIEVEMENT_DEFINITIONS.reduce((map, a) => {
+      map[a.id] = a;
+      if (a.rewardBadge && !map[a.rewardBadge]) {
+        map[a.rewardBadge] = { id: a.rewardBadge, name: a.name, description: a.description, icon: a.icon };
+      }
+      return map;
+    }, {});
+    MISSION_DEFINITIONS.forEach((m) => {
+      if (m.rewards?.badge && !achievementDefs[m.rewards.badge]) {
+        achievementDefs[m.rewards.badge] = {
+          id: m.rewards.badge,
+          name: m.name,
+          description: m.description,
+          icon: m.icon || '🎖️',
+        };
+      }
+    });
+    const enrichedAchievements = (user.achievements || []).map((id) => {
+      const def = achievementDefs[id];
+      return def ? { id: def.id, name: def.name, description: def.description, icon: def.icon } : id;
+    });
+
+    const seen = new Set();
+    const deduplicatedAchievements = enrichedAchievements.filter((a) => {
+      if (typeof a !== 'object') return true;
+      if (seen.has(a.name)) return false;
+      seen.add(a.name);
+      return true;
+    });
+
     const result = {
       user: {
         _id: user._id,
@@ -216,7 +251,7 @@ router.get('/player/:userId', async (req, res) => {
         level: user.level,
         xp: user.xp,
         bio: user.bio,
-        achievements: user.achievements,
+        achievements: deduplicatedAchievements,
         title: user.title,
         prestigeLevel: user.prestigeLevel,
         achievementPoints: user.achievementPoints,

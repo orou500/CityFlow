@@ -1,6 +1,14 @@
 import City from '../models/City.js';
 import Property from '../models/Property.js';
 
+const ECON_MOD = {
+  boom: 0.04,
+  growth: 0.02,
+  stable: 0.0,
+  slowdown: -0.02,
+  recession: -0.04,
+};
+
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
@@ -34,7 +42,6 @@ export async function simulateCities(activeEvents) {
     );
 
     let supplyMod = 0;
-
     for (const event of activeForCity) {
       supplyMod += event.impact.supplyDelta || 0;
     }
@@ -42,11 +49,34 @@ export async function simulateCities(activeEvents) {
     const stats = statsMap.get(city._id.toString()) || { total: 0, owned: 0, totalPrice: 0 };
     const totalProperties = stats.total;
 
-    city.supplyIndex = clamp(
-      city.supplyIndex + 0.03 * (1 - city.supplyIndex) + supplyMod - totalProperties * 0.001,
-      0.3,
-      3.0,
-    );
+    // Supply responds to multiple economic factors:
+    // 1. Mean reversion toward equilibrium (1.0)
+    // 2. Development rate — cities with high development build more supply
+    // 3. Demand pressure — high demand attracts development
+    // 4. Population growth — growing cities add supply
+    // 5. Economic condition — boom/growth increase supply, recession reduces it
+    // 6. Event supply deltas (natural disasters, construction booms, etc.)
+    // 7. Saturation — cities near capacity see slower supply growth
+
+    const econMod = ECON_MOD[city.economicCondition] || 0;
+    const reversionForce = 0.02 * (1.0 - city.supplyIndex);
+    const developmentPush = city.developmentRate * 0.5;
+    const demandPull = Math.max(0, city.demandIndex - 1.0) * 0.03;
+    const growthContribution = city.growthRate * 2;
+    const saturationPenalty = Math.max(0, totalProperties / Math.max(1, city.totalCapacity) - 0.7) * 0.05;
+    const noise = (Math.random() - 0.5) * 0.02;
+
+    const supplyDelta =
+      reversionForce +
+      developmentPush +
+      demandPull +
+      growthContribution +
+      econMod +
+      supplyMod -
+      saturationPenalty +
+      noise;
+
+    city.supplyIndex = clamp(city.supplyIndex + supplyDelta, 0.3, 3.0);
 
     city.avgPrice = totalProperties > 0 ? stats.totalPrice / totalProperties : city.avgPrice;
     city.propertyCount = totalProperties;

@@ -3,10 +3,13 @@ import request from 'supertest';
 import { createApp } from '../../test/createApp.js';
 import { createAuthenticatedUser, createTestProperty, createTestCity, authHeader } from '../../test/helpers.js';
 import RealEstateCompany from '../../models/RealEstateCompany.js';
+import Company from '../../models/Company.js';
+import User from '../../models/User.js';
 import GameState from '../../models/GameState.js';
 import Property from '../../models/Property.js';
 import Notification from '../../models/Notification.js';
 import ConstructionProject from '../../models/ConstructionProject.js';
+import Loan from '../../models/Loan.js';
 import { xpRequiredForLevel } from '../../config/companyProgression.js';
 
 const app = createApp();
@@ -27,12 +30,16 @@ async function createFounder(overrides = {}) {
   return { user, token, property };
 }
 
-async function createTestCompany(founderData) {
+async function createTestCompany(founderData, overrides = {}) {
   const { user, token } = founderData;
+  if (!overrides.hqCityId) {
+    const city = await createTestCity();
+    overrides.hqCityId = city._id;
+  }
   const res = await request(app)
     .post('/real-estate-companies')
     .set(authHeader(token))
-    .send({ name: `TestCompany_${Date.now()}`, description: 'A test company' });
+    .send({ name: `TestCompany_${Date.now()}`, description: 'A test company', ...overrides });
   expect(res.status).toBe(201);
   const company = await RealEstateCompany.findById(res.body._id);
   return { company, res, token };
@@ -67,16 +74,25 @@ describe('Real Estate Companies', () => {
   });
 
   describe('POST /real-estate-companies', () => {
+    let testCityId;
+
+    beforeEach(async () => {
+      const city = await createTestCity();
+      testCityId = city._id;
+    });
+
     it('creates a company for a qualified founder', async () => {
       const founder = await createFounder();
       const res = await request(app)
         .post('/real-estate-companies')
         .set(authHeader(founder.token))
-        .send({ name: `NewCompany_${Date.now()}`, description: 'Test' });
+        .send({ name: `NewCompany_${Date.now()}`, description: 'Test', hqCityId: testCityId });
 
       expect(res.status).toBe(201);
       expect(res.body.name).toMatch(/NewCompany_/);
       expect(res.body.members[0].role).toBe('ceo');
+      expect(res.body.members[0].shares).toBe(700);
+      expect(res.body.shares.treasuryShares).toBe(300);
       const updatedUser = await request(app).get('/auth/me').set(authHeader(founder.token));
       expect(updatedUser.body.balance).toBeLessThan(founder.user.balance);
     });
@@ -86,7 +102,7 @@ describe('Real Estate Companies', () => {
       const res = await request(app)
         .post('/real-estate-companies')
         .set(authHeader(token))
-        .send({ name: `LowLevel_${Date.now()}` });
+        .send({ name: `LowLevel_${Date.now()}`, hqCityId: testCityId });
 
       expect(res.status).toBe(400);
       expect(res.body.error).toMatch(/Level 15/);
@@ -95,9 +111,15 @@ describe('Real Estate Companies', () => {
     it('rejects duplicate company names', async () => {
       const founder = await createFounder();
       const name = `DupeCompany_${Date.now()}`;
-      await request(app).post('/real-estate-companies').set(authHeader(founder.token)).send({ name });
+      await request(app)
+        .post('/real-estate-companies')
+        .set(authHeader(founder.token))
+        .send({ name, hqCityId: testCityId });
 
-      const res = await request(app).post('/real-estate-companies').set(authHeader(founder.token)).send({ name });
+      const res = await request(app)
+        .post('/real-estate-companies')
+        .set(authHeader(founder.token))
+        .send({ name, hqCityId: testCityId });
 
       expect(res.status).toBe(400);
       expect(res.body.error).toMatch(/already exists/i);
@@ -970,6 +992,130 @@ describe('Real Estate Companies', () => {
         expect(dr.constructionProjectId.status).toBe('under_construction');
         expect(dr.constructionProjectId.constructionPeriods).toBeGreaterThan(0);
       });
+    });
+  });
+
+  describe('POST /real-estate-companies/:id/ipo', () => {
+    async function createCompanyForIpo() {
+      const founder = await createFounder({ balance: 200_000_000, level: 30 });
+      const { company: testCompany, token: founderToken } = await createTestCompany(founder);
+
+      testCompany.level = 25;
+      testCompany.treasury.balance = 100_000_000;
+      testCompany.reputation = 60;
+      testCompany.stats = testCompany.stats || {};
+      testCompany.stats.totalRentalIncome = 5_000_000;
+      testCompany.stats.propertiesOwned = 25;
+      await testCompany.save();
+
+      const properties = [];
+      for (let i = 0; i < 25; i++) {
+        const p = await createTestProperty({
+          ownerId: founder.user._id,
+          companyId: testCompany._id,
+          currentPrice: 10_000_000 + i * 1_000_000,
+        });
+        properties.push(p);
+      }
+
+      for (let i = 0; i < 9; i++) {
+        const { user: m } = await createAuthenticatedUser();
+        await addMemberToCompany(testCompany._id, founderToken, {
+          user: m,
+          token: (await createAuthenticatedUser()).token,
+        });
+      }
+      await addMemberToCompany(testCompany._id, founderToken, { user: founder.user, token: founderToken });
+
+      return { founder, company: testCompany, token: founderToken, properties };
+    }
+
+    it('rejects IPO when ceo not calling', async () => {
+      const founder = await createFounder({ balance: 200_000_000, level: 30 });
+      const { token: memberToken } = await createAuthenticatedUser();
+      const { company } = await createTestCompany(founder);
+
+      const res = await request(app)
+        .post(`/real-estate-companies/${company._id}/ipo`)
+        .set(authHeader(memberToken))
+        .send({});
+      expect(res.status).toBe(403);
+    });
+
+    it('rejects IPO when already listed', async () => {
+      const founder = await createFounder({ balance: 200_000_000, level: 30 });
+      const { company, token } = await createTestCompany(founder);
+      company.ipo = { listed: true };
+      await company.save();
+
+      const res = await request(app).post(`/real-estate-companies/${company._id}/ipo`).set(authHeader(token)).send({});
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('already publicly listed');
+    });
+
+    it('rejects IPO with insufficient fee', async () => {
+      const founder = await createFounder({ balance: 200_000_000, level: 30 });
+      const { company, token } = await createTestCompany(founder);
+      company.level = 25;
+      company.treasury.balance = 1_000;
+      await company.save();
+
+      for (let i = 0; i < 9; i++) {
+        const member = await createAuthenticatedUser();
+        await addMemberToCompany(company._id, token, member);
+      }
+
+      const res = await request(app).post(`/real-estate-companies/${company._id}/ipo`).set(authHeader(token)).send({});
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('IPO costs');
+    });
+
+    it('rejects IPO when company level too low', async () => {
+      const founder = await createFounder({ balance: 200_000_000, level: 30 });
+      const { company, token } = await createTestCompany(founder);
+      company.level = 10;
+      await company.save();
+
+      const res = await request(app).post(`/real-estate-companies/${company._id}/ipo`).set(authHeader(token)).send({});
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('Level 15');
+    });
+
+    it('rejects IPO when not enough members', async () => {
+      const founder = await createFounder({ balance: 200_000_000, level: 30 });
+      const { company, token } = await createTestCompany(founder);
+      company.level = 15;
+      await company.save();
+
+      const res = await request(app).post(`/real-estate-companies/${company._id}/ipo`).set(authHeader(token)).send({});
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('5 members');
+    });
+
+    it('rejects IPO when not enough properties', async () => {
+      const founder = await createFounder({ balance: 1_000_000_000, level: 30 });
+      const { company, token } = await createTestCompany(founder);
+      company.level = 25;
+      company.treasury.balance = 600_000_000;
+      company.stats = { totalRentalIncome: 50_000_000, propertiesOwned: 5 };
+      await company.save();
+      for (let i = 0; i < 9; i++) {
+        const member = await createAuthenticatedUser();
+        await addMemberToCompany(company._id, token, { user: member.user, token: member.token });
+      }
+
+      for (let i = 0; i < 5; i++) {
+        await createTestProperty({
+          ownerId: founder.user._id,
+          companyId: company._id,
+          currentPrice: 30_000_000,
+          basePrice: 30_000_000,
+        });
+      }
+
+      const res = await request(app).post(`/real-estate-companies/${company._id}/ipo`).set(authHeader(token)).send({});
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('10 properties');
     });
   });
 });

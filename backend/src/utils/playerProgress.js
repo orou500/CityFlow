@@ -35,6 +35,7 @@ const XP_REWARDS = {
   company_loan_repay: 2,
   stocks_buy: 2,
   stocks_sell: 2,
+  stocks_dividend: 2,
   report_purchase: 5,
   contract_propose: 5,
   offer_create: 2,

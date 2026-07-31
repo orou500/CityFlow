@@ -176,6 +176,8 @@ async function settleAuction(auction) {
         title: 'Auction Won!',
         message: `You won the auction for ${property.name} with a bid of $${auction.winningBid.toLocaleString()}!`,
         relatedId: auction._id,
+        route: `/auctions`,
+        entityType: 'auction',
         global: false,
       });
 
@@ -190,6 +192,9 @@ async function settleAuction(auction) {
           type: 'system',
           title: 'Property Sold at Auction',
           message: `Your property ${property.name} sold at auction for $${auction.winningBid.toLocaleString()}!`,
+          route: `/auctions/${auction._id}`,
+          entityType: 'auction',
+          entityId: auction._id,
           relatedId: auction._id,
           global: false,
         });
@@ -205,6 +210,9 @@ async function settleAuction(auction) {
           type: 'system',
           title: 'Auction Ended',
           message: `The auction for ${property.name} has ended. You were outbid.`,
+          route: `/auctions/${auction._id}`,
+          entityType: 'auction',
+          entityId: auction._id,
           relatedId: auction._id,
           global: false,
         });
@@ -220,6 +228,9 @@ async function settleAuction(auction) {
             type: 'system',
             title: 'Watched Auction Ended',
             message: `The auction for ${property.name} has ended. Winner: $${auction.winningBid.toLocaleString()}`,
+            route: `/auctions/${auction._id}`,
+            entityType: 'auction',
+            entityId: auction._id,
             relatedId: auction._id,
             global: false,
           });
@@ -232,6 +243,9 @@ async function settleAuction(auction) {
           type: 'system',
           title: 'Auction Won - Insufficient Funds',
           message: `You won the auction for ${property.name} but have insufficient funds. The auction has been cancelled.`,
+          route: `/auctions/${auction._id}`,
+          entityType: 'auction',
+          entityId: auction._id,
           relatedId: auction._id,
           global: false,
         });
@@ -250,6 +264,9 @@ async function settleAuction(auction) {
         type: 'system',
         title: 'Auction Ended - No Winner',
         message: `Your auction for ${property.name} ended without meeting the reserve price.`,
+        route: `/auctions/${auction._id}`,
+        entityType: 'auction',
+        entityId: auction._id,
         relatedId: auction._id,
         global: false,
       });
@@ -415,6 +432,9 @@ export async function processAntiSniping(auction) {
         type: 'system',
         title: 'Auction Extended',
         message: `An auction you're watching was extended by ${auction.antiSnipingExtension} tick(s) due to last-minute bidding!`,
+        route: `/auctions/${auction._id}`,
+        entityType: 'auction',
+        entityId: auction._id,
         relatedId: auction._id,
         global: false,
       });
@@ -444,6 +464,9 @@ export async function cancelAuction(auctionId, userId) {
       type: 'system',
       title: 'Auction Cancelled',
       message: 'An auction you were watching has been cancelled by the seller.',
+      route: `/auctions/${auction._id}`,
+      entityType: 'auction',
+      entityId: auction._id,
       relatedId: auction._id,
       global: false,
     });

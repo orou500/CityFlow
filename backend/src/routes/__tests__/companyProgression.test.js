@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../../test/createApp.js';
-import { createAuthenticatedUser, createTestProperty, authHeader } from '../../test/helpers.js';
+import { createAuthenticatedUser, createTestProperty, createTestCity, authHeader } from '../../test/helpers.js';
 import RealEstateCompany from '../../models/RealEstateCompany.js';
 import {
   xpRequiredForLevel,
@@ -288,10 +288,15 @@ describe('Company Progression System', () => {
         createdAt,
       });
       await createTestProperty({ ownerId: user._id, currentPrice: 5_000_000, basePrice: 5_000_000 });
+      const city = await createTestCity();
       const res = await request(app)
         .post('/real-estate-companies')
         .set(authHeader(token))
-        .send({ name: `ProgTest_${Date.now()}_${Math.random().toString(36).slice(2)}`, description: 'Test' });
+        .send({
+          name: `ProgTest_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+          description: 'Test',
+          hqCityId: city._id,
+        });
       expect(res.status).toBe(201);
       const company = await RealEstateCompany.findById(res.body._id);
       return { company, token, user };

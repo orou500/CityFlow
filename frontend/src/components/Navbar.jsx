@@ -10,6 +10,7 @@ import { formatMoney } from '../utils/format';
 import CompactValue from './CompactValue';
 import { isNativePlatform, getApiBaseUrl, getAvatarUrl } from '../utils/capacitor';
 import useNativeAvatarUrl from '../hooks/useNativeAvatarUrl';
+import { useSocketEvent } from '../hooks/useSocket';
 
 export default function Navbar() {
   const { t, i18n } = useTranslation();
@@ -61,6 +62,17 @@ export default function Navbar() {
       return () => clearInterval(interval);
     }
   }, [user]);
+
+  useSocketEvent('notification:new', () => {
+    if (!user) return;
+    fetchUnreadCount();
+    fetchNotifications().then((notifications) => {
+      const latest = notifications?.length > 0 ? notifications[0] : null;
+      if (latest && !latest.read) {
+        checkForNewNotifications(unreadCount + 1, latest);
+      }
+    });
+  });
 
   useEffect(() => {
     function handleClickOutside(e) {

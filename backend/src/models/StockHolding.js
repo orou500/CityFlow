@@ -6,10 +6,14 @@ const stockHoldingSchema = new mongoose.Schema(
     companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true },
     shares: { type: Number, required: true, min: 0 },
     avgBuyPrice: { type: Number, required: true },
+    locked: { type: Boolean, default: false },
+    unclaimedDividends: { type: Number, default: 0 },
+    dividendClaimedTick: { type: Number, default: 0 },
   },
   { timestamps: true },
 );
 
 stockHoldingSchema.index({ userId: 1, companyId: 1 }, { unique: true });
+stockHoldingSchema.index({ companyId: 1 });
 
 export default mongoose.model('StockHolding', stockHoldingSchema);

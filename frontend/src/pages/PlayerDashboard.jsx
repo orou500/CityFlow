@@ -7,6 +7,7 @@ import PeriodBonusWidget from '../components/PeriodBonusWidget';
 import RentCollectionWidget from '../components/RentCollectionWidget';
 import { formatMoney } from '../utils/format';
 import CompactValue from '../components/CompactValue';
+import PropertyImage from '../components/PropertyImage';
 
 export default function PlayerDashboard() {
   const { t } = useTranslation();
@@ -184,6 +185,7 @@ export default function PlayerDashboard() {
                   className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg flex flex-col justify-between cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors min-h-[100px]"
                   onClick={() => navigate(`/property/${p._id}`)}
                 >
+                  <PropertyImage property={p} alt={p.name} className="w-full h-24 object-cover rounded mb-2" />
                   <div>
                     <p className="font-semibold hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
                       {p.name}

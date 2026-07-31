@@ -59,6 +59,10 @@ async function handleVoteExpiration(data) {
           type: 'system',
           title: 'Loan Request Expired',
           message: `Loan request for $${request.amount?.toLocaleString() || 'N/A'} has expired without resolution.`,
+          route: `/real-estate-companies/${company._id}`,
+          tab: 'loans',
+          entityType: 'company',
+          entityId: company._id,
           relatedId: company._id,
           global: false,
         });
@@ -82,6 +86,10 @@ async function handleVoteExpiration(data) {
           type: 'system',
           title: 'Development Request Expired',
           message: `Development request has expired without resolution.`,
+          route: `/real-estate-companies/${company._id}`,
+          tab: 'properties',
+          entityType: 'company',
+          entityId: company._id,
           relatedId: company._id,
           global: false,
         });
@@ -109,6 +117,10 @@ async function handleVoteExpiration(data) {
             type: 'system',
             title: 'Investment Proposal Expired',
             message: `Investment proposal "${investment.name}" has expired without resolution.`,
+            route: `/real-estate-companies/${companyId}`,
+            tab: 'investments',
+            entityType: 'company',
+            entityId: company._id,
             relatedId: company._id,
             global: false,
           });
@@ -120,6 +132,33 @@ async function handleVoteExpiration(data) {
           companyId,
         });
       }
+    }
+  } else if (proposalType === 'propertyPurchase') {
+    const request = company.propertyPurchaseRequests.id(proposalId);
+    if (request && request.status === 'pending') {
+      request.status = 'expired';
+      await company.save();
+
+      for (const member of company.members) {
+        await enqueueNotification({
+          userId: member.userId,
+          type: 'system',
+          title: 'Property Purchase Expired',
+          message: `Property purchase request has expired without resolution.`,
+          route: `/real-estate-companies/${companyId}`,
+          tab: 'properties',
+          entityType: 'company',
+          entityId: companyId,
+          relatedId: companyId,
+          global: false,
+        });
+      }
+
+      emitToCompany(companyId, SOCKET_EVENTS.VOTE_EXPIRED, {
+        proposalType,
+        proposalId,
+        companyId,
+      });
     }
   } else if (proposalType === 'contract') {
     const contract = await CityContract.findById(proposalId);
@@ -137,6 +176,10 @@ async function handleVoteExpiration(data) {
             type: 'system',
             title: 'Contract Proposal Expired',
             message: `Contract proposal has expired without resolution.`,
+            route: `/real-estate-companies/${companyId}`,
+            tab: 'contracts',
+            entityType: 'company',
+            entityId: company._id,
             relatedId: company._id,
             global: false,
           });
@@ -188,6 +231,10 @@ async function handleContractCompletion(data) {
       type: 'system',
       title: 'City Contract Completed',
       message: `"${company.name}" completed contract: ${contract.name}. Reward: $${contract.reward.toLocaleString()}`,
+      route: `/real-estate-companies/${company._id}`,
+      tab: 'contracts',
+      entityType: 'company',
+      entityId: company._id,
       relatedId: company._id,
       global: false,
     });
@@ -239,6 +286,10 @@ async function handleInvestmentMaturity(data) {
       type: 'system',
       title: 'Investment Matured',
       message: `Investment "${investment.name}" matured. ${profit >= 0 ? 'Profit' : 'Loss'}: $${Math.abs(profit).toLocaleString()}. Capital returned: $${netReturn.toLocaleString()}.`,
+      route: `/real-estate-companies/${company._id}`,
+      tab: 'investments',
+      entityType: 'company',
+      entityId: company._id,
       relatedId: company._id,
       global: false,
     });
@@ -268,6 +319,8 @@ async function handleOfferExpiration(data) {
     type: 'system',
     title: 'Offer Expired',
     message: `Your offer of $${(offer.counterOffer || offer.offerAmount)?.toLocaleString() || 'N/A'} has expired.`,
+    route: '/marketplace',
+    entityType: 'marketplace',
     relatedId: offer.propertyId,
     global: false,
   });
@@ -278,6 +331,8 @@ async function handleOfferExpiration(data) {
       type: 'system',
       title: 'Offer Expired',
       message: `An offer for your property has expired.`,
+      route: '/marketplace',
+      entityType: 'marketplace',
       relatedId: offer.propertyId,
       global: false,
     });

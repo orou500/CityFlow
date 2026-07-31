@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { getApiBaseUrl } from '../utils/capacitor';
 import { useAuthStore } from '../store/useAuthStore';
 import { formatMoney } from '../utils/format';
 import { useSocket, useSocketEvent } from '../hooks/useSocket';
+import PropertyImage from '../components/PropertyImage';
 
 const API = getApiBaseUrl();
 
@@ -137,6 +138,7 @@ function FeaturedCard({ auction, onClick }) {
           </span>
         )}
       </div>
+      <PropertyImage property={property} alt={property?.name} className="w-full h-32 object-cover rounded-lg mb-3" />
       <div className="text-sm font-medium text-primary truncate pr-16">
         {property?.name || t('auctions.unknownProperty')}
       </div>
@@ -257,6 +259,7 @@ function AuctionCard({ auction, onClick, onWatch, isWatched, user }) {
       onClick={() => onClick(auction)}
       className={`w-full text-left bg-card/80 border-l-4 ${statusStyle.border} border-border hover:border-border hover:border-l-4 rounded-lg p-4 transition-all hover:bg-card`}
     >
+      <PropertyImage property={property} alt={property?.name} className="w-full h-28 object-cover rounded-md mb-2" />
       <div className="flex items-start justify-between mb-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
@@ -580,6 +583,7 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
 
   return (
     <div className="space-y-4">
+      <PropertyImage property={property} alt={property?.name} className="w-full h-48 object-cover rounded-xl mb-3" />
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Link
@@ -1081,6 +1085,7 @@ function SellPropertyModal({ onClose, onSubmit }) {
 export default function AuctionDashboardPage() {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
+  const { id } = useParams();
   useSocket();
   const [activeTab, setActiveTab] = useState('active');
   const [auctions, setAuctions] = useState([]);
@@ -1192,6 +1197,15 @@ export default function AuctionDashboardPage() {
         .catch(() => {});
     }, [activeTab, loadAuctions, page]),
   );
+
+  useEffect(() => {
+    if (!id) return;
+    api(`/auctions/${id}`)
+      .then((res) => {
+        if (res.success) setSelectedAuction(res.auction);
+      })
+      .catch(() => {});
+  }, [id]);
 
   useEffect(() => {
     if (selectedAuction) return;

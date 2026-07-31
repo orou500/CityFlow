@@ -1,8 +1,7 @@
 import Property from '../models/Property.js';
 import User from '../models/User.js';
-import Transaction from '../models/Transaction.js';
 import Notification from '../models/Notification.js';
-import { triggerMissionProgress } from '../utils/missionTrigger.js';
+import { enqueueNotification } from '../utils/notificationQueue.js';
 
 const RENT_STORAGE_DURATION_MS = 24 * 60 * 60 * 1000;
 
@@ -27,7 +26,6 @@ export async function processRent() {
   const propertyBulkOps = [];
   const rentPoolUpdates = [];
   const userLifetimeUpdates = [];
-  const transactions = [];
 
   for (const property of properties) {
     const owner = userMap.get(property.ownerId?.toString());
@@ -94,13 +92,6 @@ export async function processRent() {
       earned: Math.max(0, netIncome),
     });
 
-    transactions.push({
-      propertyId: property._id,
-      buyerId: owner._id,
-      price: netIncome,
-      type: 'rent',
-    });
-
     results.push({ propertyId: property._id, ownerId: owner._id, rentIncome, maintenanceCost, netIncome });
   }
 
@@ -151,23 +142,6 @@ export async function processRent() {
     }
   }
 
-  if (transactions.length > 0) {
-    const BATCH_SIZE = 500;
-    for (let i = 0; i < transactions.length; i += BATCH_SIZE) {
-      await Transaction.insertMany(transactions.slice(i, i + BATCH_SIZE));
-    }
-  }
-
-  const affectedUserIds = [
-    ...new Set([
-      ...rentPoolUpdates.map((u) => u.userId?.toString()).filter(Boolean),
-      ...userLifetimeUpdates.map((u) => u.userId?.toString()).filter(Boolean),
-    ]),
-  ];
-  for (const uid of affectedUserIds) {
-    triggerMissionProgress(uid, 'rent_collected');
-  }
-
   return results;
 }
 
@@ -189,14 +163,19 @@ export async function expireUncollectedRent() {
   }));
   await User.bulkWrite(ops);
 
-  const notifications = expired.map((u) => ({
-    userId: u._id,
-    type: 'system',
-    title: 'Rent Expired',
-    message: `You failed to collect $${u.uncollectedRent.toLocaleString()} in rent within 24 hours. The rent has been forfeited.`,
-    global: false,
-  }));
-  await Notification.insertMany(notifications);
+  await Promise.all(
+    expired.map((u) =>
+      enqueueNotification({
+        userId: u._id,
+        type: 'system',
+        title: 'Rent Expired',
+        message: `You failed to collect $${u.uncollectedRent.toLocaleString()} in rent within 24 hours. The rent has been forfeited.`,
+        route: '/dashboard',
+        entityType: 'dashboard',
+        global: false,
+      }),
+    ),
+  );
 
   console.log(`[RENT] Expired uncollected rent for ${expired.length} users`);
   return expired.length;
@@ -225,14 +204,19 @@ export async function sendRentExpiryWarnings() {
 
   if (toWarn.length === 0) return 0;
 
-  const notifications = toWarn.map((u) => ({
-    userId: u._id,
-    type: 'system',
-    title: 'Rent Collection Warning',
-    message: `You have $${u.uncollectedRent.toLocaleString()} in uncollected rent. Collect it within the next hour or it will be forfeited!`,
-    global: false,
-  }));
-  await Notification.insertMany(notifications);
+  await Promise.all(
+    toWarn.map((u) =>
+      enqueueNotification({
+        userId: u._id,
+        type: 'system',
+        title: 'Rent Collection Warning',
+        message: `You have $${u.uncollectedRent.toLocaleString()} in uncollected rent. Collect it within the next hour or it will be forfeited!`,
+        route: '/dashboard',
+        entityType: 'dashboard',
+        global: false,
+      }),
+    ),
+  );
 
   console.log(`[RENT] Sent rent expiry warnings to ${toWarn.length} users`);
   return toWarn.length;

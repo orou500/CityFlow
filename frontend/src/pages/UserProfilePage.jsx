@@ -7,6 +7,7 @@ import { formatMoney, formatCompact } from '../utils/format';
 import CompactValue from '../components/CompactValue';
 import { getApiBaseUrl, getAvatarUrl } from '../utils/capacitor';
 import useNativeAvatarUrl from '../hooks/useNativeAvatarUrl';
+import PropertyImage from '../components/PropertyImage';
 
 function StatCard({ label, value, color }) {
   return (
@@ -808,7 +809,7 @@ export default function UserProfilePage() {
                   key={i}
                   className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-sm px-3 py-1 rounded-full border border-green-200 dark:border-green-800"
                 >
-                  {a}
+                  {typeof a === 'string' ? a : a.icon ? `${a.icon} ${a.name}` : a.name}
                 </span>
               ))}
             </div>
@@ -823,15 +824,16 @@ export default function UserProfilePage() {
                 <Link
                   key={p._id}
                   to={`/property/${p._id}`}
-                  className="flex justify-between items-center bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-750 rounded-lg p-4 transition-colors"
+                  className="flex justify-between items-center gap-3 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-750 rounded-lg p-4 transition-colors"
                 >
-                  <div>
-                    <div className="text-gray-900 dark:text-white font-medium">{p.name}</div>
+                  <PropertyImage property={p} alt={p.name} className="w-16 h-16 object-cover rounded-lg shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-gray-900 dark:text-white font-medium truncate">{p.name}</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">
                       {p.cityId?.name || ''} - {p.type}
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right shrink-0">
                     <div className="text-orange-500 dark:text-orange-400 text-sm font-semibold">
                       {formatMoney(p.currentPrice)}
                     </div>
@@ -856,6 +858,8 @@ export default function UserProfilePage() {
                   buy: { label: t('profile.bought'), color: 'text-blue-600 dark:text-blue-400' },
                   sell: { label: t('profile.sold'), color: 'text-red-600 dark:text-red-400' },
                   rent: { label: t('profile.receivedRent'), color: 'text-green-600 dark:text-green-400' },
+                  period_bonus: { label: t('profile.periodBonus'), color: 'text-green-600 dark:text-green-400' },
+                  login: { label: t('profile.login'), color: 'text-gray-500 dark:text-gray-400' },
                   loan: { label: t('profile.loanTaken'), color: 'text-blue-600 dark:text-blue-400' },
                   loan_payment: { label: t('profile.loanPayment'), color: 'text-amber-600 dark:text-amber-400' },
                   loan_repay: { label: t('profile.loanRepaid'), color: 'text-green-600 dark:text-green-400' },
@@ -863,6 +867,9 @@ export default function UserProfilePage() {
                   repossess: { label: t('profile.repossessed'), color: 'text-red-600 dark:text-red-400' },
                   construction: { label: t('profile.construction'), color: 'text-blue-600 dark:text-blue-400' },
                   upgrade: { label: t('profile.upgrade'), color: 'text-purple-600 dark:text-purple-400' },
+                  grade_upgrade: { label: t('profile.gradeUpgrade'), color: 'text-purple-600 dark:text-purple-400' },
+                  improvement: { label: t('profile.improvement'), color: 'text-purple-600 dark:text-purple-400' },
+                  development: { label: t('profile.development'), color: 'text-blue-600 dark:text-blue-400' },
                 };
                 const info = typeMap[tx.type] || { label: tx.type, color: 'text-gray-500' };
                 return (

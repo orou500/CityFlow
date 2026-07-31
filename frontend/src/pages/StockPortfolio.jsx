@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { formatMoney, formatMoneyExact, formatPrice, formatCount } from '../utils/format';
@@ -15,12 +15,25 @@ async function api(path) {
   return res.json();
 }
 
+async function apiPost(path, body) {
+  const token = localStorage.getItem('token');
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(`${API}${path}`, { method: 'POST', headers, body: JSON.stringify(body) });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+
 export default function StockPortfolio() {
   const { t } = useTranslation();
   const [stockPortfolio, setStockPortfolio] = useState(null);
   const [indexPortfolio, setIndexPortfolio] = useState(null);
   const [stockTransactions, setStockTransactions] = useState([]);
   const [indexTransactions, setIndexTransactions] = useState([]);
+  const [dividends, setDividends] = useState(null);
+  const [claiming, setClaiming] = useState(false);
+  const [claimResult, setClaimResult] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('stocks');
 
@@ -30,21 +43,37 @@ export default function StockPortfolio() {
 
   async function loadData() {
     try {
-      const [sPortfolio, iPortfolio, sTx, iTx] = await Promise.all([
+      const [sPortfolio, iPortfolio, sTx, iTx, divData] = await Promise.all([
         api('/companies/portfolio'),
         api('/indexes/portfolio'),
         api('/stocks/transactions'),
         api('/indexes/user/transactions'),
+        api('/stocks/dividends'),
       ]);
       setStockPortfolio(sPortfolio);
       setIndexPortfolio(iPortfolio);
       setStockTransactions(sTx);
       setIndexTransactions(iTx);
+      setDividends(divData);
     } catch (e) {
       console.error(e);
     }
     setLoading(false);
   }
+
+  const handleClaimDividends = useCallback(async () => {
+    setClaiming(true);
+    setClaimResult(null);
+    try {
+      const result = await apiPost('/stocks/dividends/claim', {});
+      setClaimResult({ success: true, totalClaimed: result.totalClaimed });
+      setDividends({ dividends: [], totalUnclaimed: 0 });
+      loadData();
+    } catch (e) {
+      setClaimResult({ success: false, error: e.message });
+    }
+    setClaiming(false);
+  }, []);
 
   if (loading) {
     return (
@@ -93,7 +122,7 @@ export default function StockPortfolio() {
       </div>
 
       <div className="flex gap-1 border-b border-gray-200 dark:border-gray-700">
-        {['stocks', 'indexes'].map((tabKey) => (
+        {['stocks', 'indexes', 'dividends'].map((tabKey) => (
           <button
             key={tabKey}
             onClick={() => setTab(tabKey)}
@@ -244,6 +273,74 @@ export default function StockPortfolio() {
                 {t('stocks.browseMarket')}
               </Link>
             </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'dividends' && (
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          {claimResult && (
+            <div
+              className={`px-4 py-2 text-sm ${claimResult.success ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'}`}
+            >
+              {claimResult.success
+                ? `${t('stocks.dividendClaimed')}: $${claimResult.totalClaimed?.toLocaleString()}`
+                : claimResult.error}
+            </div>
+          )}
+          <div className="p-4 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
+            <div>
+              <span className="text-sm text-gray-500 dark:text-gray-400">{t('stocks.totalUnclaimed')}: </span>
+              <span className="text-lg font-bold text-gray-900 dark:text-white">
+                ${(dividends?.totalUnclaimed || 0).toLocaleString()}
+              </span>
+            </div>
+            <button
+              onClick={handleClaimDividends}
+              disabled={claiming || !dividends?.totalUnclaimed}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {claiming ? t('common.loading') : t('stocks.claimDividends')}
+            </button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
+                  <th className="px-4 py-3 text-left">{t('stocks.company')}</th>
+                  <th className="px-4 py-3 text-right">{t('stocks.shares')}</th>
+                  <th className="px-4 py-3 text-right">{t('stocks.dividendPerShare')}</th>
+                  <th className="px-4 py-3 text-right">{t('stocks.unclaimed')}</th>
+                  <th className="hidden sm:table-cell px-4 py-3 text-right">{t('stocks.dividendYield')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(dividends?.dividends || []).map((d, i) => (
+                  <tr
+                    key={d.companyId || i}
+                    className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
+                  >
+                    <td className="px-4 py-3">
+                      <div className="text-gray-900 dark:text-white font-medium">{d.companyName}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">{d.ticker}</div>
+                    </td>
+                    <td className="px-4 py-3 text-right text-gray-900 dark:text-white">{formatCount(d.shares)}</td>
+                    <td className="px-4 py-3 text-right text-gray-900 dark:text-white">
+                      ${d.dividendPerShare?.toFixed(2)}
+                    </td>
+                    <td className="px-4 py-3 text-right text-green-600 dark:text-green-400 font-medium">
+                      ${d.unclaimed?.toLocaleString()}
+                    </td>
+                    <td className="hidden sm:table-cell px-4 py-3 text-right text-gray-500 dark:text-gray-400">
+                      {d.dividendYield?.toFixed(2)}%
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {(!dividends?.dividends || dividends.dividends.length === 0) && (
+            <div className="text-center py-8 text-gray-400">{t('stocks.noDividends')}</div>
           )}
         </div>
       )}

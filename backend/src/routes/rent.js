@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import User from '../models/User.js';
+import Transaction from '../models/Transaction.js';
 import { authenticate } from '../middleware/auth.js';
 import { collectOperatingFee } from '../utils/companyFees.js';
 import { onRentCollected } from '../utils/cacheInvalidation.js';
@@ -73,6 +74,12 @@ router.post('/collect', authenticate, async (req, res) => {
     collectOperatingFee(user._id, collected, 'rent_income');
 
     await onRentCollected(user._id);
+
+    await Transaction.create({
+      buyerId: user._id,
+      type: 'rent',
+      price: collected,
+    });
 
     await processPlayerProgress(user._id, 'rent_collect');
 

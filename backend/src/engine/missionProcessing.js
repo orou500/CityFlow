@@ -496,6 +496,9 @@ export async function updateMissionProgress(userId, triggerType) {
         title: 'Mission Complete!',
         message: `You completed "${def.name}". Tap to claim your reward!`,
         relatedId: mp._id,
+        route: '/missions',
+        tab: 'completed',
+        entityType: 'mission',
       });
 
       completedMissions.push({ missionId: mp.missionId, name: def.name, rewards: def.rewards });
@@ -548,6 +551,9 @@ export async function claimMissionReward(userId, missionId) {
     title: 'Reward Claimed!',
     message: `You claimed rewards for "${def.name}"!`,
     relatedId: mp._id,
+    route: '/missions',
+    tab: 'completed',
+    entityType: 'mission',
   });
 
   await initializeMissionsForUser(userId);

@@ -49,6 +49,201 @@ const INDEX_TYPE_COLORS = {
   city: 'bg-green-900 text-green-300',
 };
 
+function PublicCompaniesTab() {
+  const { t } = useTranslation();
+  const [companies, setCompanies] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [sortBy, setSortBy] = useState('marketCap');
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  async function loadData() {
+    try {
+      const [companiesData, statsData] = await Promise.all([api('/stocks/public'), api('/stocks/public/statistics')]);
+      setCompanies(companiesData);
+      setStats(statsData);
+    } catch (e) {
+      console.error(e);
+    }
+    setLoading(false);
+  }
+
+  const filtered = companies
+    .filter(
+      (c) =>
+        !search ||
+        c.name.toLowerCase().includes(search.toLowerCase()) ||
+        c.ticker.toLowerCase().includes(search.toLowerCase()),
+    )
+    .sort((a, b) => {
+      if (sortBy === 'price') return b.sharePrice - a.sharePrice;
+      if (sortBy === 'yield') return (b.dividendYield || 0) - (a.dividendYield || 0);
+      if (sortBy === 'return') return (b.totalReturn || 0) - (a.totalReturn || 0);
+      if (sortBy === 'volume') return (b.tradingVolume || 0) - (a.tradingVolume || 0);
+      if (sortBy === 'name') return a.name.localeCompare(b.name);
+      return b.marketCap - a.marketCap;
+    });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500 dark:text-gray-400">{t('common.loading')}</div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {stats && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+            <div className="text-xs text-gray-500 dark:text-gray-400">{t('stocks.totalMarketCap')}</div>
+            <div
+              className="text-lg font-semibold text-gray-900 dark:text-white"
+              title={formatMoneyExact(stats.totalMarketCap)}
+            >
+              {formatMoney(stats.totalMarketCap)}
+            </div>
+          </div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+            <div className="text-xs text-gray-500 dark:text-gray-400">{t('stocks.totalCompanies')}</div>
+            <div className="text-lg font-semibold text-gray-900 dark:text-white">{stats.totalCompanies}</div>
+          </div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+            <div className="text-xs text-gray-500 dark:text-gray-400">{t('stocks.topGainer')}</div>
+            {stats.gainers[0] ? (
+              <div className="text-lg font-semibold text-green-500">
+                <Link to={`/company/${stats.gainers[0]._id}`} className="hover:underline">
+                  {stats.gainers[0].ticker}
+                </Link>{' '}
+                +{stats.gainers[0].dayChangePercent}%
+              </div>
+            ) : (
+              <div className="text-lg font-semibold text-gray-400">-</div>
+            )}
+          </div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+            <div className="text-xs text-gray-500 dark:text-gray-400">{t('stocks.topLoser')}</div>
+            {stats.losers[0] ? (
+              <div className="text-lg font-semibold text-red-500">
+                <Link to={`/company/${stats.losers[0]._id}`} className="hover:underline">
+                  {stats.losers[0].ticker}
+                </Link>{' '}
+                {stats.losers[0].dayChangePercent}%
+              </div>
+            ) : (
+              <div className="text-lg font-semibold text-gray-400">-</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {stats && stats.avgDividendYield > 0 && (
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700 text-center">
+          <span className="text-xs text-gray-500 dark:text-gray-400">Market Avg Yield: </span>
+          <span className="text-sm font-semibold text-gray-900 dark:text-white">{stats.avgDividendYield}%</span>
+          <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">Total Volume: </span>
+          <span className="text-sm font-semibold text-gray-900 dark:text-white">{formatCount(stats.totalVolume)}</span>
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-2 items-center">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={t('stocks.search')}
+          className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-white"
+        />
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+          className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-white"
+        >
+          <option value="marketCap">{t('stocks.marketCap')}</option>
+          <option value="price">{t('stocks.sharePrice')}</option>
+          <option value="yield">{t('stocks.dividendYield')}</option>
+          <option value="return">{t('stocks.totalReturn')}</option>
+          <option value="volume">{t('stocks.tradingVolume')}</option>
+          <option value="name">{t('stocks.name')}</option>
+        </select>
+      </div>
+
+      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
+                <th className="px-4 py-3 text-left">{t('stocks.company')}</th>
+                <th className="px-4 py-3 text-right">{t('stocks.sharePrice')}</th>
+                <th className="hidden sm:table-cell px-4 py-3 text-right">{t('stocks.change')}</th>
+                <th className="hidden sm:table-cell px-4 py-3 text-right">{t('stocks.marketCap')}</th>
+                <th className="hidden md:table-cell px-4 py-3 text-right">{t('stocks.dividendYield')}</th>
+                <th className="hidden md:table-cell px-4 py-3 text-right">{t('stocks.totalReturn')}</th>
+                <th className="hidden lg:table-cell px-4 py-3 text-right">{t('stocks.tradingVolume')}</th>
+                <th className="hidden lg:table-cell px-4 py-3 text-right">{t('stocks.shareholders')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((c) => (
+                <tr
+                  key={c._id}
+                  className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
+                >
+                  <td className="px-4 py-3">
+                    <Link to={`/company/${c._id}`} className="flex items-center gap-2">
+                      <div>
+                        <div className="text-gray-900 dark:text-white font-medium">{c.name}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">{c.ticker}</div>
+                      </div>
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3 text-right text-gray-900 dark:text-white font-medium">
+                    ${c.sharePrice?.toFixed(2)}
+                  </td>
+                  <td className="hidden sm:table-cell px-4 py-3 text-right">
+                    <span className={c.dayChangePercent >= 0 ? 'text-green-500' : 'text-red-500'}>
+                      {c.dayChangePercent >= 0 ? '+' : ''}
+                      {c.dayChangePercent}%
+                    </span>
+                  </td>
+                  <td
+                    className="hidden sm:table-cell px-4 py-3 text-right text-gray-500 dark:text-gray-400"
+                    title={formatMoneyExact(c.marketCap)}
+                  >
+                    {formatMoney(c.marketCap)}
+                  </td>
+                  <td className="hidden md:table-cell px-4 py-3 text-right text-gray-500 dark:text-gray-400">
+                    {c.dividendYield ? `${c.dividendYield}%` : '-'}
+                  </td>
+                  <td className="hidden md:table-cell px-4 py-3 text-right">
+                    <span className={c.totalReturn >= 0 ? 'text-green-500' : 'text-red-500'}>
+                      {c.totalReturn >= 0 ? '+' : ''}
+                      {c.totalReturn}%
+                    </span>
+                  </td>
+                  <td className="hidden lg:table-cell px-4 py-3 text-right text-gray-500 dark:text-gray-400">
+                    {formatCount(c.tradingVolume || 0)}
+                  </td>
+                  <td className="hidden lg:table-cell px-4 py-3 text-right text-gray-500 dark:text-gray-400">
+                    {c.activeShareholders || 0}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {filtered.length === 0 && (
+          <div className="text-center py-8 text-gray-400 dark:text-gray-500">{t('stocks.noCompanies')}</div>
+        )}
+      </div>
+    </>
+  );
+}
+
 function CompaniesTab() {
   const { t } = useTranslation();
   const [companies, setCompanies] = useState([]);
@@ -417,7 +612,7 @@ export default function StockMarket() {
       </div>
 
       <div className="flex gap-1 border-b border-gray-200 dark:border-gray-700">
-        {['companies', 'indexes'].map((t2) => (
+        {['companies', 'public', 'indexes'].map((t2) => (
           <button
             key={t2}
             onClick={() => setTab(t2)}
@@ -433,6 +628,7 @@ export default function StockMarket() {
       </div>
 
       {tab === 'companies' && <CompaniesTab />}
+      {tab === 'public' && <PublicCompaniesTab />}
       {tab === 'indexes' && <IndexesTab />}
     </div>
   );

@@ -535,6 +535,9 @@ router.post(
               type: 'system',
               title: 'Reserve Price Reached',
               message: `The reserve price has been met on an auction you're watching!`,
+              route: `/auctions/${auction._id}`,
+              entityType: 'auction',
+              entityId: auction._id,
               relatedId: auction._id,
               global: false,
             });
@@ -550,6 +553,9 @@ router.post(
           type: 'system',
           title: 'Outbid!',
           message: `You have been outbid on an auction. New high bid: $${amount.toLocaleString()}`,
+          route: `/auctions/${auction._id}`,
+          entityType: 'auction',
+          entityId: auction._id,
           relatedId: auction._id,
           global: false,
         });
@@ -766,6 +772,10 @@ router.post(
             type: 'system',
             title: 'Company Auction Bid Proposal',
             message: `${req.user.username} proposes bidding $${amount.toLocaleString()} on an auction. Vote now.`,
+            route: `/real-estate-companies/${company._id}`,
+            tab: 'overview',
+            entityType: 'company',
+            entityId: company._id,
             relatedId: company._id,
             global: false,
           });
@@ -881,6 +891,9 @@ router.post(
                 type: 'system',
                 title: 'Outbid by Company',
                 message: `${company.name} bid $${bidReq.amount.toLocaleString()} on an auction`,
+                route: `/auctions/${auction._id}`,
+                entityType: 'auction',
+                entityId: auction._id,
                 relatedId: auction._id,
                 global: false,
               });
@@ -909,6 +922,10 @@ router.post(
             bidReq.status === 'approved'
               ? `Your company auction bid proposal for $${bidReq.amount.toLocaleString()} was approved and executed.`
               : `Your company auction bid proposal for $${bidReq.amount.toLocaleString()} was rejected.`,
+          route: `/real-estate-companies/${company._id}`,
+          tab: 'overview',
+          entityType: 'company',
+          entityId: company._id,
           relatedId: company._id,
           global: false,
         });

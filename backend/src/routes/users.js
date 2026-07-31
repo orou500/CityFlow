@@ -11,6 +11,8 @@ import Transaction from '../models/Transaction.js';
 import { authenticate } from '../middleware/auth.js';
 import { validatePassword } from '../utils/validatePassword.js';
 import { invalidateUser } from '../utils/cacheInvalidation.js';
+import { ACHIEVEMENT_DEFINITIONS } from '../config/achievements.js';
+import { MISSION_DEFINITIONS } from '../config/missions.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -83,8 +85,38 @@ router.get('/:username', authenticate, async (req, res) => {
         .populate('propertyId');
     }
 
+    const achievementDefs = ACHIEVEMENT_DEFINITIONS.reduce((map, a) => {
+      map[a.id] = a;
+      if (a.rewardBadge && !map[a.rewardBadge]) {
+        map[a.rewardBadge] = { id: a.rewardBadge, name: a.name, description: a.description, icon: a.icon };
+      }
+      return map;
+    }, {});
+    MISSION_DEFINITIONS.forEach((m) => {
+      if (m.rewards?.badge && !achievementDefs[m.rewards.badge]) {
+        achievementDefs[m.rewards.badge] = {
+          id: m.rewards.badge,
+          name: m.name,
+          description: m.description,
+          icon: m.icon || '🎖️',
+        };
+      }
+    });
+    const enrichedAchievements = (user.achievements || []).map((id) => {
+      const def = achievementDefs[id];
+      return def ? { id: def.id, name: def.name, description: def.description, icon: def.icon } : id;
+    });
+
+    const seen = new Set();
+    const deduplicatedAchievements = enrichedAchievements.filter((a) => {
+      if (typeof a !== 'object') return true;
+      if (seen.has(a.name)) return false;
+      seen.add(a.name);
+      return true;
+    });
+
     res.json({
-      user,
+      user: { ...user.toObject(), achievements: deduplicatedAchievements },
       properties: user.profileVisibility.portfolio || isOwner ? properties : [],
       portfolioValue,
       totalRent,

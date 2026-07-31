@@ -6,6 +6,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { translateError } from '../i18n/errors';
 import { formatMoney, formatCompact } from '../utils/format';
 import CompactValue from '../components/CompactValue';
+import PropertyImage from '../components/PropertyImage';
 import { getApiBaseUrl } from '../utils/capacitor';
 
 const API = getApiBaseUrl();
@@ -408,6 +409,7 @@ export default function CityDashboard() {
                 const isOwner = user && p.ownerId?._id === user._id;
                 return (
                   <div key={p._id} className="bg-gray-50 dark:bg-gray-800 p-4 rounded flex flex-col gap-2 h-full">
+                    <PropertyImage property={p} alt={p.name} className="w-full h-28 object-cover rounded" />
                     <div className="flex-1 cursor-pointer" onClick={() => navigate(`/property/${p._id}`)}>
                       <h3 className="font-semibold hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
                         {p.name}

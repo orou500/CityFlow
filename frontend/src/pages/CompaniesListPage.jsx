@@ -62,6 +62,14 @@ export default function CompaniesListPage() {
     fetchUserData();
   }, [sort]);
 
+  const cities = useGameStore((s) => s.cities);
+  const fetchCities = useGameStore((s) => s.fetchCities);
+  const [selectedCityId, setSelectedCityId] = useState('');
+
+  useEffect(() => {
+    fetchCities();
+  }, [fetchCities]);
+
   const portfolioValue = userData?.properties?.reduce((sum, p) => sum + (p.currentPrice || 0), 0) || 0;
   const netWorth = (userData?.user?.balance ?? user?.balance ?? 0) + portfolioValue;
   const accountAgeDays = user?.createdAt
@@ -72,10 +80,11 @@ export default function CompaniesListPage() {
     setCreating(true);
     setCreateError('');
     try {
-      await createCompany(newName, newDesc);
+      await createCompany(newName, newDesc, '', selectedCityId);
       setShowCreate(false);
       setNewName('');
       setNewDesc('');
+      setSelectedCityId('');
       await fetchMyCompanies();
     } catch (err) {
       setCreateError(err.message);
@@ -204,6 +213,18 @@ export default function CompaniesListPage() {
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
             maxLength={500}
           />
+          <select
+            value={selectedCityId}
+            onChange={(e) => setSelectedCityId(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+          >
+            <option value="">{t('companies.selectHQ')}</option>
+            {cities.map((city) => (
+              <option key={city._id} value={city._id}>
+                {city.name}, {city.country}
+              </option>
+            ))}
+          </select>
           {createError && <p className="text-sm text-red-600 dark:text-red-400">{createError}</p>}
           <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3 space-y-1.5">
             <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('companies.requirements')}</p>

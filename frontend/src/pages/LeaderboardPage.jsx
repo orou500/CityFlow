@@ -182,7 +182,7 @@ function PlayerProfile({ profile, onClose }) {
                     key={i}
                     className="text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 px-2 py-0.5 rounded-full"
                   >
-                    {a}
+                    {typeof a === 'string' ? a : a.icon ? `${a.icon} ${a.name}` : a.name}
                   </span>
                 ))}
               </div>

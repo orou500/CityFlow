@@ -82,12 +82,12 @@ export const useCompanyStore = create((set, get) => ({
     }
   },
 
-  async createCompany(name, description, logo) {
+  async createCompany(name, description, logo, hqCityId) {
     set({ loading: true, error: null });
     try {
       const data = await api('/real-estate-companies', {
         method: 'POST',
-        body: JSON.stringify({ name, description, logo }),
+        body: JSON.stringify({ name, description, logo, hqCityId }),
       });
       set({ loading: false });
       return data;

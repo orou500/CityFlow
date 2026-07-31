@@ -10,6 +10,7 @@ import Notification from '../models/Notification.js';
 import ConstructionProject from '../models/ConstructionProject.js';
 import Event from '../models/Event.js';
 import Company from '../models/Company.js';
+import RealEstateCompany from '../models/RealEstateCompany.js';
 import StockHolding from '../models/StockHolding.js';
 import StockTransaction from '../models/StockTransaction.js';
 import StockIndex from '../models/StockIndex.js';
@@ -17,6 +18,9 @@ import IndexHolding from '../models/IndexHolding.js';
 import IndexTransaction from '../models/IndexTransaction.js';
 import LeaderboardSnapshot from '../models/LeaderboardSnapshot.js';
 import CompetitiveEvent from '../models/CompetitiveEvent.js';
+import CompanyInvestment from '../models/CompanyInvestment.js';
+import Auction from '../models/Auction.js';
+import AuctionReputation from '../models/AuctionReputation.js';
 import { sendDiscordNotification } from '../services/discordBot.js';
 
 const CITIES_DATA = [
@@ -262,6 +266,219 @@ const PROPERTY_NAMES = [
   'Grand Terrace',
 ];
 
+// ─── REAL ESTATE COMPANY LIQUIDATION ─────────────────────────────
+
+export async function liquidateRealEstateCompanies() {
+  const companies = await RealEstateCompany.find({ active: true });
+  if (companies.length === 0) return { liquidated: 0, totalPayout: 0, hallOfFame: [] };
+
+  const allCompanyIds = companies.map((c) => c._id);
+  const allProperties = await Property.find({ companyId: { $in: allCompanyIds } }).lean();
+  const propertiesByCompany = new Map();
+  for (const p of allProperties) {
+    const cid = p.companyId.toString();
+    if (!propertiesByCompany.has(cid)) propertiesByCompany.set(cid, []);
+    propertiesByCompany.get(cid).push(p);
+  }
+
+  const payoutByUser = new Map();
+  const hallOfFameEntries = [];
+
+  for (const company of companies) {
+    const props = propertiesByCompany.get(company._id.toString()) || [];
+    const propertyValue = props.reduce((s, p) => s + (p.currentPrice || 0), 0);
+    const treasury = company.treasury?.balance || 0;
+    const investments = company.stats?.totalDevelopments || 0;
+    const loans = await Loan.find({ companyId: company._id, active: true }).lean();
+    const totalDebt = loans.reduce((s, l) => s + (l.remainingBalance || 0), 0);
+
+    const netValue = Math.max(0, propertyValue + treasury + investments - totalDebt);
+    const totalShares = company.members.reduce((s, m) => s + (m.shares || 0), 0);
+
+    if (totalShares > 0 && netValue > 0) {
+      for (const member of company.members) {
+        const sharePct = (member.shares || 0) / totalShares;
+        const payout = Math.floor(netValue * sharePct);
+        if (payout > 0) {
+          const uid = member.userId.toString();
+          payoutByUser.set(uid, (payoutByUser.get(uid) || 0) + payout);
+        }
+      }
+    }
+
+    hallOfFameEntries.push({
+      name: company.name,
+      founderId: company.founderId,
+      finalValuation: netValue,
+      propertyCount: props.length,
+      memberCount: company.members.length,
+      level: company.level,
+      wasPublic: !!company.ipo?.listed,
+    });
+  }
+
+  // Apply payouts to user balances
+  const userBulkOps = [];
+  for (const [uid, amount] of payoutByUser) {
+    userBulkOps.push({
+      updateOne: {
+        filter: { _id: uid },
+        update: { $inc: { balance: amount } },
+      },
+    });
+  }
+  if (userBulkOps.length > 0) {
+    await User.bulkWrite(userBulkOps);
+  }
+
+  console.log(
+    `[SEASON] Liquidated ${companies.length} companies, paid $${[...payoutByUser.values()].reduce((a, b) => a + b, 0)} to members`,
+  );
+
+  return {
+    liquidated: companies.length,
+    totalPayout: [...payoutByUser.values()].reduce((a, b) => a + b, 0),
+    hallOfFame: hallOfFameEntries,
+  };
+}
+
+// ─── PUBLIC COMPANY (IPO) LIQUIDATION ──────────────────────────
+
+export async function liquidatePublicCompanies() {
+  const ipoCompanies = await Company.find({ isIPO: true, active: true }).lean();
+  if (ipoCompanies.length === 0) return { liquidated: 0, totalPayout: 0, hallOfFame: [] };
+
+  const ipoIds = ipoCompanies.map((c) => c._id);
+  const allHoldings = await StockHolding.find({ companyId: { $in: ipoIds } }).populate(
+    'companyId',
+    'sharePrice sharesOutstanding marketCap',
+  );
+
+  const payoutByUser = new Map();
+  const hallOfFameEntries = [];
+
+  for (const ipo of ipoCompanies) {
+    const holdings = allHoldings.filter((h) => h.companyId?._id?.toString() === ipo._id.toString());
+    const companyValue = ipo.marketCap || ipo.sharePrice * ipo.sharesOutstanding || 0;
+    const totalSharesHeld = holdings.reduce((s, h) => s + h.shares, 0);
+
+    hallOfFameEntries.push({
+      name: ipo.name,
+      ticker: ipo.ticker,
+      finalMarketCap: companyValue,
+      shareholders: holdings.length,
+      totalSharesHeld,
+    });
+
+    if (totalSharesHeld > 0 && companyValue > 0) {
+      const pricePerShare = companyValue / ipo.sharesOutstanding;
+      for (const h of holdings) {
+        const payout = Math.floor(h.shares * pricePerShare);
+        if (payout > 0) {
+          const uid = h.userId.toString();
+          payoutByUser.set(uid, (payoutByUser.get(uid) || 0) + payout);
+        }
+      }
+    }
+  }
+
+  // Apply payouts
+  const userBulkOps = [];
+  for (const [uid, amount] of payoutByUser) {
+    userBulkOps.push({
+      updateOne: {
+        filter: { _id: uid },
+        update: { $inc: { balance: amount } },
+      },
+    });
+  }
+  if (userBulkOps.length > 0) {
+    await User.bulkWrite(userBulkOps);
+  }
+
+  // Clear all IPO stock holdings so they aren't double-counted in subsequent steps
+  await StockHolding.deleteMany({ companyId: { $in: ipoIds } });
+
+  console.log(
+    `[SEASON] Liquidated ${ipoCompanies.length} public companies, paid $${[...payoutByUser.values()].reduce((a, b) => a + b, 0)} to shareholders`,
+  );
+
+  return {
+    liquidated: ipoCompanies.length,
+    totalPayout: [...payoutByUser.values()].reduce((a, b) => a + b, 0),
+    hallOfFame: hallOfFameEntries,
+  };
+}
+
+// ─── RESET COMPANY ECONOMY (keep identity, members, roles) ────
+
+export async function resetCompanyEconomy() {
+  const companies = await RealEstateCompany.find({ active: true });
+  let reset = 0;
+
+  for (const company of companies) {
+    // Preserve: _id, name, logo, founderId, description, hqCityId, members (with roles),
+    //           foundedTick, creationFee, prestige, milestones
+
+    // Each completed season adds 1 prestige
+    company.prestige = (company.prestige || 0) + 1;
+
+    // Reset financials and economy
+    company.treasury.balance = 0;
+    company.treasury.transactions = [];
+    company.level = 1;
+    company.xp = 0;
+    company.xpToNextLevel = 500;
+    company.reputation = 0;
+    company.stats = {
+      netWorth: 0,
+      propertiesOwned: 0,
+      totalRentalIncome: 0,
+      totalTreasuryDeposits: 0,
+      activeProjects: 0,
+      totalLoanBalance: 0,
+      totalDevelopments: 0,
+      contractsCompleted: 0,
+      loansRepaid: 0,
+      totalVotes: 0,
+      ticksExisted: 0,
+    };
+    company.shares = { totalShares: 1000, treasuryShares: 1000, parValue: 100 };
+    company.employees = {
+      count: 0,
+      maxEmployees: 10,
+      monthlySalaryPerEmployee: 5000,
+      totalPayroll: 0,
+      departments: [],
+    };
+    company.ipo = {
+      listed: false,
+      sharePrice: 0,
+      sharesOutstanding: 0,
+      dividendsPaid: 0,
+      lastDividendPerShare: 0,
+      lastDividendTick: 0,
+      listFee: 0,
+      ipoValue: 0,
+    };
+    company.maxMembers = 10;
+
+    // Clear pending requests (members stay, but old requests reset)
+    company.invitations = [];
+    company.applications = [];
+    company.loanRequests = [];
+    company.propertyPurchaseRequests = [];
+    company.developmentRequests = [];
+    company.milestones = [];
+
+    await company.save();
+    reset++;
+  }
+
+  console.log(`[SEASON] Reset economy for ${reset} companies (identity and members preserved)`);
+  return reset;
+}
+
 export async function getCurrentSeason() {
   return Season.findOne({ status: 'active' });
 }
@@ -328,6 +545,18 @@ export async function archiveSeason(seasonId) {
 
   const winner = playerRankings.length > 0 ? playerRankings[0] : null;
 
+  // Collect Hall of Fame data from companies (still active before liquidation)
+  const reCompanies = await RealEstateCompany.find({ active: true }).lean();
+  const largestCompany = reCompanies.sort((a, b) => (b.stats?.netWorth || 0) - (a.stats?.netWorth || 0))[0] || null;
+  const biggestIpo =
+    reCompanies.filter((c) => c.ipo?.listed).sort((a, b) => (b.ipo?.ipoValue || 0) - (a.ipo?.ipoValue || 0))[0] || null;
+  const mostProperties =
+    reCompanies.sort((a, b) => (b.stats?.propertiesOwned || 0) - (a.stats?.propertiesOwned || 0))[0] || null;
+  const bestPublic = await Company.findOne({ isIPO: true, active: true })
+    .sort({ marketCap: -1 })
+    .lean()
+    .catch(() => null);
+
   const playerRankingsWithRank = playerRankings.map((p, i) => ({ ...p, rank: i + 1 }));
 
   season.archive = {
@@ -350,6 +579,28 @@ export async function archiveSeason(seasonId) {
     totalPlayers,
     totalTransactions,
     summary: `Season ${season.number} lasted ${tickCount} months with ${totalPlayers} players.`,
+    hallOfFame: {
+      largestCompany: largestCompany
+        ? {
+            name: largestCompany.name,
+            netWorth: largestCompany.stats?.netWorth || 0,
+            founderId: largestCompany.founderId,
+          }
+        : null,
+      biggestIpo: biggestIpo
+        ? { name: biggestIpo.name, ipoValue: biggestIpo.ipo?.ipoValue || 0, ticker: biggestIpo.ipo?.ticker || '' }
+        : null,
+      mostProperties: mostProperties
+        ? {
+            name: mostProperties.name,
+            count: mostProperties.stats?.propertiesOwned || 0,
+            founderId: mostProperties.founderId,
+          }
+        : null,
+      bestPublicCompany: bestPublic
+        ? { name: bestPublic.name, ticker: bestPublic.ticker, marketCap: bestPublic.marketCap }
+        : null,
+    },
   };
 
   season.endDate = new Date();
@@ -364,6 +615,7 @@ export async function archiveSeason(seasonId) {
 export async function resetWorld() {
   console.log('[SEASON] Resetting world...');
 
+  // ── Phase 1: Deduct outstanding personal loans ──────────────
   const activeLoans = await Loan.find({ active: true }).lean();
   if (activeLoans.length > 0) {
     const loanBulkOps = [];
@@ -383,6 +635,12 @@ export async function resetWorld() {
     console.log(`[SEASON] Deducted outstanding loan balances from ${loanBulkOps.length} users`);
   }
 
+  // ── Phase 2: Liquidate Real Estate Companies ───────────────
+  // Payouts are added to user balances before net worth calculation
+  const reResult = await liquidateRealEstateCompanies();
+  const ipoResult = await liquidatePublicCompanies();
+
+  // ── Phase 3: Calculate stock/index holdings value ──────────
   const stockHoldings = await StockHolding.find().populate('companyId', 'sharePrice');
   const stockValueByUser = new Map();
   for (const sh of stockHoldings) {
@@ -398,6 +656,7 @@ export async function resetWorld() {
     stockValueByUser.set(uid, (stockValueByUser.get(uid) || 0) + ih.shares * ih.indexId.value);
   }
 
+  // ── Phase 4: Calculate net worth (includes company payouts added to balance above) ──
   const netWorths = await User.aggregate([
     { $lookup: { from: 'properties', localField: '_id', foreignField: 'ownerId', as: 'props' } },
     { $addFields: { portfolioValue: { $sum: '$props.currentPrice' } } },
@@ -410,6 +669,7 @@ export async function resetWorld() {
     netWorthMap.set(entry._id.toString(), entry.netWorth || 0);
   }
 
+  // ── Phase 5: Apply 50% carryover ──────────────────────────
   const userBulkOps = [];
   const allUsers = await User.find({}, { _id: 1 }).lean();
   for (const user of allUsers) {
@@ -432,6 +692,10 @@ export async function resetWorld() {
   }
   await User.updateMany({ uncollectedRent: { $gt: 0 } }, { $set: { uncollectedRent: 0, rentStorageStartedAt: null } });
 
+  // ── Phase 6: Reset company economies (keep identity, members, roles) ──
+  await resetCompanyEconomy();
+
+  // ── Phase 7: Clean up all game data ────────────────────────
   await Promise.all([
     User.updateMany({}, { $set: { ownedProperties: [] } }),
     Property.deleteMany({}),
@@ -450,6 +714,9 @@ export async function resetWorld() {
     IndexTransaction.deleteMany({}),
     LeaderboardSnapshot.deleteMany({}),
     CompetitiveEvent.deleteMany({}),
+    CompanyInvestment.deleteMany({}),
+    Auction.deleteMany({}),
+    AuctionReputation.deleteMany({}),
   ]);
 
   console.log('[SEASON] Cleared all game data');
