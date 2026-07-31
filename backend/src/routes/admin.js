@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import mongoose from 'mongoose';
 import User from '../models/User.js';
 import Property from '../models/Property.js';
 import City from '../models/City.js';
@@ -16,6 +17,7 @@ import { setMaintenanceMode, getMaintenanceInfo } from '../models/GameState.js';
 import { enqueueNotification } from '../utils/notificationQueue.js';
 import RealEstateCompany from '../models/RealEstateCompany.js';
 import { xpRequiredForLevel, xpRequiredForNextLevel } from '../config/companyProgression.js';
+import { getXpForLevel } from '../utils/leveling.js';
 import { sendEmail, verifyConnection } from '../services/email.js';
 import emailTemplates from '../services/emailTemplates.js';
 import { sendDiscordNotification } from '../services/discordBot.js';
@@ -203,6 +205,46 @@ router.put('/users/:id/role', async (req, res) => {
     user.role = role;
     await user.save();
     res.json({ _id: user._id, username: user.username, role: user.role });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.put('/users/:id/level', async (req, res) => {
+  try {
+    const { level } = req.body;
+    if (level == null || level < 1 || !Number.isInteger(level)) {
+      return res.status(400).json({ error: 'Invalid level' });
+    }
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    user.level = level;
+    user.xp = 0;
+    user.xpToNextLevel = getXpForLevel(level);
+    await user.save();
+    res.json({ _id: user._id, username: user.username, level: user.level, xp: user.xp, xpToNextLevel: user.xpToNextLevel });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.put('/users/:id/created-at', async (req, res) => {
+  try {
+    const { createdAt } = req.body;
+    if (!createdAt) {
+      return res.status(400).json({ error: 'createdAt is required' });
+    }
+    const date = new Date(createdAt);
+    if (isNaN(date.getTime())) {
+      return res.status(400).json({ error: 'Invalid date format' });
+    }
+    const result = await User.collection.findOneAndUpdate(
+      { _id: new mongoose.Types.ObjectId(req.params.id) },
+      { $set: { createdAt: date } },
+      { returnDocument: 'after' },
+    );
+    if (!result) return res.status(404).json({ error: 'User not found' });
+    res.json({ _id: result._id, username: result.username, createdAt: result.createdAt });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -553,6 +595,7 @@ router.post('/maintenance/enable', async (req, res) => {
       type: 'system',
       title: 'Maintenance Mode Enabled',
       message: message || 'Maintenance mode has been enabled by an administrator.',
+      entityType: 'system',
       global: true,
     });
     sendDiscordNotification({
@@ -575,6 +618,7 @@ router.post('/maintenance/disable', async (req, res) => {
       type: 'system',
       title: 'Maintenance Completed',
       message: 'Maintenance completed. Gameplay is available again.',
+      entityType: 'system',
       global: true,
     });
     sendDiscordNotification({

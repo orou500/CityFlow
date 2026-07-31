@@ -1,7 +1,7 @@
 import RealEstateCompany from '../models/RealEstateCompany.js';
 import CityContract from '../models/CityContract.js';
 import City from '../models/City.js';
-import Notification from '../models/Notification.js';
+import { enqueueNotification } from '../utils/notificationQueue.js';
 import CompanyAuditLog from '../models/CompanyAuditLog.js';
 import { getCompanyLevelBenefits, addTreasuryTransaction, grantCompanyXP } from './companyProcessing.js';
 import { cancelDelayedJob } from '../utils/delayedJobs.js';
@@ -50,11 +50,15 @@ export async function generateCityContracts(tickNumber) {
 
         const memberUserIds = company.members.map((m) => m.userId);
         for (const userId of memberUserIds) {
-          await Notification.create({
+          await enqueueNotification({
             userId,
             type: 'system',
             title: 'New City Contract Available',
             message: `"${company.name}" has a new contract opportunity: ${contractData.name} in ${city.name} for $${contractData.cost.toLocaleString()}`,
+            route: `/real-estate-companies/${company._id}`,
+            tab: 'contracts',
+            entityType: 'company',
+            entityId: company._id,
             relatedId: company._id,
             global: false,
           });
@@ -131,11 +135,15 @@ export async function processCityContracts(tickNumber) {
 
       const memberUserIds = company.members.map((m) => m.userId);
       for (const userId of memberUserIds) {
-        await Notification.create({
+        await enqueueNotification({
           userId,
           type: 'system',
           title: 'City Contract Completed',
           message: `"${company.name}" completed contract: ${contract.name}. Reward: $${contract.reward.toLocaleString()}`,
+          route: `/real-estate-companies/${company._id}`,
+          tab: 'contracts',
+          entityType: 'company',
+          entityId: company._id,
           relatedId: company._id,
           global: false,
         });
@@ -222,20 +230,81 @@ export async function processContractProposals(tickNumber) {
     }
 
     if (ageTicks >= CONTRACT_PROPOSAL_EXPIRE_TICKS && proposal.status === 'pending') {
-      contract.status = 'rejected';
-      proposal.status = 'rejected';
-      proposal.resolvedAt = new Date();
-      contract.failedReason = 'Proposal expired';
+      cancelDelayedJob(`vote:contract:${contract._id}`);
       expired++;
 
-      await CompanyAuditLog.create({
-        companyId: company._id,
-        action: 'contract_rejected',
-        details: { contractId: contract._id, reason: 'expired' },
-        tick: tickNumber,
-      });
+      const existingVoterIds = new Set((proposal.votes || []).map((v) => v.userId.toString()));
+      let autoCount = 0;
+      for (const member of company.members) {
+        const memberId = member.userId.toString();
+        if (memberId !== proposal.proposedBy.toString() && !existingVoterIds.has(memberId)) {
+          proposal.votes.push({ userId: member.userId, vote: 'yes', votedAt: new Date() });
+          autoCount++;
+
+          await CompanyAuditLog.create({
+            companyId: company._id,
+            userId: member.userId,
+            action: 'contract_vote_cast',
+            details: { vote: 'yes', contractId: contract._id, auto: true, reason: 'expired_inactive' },
+            tick: tickNumber,
+          });
+        }
+      }
+
+      const yesVotes = (proposal.votes || []).filter((v) => v.vote === 'yes').length;
+      const noVotes = (proposal.votes || []).filter((v) => v.vote === 'no').length;
+
+      if (totalVoters > 0 && yesVotes / totalVoters >= VOTE_THRESHOLD) {
+        await approveContract(contract, company, tickNumber);
+        approved++;
+
+        await CompanyAuditLog.create({
+          companyId: company._id,
+          action: 'contract_approved',
+          details: { reason: 'expired_auto_yes', contractId: contract._id, name: contract.name, activeYesVotes: yesVotes - autoCount, autoYesVotes: autoCount, noVotes, totalVoters },
+          tick: tickNumber,
+        });
+
+        await enqueueNotification({
+          userId: proposal.proposedBy,
+          type: 'system',
+          title: 'Contract Proposal Approved',
+          message: `Voting expired for the "${contract.name}" contract. ${yesVotes - autoCount} member(s) voted YES and ${autoCount} inactive member(s) were automatically counted as YES.`,
+          route: `/real-estate-companies/${company._id}`,
+          tab: 'contracts',
+          entityType: 'company',
+          entityId: company._id,
+          relatedId: company._id,
+          global: false,
+        });
+      } else {
+        contract.status = 'rejected';
+        proposal.status = 'rejected';
+        proposal.resolvedAt = new Date();
+        contract.failedReason = 'Proposal expired';
+
+        await CompanyAuditLog.create({
+          companyId: company._id,
+          action: 'contract_rejected',
+          details: { reason: 'expired_auto_yes_insufficient', contractId: contract._id, name: contract.name, activeYesVotes: yesVotes - autoCount, autoYesVotes: autoCount, noVotes, totalVoters },
+          tick: tickNumber,
+        });
+
+        await enqueueNotification({
+          userId: proposal.proposedBy,
+          type: 'system',
+          title: 'Contract Proposal Expired',
+          message: `The "${contract.name}" contract proposal expired. ${autoCount} inactive member(s) were counted as YES, but the proposal did not reach the required threshold.`,
+          route: `/real-estate-companies/${company._id}`,
+          tab: 'contracts',
+          entityType: 'company',
+          entityId: company._id,
+          relatedId: company._id,
+          global: false,
+        });
+      }
+
       await contract.save();
-      cancelDelayedJob(`vote:contract:${contract._id}`);
     }
   }
 
@@ -300,11 +369,15 @@ async function approveContract(contract, company, tickNumber) {
 
   const memberUserIds = company.members.map((m) => m.userId);
   for (const userId of memberUserIds) {
-    await Notification.create({
+    await enqueueNotification({
       userId,
       type: 'system',
       title: 'City Contract Started',
       message: `"${company.name}" started contract: ${contract.name}. Completion in ${contract.durationTicks} months.`,
+      route: `/real-estate-companies/${company._id}`,
+      tab: 'contracts',
+      entityType: 'company',
+      entityId: company._id,
       relatedId: company._id,
       global: false,
     });

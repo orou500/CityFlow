@@ -145,7 +145,7 @@ describe('Company Loan Voting - Tick-Based Timing', () => {
   });
 
   describe('Request Expiration (8 ticks = 48 hours)', () => {
-    it('should expire pending requests after 8 ticks when founder voted NO', async () => {
+    it('should auto-count inactive members as YES after expiration and approve', async () => {
       const founder = await createTestUser();
       const member1 = await createTestUser();
       const member2 = await createTestUser();
@@ -170,14 +170,21 @@ describe('Company Loan Voting - Tick-Based Timing', () => {
         },
       });
 
-      // 8 ticks after creation, founder already voted NO, not enough yes votes
+      // 8 ticks: founder NO, member2 inactive → auto-counted as YES
+      // YES=1 (member2 auto), NO=1 (founder), totalVoters=2 → 1/2 >= 50% → approved → executed
       const currentTick = 108;
       const result = await processCompanyLoanRequests(currentTick);
 
       expect(result.expired).toBe(1);
 
       const updatedCompany = await RealEstateCompany.findById(company._id);
-      expect(updatedCompany.loanRequests[0].status).toBe('rejected');
+      const lr = updatedCompany.loanRequests[0];
+      expect(lr.status).toBe('executed');
+      expect(lr.loanId).toBeTruthy();
+      // member2 was auto-counted as YES
+      const member2Vote = lr.votes.find((v) => v.userId.toString() === member2._id.toString());
+      expect(member2Vote).toBeTruthy();
+      expect(member2Vote.vote).toBe('yes');
     });
 
     it('should NOT expire before 8 ticks', async () => {
@@ -409,10 +416,8 @@ describe('Company Loan Voting - Tick-Based Timing', () => {
       expect(result.autoVoted).toBe(0);
       expect(result.expired).toBe(0);
 
-      // At tick 107 (7 ticks) - still pending
-      // Reload company to reset state
+      // At tick 107 (7 ticks) - still pending, no auto-vote for CEO (already voted)
       const company2 = await RealEstateCompany.findById(company._id);
-      // Reset the loan request to pending with founder NO vote
       company2.loanRequests[0].status = 'pending';
       company2.loanRequests[0].votes = [{ userId: founder._id, vote: 'no', votedAt: new Date() }];
       await company2.save();
@@ -420,7 +425,7 @@ describe('Company Loan Voting - Tick-Based Timing', () => {
       result = await processCompanyLoanRequests(107);
       expect(result.expired).toBe(0);
 
-      // At tick 108 (8 ticks) - expires!
+      // At tick 108 (8 ticks) - expired, member2 auto-counted as YES → approved & executed
       const company3 = await RealEstateCompany.findById(company._id);
       company3.loanRequests[0].status = 'pending';
       company3.loanRequests[0].votes = [{ userId: founder._id, vote: 'no', votedAt: new Date() }];
@@ -428,6 +433,8 @@ describe('Company Loan Voting - Tick-Based Timing', () => {
 
       result = await processCompanyLoanRequests(108);
       expect(result.expired).toBe(1);
+      const updated = await RealEstateCompany.findById(company._id);
+      expect(updated.loanRequests[0].status).toBe('executed');
     });
   });
 });

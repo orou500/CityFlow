@@ -50,6 +50,12 @@ export const SOCKET_EVENTS = {
 
   ACHIEVEMENT_UNLOCKED: 'achievement:unlocked',
   CAREER_UPDATED: 'career:updated',
+
+  PUBLIC_COMPANY_PRICES: 'publicCompany:prices',
+  PUBLIC_COMPANY_DIVIDENDS: 'publicCompany:dividends',
+  PUBLIC_COMPANY_EVENT: 'publicCompany:event',
+  PUBLIC_COMPANY_IPO_LAUNCH: 'publicCompany:ipo:launch',
+  PUBLIC_COMPANY_DELISTING: 'publicCompany:delisting',
 };
 
 export const COMPANY_ROOM_PREFIX = 'company:';

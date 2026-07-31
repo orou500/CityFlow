@@ -34,6 +34,7 @@ const treasuryTransactionSchema = new mongoose.Schema(
         'investment_return',
         'investment_withdrawal',
         'development',
+        'payroll',
       ],
       required: true,
     },
@@ -157,6 +158,7 @@ const realEstateCompanySchema = new mongoose.Schema(
     description: { type: String, default: '', maxlength: 500 },
     logo: { type: String, default: '' },
     founderId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    hqCityId: { type: mongoose.Schema.Types.ObjectId, ref: 'City' },
     members: [memberSchema],
     invitations: [invitationSchema],
     applications: [applicationSchema],
@@ -165,7 +167,9 @@ const realEstateCompanySchema = new mongoose.Schema(
     developmentRequests: [developmentRequestSchema],
     milestones: [milestoneProgressSchema],
     shares: {
-      totalShares: { type: Number, default: 100 },
+      totalShares: { type: Number, default: 1000 },
+      treasuryShares: { type: Number, default: 300 },
+      parValue: { type: Number, default: 100 },
     },
     treasury: {
       balance: { type: Number, default: 0 },
@@ -185,10 +189,24 @@ const realEstateCompanySchema = new mongoose.Schema(
       ticksExisted: { type: Number, default: 0 },
     },
     reputation: { type: Number, default: 0 },
+    prestige: { type: Number, default: 0 },
     level: { type: Number, default: 1 },
     xp: { type: Number, default: 0 },
     xpToNextLevel: { type: Number, default: 500 },
     maxMembers: { type: Number, default: 10 },
+    employees: {
+      count: { type: Number, default: 0 },
+      maxEmployees: { type: Number, default: 10 },
+      monthlySalaryPerEmployee: { type: Number, default: 5000 },
+      totalPayroll: { type: Number, default: 0 },
+      departments: [
+        {
+          name: { type: String, required: true },
+          count: { type: Number, default: 0 },
+          budget: { type: Number, default: 0 },
+        },
+      ],
+    },
     active: { type: Boolean, default: true },
     foundedTick: { type: Number, default: 0 },
     creationFee: { type: Number, default: 0 },
@@ -200,6 +218,10 @@ const realEstateCompanySchema = new mongoose.Schema(
       sharesOutstanding: { type: Number, default: 0 },
       listedAt: { type: Date },
       listFee: { type: Number, default: 0 },
+      dividendsPaid: { type: Number, default: 0 },
+      lastDividendPerShare: { type: Number, default: 0 },
+      lastDividendTick: { type: Number, default: 0 },
+      ipoValue: { type: Number, default: 0 },
     },
   },
   { timestamps: true },
@@ -207,6 +229,7 @@ const realEstateCompanySchema = new mongoose.Schema(
 
 realEstateCompanySchema.index({ founderId: 1 });
 realEstateCompanySchema.index({ 'members.userId': 1 });
+realEstateCompanySchema.index({ hqCityId: 1 });
 realEstateCompanySchema.index({ reputation: -1 });
 realEstateCompanySchema.index({ 'stats.netWorth': -1 });
 realEstateCompanySchema.index({ active: 1 });
@@ -216,6 +239,27 @@ realEstateCompanySchema.pre('save', function (next) {
   // In the old system, level >1 companies always had xp < xpRequiredForLevel(level).
   if (this.level > 1 && this.xp < xpRequiredForLevel(this.level)) {
     this.xp += xpRequiredForLevel(this.level);
+  }
+
+  // Migration: ensure expanded shares structure for old companies
+  if (this.shares) {
+    if (this.shares.treasuryShares == null) {
+      const memberSum = this.members ? this.members.reduce((s, m) => s + (m.shares || 0), 0) : 0;
+      this.shares.treasuryShares = Math.max(0, this.shares.totalShares - memberSum);
+    }
+    if (this.shares.parValue == null) {
+      this.shares.parValue = 100;
+    }
+  }
+
+  // Migration: ensure employees defaults for old companies
+  if (this.employees == null || typeof this.employees !== 'object') {
+    this.employees = { count: 0, maxEmployees: 10, monthlySalaryPerEmployee: 5000, totalPayroll: 0, departments: [] };
+  } else {
+    if (this.employees.maxEmployees == null) this.employees.maxEmployees = 10;
+    if (this.employees.monthlySalaryPerEmployee == null) this.employees.monthlySalaryPerEmployee = 5000;
+    if (this.employees.totalPayroll == null) this.employees.totalPayroll = 0;
+    if (!this.employees.departments) this.employees.departments = [];
   }
 
   // Always derive level from total accumulated XP
@@ -367,6 +411,11 @@ realEstateCompanySchema.set('toJSON', {
     }
     if (ret.ipo?.stockCompanyId && typeof ret.ipo.stockCompanyId === 'object' && ret.ipo.stockCompanyId._id) {
       ret.ipo.stockCompanyId = ret.ipo.stockCompanyId._id.toString();
+    }
+    if (ret.hqCityId && typeof ret.hqCityId === 'object' && ret.hqCityId._id) {
+      ret.hqCityId = { _id: ret.hqCityId._id.toString(), name: ret.hqCityId.name };
+    } else if (ret.hqCityId && typeof ret.hqCityId === 'object' && ret.hqCityId.toString) {
+      ret.hqCityId = ret.hqCityId.toString();
     }
     return ret;
   },

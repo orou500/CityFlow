@@ -62,6 +62,28 @@ const companySchema = new mongoose.Schema(
     dayChangePercent: { type: Number, default: 0 },
     high52Week: { type: Number, default: 0 },
     low52Week: { type: Number, default: 0 },
+    realEstateCompanyId: { type: mongoose.Schema.Types.ObjectId, ref: 'RealEstateCompany' },
+    isIPO: { type: Boolean, default: false },
+    ipoPrice: { type: Number, default: 0 },
+    dividendPerShare: { type: Number, default: 0 },
+    totalDividendsPaid: { type: Number, default: 0 },
+    lastDividendTick: { type: Number, default: 0 },
+    dividendYield: { type: Number, default: 0 },
+    totalSharesHeld: { type: Number, default: 0 },
+    tradingVolume: { type: Number, default: 0 },
+    avgDailyVolume: { type: Number, default: 0 },
+    totalTrades: { type: Number, default: 0 },
+    activeShareholders: { type: Number, default: 0 },
+    floatPercentage: { type: Number, default: 100 },
+    volumeHistory: [
+      {
+        tick: { type: Number },
+        volume: { type: Number },
+        trades: { type: Number },
+      },
+    ],
+    weeklyVolume: { type: Number, default: 0 },
+    monthlyVolume: { type: Number, default: 0 },
   },
   { timestamps: true },
 );
@@ -69,5 +91,9 @@ const companySchema = new mongoose.Schema(
 companySchema.index({ industry: 1 });
 companySchema.index({ hqCityId: 1 });
 companySchema.index({ active: 1 });
+companySchema.index({ isIPO: 1, active: 1 });
+companySchema.index({ realEstateCompanyId: 1 });
+companySchema.index({ marketCap: -1 });
+companySchema.index({ 'volumeHistory.tick': 1 });
 
 export default mongoose.model('Company', companySchema);

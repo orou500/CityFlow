@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { useMissionStore } from '../store/useMissionStore';
 import { useSocket } from '../hooks/useSocket';
 
@@ -207,7 +208,8 @@ export default function MissionsPage() {
     stats,
     fetchStats,
   } = useMissionStore();
-  const [activeTab, setActiveTab] = useState('active');
+  const [searchParams] = useSearchParams();
+const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'active');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [difficultyFilter, setDifficultyFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');

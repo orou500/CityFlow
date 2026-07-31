@@ -4,6 +4,7 @@ import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useCompanyStore } from '../store/useCompanyStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { formatMoney } from '../utils/format';
+import PropertyImage from '../components/PropertyImage';
 
 const TABS = [
   'overview',
@@ -129,6 +130,17 @@ function formatAuditDetails(log, t) {
         reputation: d.reputationReward,
         treasury: formatMoney(d.treasuryReward || 0),
       });
+    case 'employees_hired':
+      return t('companies.auditDetailEmployeesHired', { count: d.count, total: d.total });
+    case 'employees_fired':
+      return d.reason
+        ? t('companies.auditDetailEmployeesFiredAuto', { count: d.count, remaining: d.remaining })
+        : t('companies.auditDetailEmployeesFired', { count: d.count, remaining: d.remaining });
+    case 'salary_updated':
+      return t('companies.auditDetailSalaryUpdated', {
+        salary: formatMoney(d.monthlySalary),
+        payroll: formatMoney(d.totalPayroll),
+      });
     default:
       return JSON.stringify(d);
   }
@@ -214,6 +226,7 @@ export default function CompanyDetailPage() {
   const [directLoanError, setDirectLoanError] = useState('');
   const [directLoanLoading, setDirectLoanLoading] = useState(false);
   const [ipoLoading, setIpoLoading] = useState(false);
+  const [ipoError, setIpoError] = useState('');
   const [applySuccess, setApplySuccess] = useState(false);
   const [applyError, setApplyError] = useState('');
   const [propertyPurchaseRequests, setPropertyPurchaseRequests] = useState([]);
@@ -503,10 +516,13 @@ export default function CompanyDetailPage() {
 
   const handleIPO = async () => {
     setIpoLoading(true);
+    setIpoError('');
     try {
       await initiateIPO(id);
       fetchCompanyStats(id);
-    } catch {}
+    } catch (err) {
+      setIpoError(err.message || t('common.error'));
+    }
     setIpoLoading(false);
   };
 
@@ -596,6 +612,21 @@ export default function CompanyDetailPage() {
             { label: t('companies.activeLoans'), value: companyLoans.filter((l) => l.active).length, color: 'red' },
             { label: t('companies.reputation'), value: company.reputation, color: 'amber' },
             { label: t('companies.level'), value: company.level, color: 'cyan' },
+            {
+              label: t('companies.employeeCount'),
+              value: company.employees?.count || 0,
+              color: 'teal',
+            },
+            {
+              label: t('companies.monthlyPayroll'),
+              value: formatMoney(company.employees?.totalPayroll || 0),
+              color: 'orange',
+            },
+            {
+              label: t('companies.hqCity'),
+              value: company.hqCityId && typeof company.hqCityId === 'object' ? company.hqCityId.name : t('common.na'),
+              color: 'slate',
+            },
           ].map((stat) => (
             <div
               key={stat.label}
@@ -611,20 +642,59 @@ export default function CompanyDetailPage() {
             <div className="col-span-2 md:col-span-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4">
               <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{t('companies.ownership')}</h3>
               <div className="space-y-2">
-                {company.shareBreakdown.map((s) => (
-                  <div key={s.userId} className="flex items-center justify-between gap-2">
-                    <span className="text-sm text-gray-700 dark:text-gray-300 truncate min-w-0">
-                      {typeof s.userId === 'object' && s.userId?.username ? s.userId.username : 'Unknown'}
-                    </span>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <div className="w-20 sm:w-32 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${s.percentage}%` }} />
+                  {company.shareBreakdown.map((s, idx) => (
+                    <div key={s.userId || `treasury-${idx}`} className="flex items-center justify-between gap-2">
+                      <span className="text-sm text-gray-700 dark:text-gray-300 truncate min-w-0">
+                        {s.isTreasury
+                          ? t('companies.treasuryOwnership')
+                          : typeof s.userId === 'object' && s.userId?.username
+                            ? s.userId.username
+                            : 'Unknown'}
+                      </span>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className="w-20 sm:w-32 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                          <div className={`h-2 rounded-full ${s.isTreasury ? 'bg-green-500' : 'bg-blue-600'}`} style={{ width: `${s.percentage}%` }} />
+                        </div>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 w-12 text-right">{s.percentage}%</span>
                       </div>
-                      <span className="text-xs text-gray-500 dark:text-gray-400 w-12 text-right">{s.percentage}%</span>
                     </div>
-                  </div>
-                ))}
+                  ))}
               </div>
+            </div>
+          )}
+
+          {company.employees && company.employees.count > 0 && (
+            <div className="col-span-2 md:col-span-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{t('companies.employees')}</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{t('companies.employeeCount')}</span>
+                  <div className="text-lg font-bold text-gray-900 dark:text-white">{company.employees.count}</div>
+                </div>
+                <div>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{t('companies.monthlyPayroll')}</span>
+                  <div className="text-lg font-bold text-gray-900 dark:text-white">{formatMoney(company.employees.totalPayroll)}</div>
+                </div>
+                <div>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{t('companies.salaryPerEmployee')}</span>
+                  <div className="text-lg font-bold text-gray-900 dark:text-white">{formatMoney(company.employees.monthlySalaryPerEmployee)}</div>
+                </div>
+                <div>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{t('companies.maxEmployees')}</span>
+                  <div className="text-lg font-bold text-gray-900 dark:text-white">{company.employees.maxEmployees}</div>
+                </div>
+              </div>
+              {company.employees.departments && company.employees.departments.length > 0 && (
+                <div className="mt-3 space-y-1">
+                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{t('companies.departments')}</span>
+                  {company.employees.departments.map((dept, idx) => (
+                    <div key={idx} className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
+                      <span>{dept.name}</span>
+                      <span>{dept.count} employees · {formatMoney(dept.budget)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -770,8 +840,13 @@ export default function CompanyDetailPage() {
                       >
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
+                            <PropertyImage
+                              property={prop || {}}
+                              alt={prop?.name}
+                              className="w-8 h-8 object-cover rounded shrink-0"
+                            />
                             <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                              🏠 {t('companies.propertyPurchase')}: {prop?.name || t('companies.unknown')}
+                              {t('companies.propertyPurchase')}: {prop?.name || t('companies.unknown')}
                             </span>
                             {isProposer && (
                               <span className="text-xs px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded">
@@ -900,7 +975,7 @@ export default function CompanyDetailPage() {
                   <div className="min-w-0">
                     <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('companies.goPublic')}</h3>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
-                      {t('companies.ipoFee')}: $10,000,000 · {t('companies.ipoRequirements')}
+                      {t('companies.ipoFee')}: $100,000,000 · {t('companies.ipoRequirements')}
                     </p>
                   </div>
                   <button
@@ -911,6 +986,9 @@ export default function CompanyDetailPage() {
                     {ipoLoading ? t('common.loading') : t('companies.initiateIPO')}
                   </button>
                 </div>
+                {ipoError && (
+                  <p className="mt-2 text-xs text-red-600 dark:text-red-400">{ipoError}</p>
+                )}
               </div>
             )
           )}
@@ -1401,6 +1479,11 @@ export default function CompanyDetailPage() {
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
+                            <PropertyImage
+                              property={prop || {}}
+                              alt={prop?.name}
+                              className="w-12 h-12 object-cover rounded-md shrink-0"
+                            />
                             <span className="text-sm font-medium text-gray-900 dark:text-white block truncate">
                               {prop?.name || t('companies.unknown')}
                             </span>
@@ -1485,13 +1568,20 @@ export default function CompanyDetailPage() {
                   className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <span className="text-sm font-medium text-gray-900 dark:text-white block truncate">
-                        {prop.name}
-                      </span>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {prop.type} · {prop.cityId?.name || 'Unknown'} · {t('properties.rent')}:{' '}
-                        {formatMoney(prop.rent || 0)} · {t('properties.occupancy')}: {prop.occupancy || 0}%
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <PropertyImage
+                        property={prop}
+                        alt={prop.name}
+                        className="w-14 h-14 object-cover rounded-md shrink-0"
+                      />
+                      <div className="min-w-0">
+                        <span className="text-sm font-medium text-gray-900 dark:text-white block truncate">
+                          {prop.name}
+                        </span>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {prop.type} · {prop.cityId?.name || 'Unknown'} · {t('properties.rent')}:{' '}
+                          {formatMoney(prop.rent || 0)} · {t('properties.occupancy')}: {prop.occupancy || 0}%
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">

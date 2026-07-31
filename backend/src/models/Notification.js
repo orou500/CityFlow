@@ -12,6 +12,7 @@ const notificationSchema = new mongoose.Schema(
         'offer_countered',
         'offer_expired',
         'construction_complete',
+        'improvement_complete',
         'friend_request',
         'system',
         'company_vote',
@@ -23,7 +24,12 @@ const notificationSchema = new mongoose.Schema(
     },
     title: { type: String, required: true },
     message: { type: String, required: true },
+    eventId: { type: String },
     relatedId: { type: mongoose.Schema.Types.ObjectId },
+    route: { type: String },
+    tab: { type: String },
+    entityType: { type: String },
+    entityId: { type: mongoose.Schema.Types.ObjectId },
     read: { type: Boolean, default: false },
     global: { type: Boolean, default: false },
   },
@@ -31,5 +37,6 @@ const notificationSchema = new mongoose.Schema(
 );
 
 notificationSchema.index({ userId: 1, read: 1, createdAt: -1 });
+notificationSchema.index({ eventId: 1 }, { unique: true, sparse: true });
 
 export default mongoose.model('Notification', notificationSchema);

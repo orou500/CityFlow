@@ -2,7 +2,8 @@ import RealEstateCompany from '../models/RealEstateCompany.js';
 import Property from '../models/Property.js';
 import Loan from '../models/Loan.js';
 import Transaction from '../models/Transaction.js';
-import Notification from '../models/Notification.js';
+import User from '../models/User.js';
+import { enqueueNotification } from '../utils/notificationQueue.js';
 import CompanyAuditLog from '../models/CompanyAuditLog.js';
 import {
   xpRequiredForNextLevel,
@@ -99,11 +100,15 @@ export async function grantCompanyXP(company, activity, tickNumber, ...args) {
 
     const memberUserIds = company.members.map((m) => m.userId);
     for (const userId of memberUserIds) {
-      await Notification.create({
+      await enqueueNotification({
         userId,
         type: 'system',
         title: 'Company Level Up!',
         message: `"${company.name}" reached Level ${company.level}! Treasury bonus: $${treasuryBonus.toLocaleString()}. New features unlocked.`,
+        route: `/real-estate-companies/${company._id}`,
+        tab: 'overview',
+        entityType: 'company',
+        entityId: company._id,
         relatedId: company._id,
         global: false,
       });
@@ -250,6 +255,80 @@ export async function processCompanyRent(tickNumber) {
     for (let i = 0; i < companyBulkOps.length; i += BATCH_SIZE) {
       await RealEstateCompany.bulkWrite(companyBulkOps.slice(i, i + BATCH_SIZE));
     }
+  }
+
+  return results;
+}
+
+export async function processCompanyPayroll(tickNumber) {
+  const companies = await RealEstateCompany.find({ active: true, 'employees.count': { $gt: 0 } });
+  if (companies.length === 0) return [];
+
+  const results = [];
+
+  for (const company of companies) {
+    const payroll = company.employees.totalPayroll || 0;
+    if (payroll <= 0) continue;
+
+    if (company.treasury.balance >= payroll) {
+      company.treasury.balance -= payroll;
+      addTreasuryTransaction(
+        company,
+        {
+          type: 'payroll',
+          amount: payroll,
+          description: `Employee salaries: $${payroll.toLocaleString()} (${company.employees.count} employees)`,
+        },
+        tickNumber,
+      );
+      results.push({ companyId: company._id, paid: payroll, employees: company.employees.count });
+    } else {
+      const canPay = Math.floor(company.treasury.balance / company.employees.monthlySalaryPerEmployee);
+      const layoffs = Math.max(0, company.employees.count - canPay);
+      if (layoffs > 0) {
+        company.employees.count -= layoffs;
+        company.employees.totalPayroll = company.employees.count * company.employees.monthlySalaryPerEmployee;
+        if (company.employees.departments && company.employees.departments.length > 0) {
+          const totalDept = company.employees.departments.reduce((s, d) => s + d.count, 0);
+          if (totalDept > 0) {
+            for (const dept of company.employees.departments) {
+              const deptLayoffs = Math.round((dept.count / totalDept) * layoffs);
+              if (deptLayoffs > 0) {
+                dept.count = Math.max(0, dept.count - deptLayoffs);
+                dept.budget = dept.count * company.employees.monthlySalaryPerEmployee;
+              }
+            }
+          }
+        }
+
+        await CompanyAuditLog.create({
+          companyId: company._id,
+          action: 'employees_fired',
+          details: { count: layoffs, remaining: company.employees.count, reason: 'insufficient_treasury' },
+          tick: tickNumber,
+        });
+      }
+
+      const actualPayroll = company.employees.count * company.employees.monthlySalaryPerEmployee;
+      if (company.treasury.balance > 0 && actualPayroll > 0) {
+        const partialPay = Math.min(company.treasury.balance, actualPayroll);
+        company.treasury.balance -= partialPay;
+        addTreasuryTransaction(
+          company,
+          {
+            type: 'payroll',
+            amount: partialPay,
+            description: `Partial salaries: $${partialPay.toLocaleString()} (${company.employees.count} employees after layoffs)`,
+          },
+          tickNumber,
+        );
+        results.push({ companyId: company._id, paid: partialPay, employees: company.employees.count, layoffs });
+      } else {
+        results.push({ companyId: company._id, paid: 0, employees: company.employees.count, layoffs });
+      }
+    }
+
+    await company.save();
   }
 
   return results;
@@ -412,11 +491,15 @@ export async function processCompanyLevelUp(tickNumber) {
 
       const memberUserIds = company.members.map((m) => m.userId);
       for (const userId of memberUserIds) {
-        await Notification.create({
+        await enqueueNotification({
           userId,
           type: 'system',
           title: 'Company Level Up!',
           message: `"${company.name}" reached Level ${company.level}! Treasury bonus: $${treasuryBonus.toLocaleString()}. New features unlocked.`,
+          route: `/real-estate-companies/${company._id}`,
+          tab: 'overview',
+          entityType: 'company',
+          entityId: company._id,
           relatedId: company._id,
           global: false,
         });
@@ -467,11 +550,15 @@ export async function processCompanyLevelUp(tickNumber) {
 
       const memberUserIds = company.members.map((m) => m.userId);
       for (const userId of memberUserIds) {
-        await Notification.create({
+        await enqueueNotification({
           userId,
           type: 'system',
           title: 'Milestone Completed!',
           message: `"${company.name}" completed "${milestone.name}"! +${milestone.xpReward} XP, +$${milestone.treasuryReward.toLocaleString()}`,
+          route: `/real-estate-companies/${company._id}`,
+          tab: 'overview',
+          entityType: 'company',
+          entityId: company._id,
           relatedId: company._id,
           global: false,
         });
@@ -628,11 +715,15 @@ export async function processCompanyLoanRequests(tickNumber) {
           tick: tickNumber,
         });
 
-        await Notification.create({
+        await enqueueNotification({
           userId: lr.requestedBy,
           type: 'system',
           title: 'Loan Vote Updated',
           message: `Founder auto-approved the loan request due to inactivity.`,
+          route: `/real-estate-companies/${company._id}`,
+          tab: 'loans',
+          entityType: 'company',
+          entityId: company._id,
           relatedId: company._id,
           global: false,
         });
@@ -646,15 +737,99 @@ export async function processCompanyLoanRequests(tickNumber) {
         dirty = true;
       }
 
+      // ── EXPIRATION: inactive members auto-counted as YES ──
+      if (ageTicks >= LOAN_REQUEST_EXPIRE_TICKS && lr.status === 'pending') {
+        cancelDelayedJob(`vote:loanRequest:${lr._id}`);
+        expired++;
+
+        const existingVoterIds = new Set((lr.votes || []).map((v) => v.userId.toString()));
+        let autoCount = 0;
+        for (const member of company.members) {
+          const memberId = member.userId.toString();
+          if (memberId !== lr.requestedBy.toString() && !existingVoterIds.has(memberId)) {
+            lr.votes.push({ userId: member.userId, vote: 'yes', votedAt: new Date() });
+            autoCount++;
+
+            await CompanyAuditLog.create({
+              companyId: company._id,
+              userId: member.userId,
+              action: 'loan_vote_cast',
+              details: { vote: 'yes', loanRequestId: lr._id, auto: true, reason: 'expired_inactive' },
+              tick: tickNumber,
+            });
+          }
+        }
+
+        if (autoCount > 0) {
+          company.stats.totalVotes = (company.stats.totalVotes || 0) + autoCount;
+        }
+
+        const yesVotes = (lr.votes || []).filter((v) => v.vote === 'yes').length;
+        const noVotes = (lr.votes || []).filter((v) => v.vote === 'no').length;
+
+        if (totalVoters > 0 && yesVotes / totalVoters >= LOAN_REQUEST_VOTE_THRESHOLD) {
+          lr.status = 'approved';
+
+          await CompanyAuditLog.create({
+            companyId: company._id,
+            action: 'loan_approved',
+            details: { reason: 'expired_auto_yes', activeYesVotes: yesVotes - autoCount, autoYesVotes: autoCount, noVotes, totalVoters, principal: lr.principal },
+            tick: tickNumber,
+          });
+
+          await enqueueNotification({
+            userId: lr.requestedBy,
+            type: 'system',
+            title: 'Loan Request Approved',
+            message: `Voting expired for your $${lr.principal.toLocaleString()} loan request for "${company.name}". ${yesVotes - autoCount} member(s) voted YES and ${autoCount} inactive member(s) were automatically counted as YES.`,
+            route: `/real-estate-companies/${company._id}`,
+            tab: 'loans',
+            entityType: 'company',
+            entityId: company._id,
+            relatedId: company._id,
+            global: false,
+          });
+        } else {
+          lr.status = 'rejected';
+
+          await CompanyAuditLog.create({
+            companyId: company._id,
+            action: 'loan_rejected',
+            details: { reason: 'expired_auto_yes_insufficient', activeYesVotes: yesVotes - autoCount, autoYesVotes: autoCount, noVotes, totalVoters, principal: lr.principal },
+            tick: tickNumber,
+          });
+
+          await enqueueNotification({
+            userId: lr.requestedBy,
+            type: 'system',
+            title: 'Loan Request Expired',
+            message: `Your $${lr.principal.toLocaleString()} loan request for "${company.name}" expired. ${autoCount} inactive member(s) were counted as YES, but the proposal did not reach the required threshold.`,
+            route: `/real-estate-companies/${company._id}`,
+            tab: 'loans',
+            entityType: 'company',
+            entityId: company._id,
+            relatedId: company._id,
+            global: false,
+          });
+        }
+
+        dirty = true;
+      }
+
+      // ── EXECUTION (for approved requests) ──
       if (lr.status === 'approved' && lr.loanId == null) {
         const activeLoans = await Loan.find({ companyId: company._id, active: true });
         if (activeLoans.length >= MAX_ACTIVE_LOANS) {
           lr.status = 'rejected';
-          await Notification.create({
+          await enqueueNotification({
             userId: lr.requestedBy,
             type: 'system',
             title: 'Loan Execution Failed',
             message: `Your $${lr.principal.toLocaleString()} loan was rejected: maximum ${MAX_ACTIVE_LOANS} active loans reached.`,
+            route: `/real-estate-companies/${company._id}`,
+            tab: 'loans',
+            entityType: 'company',
+            entityId: company._id,
             relatedId: company._id,
             global: false,
           });
@@ -669,11 +844,15 @@ export async function processCompanyLoanRequests(tickNumber) {
 
         if (existingDebt + lr.principal > companyNetWorth) {
           lr.status = 'rejected';
-          await Notification.create({
+          await enqueueNotification({
             userId: lr.requestedBy,
             type: 'system',
             title: 'Loan Execution Failed',
             message: `Your $${lr.principal.toLocaleString()} loan was rejected: company debt would exceed net worth.`,
+            route: `/real-estate-companies/${company._id}`,
+            tab: 'loans',
+            entityType: 'company',
+            entityId: company._id,
             relatedId: company._id,
             global: false,
           });
@@ -728,26 +907,15 @@ export async function processCompanyLoanRequests(tickNumber) {
           tick: tickNumber,
         });
 
-        dirty = true;
-      }
-
-      if (ageTicks >= LOAN_REQUEST_EXPIRE_TICKS && lr.status === 'pending') {
-        lr.status = 'rejected';
-        cancelDelayedJob(`vote:loanRequest:${lr._id}`);
-        expired++;
-
-        await CompanyAuditLog.create({
-          companyId: company._id,
-          action: 'loan_rejected',
-          details: { reason: 'expired_no_votes', principal: lr.principal },
-          tick: tickNumber,
-        });
-
-        await Notification.create({
+        await enqueueNotification({
           userId: lr.requestedBy,
           type: 'system',
-          title: 'Loan Request Expired',
-          message: `Your $${lr.principal.toLocaleString()} loan request for "${company.name}" expired without enough votes.`,
+          title: 'Loan Approved & Executed',
+          message: `Your $${lr.principal.toLocaleString()} loan request for "${company.name}" was approved and executed.`,
+          route: `/real-estate-companies/${company._id}`,
+          tab: 'loans',
+          entityType: 'company',
+          entityId: company._id,
           relatedId: company._id,
           global: false,
         });
@@ -806,11 +974,15 @@ export async function processCompanyDevelopmentRequests(tickNumber) {
           tick: tickNumber,
         });
 
-        await Notification.create({
+        await enqueueNotification({
           userId: dr.requestedBy,
           type: 'system',
           title: 'Development Vote Updated',
           message: `Founder auto-approved the ${dr.actionType} development request due to inactivity.`,
+          route: `/real-estate-companies/${company._id}`,
+          tab: 'properties',
+          entityType: 'company',
+          entityId: company._id,
           relatedId: company._id,
           global: false,
         });
@@ -825,26 +997,79 @@ export async function processCompanyDevelopmentRequests(tickNumber) {
       }
 
       if (ageTicks >= DEV_REQUEST_EXPIRE_TICKS && dr.status === 'pending') {
-        dr.status = 'rejected';
         cancelDelayedJob(`vote:developmentRequest:${dr._id}`);
-        dr.rejectionReason = 'expired_no_votes';
-        expired++;
 
-        await CompanyAuditLog.create({
-          companyId: company._id,
-          action: 'development_rejected',
-          details: { reason: 'expired_no_votes', actionType: dr.actionType, estimatedCost: dr.estimatedCost },
-          tick: tickNumber,
-        });
+        const existingVoterIds = new Set((dr.votes || []).map((v) => v.userId.toString()));
+        let autoCount = 0;
+        for (const member of company.members) {
+          const memberId = member.userId.toString();
+          if (memberId !== dr.requestedBy.toString() && !existingVoterIds.has(memberId)) {
+            dr.votes.push({ userId: member.userId, vote: 'yes', votedAt: new Date() });
+            autoCount++;
 
-        await Notification.create({
-          userId: dr.requestedBy,
-          type: 'system',
-          title: 'Development Request Expired',
-          message: `Your ${dr.actionType} development request for "${company.name}" expired without enough votes.`,
-          relatedId: company._id,
-          global: false,
-        });
+            await CompanyAuditLog.create({
+              companyId: company._id,
+              userId: member.userId,
+              action: 'development_vote_cast',
+              details: { vote: 'yes', developmentRequestId: dr._id, auto: true, reason: 'expired_inactive' },
+              tick: tickNumber,
+            });
+          }
+        }
+
+        if (autoCount > 0) {
+          company.stats.totalVotes = (company.stats.totalVotes || 0) + autoCount;
+        }
+
+        const yesVotes = (dr.votes || []).filter((v) => v.vote === 'yes').length;
+        const noVotes = (dr.votes || []).filter((v) => v.vote === 'no').length;
+
+        if (totalVoters > 0 && yesVotes / totalVoters >= LOAN_REQUEST_VOTE_THRESHOLD) {
+          dr.status = 'approved';
+
+          await CompanyAuditLog.create({
+            companyId: company._id,
+            action: 'development_approved',
+            details: { reason: 'expired_auto_yes', actionType: dr.actionType, estimatedCost: dr.estimatedCost, activeYesVotes: yesVotes - autoCount, autoYesVotes: autoCount, noVotes, totalVoters },
+            tick: tickNumber,
+          });
+
+          await enqueueNotification({
+            userId: dr.requestedBy,
+            type: 'system',
+            title: 'Development Request Approved',
+            message: `Voting expired for your ${dr.actionType} development request for "${company.name}". ${yesVotes - autoCount} member(s) voted YES and ${autoCount} inactive member(s) were automatically counted as YES.`,
+            route: `/real-estate-companies/${company._id}`,
+            tab: 'properties',
+            entityType: 'company',
+            entityId: company._id,
+            relatedId: company._id,
+            global: false,
+          });
+        } else {
+          dr.status = 'rejected';
+          dr.rejectionReason = 'expired_insufficient_votes';
+
+          await CompanyAuditLog.create({
+            companyId: company._id,
+            action: 'development_rejected',
+            details: { reason: 'expired_auto_yes_insufficient', actionType: dr.actionType, estimatedCost: dr.estimatedCost, activeYesVotes: yesVotes - autoCount, autoYesVotes: autoCount, noVotes, totalVoters },
+            tick: tickNumber,
+          });
+
+          await enqueueNotification({
+            userId: dr.requestedBy,
+            type: 'system',
+            title: 'Development Request Expired',
+            message: `Your ${dr.actionType} development request for "${company.name}" expired. ${autoCount} inactive member(s) were counted as YES, but the proposal did not reach the required threshold.`,
+            route: `/real-estate-companies/${company._id}`,
+            tab: 'properties',
+            entityType: 'company',
+            entityId: company._id,
+            relatedId: company._id,
+            global: false,
+          });
+        }
 
         dirty = true;
       }
@@ -856,4 +1081,257 @@ export async function processCompanyDevelopmentRequests(tickNumber) {
   }
 
   return { autoVoted, expired };
+}
+
+const PROPERTY_PURCHASE_AUTO_VOTE_DELAY_TICKS = 4;
+const PROPERTY_PURCHASE_EXPIRE_TICKS = 8;
+
+export async function processCompanyPropertyPurchaseRequests(tickNumber) {
+  const companies = await RealEstateCompany.find({ active: true, 'propertyPurchaseRequests.status': 'pending' });
+  if (companies.length === 0) return { autoVoted: 0, executed: 0, rejected: 0 };
+
+  let autoVoted = 0;
+  let executed = 0;
+  let rejected = 0;
+
+  for (const company of companies) {
+    let dirty = false;
+
+    for (const ppr of company.propertyPurchaseRequests) {
+      if (ppr.status !== 'pending') continue;
+
+      const ageTicks = tickNumber - (ppr.createdTick || 0);
+
+      const ceoMember = company.members.find((m) => m.role === 'ceo');
+      if (!ceoMember) continue;
+
+      const ceoVoted = (ppr.votes || []).some((v) => v.userId?.toString() === ceoMember.userId?.toString());
+      const ceoIsProposer = ppr.requestedBy?.toString() === ceoMember.userId?.toString();
+      const totalVoters = company.members.length - 1;
+
+      if (!ceoVoted && !ceoIsProposer && ageTicks >= PROPERTY_PURCHASE_AUTO_VOTE_DELAY_TICKS) {
+        ppr.votes.push({ userId: ceoMember.userId, vote: 'yes', votedAt: new Date() });
+        autoVoted++;
+        company.stats.totalVotes = (company.stats.totalVotes || 0) + 1;
+
+        await CompanyAuditLog.create({
+          companyId: company._id,
+          userId: ceoMember.userId,
+          action: 'property_purchase_vote_cast',
+          details: { vote: 'yes', propertyPurchaseRequestId: ppr._id, auto: true },
+          tick: tickNumber,
+        });
+
+        await enqueueNotification({
+          userId: ppr.requestedBy,
+          type: 'system',
+          title: 'Property Purchase Vote Updated',
+          message: `CEO auto-approved the property purchase request due to inactivity.`,
+          route: `/real-estate-companies/${company._id}`,
+          tab: 'properties',
+          entityType: 'company',
+          entityId: company._id,
+          relatedId: company._id,
+          global: false,
+        });
+
+        const yesVotes = ppr.votes.filter((v) => v.vote === 'yes').length;
+        if (totalVoters > 0 && yesVotes / totalVoters >= 0.5) {
+          ppr.status = 'approved';
+          cancelDelayedJob(`vote:propertyPurchase:${ppr._id}`);
+        }
+
+        dirty = true;
+      }
+
+      if (ageTicks >= PROPERTY_PURCHASE_EXPIRE_TICKS && ppr.status === 'pending') {
+        cancelDelayedJob(`vote:propertyPurchase:${ppr._id}`);
+
+        const existingVoterIds = new Set((ppr.votes || []).map((v) => v.userId.toString()));
+        let autoCount = 0;
+        for (const member of company.members) {
+          const memberId = member.userId.toString();
+          if (memberId !== ppr.requestedBy.toString() && !existingVoterIds.has(memberId)) {
+            ppr.votes.push({ userId: member.userId, vote: 'yes', votedAt: new Date() });
+            autoCount++;
+
+            await CompanyAuditLog.create({
+              companyId: company._id,
+              userId: member.userId,
+              action: 'property_purchase_vote_cast',
+              details: { vote: 'yes', propertyPurchaseRequestId: ppr._id, auto: true, reason: 'expired_inactive' },
+              tick: tickNumber,
+            });
+          }
+        }
+
+        if (autoCount > 0) {
+          company.stats.totalVotes = (company.stats.totalVotes || 0) + autoCount;
+        }
+
+        const yesVotes = (ppr.votes || []).filter((v) => v.vote === 'yes').length;
+        const noVotes = (ppr.votes || []).filter((v) => v.vote === 'no').length;
+
+        if (totalVoters > 0 && yesVotes / totalVoters >= 0.5) {
+          const property = await Property.findById(ppr.propertyId);
+          if (!property) {
+            ppr.status = 'rejected';
+            rejected++;
+
+            await CompanyAuditLog.create({
+              companyId: company._id,
+              action: 'property_purchase_rejected',
+              details: { reason: 'expired_auto_yes_property_gone', propertyPurchaseRequestId: ppr._id, activeYesVotes: yesVotes - autoCount, autoYesVotes: autoCount, noVotes, totalVoters },
+              tick: tickNumber,
+            });
+
+            await enqueueNotification({
+              userId: ppr.requestedBy,
+              type: 'system',
+              title: 'Property Purchase Expired',
+              message: `Property purchase request expired and was approved, but the property is no longer available.`,
+              route: `/real-estate-companies/${company._id}`,
+              tab: 'properties',
+              entityType: 'company',
+              entityId: company._id,
+              relatedId: company._id,
+              global: false,
+            });
+
+            dirty = true;
+            continue;
+          }
+
+          if (company.treasury.balance < property.currentPrice) {
+            ppr.status = 'rejected';
+            rejected++;
+
+            await CompanyAuditLog.create({
+              companyId: company._id,
+              action: 'property_purchase_rejected',
+              details: { reason: 'expired_auto_yes_insufficient_funds', propertyPurchaseRequestId: ppr._id, activeYesVotes: yesVotes - autoCount, autoYesVotes: autoCount, noVotes, totalVoters },
+              tick: tickNumber,
+            });
+
+            await enqueueNotification({
+              userId: ppr.requestedBy,
+              type: 'system',
+              title: 'Property Purchase Expired',
+              message: `Property purchase request expired and was approved, but the treasury lacks sufficient funds.`,
+              route: `/real-estate-companies/${company._id}`,
+              tab: 'properties',
+              entityType: 'company',
+              entityId: company._id,
+              relatedId: company._id,
+              global: false,
+            });
+
+            dirty = true;
+            continue;
+          }
+
+          if (property.ownerId) {
+            const seller = await User.findById(property.ownerId);
+            if (seller) {
+              seller.balance += property.currentPrice;
+              seller.ownedProperties = seller.ownedProperties.filter(
+                (p) => p.toString() !== ppr.propertyId.toString(),
+              );
+              await seller.save();
+            }
+          }
+
+          company.treasury.balance -= property.currentPrice;
+          addTreasuryTransaction(
+            company,
+            {
+              type: 'property_purchase',
+              amount: property.currentPrice,
+              description: `Purchased "${property.name}" for $${property.currentPrice.toLocaleString()} (vote expired)`,
+            },
+            tickNumber,
+          );
+
+          company.stats.propertiesOwned += 1;
+
+          property.ownerId = null;
+          property.companyId = company._id;
+          property.forSale = false;
+          property.lastPurchasePrice = property.currentPrice;
+          property.lastPurchaseDate = new Date();
+          property.activeImprovement = undefined;
+
+          if (!property.investmentHistory) property.investmentHistory = [];
+          property.investmentHistory.push({
+            type: 'purchase',
+            amount: property.currentPrice,
+            description: `Purchased by ${company.name} (vote expired)`,
+          });
+
+          await property.save();
+
+          await Transaction.create({
+            propertyId: property._id,
+            companyId: company._id,
+            price: property.currentPrice,
+            type: 'buy',
+          });
+
+          ppr.status = 'executed';
+          executed++;
+
+          await CompanyAuditLog.create({
+            companyId: company._id,
+            action: 'property_purchased',
+            details: { reason: 'expired_auto_yes', propertyPurchaseRequestId: ppr._id, propertyName: property.name, price: property.currentPrice, activeYesVotes: yesVotes - autoCount, autoYesVotes: autoCount, noVotes, totalVoters },
+            tick: tickNumber,
+          });
+
+          await enqueueNotification({
+            userId: ppr.requestedBy,
+            type: 'system',
+            title: 'Property Purchase Approved',
+            message: `Voting expired for the "${property.name}" purchase. ${yesVotes - autoCount} member(s) voted YES and ${autoCount} inactive member(s) were automatically counted as YES.`,
+            route: `/real-estate-companies/${company._id}`,
+            tab: 'properties',
+            entityType: 'company',
+            entityId: company._id,
+            relatedId: company._id,
+            global: false,
+          });
+        } else {
+          ppr.status = 'rejected';
+          rejected++;
+
+          await CompanyAuditLog.create({
+            companyId: company._id,
+            action: 'property_purchase_rejected',
+            details: { reason: 'expired_auto_yes_insufficient', propertyPurchaseRequestId: ppr._id, activeYesVotes: yesVotes - autoCount, autoYesVotes: autoCount, noVotes, totalVoters },
+            tick: tickNumber,
+          });
+
+          await enqueueNotification({
+            userId: ppr.requestedBy,
+            type: 'system',
+            title: 'Property Purchase Expired',
+            message: `Property purchase request for "${company.name}" expired. ${autoCount} inactive member(s) were counted as YES, but the proposal did not reach the required threshold.`,
+            route: `/real-estate-companies/${company._id}`,
+            tab: 'properties',
+            entityType: 'company',
+            entityId: company._id,
+            relatedId: company._id,
+            global: false,
+          });
+        }
+
+        dirty = true;
+      }
+    }
+
+    if (dirty) {
+      await company.save();
+    }
+  }
+
+  return { autoVoted, executed, rejected };
 }

@@ -7,7 +7,7 @@ import Loan from '../models/Loan.js';
 import ConstructionProject from '../models/ConstructionProject.js';
 import MarketReport from '../models/MarketReport.js';
 import StockHolding from '../models/StockHolding.js';
-import Notification from '../models/Notification.js';
+import { enqueueNotification } from '../utils/notificationQueue.js';
 import { getXpForLevel } from '../utils/leveling.js';
 import {
   ACHIEVEMENT_DEFINITIONS,
@@ -45,11 +45,15 @@ export async function awardXpAndLevels(userId, xpAmount) {
   if (levelUps > 0) {
     const levelText =
       levelUps === 1 ? `You reached Level ${user.level}!` : `You reached Level ${user.level}! (${levelUps} level-ups)`;
-    await Notification.create({
+    await enqueueNotification({
       userId: user._id,
       type: 'system',
       title: 'Level Up!',
       message: levelText,
+      route: '/career',
+      tab: 'overview',
+      entityType: 'career',
+      entityId: user._id,
       global: false,
     });
   }
@@ -63,11 +67,14 @@ async function evaluateAchievementCondition(user, condition) {
 
   switch (condition.type) {
     case 'properties_owned':
-      return userData.ownedProperties?.length || 0;
+      return await Property.countDocuments({ ownerId: userId });
     case 'total_rent_collected':
       return userData.lifetimeStats?.totalRentCollected || 0;
     case 'net_worth': {
-      return userData.balance || 0;
+      const balance = userData.balance || 0;
+      const properties = await Property.find({ ownerId: userId }).lean();
+      const propertyValue = properties.reduce((sum, p) => sum + (p.currentPrice || 0), 0);
+      return balance + propertyValue;
     }
     case 'auctions_won':
       return await Auction.countDocuments({ winnerId: userId, status: 'ended' });
@@ -80,14 +87,19 @@ async function evaluateAchievementCondition(user, condition) {
       return await RealEstateCompany.countDocuments({ founderId: userId, 'ipo.listed': true });
     case 'credit_score':
       return userData.creditScore || 0;
-    case 'active_loans':
-      return await Loan.countDocuments({ userId: userId, active: true });
+    case 'active_loans': {
+      const activeCount = await Loan.countDocuments({ userId: userId, active: true });
+      if (activeCount > 0) return activeCount;
+      const totalLoanCount = await Loan.countDocuments({ userId: userId });
+      if (totalLoanCount === 0) return -1;
+      return 0;
+    }
     case 'total_loans_taken':
       return userData.lifetimeStats?.totalLoansTaken || 0;
     case 'total_construction_completed':
       return await ConstructionProject.countDocuments({ ownerId: userId, status: 'completed' });
     case 'unique_cities': {
-      const cities = await Property.distinct('cityId', { ownerId: userId, forSale: { $ne: true } });
+      const cities = await Property.distinct('cityId', { ownerId: userId });
       return cities.length;
     }
     case 'district_leader': {
@@ -99,14 +111,14 @@ async function evaluateAchievementCondition(user, condition) {
       return 0;
     }
     case 'unique_districts': {
-      const districts = await Property.distinct('districtId', { ownerId: userId, forSale: { $ne: true } });
+      const districts = await Property.distinct('districtId', { ownerId: userId });
       return districts.length;
     }
     case 'reports_purchased':
       return await MarketReport.countDocuments({ userId });
     case 'forecast_accuracy_95': {
-      const best = await MarketReport.findOne({ userId }).sort({ accuracy: -1 }).lean();
-      return best && best.accuracy >= 95 ? 1 : 0;
+      const best = await MarketReport.findOne({ userId }).sort({ forecastAccuracy: -1 }).lean();
+      return best && best.forecastAccuracy >= 95 ? 1 : 0;
     }
     case 'prestige_level':
       return userData.prestigeLevel || 0;
@@ -168,11 +180,14 @@ export async function checkAndAwardAchievements(userId, triggerType) {
       let message = `Achievement unlocked: ${ach.name}`;
       if (ach.points) message += ` (+${ach.points} pts)`;
 
-      await Notification.create({
+      await enqueueNotification({
         userId: user._id,
         type: 'system',
         title: 'Achievement Unlocked!',
         message,
+        route: '/career',
+        tab: 'achievements',
+        entityType: 'achievement',
         global: false,
       });
     }
@@ -204,11 +219,15 @@ export async function processPrestige(userId) {
   user.xpToNextLevel = getXpForLevel(1);
 
   let message = `You have reached Prestige Level ${user.prestigeLevel}!`;
-  await Notification.create({
+  await enqueueNotification({
     userId: user._id,
     type: 'system',
     title: 'Prestige!',
     message,
+    route: '/career',
+    tab: 'overview',
+    entityType: 'career',
+    entityId: user._id,
     global: false,
   });
 

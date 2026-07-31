@@ -1,6 +1,6 @@
 import Property from '../models/Property.js';
 import User from '../models/User.js';
-import Notification from '../models/Notification.js';
+import { enqueueNotification } from '../utils/notificationQueue.js';
 import { getTickNumber } from '../models/GameState.js';
 import { IMPROVEMENT_PROJECTS, calculatePropertyRating } from '../config/improvementProjects.js';
 import { sendDiscordNotification } from '../services/discordBot.js';
@@ -81,11 +81,14 @@ export async function processImprovements() {
 
       const owner = await User.findById(property.ownerId);
       if (owner) {
-        await Notification.create({
+        await enqueueNotification({
           userId: owner._id,
           type: 'improvement_complete',
           title: 'Improvement Complete!',
           message: `${improvement.name} has been completed on ${property.name}. Rating: ${newRating}`,
+          route: '/development',
+          entityType: 'construction',
+          entityId: property._id,
           relatedId: property._id,
         });
 

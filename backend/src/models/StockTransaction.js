@@ -6,7 +6,7 @@ const stockTransactionSchema = new mongoose.Schema(
     companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true },
     type: {
       type: String,
-      enum: ['buy', 'sell'],
+      enum: ['buy', 'sell', 'dividend'],
       required: true,
     },
     shares: { type: Number, required: true },

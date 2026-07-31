@@ -34,11 +34,13 @@ export default function CompanyPage() {
   const [company, setCompany] = useState(null);
   const [history, setHistory] = useState([]);
   const [events, setEvents] = useState([]);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [buyShares, setBuyShares] = useState('');
   const [sellShares, setSellShares] = useState('');
   const [trading, setTrading] = useState(false);
   const [tab, setTab] = useState('overview');
+  const [chartRange, setChartRange] = useState('all');
 
   useEffect(() => {
     loadCompany();
@@ -54,6 +56,17 @@ export default function CompanyPage() {
       setCompany(companyData);
       setHistory(historyData);
       setEvents(eventsData);
+
+      if (companyData.isIPO) {
+        try {
+          const statsData = await api(`/stocks/${id}/statistics`);
+          setStats(statsData);
+        } catch (e) {}
+        try {
+          const evData = await api(`/stocks/public/events/${id}`);
+          setEvents(evData);
+        } catch (e) {}
+      }
     } catch (e) {
       console.error(e);
     }
@@ -112,6 +125,16 @@ export default function CompanyPage() {
 
   const priceChangeColor = company.dayChangePercent >= 0 ? 'text-green-500' : 'text-red-500';
 
+  const slicedHistory = (() => {
+    if (chartRange === '24') return history.slice(-24);
+    if (chartRange === '7d') return history.slice(-28);
+    if (chartRange === '30d') return history.slice(-120);
+    return history;
+  })();
+
+  const isIPO = company.isIPO || false;
+  const displayStats = isIPO && stats ? stats : company;
+
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6 overflow-hidden">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -123,6 +146,9 @@ export default function CompanyPage() {
               <span>{company.ticker}</span>
               <span className="capitalize">{company.industry}</span>
               <span className="capitalize">{company.size}</span>
+              {isIPO && (
+                <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded">IPO</span>
+              )}
             </div>
           </div>
         </div>
@@ -136,8 +162,7 @@ export default function CompanyPage() {
           <div className="text-xs text-gray-500 dark:text-gray-400">{t('stocks.sharePrice')}</div>
           <div className="text-xl font-bold text-gray-900 dark:text-white">${company.sharePrice?.toFixed(2)}</div>
           <div className={`text-sm ${priceChangeColor}`}>
-            {company.dayChange >= 0 ? '+' : ''}
-            {company.dayChange?.toFixed(2)} ({company.dayChangePercent}%)
+            {company.dayChange >= 0 ? '+' : ''}{company.dayChange?.toFixed(2)} ({company.dayChangePercent}%)
           </div>
         </div>
         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
@@ -160,12 +185,63 @@ export default function CompanyPage() {
         </div>
       </div>
 
+      {isIPO && displayStats && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+            <div className="text-xs text-gray-500 dark:text-gray-400">{t('stocks.tradingVolume')}</div>
+            <div className="text-lg font-semibold text-gray-900 dark:text-white" title={formatMoneyExact(displayStats.tradingVolume)}>
+              {formatCount(displayStats.tradingVolume || 0)} shares
+            </div>
+          </div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+            <div className="text-xs text-gray-500 dark:text-gray-400">{t('stocks.avgVolume')}</div>
+            <div className="text-lg font-semibold text-gray-900 dark:text-white">
+              {formatCount(displayStats.avgDailyVolume || 0)}
+            </div>
+          </div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+            <div className="text-xs text-gray-500 dark:text-gray-400">{t('stocks.shareholders')}</div>
+            <div className="text-lg font-semibold text-gray-900 dark:text-white">
+              {displayStats.activeShareholders || 0}
+            </div>
+          </div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+            <div className="text-xs text-gray-500 dark:text-gray-400">{t('stocks.float')}</div>
+            <div className="text-lg font-semibold text-gray-900 dark:text-white">
+              {displayStats.floatPercentage || 100}%
+            </div>
+          </div>
+        </div>
+      )}
+
       {history.length > 0 && (
         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{t('stocks.priceChart')}</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('stocks.priceChart')}</h3>
+            <div className="flex gap-1">
+              {[
+                { key: '24', label: '24T' },
+                { key: '7d', label: '7D' },
+                { key: '30d', label: '30D' },
+                { key: 'all', label: t('stocks.allTime') },
+              ].map((r) => (
+                <button
+                  key={r.key}
+                  onClick={() => setChartRange(r.key)}
+                  className={`px-2 py-1 text-xs rounded ${
+                    chartRange === r.key
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={history.slice().reverse()}>
+              <AreaChart data={slicedHistory.slice().reverse()}>
                 <defs>
                   <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
@@ -189,7 +265,7 @@ export default function CompanyPage() {
                     fontSize: '12px',
                   }}
                   formatter={(value) => [`$${value.toFixed(2)}`, t('stocks.sharePrice')]}
-                  labelFormatter={(label) => `${t('stocks.month')} ${label}`}
+                  labelFormatter={(label) => `${t('stocks.tick')} ${label}`}
                 />
                 <Area
                   type="monotone"
@@ -212,25 +288,17 @@ export default function CompanyPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
             <div>
               <div className="text-blue-600 dark:text-blue-400">{t('stocks.shares')}</div>
-              <div
-                className="font-medium text-gray-900 dark:text-white"
-                title={company.userHolding.shares.toLocaleString()}
-              >
+              <div className="font-medium text-gray-900 dark:text-white" title={company.userHolding.shares.toLocaleString()}>
                 {formatCount(company.userHolding.shares)}
               </div>
             </div>
             <div>
               <div className="text-blue-600 dark:text-blue-400">{t('stocks.avgBuyPrice')}</div>
-              <div className="font-medium text-gray-900 dark:text-white">
-                ${company.userHolding.avgBuyPrice?.toFixed(2)}
-              </div>
+              <div className="font-medium text-gray-900 dark:text-white">${company.userHolding.avgBuyPrice?.toFixed(2)}</div>
             </div>
             <div>
               <div className="text-blue-600 dark:text-blue-400">{t('stocks.currentValue')}</div>
-              <div
-                className="font-medium text-gray-900 dark:text-white"
-                title={formatMoneyExact(company.userHolding.currentValue)}
-              >
+              <div className="font-medium text-gray-900 dark:text-white" title={formatMoneyExact(company.userHolding.currentValue)}>
                 {formatMoney(company.userHolding.currentValue)}
               </div>
             </div>
@@ -238,9 +306,7 @@ export default function CompanyPage() {
               <div className="text-blue-600 dark:text-blue-400">{t('stocks.profitLoss')}</div>
               <div className={`font-medium ${company.userHolding.profitLoss >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                 {company.userHolding.profitLoss >= 0 ? '+' : ''}
-                <span title={formatMoneyExact(company.userHolding.profitLoss)}>
-                  {formatMoney(company.userHolding.profitLoss)}
-                </span>
+                <span title={formatMoneyExact(company.userHolding.profitLoss)}>{formatMoney(company.userHolding.profitLoss)}</span>
               </div>
             </div>
           </div>
@@ -311,11 +377,11 @@ export default function CompanyPage() {
       </div>
 
       <div className="flex gap-1 overflow-x-auto border-b border-gray-200 dark:border-gray-700">
-        {['overview', 'history', 'events'].map((t2) => (
+        {['overview', 'history', 'financials', 'events'].filter((t2) => t2 !== 'financials' || isIPO).map((t2) => (
           <button
             key={t2}
             onClick={() => setTab(t2)}
-            className={`px-4 py-2 text-sm font-medium transition-colors ${
+            className={`px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
               tab === t2
                 ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-500'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
@@ -342,8 +408,7 @@ export default function CompanyPage() {
               <div className="flex justify-between">
                 <span className="text-gray-500 dark:text-gray-400">{t('stocks.totalReturn')}</span>
                 <span className={company.totalReturn >= 0 ? 'text-green-500' : 'text-red-500'}>
-                  {company.totalReturn >= 0 ? '+' : ''}
-                  {company.totalReturn}%
+                  {company.totalReturn >= 0 ? '+' : ''}{company.totalReturn}%
                 </span>
               </div>
               <div className="flex justify-between">
@@ -354,6 +419,22 @@ export default function CompanyPage() {
                 <span className="text-gray-500 dark:text-gray-400">{t('stocks.low52')}</span>
                 <span className="text-gray-900 dark:text-white">${company.low52Week?.toFixed(2)}</span>
               </div>
+              {isIPO && (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500 dark:text-gray-400">{t('stocks.dividendYield')}</span>
+                    <span className="text-gray-900 dark:text-white">{company.dividendYield ? `${company.dividendYield}%` : '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500 dark:text-gray-400">{t('stocks.dividendPerShare')}</span>
+                    <span className="text-gray-900 dark:text-white">{company.dividendPerShare ? `$${company.dividendPerShare.toFixed(2)}` : '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500 dark:text-gray-400">{t('stocks.ipoPrice')}</span>
+                    <span className="text-gray-900 dark:text-white">${company.ipoPrice?.toFixed(2) || '-'}</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
           <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
@@ -374,13 +455,94 @@ export default function CompanyPage() {
         </div>
       )}
 
+      {tab === 'financials' && isIPO && displayStats && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{t('stocks.financialOverview')}</h3>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">{t('stocks.revenue')}</span>
+                <span className="text-gray-900 dark:text-white" title={formatMoneyExact(displayStats.revenue)}>{formatMoney(displayStats.revenue)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">{t('stocks.marketCap')}</span>
+                <span className="text-gray-900 dark:text-white" title={formatMoneyExact(displayStats.marketCap)}>{formatMoney(displayStats.marketCap)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">{t('stocks.sharePrice')}</span>
+                <span className="text-gray-900 dark:text-white">${displayStats.sharePrice?.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">{t('stocks.ipoPrice')}</span>
+                <span className="text-gray-900 dark:text-white">${(displayStats.ipoPrice || 0).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">{t('stocks.sharesOutstanding')}</span>
+                <span className="text-gray-900 dark:text-white">{formatCount(displayStats.sharesOutstanding || 0)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">{t('stocks.dividendPerShare')}</span>
+                <span className="text-gray-900 dark:text-white">${(displayStats.dividendPerShare || 0).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">{t('stocks.dividendYield')}</span>
+                <span className="text-gray-900 dark:text-white">{displayStats.dividendYield || 0}%</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">{t('stocks.totalReturn')}</span>
+                <span className={displayStats.totalReturn >= 0 ? 'text-green-500' : 'text-red-500'}>
+                  {displayStats.totalReturn >= 0 ? '+' : ''}{displayStats.totalReturn}%
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{t('stocks.tradingStats')}</h3>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">{t('stocks.tradingVolume')}</span>
+                <span className="text-gray-900 dark:text-white">{formatCount(displayStats.tradingVolume || 0)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">{t('stocks.avgVolume')}</span>
+                <span className="text-gray-900 dark:text-white">{formatCount(displayStats.avgDailyVolume || 0)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">{t('stocks.totalTrades')}</span>
+                <span className="text-gray-900 dark:text-white">{displayStats.totalTrades || 0}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">{t('stocks.sharesOutstanding')}</span>
+                <span className="text-gray-900 dark:text-white">{formatCount(displayStats.sharesOutstanding || 0)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">{t('stocks.shareholders')}</span>
+                <span className="text-gray-900 dark:text-white">{displayStats.activeShareholders || 0}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">{t('stocks.float')}</span>
+                <span className="text-gray-900 dark:text-white">{displayStats.floatPercentage || 100}%</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">52W {t('stocks.high52')}</span>
+                <span className="text-gray-900 dark:text-white">${(displayStats.high52Week || 0).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">52W {t('stocks.low52')}</span>
+                <span className="text-gray-900 dark:text-white">${(displayStats.low52Week || 0).toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {tab === 'history' && (
         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 overflow-x-auto">
           {history.length > 0 ? (
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
-                  <th className="px-3 py-2 text-left">{t('stocks.month')}</th>
+                  <th className="px-3 py-2 text-left">{t('stocks.tick')}</th>
                   <th className="px-3 py-2 text-right">{t('stocks.sharePrice')}</th>
                   <th className="hidden sm:table-cell px-3 py-2 text-right">{t('stocks.employees')}</th>
                   <th className="hidden sm:table-cell px-3 py-2 text-right">{t('stocks.revenue')}</th>
@@ -388,33 +550,21 @@ export default function CompanyPage() {
                 </tr>
               </thead>
               <tbody>
-                {history
-                  .slice()
-                  .reverse()
-                  .map((h, i) => (
-                    <tr key={i} className="border-b border-gray-100 dark:border-gray-800">
-                      <td className="px-3 py-2 text-gray-900 dark:text-white">{h.tick}</td>
-                      <td className="px-3 py-2 text-right text-gray-900 dark:text-white">${h.price?.toFixed(2)}</td>
-                      <td
-                        className="hidden sm:table-cell px-3 py-2 text-right text-gray-500 dark:text-gray-400"
-                        title={h.employees?.toLocaleString()}
-                      >
-                        {formatCount(h.employees)}
-                      </td>
-                      <td
-                        className="hidden sm:table-cell px-3 py-2 text-right text-gray-500 dark:text-gray-400"
-                        title={formatMoneyExact(h.revenue)}
-                      >
-                        {formatMoney(h.revenue)}
-                      </td>
-                      <td
-                        className="hidden md:table-cell px-3 py-2 text-right text-gray-500 dark:text-gray-400"
-                        title={formatMoneyExact(h.marketCap)}
-                      >
-                        {formatMoney(h.marketCap)}
-                      </td>
-                    </tr>
-                  ))}
+                {history.slice().reverse().map((h, i) => (
+                  <tr key={i} className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="px-3 py-2 text-gray-900 dark:text-white">{h.tick}</td>
+                    <td className="px-3 py-2 text-right text-gray-900 dark:text-white">${h.price?.toFixed(2)}</td>
+                    <td className="hidden sm:table-cell px-3 py-2 text-right text-gray-500 dark:text-gray-400" title={h.employees?.toLocaleString()}>
+                      {formatCount(h.employees)}
+                    </td>
+                    <td className="hidden sm:table-cell px-3 py-2 text-right text-gray-500 dark:text-gray-400" title={formatMoneyExact(h.revenue)}>
+                      {formatMoney(h.revenue)}
+                    </td>
+                    <td className="hidden md:table-cell px-3 py-2 text-right text-gray-500 dark:text-gray-400" title={formatMoneyExact(h.marketCap)}>
+                      {formatMoney(h.marketCap)}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           ) : (
@@ -427,20 +577,23 @@ export default function CompanyPage() {
         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
           {events.length > 0 ? (
             <div className="space-y-2">
-              {events
-                .slice()
-                .reverse()
-                .map((e, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-3 text-sm py-2 border-b border-gray-100 dark:border-gray-800 last:border-0"
-                  >
-                    <span className="text-gray-500 dark:text-gray-400 w-16">
-                      {t('stocks.month')} {e.tick}
-                    </span>
-                    <span className="text-gray-900 dark:text-white">{e.description}</span>
+              {events.slice().reverse().map((e, i) => (
+                <div key={i} className="flex items-start gap-3 text-sm py-2 border-b border-gray-100 dark:border-gray-800 last:border-0">
+                  <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                    e.severity === 'positive' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
+                    e.severity === 'negative' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
+                    e.severity === 'major' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' :
+                    'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                  }`}>
+                    {e.type?.replace(/_/g, ' ')}
+                  </span>
+                  <div className="flex-1">
+                    <div className="text-gray-900 dark:text-white font-medium">{e.headline}</div>
+                    {e.description && <div className="text-gray-500 dark:text-gray-400 text-xs mt-0.5">{e.description}</div>}
                   </div>
-                ))}
+                  {e.tick && <span className="text-gray-400 text-xs whitespace-nowrap">{t('stocks.tick')} {e.tick}</span>}
+                </div>
+              ))}
             </div>
           ) : (
             <div className="text-center py-8 text-gray-400">{t('stocks.noEvents')}</div>

@@ -6,6 +6,7 @@ import LeaderboardSnapshot from '../models/LeaderboardSnapshot.js';
 import CompetitiveEvent from '../models/CompetitiveEvent.js';
 import Season from '../models/Season.js';
 import RealEstateCompany from '../models/RealEstateCompany.js';
+import Company from '../models/Company.js';
 import { sendDiscordNotification } from '../services/discordBot.js';
 
 const CATEGORIES = ['netWorth', 'properties', 'passiveIncome', 'dealVolume', 'cityInfluence'];
@@ -16,6 +17,7 @@ const COMPANY_CATEGORIES = [
   'companyReputation',
   'companyGrowth',
 ];
+const IPO_CATEGORIES = ['ipoMarketCap', 'ipoDividendYield', 'ipoPriceGrowth'];
 
 const UPCOMING_LEAD_TICKS = 12;
 const COMPLETED_RETENTION_TICKS = 28;
@@ -566,6 +568,72 @@ async function computeCompanyGrowth() {
     .sort((a, b) => b.value - a.value);
 }
 
+async function computeIpoMarketCap() {
+  const companies = await Company.find({ isIPO: true, active: true })
+    .select('name ticker marketCap sharePrice realEstateCompanyId')
+    .lean();
+
+  const reIds = companies.map((c) => c.realEstateCompanyId).filter(Boolean);
+  const reCompanies =
+    reIds.length > 0
+      ? await RealEstateCompany.find({ _id: { $in: reIds } })
+          .select('name logo')
+          .lean()
+      : [];
+  const reMap = new Map(reCompanies.map((c) => [c._id.toString(), c]));
+
+  return companies
+    .map((c) => {
+      const re = reMap.get(c.realEstateCompanyId?.toString());
+      return {
+        companyId: c._id,
+        username: c.ticker,
+        displayName: `${c.name} (${c.ticker})`,
+        avatar: re?.logo || '',
+        value: c.marketCap || 0,
+        metadata: { ticker: c.ticker, sharePrice: c.sharePrice },
+      };
+    })
+    .filter((r) => r.value > 0)
+    .sort((a, b) => b.value - a.value);
+}
+
+async function computeIpoDividendYield() {
+  const companies = await Company.find({ isIPO: true, active: true })
+    .select('name ticker dividendYield sharePrice lastDividendTick realEstateCompanyId')
+    .lean();
+
+  return companies
+    .map((c) => ({
+      companyId: c._id,
+      username: c.ticker,
+      displayName: `${c.name} (${c.ticker})`,
+      avatar: '',
+      value: c.dividendYield || 0,
+      metadata: { ticker: c.ticker, sharePrice: c.sharePrice, lastDividendTick: c.lastDividendTick },
+    }))
+    .filter((r) => r.value > 0)
+    .sort((a, b) => b.value - a.value);
+}
+
+async function computeIpoPriceGrowth() {
+  const companies = await Company.find({ isIPO: true, active: true })
+    .select('name ticker sharePrice dayChangePercent totalReturn realEstateCompanyId')
+    .lean();
+
+  return companies
+    .map((c) => ({
+      companyId: c._id,
+      username: c.ticker,
+      displayName: `${c.name} (${c.ticker})`,
+      avatar: '',
+      value: c.totalReturn || c.dayChangePercent || 0,
+      metadata: { ticker: c.ticker, sharePrice: c.sharePrice, dayChangePercent: c.dayChangePercent },
+    }))
+    .filter((r) => r.value > 0)
+    .sort((a, b) => b.value - a.value);
+}
+
 async function getPreviousSnapshot(category, currentTick) {
   return LeaderboardSnapshot.findOne({
     category,
@@ -610,9 +678,12 @@ export async function computeLeaderboards(currentTick) {
     companyIncome: computeCompanyIncome,
     companyReputation: computeCompanyReputation,
     companyGrowth: computeCompanyGrowth,
+    ipoMarketCap: computeIpoMarketCap,
+    ipoDividendYield: computeIpoDividendYield,
+    ipoPriceGrowth: computeIpoPriceGrowth,
   };
 
-  const allCategories = [...CATEGORIES, ...COMPANY_CATEGORIES];
+  const allCategories = [...CATEGORIES, ...COMPANY_CATEGORIES, ...IPO_CATEGORIES];
   const snapshots = [];
 
   for (const category of allCategories) {

@@ -1,7 +1,7 @@
 import ConstructionProject from '../models/ConstructionProject.js';
 import Property from '../models/Property.js';
 import User from '../models/User.js';
-import Notification from '../models/Notification.js';
+import { enqueueNotification } from '../utils/notificationQueue.js';
 import { getTickNumber } from '../models/GameState.js';
 import { getAllProjects, calculateUnitRent } from '../config/developmentProjects.js';
 import { sendDiscordNotification } from '../services/discordBot.js';
@@ -89,11 +89,14 @@ export async function processConstruction() {
               ],
             }).catch(() => {});
 
-            await Notification.create({
+            await enqueueNotification({
               userId: project.ownerId,
               type: 'construction_complete',
               title: 'Construction Complete!',
               message: `${project.projectName} has been completed. Your new building is generating income.`,
+              route: '/development',
+              entityType: 'construction',
+              entityId: land._id,
               relatedId: land._id,
             });
 

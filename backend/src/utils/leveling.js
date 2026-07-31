@@ -1,4 +1,4 @@
-import Notification from '../models/Notification.js';
+import { enqueueNotification } from '../utils/notificationQueue.js';
 
 const XP_BASE = 100;
 const XP_GROWTH = 1.5;
@@ -34,11 +34,15 @@ export async function awardXp(user, xpAmount, action) {
     const levelText =
       levelUps === 1 ? `You reached Level ${user.level}!` : `You reached Level ${user.level}! (${levelUps} level-ups)`;
 
-    await Notification.create({
+    await enqueueNotification({
       userId: user._id,
       type: 'system',
       title: 'Level Up!',
       message: levelText,
+      route: '/career',
+      tab: 'overview',
+      entityType: 'career',
+      entityId: user._id,
       global: false,
     });
   } else {

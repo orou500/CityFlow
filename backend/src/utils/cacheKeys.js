@@ -32,6 +32,11 @@ export const cacheKeys = {
   indexDetail: (id) => `${prefix}:index:${id}`,
   stockPortfolio: (userId) => `${prefix}:portfolio:stock:${userId}`,
   indexPortfolio: (userId) => `${prefix}:portfolio:index:${userId}`,
+  publicCompanies: () => `${prefix}:stocks:public`,
+  publicCompaniesStats: () => `${prefix}:stocks:public:stats`,
+  publicCompaniesEvents: () => `${prefix}:stocks:public:events`,
+
+  stockDividends: (userId) => `${prefix}:stocks:dividends:${userId}`,
 
   contracts: (companyId) => `${prefix}:contracts:${companyId}`,
   contractsHistory: (companyId) => `${prefix}:contracts:${companyId}:history`,

@@ -173,6 +173,10 @@ router.post('/:id/contracts/:contractId/propose', authenticate, async (req, res)
         type: 'company_vote',
         title: 'Contract Proposal',
         message: `${caller.role} proposed contract: ${contract.name} ($${contract.cost.toLocaleString()}). Vote to approve.`,
+        route: `/real-estate-companies/${company._id}`,
+        tab: 'contracts',
+        entityType: 'company',
+        entityId: company._id,
         relatedId: company._id,
         global: false,
       });
@@ -183,6 +187,10 @@ router.post('/:id/contracts/:contractId/propose', authenticate, async (req, res)
       type: 'company_vote',
       title: 'Contract Proposal Submitted',
       message: `You proposed contract: ${contract.name}. Members will vote in the contracts tab.`,
+      route: `/real-estate-companies/${company._id}`,
+      tab: 'contracts',
+      entityType: 'company',
+      entityId: company._id,
       relatedId: company._id,
       global: false,
     });
@@ -296,6 +304,10 @@ router.post('/:id/contracts/:contractId/vote', authenticate, async (req, res) =>
           type: 'system',
           title: 'City Contract Started',
           message: `"${company.name}" started contract: ${contract.name}. Completion in ${contract.durationTicks} months.`,
+          route: `/real-estate-companies/${company._id}`,
+          tab: 'contracts',
+          entityType: 'company',
+          entityId: company._id,
           relatedId: company._id,
           global: false,
         });

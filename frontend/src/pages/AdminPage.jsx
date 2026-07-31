@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useGameStore } from '../store/useGameStore';
-import { formatMoney } from '../utils/format';
+import { formatMoney, formatCount } from '../utils/format';
 import { getApiBaseUrl } from '../utils/capacitor';
+import PropertyImage from '../components/PropertyImage';
 
 function StatCard({ label, value }) {
   return (
@@ -89,6 +90,8 @@ export default function AdminPage() {
     setUserBalance,
     toggleUserBan,
     setUserRole,
+    setUserLevel,
+    setUserCreatedAt,
     restoreUser,
     permanentDeleteUser,
     fetchAdminProperties,
@@ -161,6 +164,10 @@ export default function AdminPage() {
 
   const [editUserId, setEditUserId] = useState(null);
   const [editUserBalance, setEditUserBalance] = useState('');
+  const [editUserLevel, setEditUserLevel] = useState('');
+  const [editingLevel, setEditingLevel] = useState(false);
+  const [editUserCreatedAt, setEditUserCreatedAt] = useState('');
+  const [editingCreatedAt, setEditingCreatedAt] = useState(false);
   const [propSearch, setPropSearch] = useState('');
   const [userSearch, setUserSearch] = useState('');
   const [userSortKey, setUserSortKey] = useState(null);
@@ -434,6 +441,30 @@ export default function AdminPage() {
   async function handleToggleBan(userId) {
     try {
       await toggleUserBan(userId);
+      await fetchAdminUsers();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function handleSetLevel(userId) {
+    try {
+      const level = parseInt(editUserLevel);
+      if (level < 1) return;
+      await setUserLevel(userId, level);
+      setEditUserId(null);
+      setEditingLevel(false);
+      await fetchAdminUsers();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function handleSetCreatedAt(userId) {
+    try {
+      await setUserCreatedAt(userId, editUserCreatedAt);
+      setEditUserId(null);
+      setEditingCreatedAt(false);
       await fetchAdminUsers();
     } catch (e) {
       console.error(e);
@@ -716,6 +747,10 @@ export default function AdminPage() {
                     aVal = a.balance || 0;
                     bVal = b.balance || 0;
                     return userSortDir === 'asc' ? aVal - bVal : bVal - aVal;
+                  case 'level':
+                    aVal = a.level || 1;
+                    bVal = b.level || 1;
+                    return userSortDir === 'asc' ? aVal - bVal : bVal - aVal;
                   case 'properties':
                     aVal = a.propertyCount || 0;
                     bVal = b.propertyCount || 0;
@@ -723,6 +758,10 @@ export default function AdminPage() {
                   case 'banned':
                     aVal = a.banned ? 1 : 0;
                     bVal = b.banned ? 1 : 0;
+                    return userSortDir === 'asc' ? aVal - bVal : bVal - aVal;
+                  case 'createdAt':
+                    aVal = new Date(a.createdAt).getTime();
+                    bVal = new Date(b.createdAt).getTime();
                     return userSortDir === 'asc' ? aVal - bVal : bVal - aVal;
                   default:
                     return 0;
@@ -739,6 +778,8 @@ export default function AdminPage() {
                     { key: 'email', label: t('admin.email') },
                     { key: 'role', label: t('admin.role') },
                     { key: 'balance', label: t('admin.balance') },
+                    { key: 'level', label: t('admin.level') },
+                    { key: 'createdAt', label: t('admin.joined') },
                     { key: 'properties', label: t('admin.propertiesShort') },
                     { key: 'banned', label: t('admin.banned') },
                     t('admin.actions'),
@@ -763,7 +804,7 @@ export default function AdminPage() {
                         </span>
                       </td>
                       <td className="px-3 py-2 text-blue-600 dark:text-blue-400">
-                        {editUserId === u._id ? (
+                        {editUserId === u._id && !editingLevel ? (
                           <div className="flex items-center gap-1">
                             <input
                               type="number"
@@ -788,6 +829,59 @@ export default function AdminPage() {
                           <span>{formatMoney(u.balance || 0)}</span>
                         )}
                       </td>
+                      <td className="px-3 py-2 text-gray-500 dark:text-gray-400">
+                        {editUserId === u._id && editingLevel ? (
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              value={editUserLevel}
+                              onChange={(e) => setEditUserLevel(e.target.value)}
+                              min="1"
+                              className="w-16 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 text-gray-900 dark:text-white text-xs"
+                            />
+                            <button
+                              onClick={() => handleSetLevel(u._id)}
+                              className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300"
+                            >
+                              {t('common.save')}
+                            </button>
+                            <button
+                              onClick={() => { setEditUserId(null); setEditingLevel(false); }}
+                              className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                            >
+                              X
+                            </button>
+                          </div>
+                        ) : (
+                          <span>{u.level || 1}</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-gray-500 dark:text-gray-400">
+                        {editUserId === u._id && editingCreatedAt ? (
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="date"
+                              value={editUserCreatedAt}
+                              onChange={(e) => setEditUserCreatedAt(e.target.value)}
+                              className="w-36 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 text-gray-900 dark:text-white text-xs"
+                            />
+                            <button
+                              onClick={() => handleSetCreatedAt(u._id)}
+                              className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300"
+                            >
+                              {t('common.save')}
+                            </button>
+                            <button
+                              onClick={() => { setEditUserId(null); setEditingCreatedAt(false); }}
+                              className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                            >
+                              X
+                            </button>
+                          </div>
+                        ) : (
+                          <span>{formatDate(u.createdAt)}</span>
+                        )}
+                      </td>
                       <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{u.propertyCount || 0}</td>
                       <td className="px-3 py-2">
                         <span
@@ -801,11 +895,35 @@ export default function AdminPage() {
                           <button
                             onClick={() => {
                               setEditUserId(u._id);
+                              setEditingLevel(false);
+                              setEditingCreatedAt(false);
                               setEditUserBalance(String(u.balance));
                             }}
                             className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300"
                           >
                             {t('admin.editBalance')}
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditUserId(u._id);
+                              setEditingLevel(true);
+                              setEditingCreatedAt(false);
+                              setEditUserLevel(String(u.level || 1));
+                            }}
+                            className="text-xs text-green-600 dark:text-green-400 hover:text-green-500 dark:hover:text-green-300"
+                          >
+                            {t('admin.editLevel')}
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditUserId(u._id);
+                              setEditingCreatedAt(true);
+                              setEditingLevel(false);
+                              setEditUserCreatedAt(u.createdAt ? u.createdAt.split('T')[0] : '');
+                            }}
+                            className="text-xs text-orange-600 dark:text-orange-400 hover:text-orange-500 dark:hover:text-orange-300"
+                          >
+                            {t('admin.editJoined')}
                           </button>
                           <button
                             onClick={() => handleToggleRole(u._id, u.role)}
@@ -1004,7 +1122,12 @@ export default function AdminPage() {
                   rows={filtered.slice(0, propPage * PROPS_PER_PAGE)}
                   renderRow={(p) => (
                     <>
-                      <td className="px-3 py-2 text-gray-900 dark:text-white">{p.name}</td>
+                      <td className="px-3 py-2 text-gray-900 dark:text-white">
+                        <div className="flex items-center gap-2">
+                          <PropertyImage property={p} alt={p.name} className="w-9 h-9 object-cover rounded shrink-0" />
+                          <span className="truncate">{p.name}</span>
+                        </div>
+                      </td>
                       <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{p.type}</td>
                       <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{p.cityId?.name || t('admin.na')}</td>
                       <td className="px-3 py-2 text-blue-600 dark:text-blue-400">{formatMoney(p.currentPrice || 0)}</td>

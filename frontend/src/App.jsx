@@ -310,6 +310,16 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/auctions/:id"
+        element={
+          <ErrorBoundary>
+            <ProtectedRoute>
+              <AuctionDashboardPage />
+            </ProtectedRoute>
+          </ErrorBoundary>
+        }
+      />
+      <Route
         path="/missions"
         element={
           <ErrorBoundary>

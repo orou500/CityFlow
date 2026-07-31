@@ -1,6 +1,6 @@
 import CompanyInvestment from '../models/CompanyInvestment.js';
 import RealEstateCompany from '../models/RealEstateCompany.js';
-import Notification from '../models/Notification.js';
+import { enqueueNotification } from '../utils/notificationQueue.js';
 import CompanyAuditLog from '../models/CompanyAuditLog.js';
 import InvestmentOpportunity from '../models/InvestmentOpportunity.js';
 import {
@@ -169,11 +169,15 @@ async function processInvestmentProposal(investment, tickNumber, globalEconomicI
 
     const memberUserIds = company.members.map((m) => m.userId);
     for (const userId of memberUserIds) {
-      await Notification.create({
+      await enqueueNotification({
         userId,
         type: 'system',
         title: 'Investment Approved',
         message: `"${company.name}" invested $${investment.principal.toLocaleString()} in ${investment.name}.`,
+        route: `/real-estate-companies/${company._id}`,
+        tab: 'investments',
+        entityType: 'company',
+        entityId: company._id,
         relatedId: company._id,
         global: false,
       });
@@ -185,11 +189,99 @@ async function processInvestmentProposal(investment, tickNumber, globalEconomicI
     await investment.save();
     cancelDelayedJob(`vote:investment:${investment._id}`);
   } else if (ageTicks >= 8) {
-    investment.status = 'rejected';
-    investment.proposal.status = 'rejected';
-    investment.proposal.resolvedAt = new Date();
-    await investment.save();
     cancelDelayedJob(`vote:investment:${investment._id}`);
+
+    const existingVoterIds = new Set((proposal.votes || []).map((v) => v.userId.toString()));
+    let autoCount = 0;
+    for (const member of company.members) {
+      const memberId = member.userId.toString();
+      if (memberId !== proposal.proposedBy.toString() && !existingVoterIds.has(memberId)) {
+        proposal.votes.push({ userId: member.userId, vote: 'yes', votedAt: new Date() });
+        autoCount++;
+
+        await CompanyAuditLog.create({
+          companyId: company._id,
+          userId: member.userId,
+          action: 'investment_vote_cast',
+          details: { vote: 'yes', investmentId: investment._id, auto: true, reason: 'expired_inactive' },
+          tick: tickNumber,
+        });
+      }
+    }
+
+    const updatedYesVotes = (proposal.votes || []).filter((v) => v.vote === 'yes').length;
+    const updatedNoVotes = (proposal.votes || []).filter((v) => v.vote === 'no').length;
+
+    if (totalVoters > 0 && updatedYesVotes / totalVoters >= 0.5) {
+      investment.status = 'active';
+      investment.proposal.status = 'approved';
+      investment.proposal.resolvedAt = new Date();
+      investment.startTick = tickNumber;
+      investment.maturityTick = tickNumber + investment.durationTicks;
+      const { scheduleInvestmentMaturity } = await import('../utils/delayedJobs.js');
+      scheduleInvestmentMaturity(investment._id, company._id, investment.durationTicks);
+      investment.globalEconomicIndex = globalEconomicIndex;
+
+      company.treasury.balance -= investment.principal;
+      addTreasuryTransaction(
+        company,
+        {
+          type: 'investment_withdrawal',
+          amount: investment.principal,
+          description: `Investment approved: ${investment.name}`,
+        },
+        tickNumber,
+      );
+
+      await company.save();
+      await investment.save();
+
+      await CompanyAuditLog.create({
+        companyId: company._id,
+        userId: investment.proposal.proposedBy,
+        action: 'investment_approved',
+        details: { reason: 'expired_auto_yes', investmentId: investment._id, name: investment.name, principal: investment.principal, activeYesVotes: updatedYesVotes - autoCount, autoYesVotes: autoCount, noVotes: updatedNoVotes, totalVoters },
+        tick: tickNumber,
+      });
+
+      await enqueueNotification({
+        userId: proposal.proposedBy,
+        type: 'system',
+        title: 'Investment Proposal Approved',
+        message: `Voting expired for the "${investment.name}" investment. ${updatedYesVotes - autoCount} member(s) voted YES and ${autoCount} inactive member(s) were automatically counted as YES.`,
+        route: `/real-estate-companies/${company._id}`,
+        tab: 'investments',
+        entityType: 'company',
+        entityId: company._id,
+        relatedId: company._id,
+        global: false,
+      });
+    } else {
+      investment.status = 'rejected';
+      investment.proposal.status = 'rejected';
+      investment.proposal.resolvedAt = new Date();
+      await investment.save();
+
+      await CompanyAuditLog.create({
+        companyId: company._id,
+        action: 'investment_rejected',
+        details: { reason: 'expired_auto_yes_insufficient', investmentId: investment._id, name: investment.name, activeYesVotes: updatedYesVotes - autoCount, autoYesVotes: autoCount, noVotes: updatedNoVotes, totalVoters },
+        tick: tickNumber,
+      });
+
+      await enqueueNotification({
+        userId: proposal.proposedBy,
+        type: 'system',
+        title: 'Investment Proposal Expired',
+        message: `The "${investment.name}" investment proposal expired. ${autoCount} inactive member(s) were counted as YES, but the proposal did not reach the required threshold.`,
+        route: `/real-estate-companies/${company._id}`,
+        tab: 'investments',
+        entityType: 'company',
+        entityId: company._id,
+        relatedId: company._id,
+        global: false,
+      });
+    }
   }
 }
 
@@ -257,11 +349,15 @@ async function matureInvestment(investment, tickNumber, globalEconomicIndex) {
 
   const memberUserIds = company.members.map((m) => m.userId);
   for (const userId of memberUserIds) {
-    await Notification.create({
+    await enqueueNotification({
       userId,
       type: 'system',
       title: 'Investment Matured',
       message: `"${company.name}" investment "${investment.name}" matured. Return: $${investment.currentValue.toLocaleString()}${profit >= 0 ? ` (+$${profit.toLocaleString()} profit)` : ` ($${Math.abs(profit).toLocaleString()} loss)`}.`,
+      route: `/real-estate-companies/${company._id}`,
+      tab: 'treasury',
+      entityType: 'company',
+      entityId: company._id,
       relatedId: company._id,
       global: false,
     });

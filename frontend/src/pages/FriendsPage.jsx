@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
 import { formatMoney } from '../utils/format';
@@ -13,11 +13,13 @@ function getToken() {
 export default function FriendsPage() {
   const { t } = useTranslation();
   const API = getApiBaseUrl();
-  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab');
+  const validTabs = ['friends', 'incoming', 'sent'];
   const [friends, setFriends] = useState([]);
   const [incoming, setIncoming] = useState([]);
   const [sent, setSent] = useState([]);
-  const [tab, setTab] = useState('friends');
+  const [tab, setTab] = useState(validTabs.includes(initialTab) ? initialTab : 'friends');
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(true);
 

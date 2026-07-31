@@ -6,7 +6,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import Pagination from '../components/Pagination';
 
 const TYPE_CONFIG = {
-  property_offer: { icon: '🤝', color: 'text-blue-500', route: '/dashboard' },
+  property_offer: { icon: '🤝', color: 'text-blue-500', route: '/marketplace' },
   offer_accepted: { icon: '✅', color: 'text-blue-500', route: '/marketplace' },
   offer_rejected: { icon: '❌', color: 'text-red-500', route: '/marketplace' },
   offer_countered: { icon: '🔄', color: 'text-amber-500', route: '/marketplace' },
@@ -14,6 +14,10 @@ const TYPE_CONFIG = {
   construction_complete: { icon: '🏗️', color: 'text-blue-500', route: '/development' },
   friend_request: { icon: '👤', color: 'text-blue-500', route: '/friends' },
   company_vote: { icon: '🏢', color: 'text-purple-500' },
+  mission_complete: { icon: '🎯', color: 'text-green-500', route: '/missions', tab: 'completed' },
+  mission_reward: { icon: '🎁', color: 'text-amber-500', route: '/missions' },
+  mission_chain_unlocked: { icon: '🔗', color: 'text-purple-500', route: '/missions' },
+  system: { icon: '📢', color: 'text-gray-500' },
 };
 
 function timeAgo(dateStr, t) {
@@ -70,12 +74,32 @@ export default function NotificationsPage() {
       await markNotificationRead(notification._id);
       await fetchUnreadCount();
     }
-    const cfg = TYPE_CONFIG[notification.type];
-    if (notification.type === 'company_vote' && notification.relatedId) {
-      navigate(`/real-estate-companies/${notification.relatedId}`);
+
+    // Priority 1: notification has route metadata from backend
+    if (notification.route) {
+      const tabParam = notification.tab ? `?tab=${notification.tab}` : '';
+      navigate(`${notification.route}${tabParam}`);
       return;
     }
-    if (cfg?.route) navigate(cfg.route);
+
+    // Priority 2: company_vote with company ID
+    if (notification.type === 'company_vote' && notification.relatedId) {
+      navigate(`/real-estate-companies/${notification.relatedId}?tab=overview`);
+      return;
+    }
+
+    // Priority 3: mission_complete with relatedId
+    if (notification.type === 'mission_complete' && notification.relatedId) {
+      navigate(`/missions?tab=completed`);
+      return;
+    }
+
+    // Priority 4: use TYPE_CONFIG fallback
+    const cfg = TYPE_CONFIG[notification.type];
+    if (cfg?.route) {
+      const tabParam = (cfg.tab || notification.tab) ? `?tab=${cfg.tab || notification.tab}` : '';
+      navigate(`${cfg.route}${tabParam}`);
+    }
   };
 
   const handleMarkAllRead = async () => {

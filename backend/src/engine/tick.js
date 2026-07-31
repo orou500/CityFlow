@@ -32,10 +32,12 @@ import Loan from '../models/Loan.js';
 import ConstructionProject from '../models/ConstructionProject.js';
 import {
   processCompanyRent,
+  processCompanyPayroll,
   processCompanyLoans,
   processCompanyLevelUp,
   processCompanyLoanRequests,
   processCompanyDevelopmentRequests,
+  processCompanyPropertyPurchaseRequests,
   pruneCompanyTreasuryTransactions,
 } from './companyProcessing.js';
 import { invalidateLeaderboardCache } from '../routes/leaderboards.js';
@@ -56,6 +58,7 @@ import { simulateDistricts } from './districtSimulation.js';
 import { evaluateExpiredReports } from './marketIntelligence.js';
 import { processAuctions, generateBankAuctions } from './auctionProcessing.js';
 import { processMissionReset } from './missionProcessing.js';
+import { processPublicCompanies } from './publicCompanyProcessing.js';
 
 export async function executeTick() {
   const startTime = Date.now();
@@ -139,11 +142,15 @@ export async function executeTick() {
 
     const companyRentResults = await processCompanyRent(tickNumber);
 
+    const payrollResults = await processCompanyPayroll(tickNumber);
+
     const companyLoanResults = await processCompanyLoans(tickNumber);
 
     const loanRequestResults = await processCompanyLoanRequests(tickNumber);
 
     const devRequestResults = await processCompanyDevelopmentRequests(tickNumber);
+
+    const propertyPurchaseResults = await processCompanyPropertyPurchaseRequests(tickNumber);
 
     const companyLevelUps = await processCompanyLevelUp(tickNumber);
 
@@ -164,6 +171,21 @@ export async function executeTick() {
     const evaluatedReports = await evaluateExpiredReports(tickNumber);
 
     const missionResets = await processMissionReset();
+
+    const publicCompanyResults = await processPublicCompanies(tickNumber);
+
+    if (publicCompanyResults.length > 0) {
+      emitToAll(SOCKET_EVENTS.PUBLIC_COMPANY_PRICES, {
+        tickNumber,
+        companies: publicCompanyResults.filter((r) => r.status === 'ok').map((r) => ({
+          ticker: r.ticker,
+          price: r.price,
+          change: r.priceChange,
+          volume: r.volume,
+          shareholders: r.shareholders,
+        })),
+      });
+    }
 
     const leaderboardSnapshots = await computeLeaderboards(tickNumber);
 
@@ -199,6 +221,7 @@ export async function executeTick() {
     console.log(`  Expired rent: ${expiredRentCount} users, warnings sent: ${rentWarningsCount}`);
     console.log(`  Auctions: ${auctionResults.activated} activated, ${auctionResults.completed} completed`);
     console.log(`  Bank auctions generated: ${newBankAuctions.length}`);
+    console.log(`  Public companies processed: ${publicCompanyResults.length}`);
     console.log(`  Leaderboard snapshots: ${leaderboardSnapshots.length}`);
     console.log(
       `  Competitive events: ${activatedEvents.length} activated, ${finalizedEvents.length} finalized, ${newCompEvents.length} new, ${cleanedUpEvents} cleaned`,
@@ -241,6 +264,7 @@ export async function executeTick() {
     await cacheDelPattern('cf:auction*');
     await cacheDelPattern('cf:missions:*');
     await cacheDelPattern('cf:stats:*');
+    await cacheDelPattern('cf:stocks:*');
     await publish(CHANNELS.TICK, { tickNumber, timestamp: new Date().toISOString() });
     emitToAll(SOCKET_EVENTS.TICK, { tickNumber, timestamp: new Date().toISOString() });
 

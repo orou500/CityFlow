@@ -216,6 +216,20 @@ export const useGameStore = create((set, get) => ({
     });
   },
 
+  setUserLevel: async (userId, level) => {
+    return await api(`/admin/users/${userId}/level`, {
+      method: 'PUT',
+      body: JSON.stringify({ level }),
+    });
+  },
+
+  setUserCreatedAt: async (userId, createdAt) => {
+    return await api(`/admin/users/${userId}/created-at`, {
+      method: 'PUT',
+      body: JSON.stringify({ createdAt }),
+    });
+  },
+
   restoreUser: async (userId) => {
     return await api(`/admin/users/${userId}/restore`, { method: 'POST' });
   },

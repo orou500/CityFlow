@@ -275,7 +275,8 @@ export function generateContractForCity(company, city, tickNumber, options = {})
   const cost = Math.round(baseCost / economicMultiplier);
   const reward = Math.round(baseCost * 1.35 * economicMultiplier * growthMultiplier);
   const expectedProfit = reward - cost;
-  const durationTicks = Math.max(4, Math.round(template.baseDuration * (1 + (level - 1) * 0.02)));
+  const minConstructionTicks = (CONTRACT_BUILDING_CONSTRUCTION[template.type] || 0) + CONSTRUCTION_BUFFER_TICKS + DEV_REQUEST_VOTE_OVERHEAD;
+  const durationTicks = Math.max(4, minConstructionTicks, Math.round(template.baseDuration * (1 + (level - 1) * 0.02)));
   const xpReward = Math.round(template.baseXp * levelMultiplier * cityScale * economicMultiplier);
   const reputationReward = Math.round(template.baseReputation * levelMultiplier * economicMultiplier);
 
@@ -330,6 +331,24 @@ export function generateContractTypeFromDemand(city, companyLevel) {
 export function calculateContractXPReward(cost, xpReward) {
   return Math.round(xpReward + calculateXPReward('contract_completed', cost));
 }
+
+// Map contract types to the construction period (ticks) of the most relevant building type.
+// Used to ensure contract deadlines are always achievable.
+const CONTRACT_BUILDING_CONSTRUCTION = {
+  small_housing: 20,       // apartment_building
+  affordable_housing: 25,  // housing_complex
+  small_office: 18,        // retail_complex
+  apartment_complex: 30,   // luxury_apartments
+  shopping_center: 35,     // shopping_center
+  hotel: 30,               // hotel
+  office_district: 25,     // office_building
+  office_tower: 25,        // office_building
+  mixed_use: 35,           // max(residential_max=30, commercial_max=35)
+  district: 40,            // max(all)
+};
+
+const CONSTRUCTION_BUFFER_TICKS = 4;      // flexibility after construction completes
+const DEV_REQUEST_VOTE_OVERHEAD = 8;       // company must vote on the development request (construction) after contract starts
 
 export const VOTE_THRESHOLD = 0.5;
 export const CONTRACT_PROPOSAL_EXPIRE_TICKS = 8;
