@@ -121,6 +121,11 @@ router.get('/:username', authenticate, async (req, res) => {
       delete publicUser.lastDailyLogin;
     }
 
+    if (!isOwner && req.user) {
+      const recordVisit = (await import('../utils/visitTracking.js')).recordVisit;
+      recordVisit(req.user._id, 'profile', user._id);
+    }
+
     res.json({
       user: publicUser,
       properties: user.profileVisibility.portfolio || isOwner ? properties : [],

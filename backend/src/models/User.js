@@ -81,6 +81,7 @@ const userSchema = new mongoose.Schema(
       totalConstructionStarted: { type: Number, default: 0 },
       totalSeasonsCompleted: { type: Number, default: 0 },
       totalRentCollected: { type: Number, default: 0 },
+      stockProfit: { type: Number, default: 0 },
     },
     supporter: {
       badge: { type: String, enum: ['none', 'supporter', 'early_supporter', 'founding_supporter'], default: 'none' },

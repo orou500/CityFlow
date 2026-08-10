@@ -167,7 +167,9 @@ function UserDetailModal({ userId, onClose }) {
             </div>
             <div>
               <div className="text-xs text-gray-500 dark:text-gray-400">{t('admin.lastLogin')}</div>
-              <div className="text-sm font-medium text-gray-900 dark:text-white">{formatDate(detail.lastLoginAt)}</div>
+              <div className="text-sm font-medium text-gray-900 dark:text-white">
+                {detail.lastLoginAt ? formatDate(detail.lastLoginAt) : t('admin.never')}
+              </div>
             </div>
             <div>
               <div className="text-xs text-gray-500 dark:text-gray-400">{t('admin.banned')}</div>
@@ -1146,7 +1148,7 @@ export default function AdminPage() {
                         )}
                       </td>
                       <td className="px-3 py-2 text-gray-500 dark:text-gray-400">
-                        {u.lastLoginAt ? formatDate(u.lastLoginAt) : '\u2014'}
+                        {u.lastLoginAt ? formatDate(u.lastLoginAt) : t('admin.never')}
                       </td>
                       <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{u.propertyCount || 0}</td>
                       <td className="px-3 py-2">

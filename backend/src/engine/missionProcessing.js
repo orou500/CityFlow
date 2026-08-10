@@ -9,6 +9,12 @@ import RealEstateCompany from '../models/RealEstateCompany.js';
 import District from '../models/District.js';
 import Transaction from '../models/Transaction.js';
 import ConstructionProject from '../models/ConstructionProject.js';
+import CompanyAuditLog from '../models/CompanyAuditLog.js';
+import FriendRequest from '../models/FriendRequest.js';
+import StockHolding from '../models/StockHolding.js';
+import StockTransaction from '../models/StockTransaction.js';
+import UserVisit from '../models/UserVisit.js';
+import Company from '../models/Company.js';
 import { MISSION_DEFINITIONS, getMissionById } from '../config/missions.js';
 import { enqueueNotification } from '../utils/notificationQueue.js';
 import { emitToUser } from '../socket/index.js';
@@ -47,6 +53,82 @@ function getPeriodKey(type) {
       return null;
   }
 }
+
+export const SUPPORTED_CONDITION_TYPES = [
+  'properties_owned',
+  'total_rent_collected',
+  'total_upgrades',
+  'total_properties_sold',
+  'auctions_won',
+  'auctions_sold',
+  'rare_auctions_won',
+  'monthly_income',
+  'net_worth',
+  'own_legendary_property',
+  'unique_cities',
+  'city_owned',
+  'unique_districts',
+  'district_leader',
+  'total_construction_completed',
+  'total_loans_taken',
+  'total_loan_repayments',
+  'credit_score',
+  'total_loan_amount_repaid',
+  'joined_company',
+  'created_company',
+  'company_votes_cast',
+  'company_projects_completed',
+  'company_properties_purchased',
+  'reports_purchased',
+  'forecast_accuracy_90',
+  'properties_bought_today',
+  'rent_collected_today',
+  'bonus_claimed_today',
+  'login_today',
+  'upgrades_today',
+  'auction_bids_today',
+  'money_earned_this_week',
+  'properties_bought_this_week',
+  'auctions_won_this_week',
+  'rent_collected_this_week',
+  'bonus_claimed_this_week',
+  'login_this_week',
+  'login_count_this_week',
+  'friends_added',
+  'friend_requests_accepted',
+  'profiles_visited',
+  'company_invites_sent',
+  'company_contracts_completed',
+  'company_loans_taken',
+  'company_employees_hired',
+  'company_ipo_listed',
+  'company_members_recruited',
+  'auction_bids_placed',
+  'properties_bought',
+  'properties_listed',
+  'property_value',
+  'property_sale_profit',
+  'property_improvements',
+  'rent_total_earned',
+  'stocks_bought',
+  'dividends_received',
+  'stocks_owned_companies',
+  'stock_profit',
+  'ipo_shares_bought',
+  'city_visits',
+  'district_visits',
+  'market_visits',
+  'countries_owned',
+  'login_streak',
+  'missions_completed',
+  'achievements_unlocked',
+  'views_today',
+  'market_visits_today',
+  'stock_trades_today',
+  'views_this_week',
+  'stock_trades_this_week',
+  'auction_bids_this_week',
+];
 
 export async function evaluateCondition(userId, missionId, condition, userData) {
   let value;
@@ -288,7 +370,7 @@ export async function evaluateCondition(userId, missionId, condition, userData) 
       dayStart.setUTCHours(0, 0, 0, 0);
       value = await Auction.countDocuments({
         'bids.bidderId': userId,
-        'bids.timestamp': { $gte: dayStart },
+        'bids.createdAt': { $gte: dayStart },
       });
       break;
     }
@@ -371,10 +453,224 @@ export async function evaluateCondition(userId, missionId, condition, userData) 
       break;
     }
 
-    // ── FUTURE / STOCK MARKET (placeholder) ──────────────
-    case 'stocks_bought':
+    // ── SOCIAL / COMMUNITY CONDITIONS ────────────────────
+    case 'friends_added': {
+      value = userData.friends?.length || 0;
+      break;
+    }
+    case 'friend_requests_accepted': {
+      value = await FriendRequest.countDocuments({ receiverId: userId, status: 'accepted' });
+      break;
+    }
+    case 'profiles_visited': {
+      value = await UserVisit.countDocuments({ userId, targetType: 'profile' });
+      break;
+    }
+
+    // ── COMPANY CONDITIONS (via the company audit log) ───
+    case 'company_invites_sent': {
+      value = await CompanyAuditLog.countDocuments({ userId, action: 'member_invited' });
+      break;
+    }
+    case 'company_contracts_completed': {
+      value = await CompanyAuditLog.countDocuments({ userId, action: 'contract_completed' });
+      break;
+    }
+    case 'company_loans_taken': {
+      value = await CompanyAuditLog.countDocuments({ userId, action: 'loan_taken' });
+      break;
+    }
+    case 'company_employees_hired': {
+      value = await CompanyAuditLog.countDocuments({ userId, action: 'employees_hired' });
+      break;
+    }
+    case 'company_ipo_listed': {
+      value = await CompanyAuditLog.countDocuments({ userId, action: 'ipo_listed' });
+      break;
+    }
+    case 'company_members_recruited': {
+      const userCompany = await RealEstateCompany.findOne({ 'members.userId': userId }).select('members').lean();
+      value = userCompany ? Math.max(0, userCompany.members.length - 1) : 0;
+      break;
+    }
+
+    // ── MARKETPLACE / AUCTION CONDITIONS ────────────────
+    case 'auction_bids_placed': {
+      value = await Auction.countDocuments({ 'bids.bidderId': userId });
+      break;
+    }
+    case 'properties_bought': {
+      value = await Transaction.countDocuments({ buyerId: userId, type: 'buy' });
+      break;
+    }
+    case 'properties_listed': {
+      value = await Property.countDocuments({ ownerId: userId, forSale: true });
+      break;
+    }
+    case 'property_value': {
+      const properties = await Property.find({ ownerId: userId }).select('currentPrice').lean();
+      value = properties.reduce((sum, p) => sum + (p.currentPrice || 0), 0);
+      break;
+    }
+    case 'property_sale_profit': {
+      const sellTxs = await Transaction.find({ sellerId: userId, type: 'sell' }).select('propertyId price').lean();
+      const propIds = sellTxs.map((t) => t.propertyId).filter(Boolean);
+      const props =
+        propIds.length > 0
+          ? await Property.find({ _id: { $in: propIds } })
+              .select('lastPurchasePrice')
+              .lean()
+          : [];
+      const costMap = new Map(props.map((p) => [p._id.toString(), p.lastPurchasePrice || 0]));
+      value = sellTxs.filter((t) => {
+        if (!t.propertyId) return false;
+        const cost = costMap.get(t.propertyId.toString()) ?? null;
+        if (cost == null) return false;
+        return (t.price || 0) > cost;
+      }).length;
+      break;
+    }
+    case 'property_improvements': {
+      value = await Transaction.countDocuments({ buyerId: userId, type: 'improvement' });
+      break;
+    }
+    case 'rent_total_earned': {
+      const rentTxs = await Transaction.find({ buyerId: userId, type: 'rent' }).select('price').lean();
+      value = rentTxs.reduce((sum, t) => sum + (t.price || 0), 0);
+      break;
+    }
+
+    // ── STOCK MARKET CONDITIONS ─────────────────────────
+    case 'stocks_bought': {
+      value = await StockTransaction.countDocuments({ userId, type: 'buy' });
+      break;
+    }
     case 'dividends_received': {
-      value = 0;
+      value = await StockTransaction.countDocuments({ userId, type: 'dividend' });
+      break;
+    }
+    case 'stocks_owned_companies': {
+      value = await StockHolding.countDocuments({ userId, shares: { $gt: 0 } });
+      break;
+    }
+    case 'stock_profit': {
+      value = userData.lifetimeStats?.stockProfit || 0;
+      break;
+    }
+    case 'ipo_shares_bought': {
+      const ipoIds = await Company.find({ isIPO: true }).distinct('_id');
+      value =
+        ipoIds.length > 0
+          ? await StockTransaction.countDocuments({ userId, type: 'buy', companyId: { $in: ipoIds } })
+          : 0;
+      break;
+    }
+
+    // ── EXPLORATION CONDITIONS ──────────────────────────
+    case 'city_visits': {
+      const visited = await UserVisit.distinct('targetId', { userId, targetType: 'city' });
+      value = visited.filter(Boolean).length;
+      break;
+    }
+    case 'district_visits': {
+      const visited = await UserVisit.distinct('targetId', { userId, targetType: 'district' });
+      value = visited.filter(Boolean).length;
+      break;
+    }
+    case 'market_visits': {
+      value = await UserVisit.countDocuments({ userId, targetType: 'market' });
+      break;
+    }
+    case 'countries_owned': {
+      const cityIds = await Property.find({ ownerId: userId }).distinct('cityId');
+      if (cityIds.length === 0) {
+        value = 0;
+        break;
+      }
+      const countries = await mongoose.model('City').distinct('country', { _id: { $in: cityIds } });
+      value = countries.length;
+      break;
+    }
+
+    // ── ENGAGEMENT CONDITIONS ───────────────────────────
+    case 'login_streak': {
+      const loginTxs = await Transaction.find({ buyerId: userId, type: 'login' }).select('createdAt').lean();
+      const days = new Set(loginTxs.map((t) => t.createdAt.toISOString().slice(0, 10)));
+      if (days.size === 0) {
+        value = 0;
+        break;
+      }
+      let streak = 0;
+      const cursor = new Date();
+      if (!days.has(cursor.toISOString().slice(0, 10))) {
+        cursor.setUTCDate(cursor.getUTCDate() - 1);
+      }
+      while (days.has(cursor.toISOString().slice(0, 10))) {
+        streak++;
+        cursor.setUTCDate(cursor.getUTCDate() - 1);
+      }
+      value = streak;
+      break;
+    }
+    case 'missions_completed': {
+      value = await MissionProgress.countDocuments({
+        userId,
+        status: { $in: ['completed', 'claimed'] },
+      });
+      break;
+    }
+    case 'achievements_unlocked': {
+      value = userData.achievements?.length || 0;
+      break;
+    }
+    case 'views_today': {
+      const dayStart = new Date();
+      dayStart.setUTCHours(0, 0, 0, 0);
+      value = await UserVisit.countDocuments({ userId, createdAt: { $gte: dayStart } });
+      break;
+    }
+    case 'market_visits_today': {
+      const dayStart = new Date();
+      dayStart.setUTCHours(0, 0, 0, 0);
+      value = await UserVisit.countDocuments({ userId, targetType: 'market', createdAt: { $gte: dayStart } });
+      break;
+    }
+    case 'stock_trades_today': {
+      const dayStart = new Date();
+      dayStart.setUTCHours(0, 0, 0, 0);
+      value = await StockTransaction.countDocuments({
+        userId,
+        type: { $in: ['buy', 'sell'] },
+        createdAt: { $gte: dayStart },
+      });
+      break;
+    }
+    case 'views_this_week': {
+      const weekStart = new Date();
+      weekStart.setUTCHours(0, 0, 0, 0);
+      weekStart.setUTCDate(weekStart.getUTCDate() - weekStart.getUTCDay());
+      value = await UserVisit.countDocuments({ userId, createdAt: { $gte: weekStart } });
+      break;
+    }
+    case 'stock_trades_this_week': {
+      const weekStart = new Date();
+      weekStart.setUTCHours(0, 0, 0, 0);
+      weekStart.setUTCDate(weekStart.getUTCDate() - weekStart.getUTCDay());
+      value = await StockTransaction.countDocuments({
+        userId,
+        type: { $in: ['buy', 'sell'] },
+        createdAt: { $gte: weekStart },
+      });
+      break;
+    }
+    case 'auction_bids_this_week': {
+      const weekStart = new Date();
+      weekStart.setUTCHours(0, 0, 0, 0);
+      weekStart.setUTCDate(weekStart.getUTCDate() - weekStart.getUTCDay());
+      value = await Auction.countDocuments({
+        'bids.bidderId': userId,
+        'bids.createdAt': { $gte: weekStart },
+      });
       break;
     }
 

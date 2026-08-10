@@ -169,6 +169,14 @@ router.post('/sell', async (req, res) => {
       await holding.save();
     }
 
+    // Track realized stock profit for mission/achievement progress
+    const realizedProfit = Math.round((company.sharePrice - holding.avgBuyPrice) * shares * 100) / 100;
+    if (realizedProfit > 0) {
+      await User.updateOne({ _id: req.user._id }, { $inc: { 'lifetimeStats.stockProfit': realizedProfit } }).catch(
+        () => {},
+      );
+    }
+
     user.balance += totalRevenue;
     await user.save();
 

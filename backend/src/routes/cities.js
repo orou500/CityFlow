@@ -5,6 +5,8 @@ import Event from '../models/Event.js';
 import { ECONOMIC_CONDITIONS } from '../config/demographics.js';
 import { cacheGetOrSet } from '../utils/cache.js';
 import { cacheKeys, cacheTTL } from '../utils/cacheKeys.js';
+import { optionalAuth } from '../middleware/auth.js';
+import { recordVisit } from '../utils/visitTracking.js';
 
 const router = Router();
 
@@ -18,7 +20,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.get('/:id', async (req, res) => {
+router.get('/:id', optionalAuth, async (req, res) => {
   try {
     const data = await cacheGetOrSet(
       cacheKeys.city(req.params.id),
@@ -59,6 +61,7 @@ router.get('/:id', async (req, res) => {
     );
 
     if (!data) return res.status(404).json({ error: 'City not found' });
+    if (req.user) recordVisit(req.user._id, 'city', data.city._id);
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });

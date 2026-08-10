@@ -5,6 +5,7 @@ import User from '../models/User.js';
 import { optionalAuth } from '../middleware/auth.js';
 import { cacheGetOrSet } from '../utils/cache.js';
 import { cacheKeys, cacheTTL } from '../utils/cacheKeys.js';
+import { recordVisit } from '../utils/visitTracking.js';
 
 const router = Router();
 
@@ -104,6 +105,8 @@ router.get('/:id', optionalAuth, async (req, res) => {
       ownedCount: 0,
       companyOwnedCount: 0,
     };
+
+    if (req.user) recordVisit(req.user._id, 'district', district._id);
 
     res.json({
       district,

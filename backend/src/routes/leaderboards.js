@@ -4,6 +4,7 @@ import CompetitiveEvent from '../models/CompetitiveEvent.js';
 import User from '../models/User.js';
 import Season from '../models/Season.js';
 import { authenticate } from '../middleware/auth.js';
+import { optionalAuth } from '../middleware/auth.js';
 import { requireAdmin } from '../middleware/admin.js';
 import { cacheGet, cacheSet, cacheDelPattern } from '../utils/cache.js';
 import { ACHIEVEMENT_DEFINITIONS } from '../config/achievements.js';
@@ -185,7 +186,7 @@ router.get('/history/:category', async (req, res) => {
   }
 });
 
-router.get('/player/:userId', async (req, res) => {
+router.get('/player/:userId', optionalAuth, async (req, res) => {
   try {
     const { userId } = req.params;
 
@@ -197,6 +198,11 @@ router.get('/player/:userId', async (req, res) => {
       'username displayName avatar level xp balance ownedProperties achievements bio title prestigeLevel achievementPoints',
     );
     if (!user) return res.status(404).json({ error: 'User not found' });
+
+    if (req.user && !req.user._id.equals(user._id)) {
+      const recordVisit = (await import('../utils/visitTracking.js')).recordVisit;
+      recordVisit(req.user._id, 'profile', user._id);
+    }
 
     const activeSeason = await Season.findOne({ status: 'active' });
     const seasonNumber = activeSeason ? activeSeason.number : 1;

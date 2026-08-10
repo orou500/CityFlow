@@ -130,6 +130,11 @@ router.get('/', optionalAuth, async (req, res) => {
         .lean(),
     ]);
 
+    if (req.user) {
+      const recordVisit = (await import('../utils/visitTracking.js')).recordVisit;
+      recordVisit(req.user._id, 'market', null);
+    }
+
     res.json({ properties, total, page: pageNum, totalPages: Math.ceil(total / limitNum), limit: limitNum });
   } catch (err) {
     res.status(500).json({ error: err.message });

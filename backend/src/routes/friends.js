@@ -86,6 +86,14 @@ router.post('/accept/:requestId', async (req, res) => {
       await user.save();
     }
 
+    // The sender also gained a friend — fire their progress too
+    const sender = await User.findById(request.senderId);
+    if (sender) {
+      await processPlayerProgress(sender._id, 'friend_add');
+      sender.lifetimeStats.totalFriendsAdded += 1;
+      await sender.save();
+    }
+
     await createFriendNotification(request.senderId, req.user, 'friend_accepted');
 
     res.json(request);

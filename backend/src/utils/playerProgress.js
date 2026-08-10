@@ -40,6 +40,7 @@ const XP_REWARDS = {
   contract_propose: 5,
   offer_create: 2,
   investment_create: 5,
+  visit: 1,
   login: 0,
 };
 

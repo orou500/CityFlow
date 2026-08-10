@@ -88,6 +88,25 @@ describe('Admin users endpoints', () => {
       expect(res.body.total).toBe(1);
       expect(res.body.users[0].username).toBe('gone_user');
     });
+
+    it('sorts by lastLoginAt ascending and descending', async () => {
+      const { token } = await createAuthenticatedAdmin();
+      await makeUser('login_never', { lastLoginAt: null });
+      await makeUser('login_a', { lastLoginAt: new Date('2026-01-01T00:00:00Z') });
+      await makeUser('login_b', { lastLoginAt: new Date('2026-06-01T00:00:00Z') });
+
+      const asc = await request(app).get('/admin/users?sort=lastLoginAt&order=asc').set(authHeader(token));
+      expect(asc.status).toBe(200);
+      const ascDates = asc.body.users.filter((u) => u.lastLoginAt).map((u) => new Date(u.lastLoginAt).getTime());
+      expect([...ascDates].sort((a, b) => a - b)).toEqual(ascDates);
+      // null lastLoginAt sorts first in asc
+      expect(asc.body.users[asc.body.users.length - 1].username).toBe('login_b');
+
+      const desc = await request(app).get('/admin/users?sort=lastLoginAt&order=desc').set(authHeader(token));
+      expect(desc.status).toBe(200);
+      expect(desc.body.users[0].username).toBe('login_b');
+      expect(desc.body.users[1].username).toBe('login_a');
+    });
   });
 
   describe('GET /admin/users/:id', () => {

@@ -16,6 +16,11 @@ const CATEGORY_ICONS = {
   company: '\uD83C\uDFE2',
   district: '\uD83C\uDFD8\uFE0F',
   intelligence: '\uD83D\uDD0D',
+  social: '\uD83D\uDC65',
+  marketplace: '\uD83D\uDED2',
+  stocks: '\uD83D\uDCC8',
+  exploration: '\uD83E\uDDED',
+  engagement: '\uD83D\uDD25',
   daily: '\uD83D\uDCC5',
   weekly: '\uD83D\uDCC6',
   seasonal: '\u2744\uFE0F',
@@ -379,6 +384,11 @@ export default function MissionsPage() {
                   'company',
                   'district',
                   'intelligence',
+                  'social',
+                  'marketplace',
+                  'stocks',
+                  'exploration',
+                  'engagement',
                 ].map((cat) => (
                   <option key={cat} value={cat}>
                     {CATEGORY_ICONS[cat]} {t(`missions.categories.${cat}`)}
