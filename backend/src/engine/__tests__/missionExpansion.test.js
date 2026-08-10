@@ -14,12 +14,7 @@ import StockHolding from '../../models/StockHolding.js';
 import Company from '../../models/Company.js';
 import RealEstateCompany from '../../models/RealEstateCompany.js';
 import { createTestUser, createTestCity } from '../../test/helpers.js';
-import {
-  initializeMissionsForUser,
-  updateMissionProgress,
-  evaluateCondition,
-  SUPPORTED_CONDITION_TYPES,
-} from '../missionProcessing.js';
+import { initializeMissionsForUser, evaluateCondition, SUPPORTED_CONDITION_TYPES } from '../missionProcessing.js';
 import { MISSION_DEFINITIONS } from '../../config/missions.js';
 
 const getMissionProgress = async (userId, missionId) => MissionProgress.findOne({ userId, missionId }).lean();

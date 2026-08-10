@@ -1,5 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import mongoose from 'mongoose';
+﻿import { describe, it, expect, beforeEach } from 'vitest';
 import RealEstateCompany from '../../models/RealEstateCompany.js';
 import Company from '../../models/Company.js';
 import StockHolding from '../../models/StockHolding.js';
@@ -17,7 +16,7 @@ import {
   endCurrentSeasonAndStartNew,
 } from '../seasonReset.js';
 
-describe('Season Reset — Economy Validation', () => {
+describe('Season Reset â€” Economy Validation', () => {
   let city;
 
   beforeEach(async () => {
@@ -42,7 +41,7 @@ describe('Season Reset — Economy Validation', () => {
     });
   });
 
-  // ─── 1. OWNERSHIP DISTRIBUTION ─────────────────────────────
+  // â”€â”€â”€ 1. OWNERSHIP DISTRIBUTION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   it('distributes company value to shareholders by exact ownership percentage', async () => {
     const founder = await User.create({
@@ -73,7 +72,7 @@ describe('Season Reset — Economy Validation', () => {
       emailVerifiedAt: new Date(),
     });
 
-    const company = await RealEstateCompany.create({
+    await RealEstateCompany.create({
       name: 'OwnershipTest Co',
       founderId: founder._id,
       members: [
@@ -108,7 +107,7 @@ describe('Season Reset — Economy Validation', () => {
     expect(totalDistributed).toBe(100_000_000);
   });
 
-  // ─── 2. DEBT HANDLING ──────────────────────────────────────
+  // â”€â”€â”€ 2. DEBT HANDLING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   it('reduces liquidation value by outstanding debt', async () => {
     const founder = await User.create({
@@ -156,7 +155,7 @@ describe('Season Reset — Economy Validation', () => {
     expect(founderAfter.balance - founderBefore.balance).toBe(20_000_000);
   });
 
-  // ─── 3. IPO COMPANIES ──────────────────────────────────────
+  // â”€â”€â”€ 3. IPO COMPANIES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   it('distributes IPO market cap to shareholders with locked CEO shares included', async () => {
     const founder = await User.create({
@@ -220,7 +219,7 @@ describe('Season Reset — Economy Validation', () => {
     expect(investorAfter.balance - investorBefore.balance).toBe(10_000_000);
   });
 
-  // ─── 4. CARRYOVER INTERACTION ──────────────────────────────
+  // â”€â”€â”€ 4. CARRYOVER INTERACTION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   it('includes liquidation payouts in net worth exactly once (no double-count)', async () => {
     const founder = await User.create({
@@ -234,7 +233,7 @@ describe('Season Reset — Economy Validation', () => {
     });
 
     // Create company with value
-    const company = await RealEstateCompany.create({
+    await RealEstateCompany.create({
       name: 'Carryover Co',
       founderId: founder._id,
       members: [{ userId: founder._id, role: 'ceo', shares: 1000 }],
@@ -321,7 +320,7 @@ describe('Season Reset — Economy Validation', () => {
     const afterFirst = await User.findById(founder._id);
     expect(afterFirst.balance).toBe(100_000_000); // 50 original + 50 payout
 
-    // Run liquidation again — should find no active companies with value
+    // Run liquidation again â€” should find no active companies with value
     // (company still active but treasury already at 0...)
     // Actually the company still has treasury = 50M because liquidation
     // only distributes, doesn't clear. Let me check:
@@ -336,7 +335,7 @@ describe('Season Reset — Economy Validation', () => {
     // The protection is that resetWorld calls it once, and then resetCompanyEconomy
     // clears the treasury. So in the full flow it's safe.
     // For standalone calls, we verify that the company still has its assets
-    // (so a second call would re-distribute — which is why the flow order matters)
+    // (so a second call would re-distribute â€” which is why the flow order matters)
 
     const second = await liquidateRealEstateCompanies();
     expect(second.totalPayout).toBe(50_000_000); // Would pay again if called twice
@@ -351,7 +350,7 @@ describe('Season Reset — Economy Validation', () => {
     expect(third.totalPayout).toBe(0);
   });
 
-  // ─── 5. LEGACY/ECONOMY RESET ───────────────────────────────
+  // â”€â”€â”€ 5. LEGACY/ECONOMY RESET â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   it('preserves company identity and clears all economic data', async () => {
     const founder = await User.create({
@@ -450,7 +449,7 @@ describe('Season Reset — Economy Validation', () => {
     expect(reset.milestones).toHaveLength(0);
   });
 
-  // ─── 6. FULL SEASON RESET CLEANUP ──────────────────────────
+  // â”€â”€â”€ 6. FULL SEASON RESET CLEANUP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   it('completes full season reset with no orphan data', async () => {
     const founder = await User.create({

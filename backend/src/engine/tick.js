@@ -1,4 +1,4 @@
-import { simulateCities } from './citySimulation.js';
+﻿import { simulateCities } from './citySimulation.js';
 import { simulateDemographics } from './demographics.js';
 import { simulateStockMarket } from './stockMarket.js';
 import { simulateIndexes } from './indexSimulation.js';
@@ -82,7 +82,7 @@ export async function executeTick() {
 
     const stockResults = await simulateStockMarket(tickNumber);
 
-    const indexResults = await simulateIndexes(tickNumber);
+    await simulateIndexes(tickNumber);
 
     const intrinsicCount = await updateIntrinsicValues();
 
@@ -142,15 +142,15 @@ export async function executeTick() {
 
     const companyRentResults = await processCompanyRent(tickNumber);
 
-    const payrollResults = await processCompanyPayroll(tickNumber);
+    await processCompanyPayroll(tickNumber);
 
     const companyLoanResults = await processCompanyLoans(tickNumber);
 
-    const loanRequestResults = await processCompanyLoanRequests(tickNumber);
+    await processCompanyLoanRequests(tickNumber);
 
-    const devRequestResults = await processCompanyDevelopmentRequests(tickNumber);
+    await processCompanyDevelopmentRequests(tickNumber);
 
-    const propertyPurchaseResults = await processCompanyPropertyPurchaseRequests(tickNumber);
+    await processCompanyPropertyPurchaseRequests(tickNumber);
 
     const companyLevelUps = await processCompanyLevelUp(tickNumber);
 
@@ -160,17 +160,17 @@ export async function executeTick() {
 
     const contractResults = await processCityContracts(tickNumber);
 
-    const contractProposalResults = await processContractProposals(tickNumber);
+    await processContractProposals(tickNumber);
 
-    const expiredContracts = await expireAvailableContracts(tickNumber);
+    await expireAvailableContracts(tickNumber);
 
-    const investmentOpportunities = await generateInvestmentOpportunities(tickNumber);
+    await generateInvestmentOpportunities(tickNumber);
 
-    const investmentResults = await processCompanyInvestments(tickNumber);
+    await processCompanyInvestments(tickNumber);
 
-    const evaluatedReports = await evaluateExpiredReports(tickNumber);
+    await evaluateExpiredReports(tickNumber);
 
-    const missionResets = await processMissionReset();
+    await processMissionReset();
 
     const publicCompanyResults = await processPublicCompanies(tickNumber);
 
@@ -247,7 +247,7 @@ export async function executeTick() {
     }
 
     if (tickNumber >= 720) {
-      console.log(`[TICK] Tick #${tickNumber} reached 720 — ending season`);
+      console.log(`[TICK] Tick #${tickNumber} reached 720 â€” ending season`);
       const newSeason = await endCurrentSeasonAndStartNew();
       console.log(`[TICK] Season ended. New season: ${newSeason.number}`);
       await invalidateLeaderboardCache();

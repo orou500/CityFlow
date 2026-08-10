@@ -68,7 +68,7 @@ export const PROFIT_FORMULA = {
 
 export const HISTORY_MAX_ENTRIES = 120;
 
-export function calculateMonthlyProfit(rentIncome, maintenanceLevel, propertyValue) {
+export function calculateMonthlyProfit(rentIncome, maintenanceLevel, _propertyValue) {
   const tier = MAINTENANCE_TIERS[maintenanceLevel] || MAINTENANCE_TIERS.none;
   const maintenanceCost = Math.round(rentIncome * tier.costPercentOfRent);
   return {
@@ -113,7 +113,6 @@ export function calculateQualityScore(property) {
       : property.occupancy || 50;
   const occupancyScore = avgOccupancy * QUALITY_WEIGHTS.occupancyHistory;
 
-  const tier = MAINTENANCE_TIERS[property.maintenanceLevel] || MAINTENANCE_TIERS.none;
   const maintenanceScores = { none: 0, basic: 40, standard: 70, premium: 100 };
   const maintenanceScore = (maintenanceScores[property.maintenanceLevel] || 0) * QUALITY_WEIGHTS.maintenanceLevel;
 

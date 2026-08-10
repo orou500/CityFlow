@@ -3,8 +3,6 @@ import mongoose from 'mongoose';
 import Company from '../../models/Company.js';
 import RealEstateCompany from '../../models/RealEstateCompany.js';
 import StockHolding from '../../models/StockHolding.js';
-import Property from '../../models/Property.js';
-import Loan from '../../models/Loan.js';
 import GameState from '../../models/GameState.js';
 import User from '../../models/User.js';
 import City from '../../models/City.js';

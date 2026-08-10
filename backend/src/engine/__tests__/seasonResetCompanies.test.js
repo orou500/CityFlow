@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import mongoose from 'mongoose';
 import RealEstateCompany from '../../models/RealEstateCompany.js';
 import Company from '../../models/Company.js';
 import StockHolding from '../../models/StockHolding.js';
@@ -89,7 +88,7 @@ describe('Season Reset — Company Liquidation', () => {
     });
 
     // Add company-owned properties
-    const prop1 = await Property.create({
+    await Property.create({
       name: 'Company HQ',
       type: 'commercial',
       cityId: city._id,
@@ -98,7 +97,7 @@ describe('Season Reset — Company Liquidation', () => {
       currentPrice: 30_000_000,
       basePrice: 30_000_000,
     });
-    const prop2 = await Property.create({
+    await Property.create({
       name: 'Warehouse',
       type: 'commercial',
       cityId: city._id,
@@ -150,7 +149,7 @@ describe('Season Reset — Company Liquidation', () => {
       foundedTick: 0,
     });
 
-    const loan = await Loan.create({
+    await Loan.create({
       userId: founder._id,
       companyId: company._id,
       principal: 80_000_000,
@@ -173,7 +172,7 @@ describe('Season Reset — Company Liquidation', () => {
   });
 
   it('returns zero payout for company with zero net value', async () => {
-    const company = await RealEstateCompany.create({
+    await RealEstateCompany.create({
       name: `ZeroVal_${Date.now()}`,
       founderId: founder._id,
       members: [{ userId: founder._id, role: 'ceo', shares: 1000 }],

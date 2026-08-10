@@ -83,8 +83,6 @@ export async function simulateDemographics(currentTick) {
     return { city, stats, totalHousingCapacity, occupiedUnits, avgRent, attractiveness };
   });
 
-  const totalWorldPopulation = cityData.reduce((sum, d) => sum + d.city.population, 0);
-
   for (const d of cityData) {
     if (Math.random() < CONFIG.economicTransitionChance) {
       d.city.economicCondition = pickEconomicTransition(d.city.economicCondition);

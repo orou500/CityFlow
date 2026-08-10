@@ -734,7 +734,7 @@ export async function initializeMissionsForUser(userId) {
   return missionsToCreate.length;
 }
 
-export async function updateMissionProgress(userId, triggerType) {
+export async function updateMissionProgress(userId, _triggerType) {
   await initializeMissionsForUser(userId);
 
   const user = await User.findById(userId).lean();

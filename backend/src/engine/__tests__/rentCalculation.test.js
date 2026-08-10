@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
-import mongoose from 'mongoose';
 import User from '../../models/User.js';
 import Property from '../../models/Property.js';
 import City from '../../models/City.js';

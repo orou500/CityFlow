@@ -93,7 +93,7 @@ router.get('/', async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
 
     proxyRes.pipe(res);
-  } catch (err) {
+  } catch {
     if (!res.headersSent) {
       res.status(502).json({ error: 'Failed to proxy image' });
     }

@@ -5,10 +5,6 @@ import City from '../models/City.js';
 const INITIAL_VALUE = 1000;
 const HISTORY_MAX = 120;
 
-function clamp(value, min, max) {
-  return Math.min(max, Math.max(min, value));
-}
-
 export async function initializeIndexes() {
   const existingCount = await StockIndex.countDocuments();
   if (existingCount > 0) return;

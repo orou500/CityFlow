@@ -1,12 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+﻿import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../../test/createApp.js';
 import { createAuthenticatedUser, createTestProperty, createTestCity, authHeader } from '../../test/helpers.js';
 import RealEstateCompany from '../../models/RealEstateCompany.js';
 import Company from '../../models/Company.js';
 import StockHolding from '../../models/StockHolding.js';
-import User from '../../models/User.js';
-import Property from '../../models/Property.js';
 import GameState from '../../models/GameState.js';
 
 const app = createApp();
@@ -37,7 +35,7 @@ async function createCompany(founder, hqCityId) {
 
 async function addMember(companyId, founderToken) {
   const member = await createAuthenticatedUser({ balance: 10_000_000, level: 15 });
-  const applyRes = await request(app)
+  await request(app)
     .post(`/real-estate-companies/${companyId}/apply`)
     .set(authHeader(member.token))
     .send({ message: 'I want to join' });
@@ -61,7 +59,7 @@ describe('Ownership Lifecycle', () => {
     hqCityId = city._id;
   });
 
-  // ─── 1. PRIVATE COMPANY CREATION ───────────────────────────────
+  // â”€â”€â”€ 1. PRIVATE COMPANY CREATION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   it('creates a company with correct initial share distribution', async () => {
     const founder = await createFounder();
@@ -76,7 +74,7 @@ describe('Ownership Lifecycle', () => {
     expect(memberSum + company.shares.treasuryShares).toBe(company.shares.totalShares);
   });
 
-  // ─── 2. MEMBERS JOIN ───────────────────────────────────────────
+  // â”€â”€â”€ 2. MEMBERS JOIN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   it('allocates shares from treasury when members join', async () => {
     const founder = await createFounder();
@@ -92,7 +90,7 @@ describe('Ownership Lifecycle', () => {
     expect(member1Shares).toBeLessThanOrEqual(50);
     expect(afterFirst.shares.treasuryShares).toBe(initialTreasury - member1Shares);
 
-    const member2 = await addMember(company._id, founder.token);
+    await addMember(company._id, founder.token);
     const afterSecond = await RealEstateCompany.findById(company._id);
 
     const memberSum = afterSecond.members.reduce((s, m) => s + m.shares, 0);
@@ -100,7 +98,7 @@ describe('Ownership Lifecycle', () => {
     expect(afterSecond.shares.totalShares).toBe(1000);
   });
 
-  // ─── 3. MEMBER LEAVES → SHARES RETURN TO TREASURY ─────────────
+  // â”€â”€â”€ 3. MEMBER LEAVES â†’ SHARES RETURN TO TREASURY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   it('returns shares to treasury when a member leaves', async () => {
     const founder = await createFounder();
@@ -123,13 +121,13 @@ describe('Ownership Lifecycle', () => {
     expect(afterLeave.shares.totalShares).toBe(1000);
   });
 
-  // ─── 4. CEO LEAVES / SUCCESSION ───────────────────────────────
+  // â”€â”€â”€ 4. CEO LEAVES / SUCCESSION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   it('transfers CEO role correctly on CEO leave, shares go to treasury', async () => {
     const founder = await createFounder();
     const company = await createCompany(founder, hqCityId);
     const member1 = await addMember(company._id, founder.token);
-    const member2 = await addMember(company._id, founder.token);
+    await addMember(company._id, founder.token);
 
     const before = await RealEstateCompany.findById(company._id);
     const founderShares = before.members.find((m) => m.userId.toString() === founder.user._id.toString())?.shares || 0;
@@ -148,7 +146,7 @@ describe('Ownership Lifecycle', () => {
     expect(after.shares.totalShares).toBe(1000);
   });
 
-  // ─── 5. IPO OWNERSHIP DISTRIBUTION ─────────────────────────────
+  // â”€â”€â”€ 5. IPO OWNERSHIP DISTRIBUTION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   it('distributes IPO shares: CEO 51% locked, members 19%, public 30%', async () => {
     const founder = await createFounder({ balance: 1_000_000_000, level: 30 });
@@ -252,7 +250,7 @@ describe('Ownership Lifecycle', () => {
 
     const stockCompany = await Company.findById(ipoRes.body.stockCompany._id);
 
-    // The member tries to buy shares in their own company — should be rejected
+    // The member tries to buy shares in their own company â€” should be rejected
     const buyRes = await request(app)
       .post('/stocks/buy')
       .set(authHeader(member.token))
@@ -295,7 +293,7 @@ describe('Ownership Lifecycle', () => {
     const heldByInsiders = stockCompany.totalSharesHeld;
     const floatShares = totalShares - heldByInsiders;
 
-    // Try to buy more than available float — should be capped
+    // Try to buy more than available float â€” should be capped
     const buyer = await createAuthenticatedUser({ balance: 10_000_000_000 });
     const buyRes = await request(app)
       .post('/stocks/buy')
@@ -304,7 +302,7 @@ describe('Ownership Lifecycle', () => {
     expect(buyRes.status).toBe(400);
     expect(buyRes.body.error).toContain('Only');
 
-    // Try to buy exact float amount — should succeed
+    // Try to buy exact float amount â€” should succeed
     if (floatShares > 0) {
       const buyRes2 = await request(app)
         .post('/stocks/buy')
@@ -346,7 +344,7 @@ describe('Ownership Lifecycle', () => {
 
     const stockCompany = await Company.findById(ipoRes.body.stockCompany._id);
 
-    // CEO tries to sell locked shares — should be rejected
+    // CEO tries to sell locked shares â€” should be rejected
     const sellRes = await request(app)
       .post('/stocks/sell')
       .set(authHeader(founder.token))
@@ -355,7 +353,7 @@ describe('Ownership Lifecycle', () => {
     expect(sellRes.body.error).toContain('locked');
   });
 
-  // ─── 6. SECONDARY OFFERING ─────────────────────────────────────
+  // â”€â”€â”€ 6. SECONDARY OFFERING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   it('handles secondary offering with CEO protection', async () => {
     const founder = await createFounder({ balance: 1_000_000_000, level: 30 });
@@ -494,7 +492,7 @@ describe('Ownership Lifecycle', () => {
     expect(offeringRes.body.error).toContain('must be publicly listed');
   });
 
-  // ─── 7. EDGE CASES ─────────────────────────────────────────────
+  // â”€â”€â”€ 7. EDGE CASES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   it('handles treasury shares reaching zero when members join', async () => {
     const founder = await createFounder();
@@ -505,7 +503,6 @@ describe('Ownership Lifecycle', () => {
     reCompany.maxMembers = 50;
     await reCompany.save();
 
-    const initialTreasury = 300;
     let added = 0;
     for (let i = 0; i < 20; i++) {
       try {

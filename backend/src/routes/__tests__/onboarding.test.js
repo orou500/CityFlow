@@ -121,7 +121,7 @@ describe('Progressive onboarding', () => {
   });
 
   it('migrates high-level players who never finished the old onboarding', async () => {
-    const { user, token } = await makeUser('nolessons', {
+    const { token } = await makeUser('nolessons', {
       level: 12,
       xp: 0,
       xpToNextLevel: getXpForLevel(12),

@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { config } from '../config/index.js';

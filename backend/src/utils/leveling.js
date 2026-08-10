@@ -1,9 +1,6 @@
 import { enqueueNotification } from '../utils/notificationQueue.js';
 import { notifyOnboardingUnlocks } from './onboarding.js';
 
-const XP_BASE = 100;
-const XP_GROWTH = 1.5;
-
 export function getXpForLevel(level) {
   return Math.round(100 * Math.pow(1.5, level - 1));
 }
@@ -18,7 +15,7 @@ export function getLevelFromXp(totalXp) {
   return { level, xpInCurrentLevel: xpRemaining, xpToNextLevel: getXpForLevel(level) };
 }
 
-export async function awardXp(user, xpAmount, action) {
+export async function awardXp(user, xpAmount, _action) {
   user.xp += xpAmount;
 
   let levelUps = 0;

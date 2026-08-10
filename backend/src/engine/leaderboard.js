@@ -727,7 +727,6 @@ export async function updateCompetitiveEventProgress(tickNumber) {
     endTick: { $gt: tickNumber },
   });
 
-  let updatedCount = 0;
   for (const event of events) {
     if (tickNumber - event.lastSnapshotTick < event.snapshotInterval) continue;
 
@@ -767,7 +766,6 @@ export async function updateCompetitiveEventProgress(tickNumber) {
       });
       event.lastSnapshotTick = tickNumber;
       await event.save();
-      updatedCount++;
     } catch (err) {
       console.error(`[LEADERBOARD] Error updating event ${event.name}:`, err.message);
     }

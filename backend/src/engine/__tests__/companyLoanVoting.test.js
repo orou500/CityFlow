@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import mongoose from 'mongoose';
 import RealEstateCompany from '../../models/RealEstateCompany.js';
 import Loan from '../../models/Loan.js';
 import User from '../../models/User.js';
@@ -343,7 +342,7 @@ describe('Company Loan Voting - Tick-Based Timing', () => {
       });
 
       const currentTick = 104;
-      const result = await processCompanyLoanRequests(currentTick);
+      await processCompanyLoanRequests(currentTick);
 
       const updatedCompany = await RealEstateCompany.findById(company._id);
       expect(updatedCompany.loanRequests[0].status).toBe('rejected');

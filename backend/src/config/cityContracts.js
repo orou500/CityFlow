@@ -259,7 +259,7 @@ export function getGrowthMultiplier(city) {
   return Math.max(0.8, Math.min(1.3, 1 + growth * 10));
 }
 
-export function generateContractForCity(company, city, tickNumber, options = {}) {
+export function generateContractForCity(company, city, tickNumber, _options = {}) {
   const level = company.level || 1;
   const availableTypes = getContractTypesForLevel(level);
   if (availableTypes.length === 0) return null;

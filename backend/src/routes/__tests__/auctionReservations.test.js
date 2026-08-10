@@ -1,5 +1,4 @@
-import { describe, it, expect, beforeEach, afterAll } from 'vitest';
-import mongoose from 'mongoose';
+﻿import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../../test/createApp.js';
 import { createAuthenticatedUser, createTestCity, authHeader } from '../../test/helpers.js';
@@ -103,7 +102,7 @@ describe('Auction bid money reservation', () => {
 
   it('rejects a bid when funds are tied up in another reservation', async () => {
     const city = await createTestCity({ propertyCount: 200 });
-    const { user, token } = await makeUser('tied', 100000);
+    const { token } = await makeUser('tied', 100000);
     const auctionA = await makeAuction({ city });
     const auctionB = await makeAuction({ city });
 
@@ -153,7 +152,7 @@ describe('Auction bid money reservation', () => {
     const { token: tokenB } = await makeUser('simB', 100000);
     const auction = await makeAuction({ city });
 
-    const [resA, resB] = await Promise.all([
+    await Promise.all([
       request(app).post(`/auctions/${auction._id}/bid`).set(authHeader(tokenA)).send({ amount: 40000 }),
       request(app).post(`/auctions/${auction._id}/bid`).set(authHeader(tokenB)).send({ amount: 45000 }),
     ]);

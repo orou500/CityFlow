@@ -77,7 +77,6 @@ describe('Full Progression Pipeline', () => {
     });
 
     it('awards XP via processPlayerProgress (skipXp false)', async () => {
-      const balanceBefore = user.balance;
       const result = await processPlayerProgress(user._id, 'property_buy');
       expect(result.xpResult).toBeDefined();
 

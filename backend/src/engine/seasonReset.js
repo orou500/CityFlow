@@ -662,8 +662,8 @@ export async function resetWorld() {
 
   // ── Phase 2: Liquidate Real Estate Companies ───────────────
   // Payouts are added to user balances before net worth calculation
-  const reResult = await liquidateRealEstateCompanies();
-  const ipoResult = await liquidatePublicCompanies();
+  await liquidateRealEstateCompanies();
+  await liquidatePublicCompanies();
 
   // ── Phase 3: Calculate stock/index holdings value ──────────
   const stockHoldings = await StockHolding.find().populate('companyId', 'sharePrice');

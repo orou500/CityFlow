@@ -15,7 +15,6 @@ import {
   PRESTIGE_REQUIREMENT_LEVEL,
   MAX_PRESTIGE,
 } from '../config/achievements.js';
-import { getLevelFromXp } from '../utils/leveling.js';
 import { emitToUser } from '../socket/index.js';
 import { SOCKET_EVENTS } from '../socket/events.js';
 import { cacheDel } from '../utils/cache.js';
@@ -131,7 +130,7 @@ async function evaluateAchievementCondition(user, condition) {
   }
 }
 
-export async function checkAndAwardAchievements(userId, triggerType) {
+export async function checkAndAwardAchievements(userId, _triggerType) {
   const user = await User.findById(userId);
   if (!user) return [];
 

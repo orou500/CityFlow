@@ -3,13 +3,10 @@ import request from 'supertest';
 import { createApp } from '../../test/createApp.js';
 import { createAuthenticatedUser, createTestProperty, createTestCity, authHeader } from '../../test/helpers.js';
 import RealEstateCompany from '../../models/RealEstateCompany.js';
-import Company from '../../models/Company.js';
-import User from '../../models/User.js';
 import GameState from '../../models/GameState.js';
 import Property from '../../models/Property.js';
 import Notification from '../../models/Notification.js';
 import ConstructionProject from '../../models/ConstructionProject.js';
-import Loan from '../../models/Loan.js';
 import { xpRequiredForLevel } from '../../config/companyProgression.js';
 
 const app = createApp();
@@ -31,7 +28,7 @@ async function createFounder(overrides = {}) {
 }
 
 async function createTestCompany(founderData, overrides = {}) {
-  const { user, token } = founderData;
+  const { token } = founderData;
   if (!overrides.hqCityId) {
     const city = await createTestCity();
     overrides.hqCityId = city._id;
@@ -650,7 +647,6 @@ describe('Real Estate Companies', () => {
       it('executes upgrade on majority vote', async () => {
         const { company, token, memberToken, apartment } = await setupCompanyWithProperty();
         const oldPrice = apartment.currentPrice;
-        const oldRent = apartment.rent;
 
         await request(app)
           .post(`/real-estate-companies/${company._id}/development-requests`)
@@ -948,7 +944,7 @@ describe('Real Estate Companies', () => {
       });
 
       it('rejects non-members from listing', async () => {
-        const { company, apartment } = await setupCompanyWithProperty();
+        const { company } = await setupCompanyWithProperty();
         const outsider = await createAuthenticatedUser();
 
         const res = await request(app)
@@ -996,40 +992,6 @@ describe('Real Estate Companies', () => {
   });
 
   describe('POST /real-estate-companies/:id/ipo', () => {
-    async function createCompanyForIpo() {
-      const founder = await createFounder({ balance: 200_000_000, level: 30 });
-      const { company: testCompany, token: founderToken } = await createTestCompany(founder);
-
-      testCompany.level = 25;
-      testCompany.treasury.balance = 100_000_000;
-      testCompany.reputation = 60;
-      testCompany.stats = testCompany.stats || {};
-      testCompany.stats.totalRentalIncome = 5_000_000;
-      testCompany.stats.propertiesOwned = 25;
-      await testCompany.save();
-
-      const properties = [];
-      for (let i = 0; i < 25; i++) {
-        const p = await createTestProperty({
-          ownerId: founder.user._id,
-          companyId: testCompany._id,
-          currentPrice: 10_000_000 + i * 1_000_000,
-        });
-        properties.push(p);
-      }
-
-      for (let i = 0; i < 9; i++) {
-        const { user: m } = await createAuthenticatedUser();
-        await addMemberToCompany(testCompany._id, founderToken, {
-          user: m,
-          token: (await createAuthenticatedUser()).token,
-        });
-      }
-      await addMemberToCompany(testCompany._id, founderToken, { user: founder.user, token: founderToken });
-
-      return { founder, company: testCompany, token: founderToken, properties };
-    }
-
     it('rejects IPO when ceo not calling', async () => {
       const founder = await createFounder({ balance: 200_000_000, level: 30 });
       const { token: memberToken } = await createAuthenticatedUser();

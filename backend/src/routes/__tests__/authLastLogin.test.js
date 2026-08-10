@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../../test/createApp.js';
-import { createAuthenticatedUser, authHeader, generateToken } from '../../test/helpers.js';
+import { createAuthenticatedUser, authHeader } from '../../test/helpers.js';
 import User from '../../models/User.js';
 
 const app = createApp();
@@ -52,7 +52,7 @@ describe('lastLoginAt tracking', () => {
   });
 
   it('is returned to the user themselves via /users/me', async () => {
-    const { user, token } = await createAuthenticatedUser({ lastLoginAt: new Date('2026-01-01T00:00:00Z') });
+    const { token } = await createAuthenticatedUser({ lastLoginAt: new Date('2026-01-01T00:00:00Z') });
     const res = await request(app).get('/users/me').set(authHeader(token));
     expect(res.status).toBe(200);
     expect(res.body.user.lastLoginAt).toBeDefined();

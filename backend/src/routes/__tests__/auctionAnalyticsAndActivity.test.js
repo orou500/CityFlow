@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterAll } from 'vitest';
+﻿import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../../test/createApp.js';
 import { createAuthenticatedUser, createTestCity, authHeader } from '../../test/helpers.js';
@@ -12,7 +12,7 @@ import Transaction from '../../models/Transaction.js';
 import MissionProgress from '../../models/MissionProgress.js';
 import CompanyAuditLog from '../../models/CompanyAuditLog.js';
 import RealEstateCompany from '../../models/RealEstateCompany.js';
-import { cacheGet, cacheDelPattern } from '../../utils/cache.js';
+import { cacheDelPattern } from '../../utils/cache.js';
 
 const app = createApp();
 
@@ -80,7 +80,7 @@ afterAll(async () => {
 describe('GET /auctions/my/analytics', () => {
   it('returns the authenticated user auction stats', async () => {
     const city = await createTestCity({ propertyCount: 200 });
-    const { user, token } = await makeUser('analyst');
+    const { token } = await makeUser('analyst');
     const auction = await makeAuction({ city });
     // watch it first (bidding auto-watches, which would otherwise toggle it off)
     await request(app).post(`/auctions/${auction._id}/watch`).set(authHeader(token));
@@ -122,7 +122,7 @@ describe('GET /auctions/my/analytics', () => {
 
   it('reflects wins after settlement', async () => {
     const city = await createTestCity({ propertyCount: 200 });
-    const { user, token } = await makeUser('settleStats', 100000);
+    const { token } = await makeUser('settleStats', 100000);
     const auction = await makeAuction({ city, endTick: 15 });
     await request(app).post(`/auctions/${auction._id}/bid`).set(authHeader(token)).send({ amount: 40000 });
 
@@ -144,7 +144,7 @@ describe('GET /auctions/my/analytics', () => {
   });
 });
 
-describe('GET /stats — global activity feed', () => {
+describe('GET /stats â€” global activity feed', () => {
   it('only includes real player activity (no system/$0/penalty/login)', async () => {
     const { user } = await createAuthenticatedUser();
     const city = await createTestCity();
