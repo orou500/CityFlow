@@ -79,6 +79,30 @@ export function calculateMonthlyProfit(rentIncome, maintenanceLevel, propertyVal
   };
 }
 
+/**
+ * Single source of truth for a property's effective (occupancy-adjusted)
+ * rent income per tick.
+ *
+ * - Explicit per-unit rent (property.rentPerUnit, set by the player via the
+ *   management panel) takes precedence.
+ * - For buildings with units, the gross rent is the sum of unit rents.
+ * - Otherwise the property's gross rent field is used.
+ *
+ * The result is occupancy-adjusted so displayed income, accrued rent and
+ * maintenance all use the same number.
+ */
+export function calculatePropertyRentIncome(property) {
+  const unitCount = property.units?.length || 1;
+  let grossRent = property.rent || 0;
+  if (property.rentPerUnit) {
+    grossRent = property.rentPerUnit * unitCount;
+  } else if (property.units?.length > 0) {
+    grossRent = property.units.reduce((sum, u) => sum + (u.rentPrice || 0), 0);
+  }
+  const occupancy = Math.max(0, Math.min(100, property.occupancy || 0));
+  return Math.round((grossRent * occupancy) / 100);
+}
+
 export function calculateQualityScore(property) {
   const conditionScore = (property.condition || 50) * QUALITY_WEIGHTS.condition;
 

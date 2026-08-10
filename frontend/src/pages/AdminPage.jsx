@@ -31,6 +31,7 @@ function TabButton({ active, onClick, children }) {
 
 function Table({ headers, rows, renderRow, sortKey, sortDir, onSort }) {
   const { t } = useTranslation();
+  const safeRows = Array.isArray(rows) ? rows : [];
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm text-left">
@@ -53,14 +54,14 @@ function Table({ headers, rows, renderRow, sortKey, sortDir, onSort }) {
           </tr>
         </thead>
         <tbody>
-          {rows.length === 0 ? (
+          {safeRows.length === 0 ? (
             <tr>
               <td colSpan={headers.length} className="px-3 py-8 text-center text-gray-400 dark:text-gray-500">
                 {t('admin.noData')}
               </td>
             </tr>
           ) : (
-            rows.map((row, i) => (
+            safeRows.map((row, i) => (
               <tr
                 key={row._id || i}
                 className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
@@ -1222,7 +1223,7 @@ export default function AdminPage() {
           })()}
 
           {(() => {
-            if (adminDeletedUsers.length === 0) return null;
+            if (!Array.isArray(adminDeletedUsers) || adminDeletedUsers.length === 0) return null;
             return (
               <div className="mt-6">
                 <h3 className="text-sm font-semibold text-red-600 dark:text-red-400 mb-3">

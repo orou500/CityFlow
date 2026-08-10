@@ -205,18 +205,19 @@ export const useGameStore = create((set, get) => ({
     });
     const query = qs.toString() ? `?${qs.toString()}` : '';
     const data = await api(`/admin/users${query}`);
+    const users = Array.isArray(data) ? data : Array.isArray(data?.users) ? data.users : [];
     set({
-      adminUsers: data.users || [],
-      adminUsersTotal: data.total || 0,
-      adminUsersPage: data.page || 1,
-      adminUsersTotalPages: data.totalPages || 0,
+      adminUsers: users,
+      adminUsersTotal: Array.isArray(data) ? users.length : data?.total || 0,
+      adminUsersPage: Array.isArray(data) ? 1 : data?.page || 1,
+      adminUsersTotalPages: Array.isArray(data) ? Math.max(1, Math.ceil(users.length / 25)) : data?.totalPages || 1,
     });
     return data;
   },
 
   fetchAdminDeletedUsers: async () => {
     const data = await api('/admin/users?deleted=true&limit=100&page=1');
-    set({ adminDeletedUsers: data.users || [] });
+    set({ adminDeletedUsers: Array.isArray(data) ? data : Array.isArray(data?.users) ? data.users : [] });
     return data;
   },
 

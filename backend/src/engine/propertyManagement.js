@@ -2,6 +2,7 @@ import Property from '../models/Property.js';
 import User from '../models/User.js';
 import {
   calculateMonthlyProfit,
+  calculatePropertyRentIncome,
   calculateQualityScore,
   simulateOccupancy,
   HISTORY_MAX_ENTRIES,
@@ -44,13 +45,12 @@ export async function processPropertyManagement(currentTick) {
 
       property.qualityScore = calculateQualityScore(property);
 
-      const unitCount = property.units?.length || 1;
-      const perUnitRent = property.rentPerUnit || property.rent / Math.max(1, unitCount);
-      const actualRentIncome = Math.round(perUnitRent * unitCount * (newOccupancy / 100));
+      // Effective income for display/history/maintenance. property.rent is
+      // deliberately NOT overwritten here — it stays the stable gross rent,
+      // so income never compounds down tick after tick.
+      const actualRentIncome = calculatePropertyRentIncome(property);
 
       const profit = calculateMonthlyProfit(actualRentIncome, property.maintenanceLevel, property.currentPrice);
-
-      property.rent = actualRentIncome;
 
       const historyEntry = {
         tick: currentTick,

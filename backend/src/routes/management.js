@@ -155,6 +155,12 @@ router.post('/:propertyId/rent', authenticate, async (req, res) => {
     }
 
     property.rentPerUnit = Math.round(rentPerUnit);
+    // Keep unit rents in sync so the rent engine accrues the adjusted amount
+    if (property.units && property.units.length > 0) {
+      for (const unit of property.units) {
+        unit.rentPrice = Math.round(rentPerUnit);
+      }
+    }
     property.lastRentAdjustTick = currentTick;
     await property.save();
 
