@@ -799,9 +799,6 @@ export default function DevelopmentPage() {
                                 <span className="ml-1 text-xs text-gray-400 dark:text-gray-500">Lv.{u.level}</span>
                               )}
                             </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                              {t(`development.${u.type}Desc`)}
-                            </p>
                           </div>
                           <div className="text-right">
                             <p className="font-semibold text-gray-900 dark:text-white text-sm">

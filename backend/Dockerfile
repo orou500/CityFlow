@@ -1,9 +1,9 @@
-FROM --platform=$BUILDPLATFORM node:20-alpine AS deps
+FROM --platform=$BUILDPLATFORM node:22-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts
 
-FROM node:20-alpine
+FROM node:22-alpine
 RUN apk add --no-cache tini curl python3 make g++ && \
     addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
