@@ -864,6 +864,106 @@
     "searchCompanies": "Search companies..."
   },
   "onboarding": {
+    "progressive": {
+      "unlocked": "New System Unlocked",
+      "levelReached": "You reached Level {{level}}",
+      "explore": "Explore",
+      "gotIt": "Got It",
+      "close": "Close"
+    },
+    "systems": {
+      "properties": {
+        "title": "Properties",
+        "description": "Buy and rent properties to start growing your empire!",
+        "step1": "Browse cities and buy properties from the marketplace",
+        "step2": "Your properties earn rent every 6 hours — collect it from your dashboard",
+        "step3": "Track your net worth, portfolio and transactions on your dashboard"
+      },
+      "management": {
+        "title": "Property Management",
+        "description": "Take control of your properties' income.",
+        "step1": "Adjust rent per unit to match the market rate",
+        "step2": "Set a maintenance level to improve occupancy — at a cost"
+      },
+      "development": {
+        "title": "Development & Upgrades",
+        "description": "Build and improve your properties for higher value and rent.",
+        "step1": "Buy land and start construction projects",
+        "step2": "Upgrade buildings with renovations, security and more",
+        "step3": "Start improvements to boost value, rent and property rating"
+      },
+      "auctions": {
+        "title": "Auctions",
+        "description": "Compete with other players for valuable properties at auction!",
+        "step1": "Place bids — your funds are reserved until the auction ends",
+        "step2": "Watch the countdown; last-minute bids may extend the auction",
+        "step3": "Win the auction to buy the property; outbid players get their funds back",
+        "step4": "Bank auctions sell bank properties; player auctions sell other investors' properties"
+      },
+      "marketplace": {
+        "title": "Marketplace",
+        "description": "Buy and sell properties with other players.",
+        "step1": "Browse player listings and bank properties",
+        "step2": "Make offers on player properties or sell your own for a profit"
+      },
+      "banking": {
+        "title": "Banking & Loans",
+        "description": "Borrow capital and build your credit score.",
+        "step1": "Take loans up to 70% of your net worth",
+        "step2": "Make monthly payments to build your credit score",
+        "step3": "Missed payments cause penalties and risk repossession"
+      },
+      "missions": {
+        "title": "Missions",
+        "description": "Complete missions to earn rewards and guide your progress.",
+        "step1": "Daily, weekly and progression missions with cash and XP rewards",
+        "step2": "Collect rewards from your missions page when complete"
+      },
+      "career": {
+        "title": "Career & Achievements",
+        "description": "Track your achievements, titles and prestige.",
+        "step1": "Unlock achievements as you play",
+        "step2": "Earn titles and prestige levels to show off your progress"
+      },
+      "companies": {
+        "title": "Real Estate Companies",
+        "description": "Found or join a company to cooperate with other players.",
+        "step1": "Create a company or apply to join one",
+        "step2": "Vote on loans, property purchases and investments",
+        "step3": "Share treasury, contracts and profits with your members"
+      },
+      "stocks": {
+        "title": "Stock Market",
+        "description": "Invest in companies and earn dividends.",
+        "step1": "Buy shares in auto-generated companies",
+        "step2": "Hold shares to receive dividend payments",
+        "step3": "Sell for a profit or invest in public (IPO) companies"
+      },
+      "marketIntelligence": {
+        "title": "Market Intelligence",
+        "description": "Buy market reports and forecasts to make smarter investments.",
+        "step1": "Purchase city and district market reports",
+        "step2": "Use forecasts and risk assessments to time your trades"
+      },
+      "districts": {
+        "title": "Districts",
+        "description": "Compete for influence in city districts.",
+        "step1": "Own properties and develop them to gain district influence",
+        "step2": "Become the district leader for prestige and rewards"
+      },
+      "contracts": {
+        "title": "City Contracts",
+        "description": "Complete city contracts with your company for big rewards.",
+        "step1": "Propose contracts with city officials through your company",
+        "step2": "Vote with your members and complete projects to earn rewards"
+      },
+      "ipo": {
+        "title": "Public Companies (IPO)",
+        "description": "Take your company public and trade its shares.",
+        "step1": "Reach level 15 with a strong company to launch an IPO",
+        "step2": "Trade shares on the stock market and pay dividends to shareholders"
+      }
+    },
     "welcome": {
       "title": "Welcome to CityFlow! 🌍",
       "description": "Build a global real estate empire across 18 cities worldwide.\n\nBuy and develop properties, take loans from the bank, trade with other players, and climb the leaderboard.\n\nThe world evolves every month — prices shift, events unfold, and new opportunities appear.\n\nReady to become a property tycoon?",
@@ -1026,6 +1126,16 @@
       "loan": "{{buyer}} took a loan of {{amount}}",
       "loanRepay": "{{buyer}} repaid a loan of {{amount}}",
       "seasonReward": "{{buyer}} received {{amount}} as a season reward",
+      "auctionWon": "{{buyer}} won an auction for {{property}} at {{amount}}",
+      "missionCompleted": "{{buyer}} completed the mission \"{{mission}}\"",
+      "companyAction": "{{buyer}} {{action}} {{company}}",
+      "companyActions": {
+        "company_created": "founded",
+        "ipo_listed": "took public",
+        "milestone_completed": "reached a milestone with",
+        "contract_completed": "completed a contract with",
+        "employees_hired": "hired employees at"
+      },
       "default": "{{property}} was transacted for {{amount}}"
     },
     "cta": {

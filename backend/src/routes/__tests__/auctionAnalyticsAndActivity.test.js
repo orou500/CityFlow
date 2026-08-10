@@ -9,6 +9,9 @@ import Auction from '../../models/Auction.js';
 import AuctionReservation from '../../models/AuctionReservation.js';
 import AuctionReputation from '../../models/AuctionReputation.js';
 import Transaction from '../../models/Transaction.js';
+import MissionProgress from '../../models/MissionProgress.js';
+import CompanyAuditLog from '../../models/CompanyAuditLog.js';
+import RealEstateCompany from '../../models/RealEstateCompany.js';
 import { cacheGet, cacheDelPattern } from '../../utils/cache.js';
 
 const app = createApp();
@@ -55,6 +58,9 @@ beforeEach(async () => {
   await AuctionReservation.deleteMany({});
   await AuctionReputation.deleteMany({});
   await Transaction.deleteMany({});
+  await MissionProgress.deleteMany({});
+  await CompanyAuditLog.deleteMany({});
+  await RealEstateCompany.deleteMany({});
   await cacheDelPattern('cf:auctions:my-analytics:*');
 });
 
@@ -66,6 +72,9 @@ afterAll(async () => {
   await AuctionReservation.deleteMany({});
   await AuctionReputation.deleteMany({});
   await Transaction.deleteMany({});
+  await MissionProgress.deleteMany({});
+  await CompanyAuditLog.deleteMany({});
+  await RealEstateCompany.deleteMany({});
 });
 
 describe('GET /auctions/my/analytics', () => {
@@ -157,19 +166,75 @@ describe('GET /stats — global activity feed', () => {
     await Transaction.create({ buyerId: user._id, price: 30000, type: 'loan_payment' }); // excluded: bookkeeping
     await Transaction.create({ buyerId: user._id, price: 25000, type: 'rent' }); // included
 
+    // auction win (player activity)
+    await Auction.create({
+      propertyId: property._id,
+      sellerId: null,
+      sellerType: 'bank',
+      auctionType: 'standard',
+      startingBid: 1000,
+      currentBid: 60000,
+      currentBidderId: user._id,
+      winnerId: user._id,
+      winningBid: 60000,
+      bidIncrement: 100,
+      status: 'ended',
+      startTick: 1,
+      endTick: 10,
+      originalEndTick: 10,
+      totalBids: 1,
+      bids: [],
+      activity: [],
+      watchers: [],
+    });
+
+    // mission completion (player activity)
+    await MissionProgress.create({
+      userId: user._id,
+      missionId: 'first_property',
+      status: 'completed',
+      progress: 1,
+      target: 1,
+      completedAt: new Date(),
+    });
+
+    // company creation (player activity)
+    const company = await RealEstateCompany.create({
+      name: 'Feed Co',
+      founderId: user._id,
+      members: [{ userId: user._id, role: 'ceo', shares: 1000 }],
+      treasury: { balance: 0, transactions: [] },
+      active: true,
+      level: 1,
+      foundedTick: 0,
+    });
+    await CompanyAuditLog.create({ companyId: company._id, userId: user._id, action: 'company_created' });
+
     const res = await request(app).get('/stats');
     expect(res.status).toBe(200);
     const types = res.body.recentActivity.map((t) => t.type);
     expect(types).toContain('buy');
     expect(types).toContain('sell');
     expect(types).toContain('rent');
+    expect(types).toContain('auction_won');
+    expect(types).toContain('mission_completed');
+    expect(types).toContain('company_event');
     expect(types).not.toContain('login');
     expect(types).not.toContain('repossess');
     expect(types).not.toContain('penalty');
     expect(types).not.toContain('loan_payment');
     for (const tx of res.body.recentActivity) {
-      expect(tx.price).toBeGreaterThan(0);
-      expect(tx.buyerId || tx.sellerId).toBeTruthy();
+      if (tx.type === 'buy' || tx.type === 'sell' || tx.type === 'rent') {
+        expect(tx.price).toBeGreaterThan(0);
+        expect(tx.buyerId || tx.sellerId).toBeTruthy();
+      }
     }
+
+    const auctionEntry = res.body.recentActivity.find((a) => a.type === 'auction_won');
+    expect(auctionEntry.price).toBe(60000);
+    const missionEntry = res.body.recentActivity.find((a) => a.type === 'mission_completed');
+    expect(missionEntry.missionName).toBeDefined();
+    const companyEntry = res.body.recentActivity.find((a) => a.type === 'company_event');
+    expect(companyEntry.company?.name).toBe('Feed Co');
   });
 });

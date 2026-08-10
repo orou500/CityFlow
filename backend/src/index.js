@@ -41,6 +41,7 @@ import districtRoutes from './routes/districts.js';
 import marketIntelligenceRoutes from './routes/marketIntelligence.js';
 import auctionRoutes from './routes/auctions.js';
 import missionRoutes from './routes/missions.js';
+import onboardingRoutes from './routes/onboarding.js';
 import careerRoutes from './routes/career.js';
 import { maintenanceCheck } from './middleware/maintenance.js';
 import { getMaintenanceInfo, getTickNumber } from './models/GameState.js';
@@ -168,6 +169,7 @@ app.use('/districts', districtRoutes);
 app.use('/market-intelligence', marketIntelligenceRoutes);
 app.use('/auctions', auctionRoutes);
 app.use('/missions', missionRoutes);
+app.use('/onboarding', onboardingRoutes);
 app.use('/career', careerRoutes);
 
 app.use((req, res) => {

@@ -25,6 +25,8 @@ const userSchema = new mongoose.Schema(
       completed: { type: Boolean, default: false },
       completedAt: { type: Date, default: null },
     },
+    completedOnboarding: [{ type: String }],
+    onboardingV2Seen: { type: Boolean, default: false },
     avatar: { type: String, default: '' },
     bio: { type: String, default: '', maxlength: 500 },
     displayName: { type: String, default: '', maxlength: 50 },

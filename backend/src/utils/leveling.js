@@ -1,4 +1,5 @@
 import { enqueueNotification } from '../utils/notificationQueue.js';
+import { notifyOnboardingUnlocks } from './onboarding.js';
 
 const XP_BASE = 100;
 const XP_GROWTH = 1.5;
@@ -45,6 +46,8 @@ export async function awardXp(user, xpAmount, action) {
       entityId: user._id,
       global: false,
     });
+
+    await notifyOnboardingUnlocks(user);
   } else {
     await user.save();
   }

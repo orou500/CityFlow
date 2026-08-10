@@ -3,8 +3,12 @@ import User from '../models/User.js';
 import Property from '../models/Property.js';
 import City from '../models/City.js';
 import Transaction from '../models/Transaction.js';
+import Auction from '../models/Auction.js';
+import MissionProgress from '../models/MissionProgress.js';
+import CompanyAuditLog from '../models/CompanyAuditLog.js';
 import { cacheGetOrSet } from '../utils/cache.js';
 import { cacheKeys } from '../utils/cacheKeys.js';
+import { getMissionById } from '../config/missions.js';
 
 const router = Router();
 
@@ -29,6 +33,15 @@ const PLAYER_ACTIVITY_TYPES = [
   'season_reward',
 ];
 
+/** Major company actions worth showing in the community feed. */
+const COMPANY_ACTIVITY_ACTIONS = [
+  'company_created',
+  'ipo_listed',
+  'milestone_completed',
+  'contract_completed',
+  'employees_hired',
+];
+
 router.get('/', async (req, res) => {
   try {
     const data = await cacheGetOrSet(
@@ -50,19 +63,91 @@ router.get('/', async (req, res) => {
           { $project: { username: 1, displayName: 1, avatar: 1, netWorth: 1, balance: 1 } },
         ]);
 
-        // Only real player activity: a meaningful transaction type, a
-        // non-zero amount, and at least one real player actor (bank/system
-        // transfers have no buyerId/sellerId).
-        const recentActivity = await Transaction.find({
-          type: { $in: PLAYER_ACTIVITY_TYPES },
-          price: { $gt: 0 },
-          $or: [{ buyerId: { $ne: null } }, { sellerId: { $ne: null } }],
-        })
-          .sort({ createdAt: -1 })
-          .limit(10)
-          .populate('propertyId', 'name cityId')
-          .populate('buyerId', 'username displayName')
-          .populate('sellerId', 'username displayName');
+        // ── Global Activity: real players only ────────────────────────
+        // Meaningful transaction types, non-zero amounts, at least one real
+        // player actor (bank/system transfers have no buyerId/sellerId).
+        const [playerTxs, auctionWins, missionCompletions, companyEvents] = await Promise.all([
+          Transaction.find({
+            type: { $in: PLAYER_ACTIVITY_TYPES },
+            price: { $gt: 0 },
+            $or: [{ buyerId: { $ne: null } }, { sellerId: { $ne: null } }],
+          })
+            .sort({ createdAt: -1 })
+            .limit(8)
+            .populate('propertyId', 'name cityId')
+            .populate('buyerId', 'username displayName')
+            .populate('sellerId', 'username displayName')
+            .lean(),
+          Auction.find({ status: 'ended', winnerId: { $ne: null }, winningBid: { $gt: 0 } })
+            .sort({ updatedAt: -1 })
+            .limit(4)
+            .populate('winnerId', 'username displayName')
+            .populate('propertyId', 'name cityId')
+            .lean(),
+          MissionProgress.find({ status: 'completed', completedAt: { $ne: null } })
+            .sort({ completedAt: -1 })
+            .limit(4)
+            .populate('userId', 'username displayName')
+            .lean(),
+          CompanyAuditLog.find({ action: { $in: COMPANY_ACTIVITY_ACTIONS }, userId: { $ne: null } })
+            .sort({ createdAt: -1 })
+            .limit(4)
+            .populate('userId', 'username displayName')
+            .populate('companyId', 'name')
+            .lean(),
+        ]);
+
+        const activities = [];
+
+        for (const tx of playerTxs) {
+          activities.push({
+            _id: tx._id,
+            type: tx.type,
+            createdAt: tx.createdAt,
+            price: tx.price,
+            buyerId: tx.buyerId,
+            sellerId: tx.sellerId,
+            propertyId: tx.propertyId,
+          });
+        }
+
+        for (const a of auctionWins) {
+          activities.push({
+            _id: a._id,
+            type: 'auction_won',
+            createdAt: a.updatedAt || a.createdAt,
+            price: a.winningBid,
+            buyerId: a.winnerId,
+            propertyId: a.propertyId,
+          });
+        }
+
+        for (const m of missionCompletions) {
+          const def = m.missionId ? getMissionById(m.missionId) : null;
+          activities.push({
+            _id: m._id,
+            type: 'mission_completed',
+            createdAt: m.completedAt,
+            price: null,
+            buyerId: m.userId,
+            missionName: def?.name || m.missionId,
+          });
+        }
+
+        for (const e of companyEvents) {
+          activities.push({
+            _id: e._id,
+            type: 'company_event',
+            createdAt: e.createdAt,
+            price: null,
+            buyerId: e.userId,
+            company: e.companyId,
+            companyAction: e.action,
+          });
+        }
+
+        activities.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        const recentActivity = activities.slice(0, 15);
 
         return { playersCount, propertiesCount, citiesCount, transactionsCount, topPlayers, recentActivity };
       },

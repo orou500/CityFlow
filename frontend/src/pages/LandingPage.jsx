@@ -185,6 +185,16 @@ export default function LandingPage() {
         return t('landing.activity.loanRepay', { buyer, amount });
       case 'season_reward':
         return t('landing.activity.seasonReward', { buyer, amount });
+      case 'auction_won':
+        return t('landing.activity.auctionWon', { buyer, property, amount });
+      case 'mission_completed':
+        return t('landing.activity.missionCompleted', { buyer, mission: tx.missionName || 'a mission' });
+      case 'company_event':
+        return t('landing.activity.companyAction', {
+          buyer,
+          company: tx.company?.name || 'a company',
+          action: t(`landing.activity.companyActions.${tx.companyAction}`, { defaultValue: tx.companyAction }),
+        });
       default:
         return t('landing.activity.default', { property, amount });
     }

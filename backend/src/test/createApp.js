@@ -22,6 +22,7 @@ import missionRoutes from '../routes/missions.js';
 import stockRoutes from '../routes/stocks.js';
 import auctionRoutes from '../routes/auctions.js';
 import leaderboardRoutes from '../routes/leaderboards.js';
+import onboardingRoutes from '../routes/onboarding.js';
 
 export function createApp() {
   const app = express();
@@ -50,6 +51,7 @@ export function createApp() {
   app.use('/stocks', stockRoutes);
   app.use('/auctions', auctionRoutes);
   app.use('/leaderboards', leaderboardRoutes);
+  app.use('/onboarding', onboardingRoutes);
 
   app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
