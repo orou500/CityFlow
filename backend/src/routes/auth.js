@@ -141,7 +141,7 @@ router.post('/login', loginLimiter, async (req, res) => {
           .json({ error: 'CityFlow is currently undergoing maintenance. Please check back later.' });
       }
     }
-    await User.updateOne({ _id: user._id }, { $set: { lastLoginAt: new Date() } });
+    await User.updateOne({ _id: user._id }, { $set: { lastLoginAt: new Date(), lastDailyLogin: new Date() } });
     await processPlayerProgress(user._id, 'login');
     await Transaction.create({ buyerId: user._id, price: 0, type: 'login' }).catch(() => {});
 

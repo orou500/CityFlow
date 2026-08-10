@@ -97,6 +97,10 @@ export async function initSocketIO(httpServer) {
 
     await setOnline(userId, socket.id);
 
+    import('../engine/missionProcessing.js')
+      .then(({ markDailyLoginForUser }) => markDailyLoginForUser(userId))
+      .catch((err) => console.warn('[SOCKET.IO] daily login marking failed:', err.message));
+
     if (socket.companyId) {
       socket.join(companyRoom(socket.companyId));
     }

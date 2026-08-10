@@ -34,12 +34,11 @@ router.get('/me', authenticate, async (req, res) => {
     const user = await User.findById(req.user._id);
     const properties = await Property.find({ ownerId: user._id }).populate('cityId');
     const loans = await Loan.find({ userId: user._id, active: true });
-    const transactions = await Transaction.find({
-      $or: [{ buyerId: user._id }, { sellerId: user._id }],
-    })
-      .sort({ createdAt: -1 })
-      .limit(50)
-      .populate('propertyId');
+    const txFilter = { $or: [{ buyerId: user._id }, { sellerId: user._id }] };
+    if (user.companyId) {
+      txFilter.$or.push({ companyId: user.companyId });
+    }
+    const transactions = await Transaction.find(txFilter).sort({ createdAt: -1 }).limit(50).populate('propertyId');
     res.json({ user, properties, loans, transactions });
   } catch (err) {
     res.status(500).json({ error: err.message });
