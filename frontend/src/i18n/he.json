@@ -827,7 +827,7 @@
     "lastLogin": "כניסה אחרונה",
     "never": "אף פעם",
     "viewLogs": "יומנים",
-    "totalUsers": "סה\"כ משתמשים: {{total}}",
+    "totalUsersCount": "סה\"כ משתמשים: {{total}}",
     "pageOf": "עמוד {{page}} מתוך {{total}}",
     "first": "ראשון",
     "last": "אחרון",
