@@ -56,8 +56,7 @@ function ReportCard({ report, onClick }) {
   const { t } = useTranslation();
   const tierStyle = TIER_STYLES[report.tier] || TIER_STYLES.basic;
   const statusStyle = STATUS_STYLES[report.status] || STATUS_STYLES.active;
-  const ticksLeft = Math.max(0, report.expiresAtTick - (report.currentTick || 0));
-
+  const monthsLeft = Math.max(0, report.expiresAtTick - (report.currentTick || 0));
   return (
     <button
       onClick={() => onClick(report)}
@@ -74,7 +73,7 @@ function ReportCard({ report, onClick }) {
           {t(`mi.status.${report.status}`)}
         </span>
         {report.status === 'active' && (
-          <span className="text-xs text-muted">{t('mi.ticksRemaining', { count: ticksLeft })}</span>
+          <span className="text-xs text-muted">{t('mi.monthsRemaining', { count: monthsLeft })}</span>
         )}
         {report.forecastAccuracy != null && (
           <span className="text-xs text-muted">
@@ -369,7 +368,7 @@ function ReportDetail({ report, onClose }) {
           <div className="text-xs text-muted mb-1">{t('mi.forecastAccuracy')}</div>
           <div className="text-2xl font-bold text-blue-400">{report.forecastAccuracy}%</div>
           <div className="text-xs text-muted">
-            {t('mi.evaluationTick')}: {report.evaluationTick}
+            {t('mi.evaluationMonth')}: {report.evaluationTick}
           </div>
         </div>
       )}
@@ -433,7 +432,7 @@ function PurchaseForm({ reportType, tierInfo, cities, selectedCity, onSelectCity
                 <span className="text-primary font-semibold">${cost?.toLocaleString()}</span>
               </div>
               <div className="text-xs text-muted mt-1">
-                {t('mi.accuracy')}: {Math.round(accuracy * 100)}% · {t('mi.ticks.count', { count: duration })}
+                {t('mi.accuracy')}: {Math.round(accuracy * 100)}% · {t('mi.months.count', { count: duration })}
               </div>
             </button>
           );

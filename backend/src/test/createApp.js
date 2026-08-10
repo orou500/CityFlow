@@ -20,6 +20,7 @@ import discordRoutes from '../routes/discord.js';
 import realEstateCompanyRoutes from '../routes/realEstateCompanies.js';
 import missionRoutes from '../routes/missions.js';
 import stockRoutes from '../routes/stocks.js';
+import auctionRoutes from '../routes/auctions.js';
 
 export function createApp() {
   const app = express();
@@ -46,6 +47,7 @@ export function createApp() {
   app.use('/real-estate-companies', realEstateCompanyRoutes);
   app.use('/missions', missionRoutes);
   app.use('/stocks', stockRoutes);
+  app.use('/auctions', auctionRoutes);
 
   app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });

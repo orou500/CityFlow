@@ -424,6 +424,8 @@ export async function processAntiSniping(auction) {
     emitAuctionExtended(auction._id.toString(), {
       newEndTick,
       extension: auction.antiSnipingExtension,
+      currentTick,
+      remainingMonths: Math.max(0, newEndTick - currentTick),
     });
 
     for (const watcherId of auction.watchers) {

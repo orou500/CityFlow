@@ -377,7 +377,7 @@ export default function DistrictPage() {
                               : 'text-red-600 dark:text-red-400'
                           }`}
                         >
-                          {ev.remainingTicks} ticks remaining
+                          {t('districts.eventsRemaining', { count: ev.remainingTicks })}
                         </p>
                       </div>
                       <span
@@ -410,7 +410,7 @@ export default function DistrictPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
-                      <th className="text-left px-3 py-2">Tick</th>
+                      <th className="text-left px-3 py-2">{t('districts.historyTick', 'Month')}</th>
                       <th className="text-left px-3 py-2">{t('districts.avgPrice', 'Avg Price')}</th>
                       <th className="text-left px-3 py-2">{t('districts.demandIndex', 'Demand')}</th>
                       <th className="text-left px-3 py-2">{t('districts.supplyIndex', 'Supply')}</th>
