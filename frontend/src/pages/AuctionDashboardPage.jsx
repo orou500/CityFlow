@@ -6,6 +6,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { formatMoney } from '../utils/format';
 import { useSocket, useSocketEvent } from '../hooks/useSocket';
 import PropertyImage from '../components/PropertyImage';
+import AuctionTimeLeft from '../components/AuctionTimeLeft';
 
 const API = getApiBaseUrl();
 
@@ -74,31 +75,6 @@ const RARITY_STYLES = {
 
 const SELLER_ICONS = { bank: '🏦', player: '👤', event: '🎯' };
 
-function TickCountdown({ endTick, currentTick, status, className }) {
-  const { t } = useTranslation();
-  const ticksLeft = Math.max(0, (endTick || 0) - (currentTick || 0));
-  const isUrgent = status === 'active' && ticksLeft <= 2;
-
-  if (status === 'ended' || status === 'cancelled') {
-    return <span className={className}>{t(`auctions.status.${status}`)}</span>;
-  }
-  if (status === 'ending') {
-    return <span className={`${className} text-purple-400 font-medium`}>⏰ {t('auctions.finalizing')}</span>;
-  }
-  if (status === 'upcoming') {
-    return (
-      <span className={className}>
-        {t('auctions.startsIn', { count: Math.max(0, (endTick || 0) - (currentTick || 0)) })}
-      </span>
-    );
-  }
-  return (
-    <span className={`${className} ${isUrgent ? 'text-red-400 font-bold animate-pulse' : ''}`}>
-      {t('auctions.ticksLeft', { count: ticksLeft })}
-    </span>
-  );
-}
-
 function FeaturedSection({ auctions, onSelect }) {
   const { t } = useTranslation();
   if (!auctions || auctions.length === 0) return null;
@@ -160,10 +136,12 @@ function FeaturedCard({ auction, onClick }) {
         </div>
         <div className="text-right">
           <div className="text-xs text-muted">{t('auctions.timeLeft')}</div>
-          <TickCountdown
+          <AuctionTimeLeft
+            startTick={auction.startTick}
             endTick={auction.endTick}
             currentTick={auction.currentTick}
             status={auction.status}
+            remainingMonths={auction.remainingMonths}
             className="text-sm text-primary"
           />
         </div>
@@ -314,10 +292,12 @@ function AuctionCard({ auction, onClick, onWatch, isWatched, user }) {
         </div>
         <div>
           <div className="text-xs text-muted">{t('auctions.timeLeft')}</div>
-          <TickCountdown
+          <AuctionTimeLeft
+            startTick={auction.startTick}
             endTick={auction.endTick}
             currentTick={auction.currentTick}
             status={auction.status}
+            remainingMonths={auction.remainingMonths}
             className="text-sm text-primary"
           />
         </div>
@@ -385,7 +365,7 @@ function ActivityFeed({ activities }) {
               {act.amount ? <span className="text-primary ml-1">{formatMoney(act.amount)}</span> : null}
               {act.message && <span className="text-muted ml-1 text-xs">— {act.message}</span>}
             </div>
-            <span className="text-xs text-muted whitespace-nowrap">T{act.tick}</span>
+            <span className="text-xs text-muted whitespace-nowrap">M{act.tick}</span>
           </div>
         ))}
       </div>
@@ -448,7 +428,6 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
   const activityRef = useRef([]);
 
   const property = getProperty(detail);
-  const ticksLeft = detail.ticksRemaining ?? Math.max(0, (detail.endTick || 0) - (detail.currentTick || 0));
   const isOwner = user && detail.sellerId?._id === user._id;
   const isWinning = user && detail.currentBidderId?._id === user._id;
   const minNextBid =
@@ -494,13 +473,15 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
             totalBids: data.totalBids,
             uniqueBidders: data.uniqueBidders,
             endTick: data.endTick,
+            currentTick: data.currentTick,
+            remainingMonths: data.remainingMonths,
           }));
           activityRef.current = [
             {
               type: 'bid',
               username: data.currentBidderUsername,
               amount: data.currentBid,
-              tick: data.endTick,
+              tick: data.currentTick,
               createdAt: new Date(),
             },
             ...activityRef.current,
@@ -516,7 +497,12 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
     useCallback(
       (data) => {
         if (data.auctionId === detail._id) {
-          setDetail((prev) => ({ ...prev, endTick: data.newEndTick }));
+          setDetail((prev) => ({
+            ...prev,
+            endTick: data.newEndTick,
+            currentTick: data.currentTick,
+            remainingMonths: data.remainingMonths,
+          }));
         }
       },
       [detail._id],
@@ -533,6 +519,13 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
       },
       [detail._id],
     ),
+  );
+
+  useSocketEvent(
+    'tick:completed',
+    useCallback(() => {
+      refreshDetail();
+    }, [refreshDetail]),
   );
 
   useSocketEvent(
@@ -622,10 +615,12 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
         </div>
         <div className="bg-gradient-to-br from-blue-100/40 to-gray-100 dark:from-blue-900/40 dark:to-gray-900 rounded-lg p-3 text-center border border-blue-200/30 dark:border-blue-900/30">
           <div className="text-xs text-muted">{t('auctions.timeLeft')}</div>
-          <TickCountdown
+          <AuctionTimeLeft
+            startTick={detail.startTick}
             endTick={detail.endTick}
             currentTick={detail.currentTick}
             status={detail.status}
+            remainingMonths={detail.remainingMonths}
             className="text-lg font-bold"
           />
         </div>
@@ -666,7 +661,7 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
             {property.rent > 0 && (
               <div>
                 <span className="text-muted">{t('auctions.rent')}: </span>
-                <span className="text-green-400">{formatMoney(property.rent)}/tick</span>
+                <span className="text-green-400">{formatMoney(property.rent)}/month</span>
               </div>
             )}
             {property.qualityScore != null && (
@@ -814,7 +809,7 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
                   )}
                 </span>
                 <div className="flex items-center gap-3">
-                  <span className="text-muted text-xs">T{bid.tick}</span>
+                  <span className="text-muted text-xs">M{bid.tick}</span>
                   <span className="text-primary font-medium">{formatMoney(bid.amount)}</span>
                 </div>
               </div>

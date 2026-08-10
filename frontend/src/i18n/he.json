@@ -1531,7 +1531,7 @@
     "ipoPrice": "מחיר הנפקה",
     "sharesOutstanding": "מניות רשומות",
     "allTime": "כל הזמנים",
-    "tick": "טיק",
+    "tick": "חודש",
     "financialOverview": "סקירה פיננסית",
     "tradingStats": "סטטיסטיקת מסחר"
   },
@@ -2122,7 +2122,11 @@
     "investors": "משקיעים",
     "properties": "נכסים",
     "events": "אירועים",
+    "eventsRemaining_one": "נותר חודש 1",
+    "eventsRemaining_two": "נותרו {{count}} חודשים",
+    "eventsRemaining_other": "נותרו {{count}} חודשים",
     "history": "היסטוריה",
+    "historyTick": "חודש",
     "population": "אוכלוסייה",
     "demandIndex": "ביקוש",
     "supplyIndex": "היצע",
@@ -2217,12 +2221,16 @@
     "noData": "אין נתונים זמינים",
     "noPerformanceData": "אין עדיין נתוני ביצועים",
     "selectCity": "בחר עיר",
-    "ticksRemaining": "{{count}} מחזורים נותרו",
+    "monthsRemaining_one": "נותר חודש 1",
+    "monthsRemaining_two": "נותרו {{count}} חודשים",
+    "monthsRemaining_other": "נותרו {{count}} חודשים",
     "accuracy": "דיוק",
     "forecastAccuracy": "דיוק חיזוי",
-    "evaluationTick": "מחזור הערכה",
-    "ticks": {
-      "count": "{{count}} מחזורים"
+    "evaluationMonth": "חודש הערכה",
+    "months": {
+      "count_one": "חודש 1",
+      "count_two": "{{count}} חודשים",
+      "count_other": "{{count}} חודשים"
     },
     "demandIndex": "מדד ביקוש",
     "supplyIndex": "מדד היצע",
@@ -2240,7 +2248,7 @@
     "overallRisk": "רמת סיכון כולל",
     "expectedVolatility": "תנודתיות צפויה",
     "riskFactors": "גורמי סיכון",
-    "hazardProbabilities": "הסתברויות אסון (4 מחזורים הבאים)",
+    "hazardProbabilities": "הסתברויות אסון (4 חודשים הבאים)",
     "mitigationTips": "טיפים להפחתת סיכון",
     "emergingCities": "ערים מתפתחות",
     "emergingDistricts": "שכונות מתפתחות",
@@ -2331,8 +2339,12 @@
     "totalBids": "סך ההצעות",
     "uniqueBidders": "מציעים",
     "timeLeft": "זמן נותר",
-    "ticksLeft": "{{count}} מחזורים נותרו",
-    "startsIn": "מתחיל בעוד {{count}} מחזורים",
+    "monthsLeft_one": "חודש 1",
+    "monthsLeft_two": "נותרו {{count}} חודשים",
+    "monthsLeft_other": "נותרו {{count}} חודשים",
+    "startsInMonths_one": "מתחיל בעוד חודש",
+    "startsInMonths_two": "מתחיל בעוד {{count}} חודשים",
+    "startsInMonths_other": "מתחיל בעוד {{count}} חודשים",
     "minNextBid": "הצעה מינימלית",
     "reserve": "רזרבה",
     "reserveMet": "רזרבה הושגה",
@@ -2402,10 +2414,10 @@
     "highestBid": "הצעה הכי גבוהה",
     "totalProfit": "רווח כולל",
     "durations": {
-      "short": "מחזור אחד (6ש)",
-      "medium": "4 מחזורים (24ש)",
-      "long": "8 מחזורים (48ש)",
-      "extended": "16 מחזורים (96ש)"
+      "short": "חודש 1",
+      "medium": "4 חודשים",
+      "long": "8 חודשים",
+      "extended": "16 חודשים"
     }
   },
   "missions": {

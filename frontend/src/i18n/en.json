@@ -1336,7 +1336,7 @@
   "worldStatus": {
     "title": "World Status",
     "nextUpdate": "Next World Update",
-    "completedCycles": "Completed World Cycles",
+    "completedCycles": "Completed World Months",
     "worldAge": "World Age",
     "lastUpdate": "Last Update",
     "loading": "Loading world status...",
@@ -1540,7 +1540,7 @@
     "ipoPrice": "IPO Price",
     "sharesOutstanding": "Outstanding Shares",
     "allTime": "All Time",
-    "tick": "Tick",
+    "tick": "Month",
     "financialOverview": "Financial Overview",
     "tradingStats": "Trading Statistics"
   },
@@ -2132,7 +2132,11 @@
     "investors": "Investors",
     "properties": "Properties",
     "events": "Events",
+    "eventsRemaining_one": "{{count}} month remaining",
+    "eventsRemaining_two": "{{count}} months remaining",
+    "eventsRemaining_other": "{{count}} months remaining",
     "history": "History",
+    "historyTick": "Month",
     "population": "Population",
     "demandIndex": "Demand",
     "supplyIndex": "Supply",
@@ -2227,12 +2231,16 @@
     "noData": "No data available",
     "noPerformanceData": "No performance data yet",
     "selectCity": "Select a city",
-    "ticksRemaining": "{{count}} ticks remaining",
+    "monthsRemaining_one": "{{count}} month remaining",
+    "monthsRemaining_two": "{{count}} months remaining",
+    "monthsRemaining_other": "{{count}} months remaining",
     "accuracy": "Accuracy",
     "forecastAccuracy": "Forecast Accuracy",
-    "evaluationTick": "Evaluation Tick",
-    "ticks": {
-      "count": "{{count}} ticks"
+    "evaluationMonth": "Evaluation Month",
+    "months": {
+      "count_one": "{{count}} month",
+      "count_two": "{{count}} months",
+      "count_other": "{{count}} months"
     },
     "demandIndex": "Demand Index",
     "supplyIndex": "Supply Index",
@@ -2250,7 +2258,7 @@
     "overallRisk": "Overall Risk Level",
     "expectedVolatility": "Expected Volatility",
     "riskFactors": "Risk Factors",
-    "hazardProbabilities": "Hazard Probabilities (next 4 ticks)",
+    "hazardProbabilities": "Hazard Probabilities (next 4 months)",
     "mitigationTips": "Mitigation Tips",
     "emergingCities": "Emerging Cities",
     "emergingDistricts": "Emerging Districts",
@@ -2341,8 +2349,12 @@
     "totalBids": "Total Bids",
     "uniqueBidders": "Bidders",
     "timeLeft": "Time Left",
-    "ticksLeft": "{{count}} ticks left",
-    "startsIn": "Starts in {{count}} ticks",
+    "monthsLeft_one": "{{count}} Month",
+    "monthsLeft_two": "{{count}} Months",
+    "monthsLeft_other": "{{count}} Months",
+    "startsInMonths_one": "Starts in {{count}} Month",
+    "startsInMonths_two": "Starts in {{count}} Months",
+    "startsInMonths_other": "Starts in {{count}} Months",
     "minNextBid": "Min. next bid",
     "reserve": "Reserve",
     "reserveMet": "Reserve met",
@@ -2412,10 +2424,10 @@
     "highestBid": "Highest Bid",
     "totalProfit": "Total Profit",
     "durations": {
-      "short": "1 Tick (6h)",
-      "medium": "4 Ticks (24h)",
-      "long": "8 Ticks (48h)",
-      "extended": "16 Ticks (96h)"
+      "short": "1 Month",
+      "medium": "4 Months",
+      "long": "8 Months",
+      "extended": "16 Months"
     }
   },
   "missions": {

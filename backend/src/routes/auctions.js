@@ -21,6 +21,7 @@ import {
 import { enqueueNotification } from '../utils/notificationQueue.js';
 import { cacheGet, cacheSet, cacheDel } from '../utils/cache.js';
 import { cacheKeys } from '../utils/cacheKeys.js';
+import { computeAuctionRemaining } from '../utils/auctionTime.js';
 
 function hasPermission(member, permission) {
   if (!member) return false;
@@ -95,8 +96,8 @@ router.get('/featured', async (req, res) => {
     const maxWatchers = Math.max(...activeAuctions.map((a) => a.watcherCount || 0), 1);
 
     const scored = activeAuctions.map((a) => {
-      const ticksRemaining = Math.max(0, a.endTick - currentTick);
-      const isEndingSoon = ticksRemaining <= sc.endingSoonBonus && ticksRemaining > 0;
+      const timing = computeAuctionRemaining(a, currentTick);
+      const isEndingSoon = timing.ticksRemaining <= sc.endingSoonBonus && timing.ticksRemaining > 0;
       const isHot = (a.totalBids || 0) >= AUCTION_CONFIG.featuredMinBids;
       const rarity = a.propertyId?.propertyRating || 'standard';
 
@@ -110,8 +111,7 @@ router.get('/featured', async (req, res) => {
 
       return {
         ...a,
-        currentTick,
-        ticksRemaining,
+        ...timing,
         isEndingSoon,
         isHot,
         featuredScore,
@@ -193,7 +193,21 @@ router.get(
       pipeline.push({
         $addFields: {
           currentTick,
-          ticksRemaining: { $max: [0, { $subtract: ['$endTick', currentTick] }] },
+          remainingMonths: {
+            $switch: {
+              branches: [
+                {
+                  case: { $eq: ['$status', 'upcoming'] },
+                  then: { $max: [0, { $subtract: ['$startTick', currentTick] }] },
+                },
+                {
+                  case: { $eq: ['$status', 'active'] },
+                  then: { $max: [0, { $subtract: ['$endTick', currentTick] }] },
+                },
+              ],
+              default: 0,
+            },
+          },
         },
       });
 
@@ -237,7 +251,8 @@ router.get(
           winningBid: 1,
           createdAt: 1,
           currentTick: 1,
-          ticksRemaining: 1,
+          remainingMonths: 1,
+          ticksRemaining: '$remainingMonths',
           'property._id': 1,
           'property.name': 1,
           'property.type': 1,
@@ -283,8 +298,7 @@ router.get(
 
       const currentTick = global.currentTick || 0;
       const auctionObj = auction.toJSON();
-      auctionObj.currentTick = currentTick;
-      auctionObj.ticksRemaining = Math.max(0, auction.endTick - currentTick);
+      Object.assign(auctionObj, computeAuctionRemaining(auction, currentTick));
 
       const property = auctionObj.propertyId;
       if (property && typeof property === 'object') {
@@ -579,6 +593,8 @@ router.post(
         // reputation update is best-effort
       }
 
+      const timing = computeAuctionRemaining(auction, currentTick);
+
       emitAuctionBid(auction._id.toString(), {
         currentBid: amount,
         currentBidderId: userId.toString(),
@@ -586,6 +602,8 @@ router.post(
         totalBids: auction.totalBids,
         uniqueBidders: auction.uniqueBidders,
         endTick: auction.endTick,
+        currentTick: timing.currentTick,
+        remainingMonths: timing.remainingMonths,
       });
 
       emitAuctionActivity(auction._id.toString(), {
@@ -614,6 +632,8 @@ router.post(
           uniqueBidders: auction.uniqueBidders,
           endTick: auction.endTick,
           reserveMet: auction.reserveMet,
+          currentTick: timing.currentTick,
+          remainingMonths: timing.remainingMonths,
         },
         balance: user.balance,
       });
@@ -899,6 +919,8 @@ router.post(
               });
             }
 
+            const timing = computeAuctionRemaining(auction, currentTick);
+
             emitAuctionBid(auction._id.toString(), {
               currentBid: bidReq.amount,
               currentBidderId: userId.toString(),
@@ -906,6 +928,8 @@ router.post(
               totalBids: auction.totalBids,
               uniqueBidders: auction.uniqueBidders,
               endTick: auction.endTick,
+              currentTick: timing.currentTick,
+              remainingMonths: timing.remainingMonths,
             });
           }
         }
@@ -1013,8 +1037,7 @@ router.get(
 
       const enriched = auctions.map((a) => ({
         ...a,
-        currentTick,
-        ticksRemaining: Math.max(0, a.endTick - currentTick),
+        ...computeAuctionRemaining(a, currentTick),
         isWinning: a.currentBidderId?.toString() === userId.toString(),
         myMaxBid: Math.max(...a.bids.filter((b) => b.bidderId.toString() === userId.toString()).map((b) => b.amount)),
       }));
@@ -1046,8 +1069,7 @@ router.get('/my/watchlist', authenticate, async (req, res) => {
 
     const enriched = auctions.map((a) => ({
       ...a,
-      currentTick,
-      ticksRemaining: Math.max(0, a.endTick - currentTick),
+      ...computeAuctionRemaining(a, currentTick),
       isWinning: a.currentBidderId?._id?.toString() === userId.toString(),
     }));
 
