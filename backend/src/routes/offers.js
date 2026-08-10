@@ -8,6 +8,7 @@ import { enqueueNotification } from '../utils/notificationQueue.js';
 import { onPropertyPurchased } from '../utils/cacheInvalidation.js';
 import { processPlayerProgress } from '../utils/playerProgress.js';
 import { trackEvent, EVENTS } from '../utils/analytics.js';
+import { getAvailableBalance } from '../utils/auctionMoney.js';
 
 const MIN_OFFER_PERCENTAGE = 0.7;
 const router = Router();
@@ -107,7 +108,7 @@ router.post('/accept/:id', async (req, res) => {
     if (!buyer) return res.status(404).json({ error: 'Buyer not found' });
 
     const price = offer.counterOffer || offer.offerAmount;
-    if (buyer.balance < price) {
+    if (getAvailableBalance(buyer) < price) {
       return res.status(400).json({ error: 'Buyer does not have sufficient funds' });
     }
 
@@ -263,7 +264,7 @@ router.post('/accept-counter/:id', async (req, res) => {
 
     const price = offer.counterOffer;
     const buyer = await User.findById(offer.buyerId);
-    if (buyer.balance < price) {
+    if (getAvailableBalance(buyer) < price) {
       return res.status(400).json({ error: 'Insufficient balance' });
     }
 

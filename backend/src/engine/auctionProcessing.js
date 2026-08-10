@@ -9,6 +9,7 @@ import { emitToAll } from '../socket/index.js';
 import { cacheDel } from '../utils/cache.js';
 import { cacheKeys } from '../utils/cacheKeys.js';
 import { triggerMissionProgress } from '../utils/missionTrigger.js';
+import { releaseAuctionReservations } from '../utils/auctionMoney.js';
 
 export function emitAuctionBid(auctionId, data) {
   emitToAll(`auction:bid`, { auctionId, ...data });
@@ -67,6 +68,7 @@ export async function processAuctions() {
       console.error(`[AUCTION-TICK ${currentTick}] ✗ Failed to settle auction ${auction._id}:`, err.message);
       auction.status = 'cancelled';
       await auction.save().catch(() => {});
+      await releaseAuctionReservations(auction._id);
     }
   }
 
@@ -77,6 +79,10 @@ export async function processAuctions() {
 
   if (endingCompleted.length > 0) {
     await Auction.updateMany({ _id: { $in: endingCompleted.map((a) => a._id) } }, { $set: { status: 'ended' } });
+    // Safety net: any reservations still held were never settled — release them
+    for (const auction of endingCompleted) {
+      await releaseAuctionReservations(auction._id);
+    }
     completed = endingCompleted.length;
   }
 
@@ -87,6 +93,9 @@ export async function processAuctions() {
 
   if (stuckEnding.length > 0) {
     await Auction.updateMany({ _id: { $in: stuckEnding.map((a) => a._id) } }, { $set: { status: 'cancelled' } });
+    for (const auction of stuckEnding) {
+      await releaseAuctionReservations(auction._id);
+    }
   }
 
   await Promise.all([cacheDel(cacheKeys.auctionFeatured()), cacheDel(cacheKeys.auctionAnalytics())]);
@@ -114,6 +123,7 @@ async function settleAuction(auction) {
   if (!property) {
     auction.status = 'cancelled';
     await auction.save();
+    await releaseAuctionReservations(auction._id);
     return;
   }
 
@@ -135,8 +145,19 @@ async function settleAuction(auction) {
 
     const winner = await User.findById(auction.currentBidderId);
     if (winner && winner.balance >= auction.winningBid) {
+      // The reserved funds are converted into the purchase payment
       winner.balance -= auction.winningBid;
+      winner.reservedAuctionFunds = Math.max(0, (winner.reservedAuctionFunds || 0) - auction.winningBid);
+      if (!winner.ownedProperties.includes(auction.propertyId)) {
+        winner.ownedProperties.push(auction.propertyId);
+      }
       await winner.save();
+
+      // Winner's reservation was converted — remove the tracking doc
+      await mongoose
+        .model('AuctionReservation')
+        .deleteOne({ userId: winner._id, auctionId: auction._id })
+        .catch(() => {});
 
       property.ownerId = winner._id;
       property.forSale = false;
@@ -272,6 +293,20 @@ async function settleAuction(auction) {
       });
     }
   }
+
+  // Release any reservations still held on this auction (losers, cancelled or
+  // no-winner paths). The winner's reservation was converted above.
+  await releaseAuctionReservations(auction._id);
+
+  // Invalidate per-user analytics for everyone involved
+  const involvedUserIds = new Set();
+  if (auction.winnerId) involvedUserIds.add(auction.winnerId.toString());
+  if (auction.currentBidderId) involvedUserIds.add(auction.currentBidderId.toString());
+  if (auction.sellerId) involvedUserIds.add(auction.sellerId.toString());
+  for (const b of auction.bids || []) {
+    if (b.bidderId) involvedUserIds.add(b.bidderId.toString());
+  }
+  await Promise.all([...involvedUserIds].map((uid) => cacheDel(cacheKeys.auctionMyAnalytics(uid))));
 
   await Promise.all([
     cacheDel(cacheKeys.auction(auction._id.toString())),
@@ -457,6 +492,8 @@ export async function cancelAuction(auctionId, userId) {
 
   auction.status = 'cancelled';
   await auction.save();
+
+  await releaseAuctionReservations(auction._id);
 
   await Property.findByIdAndUpdate(auction.propertyId, { forSale: true });
 

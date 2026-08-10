@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom';
 import { getApiBaseUrl } from '../utils/capacitor';
 import { useAuthStore } from '../store/useAuthStore';
 import { formatMoney } from '../utils/format';
+import { translateError } from '../i18n/errors';
 import { useSocket, useSocketEvent } from '../hooks/useSocket';
 import PropertyImage from '../components/PropertyImage';
 import AuctionTimeLeft from '../components/AuctionTimeLeft';
@@ -193,6 +194,33 @@ function AnalyticsPanel({ stats }) {
             {formatMoney(stats.mostSuccessfulSeller.volume)})
           </span>
         )}
+      </div>
+    </div>
+  );
+}
+
+function MyStatsPanel({ stats }) {
+  const { t } = useTranslation();
+  if (!stats) return null;
+
+  return (
+    <div className="mb-6 bg-card border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+      <h2 className="text-lg font-bold text-primary mb-3 flex items-center gap-2">
+        <span>👤</span> {t('auctions.myAnalytics')}
+      </h2>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard label={t('auctions.myParticipation')} value={stats.participation || 0} />
+        <StatCard label={t('auctions.myBidsPlaced')} value={stats.bidsPlaced || 0} />
+        <StatCard label={t('auctions.myWon')} value={stats.won || 0} />
+        <StatCard label={t('auctions.myLost')} value={stats.lost || 0} />
+        <StatCard label={t('auctions.myTotalBid')} value={formatMoney(stats.totalAmountBid || 0)} />
+        <StatCard label={t('auctions.myTotalSpent')} value={formatMoney(stats.totalSpent || 0)} />
+        <StatCard label={t('auctions.myAverageBid')} value={formatMoney(stats.averageBid || 0)} />
+        <StatCard label={t('auctions.myWinRate')} value={`${stats.winRate || 0}%`} />
+        <StatCard label={t('auctions.myActiveWinning')} value={stats.activeWinningBids || 0} />
+        <StatCard label={t('auctions.myWatchlistCount')} value={stats.watchlistCount || 0} />
+        <StatCard label={t('auctions.reservedFunds')} value={formatMoney(stats.reservedAuctionFunds || 0)} />
+        <StatCard label={t('auctions.availableBalance')} value={formatMoney(stats.availableBalance || 0)} />
       </div>
     </div>
   );
@@ -430,6 +458,7 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
   const property = getProperty(detail);
   const isOwner = user && detail.sellerId?._id === user._id;
   const isWinning = user && detail.currentBidderId?._id === user._id;
+  const availableBalance = Math.max(0, (user?.balance || 0) - (user?.reservedAuctionFunds || 0));
   const minNextBid =
     (detail.currentBid || 0) > 0 ? (detail.currentBid || 0) + (detail.bidIncrement || 0) : detail.startingBid;
   const canCancel = isOwner && detail.totalBids === 0 && (detail.status === 'upcoming' || detail.status === 'active');
@@ -555,7 +584,7 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
       await refreshDetail();
       useAuthStore.getState().fetchMe();
     } catch (err) {
-      setError(err.message);
+      setError(translateError(err, t));
     } finally {
       setBidding(false);
     }
@@ -568,7 +597,7 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
       await api(`/auctions/${detail._id}/cancel`, { method: 'POST' });
       onClose();
     } catch (err) {
-      setError(err.message);
+      setError(translateError(err, t));
     } finally {
       setCancelling(false);
     }
@@ -767,6 +796,18 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
           <div className="text-xs text-muted mt-2">
             {t('auctions.minNextBid')}: {formatMoney(minNextBid)}
           </div>
+          {user && (
+            <div className="text-xs text-muted mt-1">
+              {t('auctions.availableBalance')}: <span className="text-green-500">{formatMoney(availableBalance)}</span>
+              {(user.reservedAuctionFunds || 0) > 0 && (
+                <>
+                  {' · '}
+                  {t('auctions.reservedFunds')}:{' '}
+                  <span className="text-amber-500">{formatMoney(user.reservedAuctionFunds)}</span>
+                </>
+              )}
+            </div>
+          )}
           {isWinning && <div className="text-xs text-green-400 mt-1">✅ {t('auctions.youAreWinning')}</div>}
           <div className="mt-3">
             <button
@@ -1093,6 +1134,7 @@ export default function AuctionDashboardPage() {
   const [filterType, setFilterType] = useState('all');
   const [featured, setFeatured] = useState([]);
   const [analytics, setAnalytics] = useState(null);
+  const [myStats, setMyStats] = useState(null);
   const [watchedIds, setWatchedIds] = useState(new Set());
 
   const PAGE_SIZE = 5;
@@ -1190,8 +1232,23 @@ export default function AuctionDashboardPage() {
       api('/auctions/analytics')
         .then((res) => setAnalytics(res))
         .catch(() => {});
-    }, [activeTab, loadAuctions, page]),
+      if (user) {
+        api('/auctions/my/analytics')
+          .then((res) => setMyStats(res.stats))
+          .catch(() => {});
+      }
+    }, [activeTab, loadAuctions, page, user]),
   );
+
+  useEffect(() => {
+    if (user) {
+      api('/auctions/my/analytics')
+        .then((res) => setMyStats(res.stats))
+        .catch(() => {});
+    } else {
+      setMyStats(null);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!id) return;
@@ -1290,6 +1347,7 @@ export default function AuctionDashboardPage() {
       )}
 
       <FeaturedSection auctions={featured} onSelect={setSelectedAuction} />
+      {user && <MyStatsPanel stats={myStats} />}
       <AnalyticsPanel stats={analytics} />
 
       <div className="flex flex-wrap gap-1 mb-4 bg-card rounded-lg p-1">

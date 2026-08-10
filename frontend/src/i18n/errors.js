@@ -44,6 +44,22 @@ export function translateError(err, t) {
       key: 'errors.cityOwnershipLimit',
       params: (m) => ({ maxAllowed: m[1], cityName: m[2] }),
     },
+    {
+      regex: /^Minimum bid is \$([\d,]+)$/,
+      key: 'errors.minimumBid',
+      params: (m) => ({ amount: m[1] }),
+    },
+    {
+      regex: /^You already control the maximum number of properties allowed in (.+)$/,
+      key: 'errors.alreadyAtCityLimit',
+      params: (m) => ({ cityName: m[1] }),
+    },
+    {
+      regex:
+        /^You cannot place this bid because winning this auction would exceed the property ownership limit for (.+)$/,
+      key: 'errors.auctionOwnershipLimit',
+      params: (m) => ({ cityName: m[1] }),
+    },
   ];
 
   for (const pattern of dynamicPatterns) {

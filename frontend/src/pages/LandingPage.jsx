@@ -171,6 +171,20 @@ export default function LandingPage() {
         return t('landing.activity.construction', { buyer, property });
       case 'upgrade':
         return t('landing.activity.upgrade', { buyer, property });
+      case 'grade_upgrade':
+        return t('landing.activity.gradeUpgrade', { buyer, property });
+      case 'rent':
+        return t('landing.activity.rent', { buyer, amount });
+      case 'development':
+        return t('landing.activity.development', { buyer, property });
+      case 'improvement':
+        return t('landing.activity.improvement', { buyer, property });
+      case 'loan':
+        return t('landing.activity.loan', { buyer, amount });
+      case 'loan_repay':
+        return t('landing.activity.loanRepay', { buyer, amount });
+      case 'season_reward':
+        return t('landing.activity.seasonReward', { buyer, amount });
       default:
         return t('landing.activity.default', { property, amount });
     }

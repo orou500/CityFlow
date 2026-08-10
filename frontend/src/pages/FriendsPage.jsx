@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
-import { formatMoney } from '../utils/format';
 import CompactValue from '../components/CompactValue';
 import { getApiBaseUrl } from '../utils/capacitor';
 
@@ -13,6 +12,7 @@ function getToken() {
 export default function FriendsPage() {
   const { t } = useTranslation();
   const API = getApiBaseUrl();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const initialTab = searchParams.get('tab');
   const validTabs = ['friends', 'incoming', 'sent'];

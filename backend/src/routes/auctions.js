@@ -3,25 +3,53 @@ import mongoose from 'mongoose';
 import { body, param, query, validationResult } from 'express-validator';
 import Auction from '../models/Auction.js';
 import AuctionReputation from '../models/AuctionReputation.js';
+import AuctionReservation from '../models/AuctionReservation.js';
 import Property from '../models/Property.js';
 import User from '../models/User.js';
 import RealEstateCompany from '../models/RealEstateCompany.js';
-import { authenticate } from '../middleware/auth.js';
+import City from '../models/City.js';
+import { authenticate, optionalAuth } from '../middleware/auth.js';
 import { rateLimit } from '../middleware/rateLimit.js';
 import { AUCTION_CONFIG } from '../config/auctions.js';
 import { processPlayerProgress } from '../utils/playerProgress.js';
 import {
-  processAntiSniping,
   cancelAuction,
   getAuctionStats,
   emitAuctionBid,
   emitAuctionActivity,
+  emitAuctionExtended,
   resolveStuckAuction,
 } from '../engine/auctionProcessing.js';
 import { enqueueNotification } from '../utils/notificationQueue.js';
 import { cacheGet, cacheSet, cacheDel } from '../utils/cache.js';
 import { cacheKeys } from '../utils/cacheKeys.js';
 import { computeAuctionRemaining } from '../utils/auctionTime.js';
+import { reserveAuctionFunds, releaseAuctionFunds, setAuctionReservation } from '../utils/auctionMoney.js';
+import { getCityPropertyLimit, getCityOwnershipStats } from '../utils/ownershipLimits.js';
+
+// In-process mutex per user — serializes concurrent bids by the same player
+// so reservation deltas and city-ownership checks can never race.
+const userBidLocks = new Map();
+
+async function withUserBidLock(userId, fn) {
+  const key = userId.toString();
+  const prev = userBidLocks.get(key) || Promise.resolve();
+  let release;
+  const next = new Promise((resolve) => {
+    release = resolve;
+  });
+  const chain = prev.then(() => next);
+  userBidLocks.set(key, chain);
+  await prev;
+  try {
+    return await fn();
+  } finally {
+    release();
+    if (userBidLocks.get(key) === chain) {
+      userBidLocks.delete(key);
+    }
+  }
+}
 
 function hasPermission(member, permission) {
   if (!member) return false;
@@ -279,6 +307,7 @@ router.get(
 
 router.get(
   '/:id',
+  optionalAuth,
   [param('id').isMongoId().withMessage('Invalid auction ID'), handleValidationErrors],
   async (req, res) => {
     try {
@@ -315,9 +344,12 @@ router.get(
       auctionObj.uniqueBidders = uniqueBidderIds.length;
 
       if (req.user) {
-        auctionObj.isWatching = auction.watchers.some(
-          (w) => (w._id?.toString() || w?.toString()) === req.user._id.toString(),
-        );
+        const myUserId = req.user._id.toString();
+        auctionObj.isWatching = auction.watchers.some((w) => (w._id?.toString() || w?.toString()) === myUserId);
+        const myBids = auction.bids.filter((b) => b.bidderId.toString() === myUserId);
+        auctionObj.myBidCount = myBids.length;
+        auctionObj.myMaxBid = myBids.length > 0 ? Math.max(...myBids.map((b) => b.amount)) : 0;
+        auctionObj.isWinning = auction.currentBidderId?._id?.toString() === myUserId;
       }
 
       return res.json({ success: true, auction: auctionObj });
@@ -446,6 +478,248 @@ router.post(
   },
 );
 
+/**
+ * One atomic attempt at placing a bid. Returns { retry: true } when the
+ * auction changed concurrently (the reservation is rolled back and the caller
+ * re-reads and retries), otherwise a response object.
+ */
+async function tryPlaceBid({ id, amount, userId, currentTick }) {
+  const auction = await Auction.findById(id);
+  if (!auction) return { status: 404, body: { success: false, error: 'Auction not found' } };
+
+  if (auction.status !== 'active') {
+    return { status: 400, body: { success: false, error: 'This auction is no longer active' } };
+  }
+
+  if (auction.endTick <= currentTick) {
+    await resolveStuckAuction(auction._id).catch(() => {});
+    return { status: 400, body: { success: false, error: 'This auction is no longer active' } };
+  }
+
+  if (auction.sellerId?.toString() === userId.toString()) {
+    return { status: 400, body: { success: false, error: 'You cannot bid on your own property' } };
+  }
+
+  const minBid = auction.currentBid > 0 ? auction.currentBid + auction.bidIncrement : auction.startingBid;
+  if (amount < minBid) {
+    return { status: 400, body: { success: false, error: `Minimum bid is $${minBid.toLocaleString()}` } };
+  }
+
+  const user = await User.findById(userId);
+  if (!user) return { status: 404, body: { success: false, error: 'User not found' } };
+
+  // ── Money reservation (atomic, cannot double-spend) ───────────────
+  const prevReservation = await AuctionReservation.findOne({ userId, auctionId: auction._id }).lean();
+  const delta = Math.max(0, amount - (prevReservation?.amount || 0));
+
+  const reservedUser = await reserveAuctionFunds(userId, delta);
+  if (!reservedUser) {
+    return {
+      status: 400,
+      body: { success: false, error: "You don't have enough available funds to place this bid" },
+    };
+  }
+
+  // ── Optimistic auction update (guarded on currentBid/currentBidderId) ──
+  const ticksRemaining = auction.endTick - currentTick;
+  const extend = ticksRemaining <= AUCTION_CONFIG.antiSnipingThresholdTicks;
+  const newEndTick = extend ? auction.endTick + auction.antiSnipingExtension : auction.endTick;
+
+  const reserveMetNow = auction.auctionType === 'reserve' && !auction.reserveMet && amount >= auction.reservePrice;
+
+  const uniqueBefore = new Set(auction.bids.map((b) => b.bidderId.toString()));
+  const isNewBidder = !uniqueBefore.has(userId.toString());
+
+  const activityEntries = [
+    { type: 'bid', userId, username: user.username, amount, tick: currentTick, createdAt: new Date() },
+  ];
+  if (reserveMetNow) {
+    activityEntries.push({
+      type: 'reserve_met',
+      message: `Reserve price reached at $${amount.toLocaleString()}`,
+      tick: currentTick,
+      createdAt: new Date(),
+    });
+  }
+
+  const updated = await Auction.findOneAndUpdate(
+    {
+      _id: auction._id,
+      status: 'active',
+      currentBid: auction.currentBid,
+      currentBidderId: auction.currentBidderId,
+    },
+    {
+      $set: {
+        currentBid: amount,
+        currentBidderId: userId,
+        reserveMet: auction.reserveMet || reserveMetNow,
+        ...(extend ? { endTick: newEndTick } : {}),
+      },
+      $inc: { totalBids: 1 },
+      $push: {
+        bids: { bidderId: userId, amount, tick: currentTick, username: user.username, createdAt: new Date() },
+        activity: { $each: activityEntries },
+      },
+    },
+    { new: true },
+  );
+
+  if (!updated) {
+    // Concurrent modification — roll back the reservation and retry
+    await releaseAuctionFunds(userId, delta);
+    return { retry: true };
+  }
+
+  // Recompute unique bidders from the fresh document (idempotent)
+  const uniqueAfter = new Set(updated.bids.map((b) => b.bidderId.toString()));
+  await Auction.updateOne({ _id: updated._id }, { $set: { uniqueBidders: uniqueAfter.size } });
+
+  if (isNewBidder) {
+    await Auction.updateOne(
+      { _id: updated._id, watchers: { $ne: userId } },
+      { $addToSet: { watchers: userId }, $inc: { watcherCount: 1 } },
+    );
+  }
+
+  // Record the reservation (full new amount for this auction)
+  await setAuctionReservation(userId, updated._id, amount);
+
+  // ── Release the outbid user's reservation immediately ──────────────
+  const previousBidderId = auction.currentBidderId;
+  const wasOutbid = previousBidderId && previousBidderId.toString() !== userId.toString();
+  if (wasOutbid) {
+    const outbidRes = await AuctionReservation.findOne({
+      userId: previousBidderId,
+      auctionId: updated._id,
+    }).lean();
+    if (outbidRes) {
+      await releaseAuctionFunds(previousBidderId, outbidRes.amount);
+      await AuctionReservation.deleteOne({ _id: outbidRes._id });
+    }
+
+    await enqueueNotification({
+      userId: previousBidderId,
+      type: 'system',
+      title: 'Outbid!',
+      message: `You have been outbid on an auction. New high bid: $${amount.toLocaleString()}`,
+      route: `/auctions/${updated._id}`,
+      entityType: 'auction',
+      entityId: updated._id,
+      relatedId: updated._id,
+      global: false,
+    });
+
+    await Auction.updateOne(
+      { _id: updated._id },
+      { $push: { activity: { type: 'outbid', userId: previousBidderId, tick: currentTick, createdAt: new Date() } } },
+    );
+  }
+
+  if (extend) {
+    emitAuctionExtended(updated._id.toString(), {
+      newEndTick,
+      extension: updated.antiSnipingExtension,
+      currentTick,
+      remainingMonths: Math.max(0, newEndTick - currentTick),
+    });
+    for (const watcherId of updated.watchers) {
+      if (watcherId.toString() === userId.toString()) continue;
+      await enqueueNotification({
+        userId: watcherId,
+        type: 'system',
+        title: 'Auction Extended',
+        message: `An auction you're watching was extended by ${updated.antiSnipingExtension} tick(s) due to last-minute bidding!`,
+        route: `/auctions/${updated._id}`,
+        entityType: 'auction',
+        entityId: updated._id,
+        relatedId: updated._id,
+        global: false,
+      });
+    }
+  }
+
+  if (reserveMetNow) {
+    for (const watcherId of updated.watchers) {
+      if (watcherId.toString() === userId.toString()) continue;
+      await enqueueNotification({
+        userId: watcherId,
+        type: 'system',
+        title: 'Reserve Price Reached',
+        message: `The reserve price has been met on an auction you're watching!`,
+        route: `/auctions/${updated._id}`,
+        entityType: 'auction',
+        entityId: updated._id,
+        relatedId: updated._id,
+        global: false,
+      });
+    }
+  }
+
+  try {
+    let rep = await AuctionReputation.findOne({ userId });
+    if (!rep) rep = await AuctionReputation.create({ userId });
+    rep.totalBidsPlaced += 1;
+    rep.totalParticipations += isNewBidder ? 1 : 0;
+    await rep.save();
+  } catch {
+    // reputation update is best-effort
+  }
+
+  const timing = computeAuctionRemaining(updated, currentTick);
+
+  emitAuctionBid(updated._id.toString(), {
+    currentBid: amount,
+    currentBidderId: userId.toString(),
+    currentBidderUsername: user.username,
+    totalBids: updated.totalBids,
+    uniqueBidders: uniqueAfter.size,
+    endTick: updated.endTick,
+    currentTick: timing.currentTick,
+    remainingMonths: timing.remainingMonths,
+  });
+
+  emitAuctionActivity(updated._id.toString(), {
+    type: 'bid',
+    userId: userId.toString(),
+    username: user.username,
+    amount,
+    tick: currentTick,
+  });
+
+  const cacheDeletes = [
+    cacheDel(cacheKeys.auction(updated._id.toString())),
+    cacheDel(cacheKeys.auctionFeatured()),
+    cacheDel(cacheKeys.auctionAnalytics()),
+    cacheDel(cacheKeys.auctionMyAnalytics(userId.toString())),
+  ];
+  if (wasOutbid) cacheDeletes.push(cacheDel(cacheKeys.auctionMyAnalytics(previousBidderId.toString())));
+  await Promise.all(cacheDeletes);
+
+  await processPlayerProgress(userId, 'auction_bid');
+
+  return {
+    status: 200,
+    body: {
+      success: true,
+      auction: {
+        _id: updated._id,
+        currentBid: updated.currentBid,
+        currentBidderId: userId.toString(),
+        totalBids: updated.totalBids,
+        uniqueBidders: uniqueAfter.size,
+        endTick: updated.endTick,
+        reserveMet: updated.reserveMet,
+        currentTick: timing.currentTick,
+        remainingMonths: timing.remainingMonths,
+      },
+      balance: reservedUser.balance,
+      reservedAuctionFunds: reservedUser.reservedAuctionFunds || 0,
+      availableBalance: (reservedUser.balance || 0) - (reservedUser.reservedAuctionFunds || 0),
+    },
+  };
+}
+
 router.post(
   '/:id/bid',
   authenticate,
@@ -458,185 +732,47 @@ router.post(
   async (req, res) => {
     try {
       const { id } = req.params;
-      const { amount } = req.body;
+      const amount = Number(req.body.amount);
       const userId = req.user._id;
+      const currentTick = global.currentTick || 0;
 
-      const auction = await Auction.findById(id);
-      if (!auction) {
+      // ── City ownership limit — checked before any money moves ──────
+      const auctionRef = await Auction.findById(id).select('propertyId sellerId status endTick currentBidderId');
+      if (!auctionRef) {
         return res.status(404).json({ success: false, error: 'Auction not found' });
       }
+      const propertyRef = await Property.findById(auctionRef.propertyId).select('cityId').lean();
+      const city = propertyRef?.cityId ? await City.findById(propertyRef.cityId) : null;
+      if (city) {
+        const limit = await getCityPropertyLimit(city);
+        const { owned, potential } = await getCityOwnershipStats(userId, city._id);
+        const alreadyWinningThis = auctionRef.currentBidderId?.toString() === userId.toString();
+        const extra = alreadyWinningThis ? 0 : 1;
 
-      if (auction.status !== 'active') {
-        return res.status(400).json({ success: false, error: 'Auction is not active' });
-      }
-
-      const currentTick = global.currentTick || 0;
-      if (auction.endTick <= currentTick) {
-        await resolveStuckAuction(auction._id);
-        return res.status(400).json({ success: false, error: 'Auction has ended' });
-      }
-
-      if (auction.sellerId?.toString() === userId.toString()) {
-        return res.status(400).json({ success: false, error: 'Cannot bid on your own auction' });
-      }
-
-      const minBid = auction.currentBid > 0 ? auction.currentBid + auction.bidIncrement : auction.startingBid;
-
-      if (amount < minBid) {
-        return res.status(400).json({
-          success: false,
-          error: `Minimum bid is $${minBid.toLocaleString()}`,
-        });
-      }
-
-      const user = await User.findById(userId);
-      if (!user) {
-        return res.status(404).json({ success: false, error: 'User not found' });
-      }
-
-      if (user.balance < amount) {
-        return res.status(400).json({ success: false, error: 'Insufficient funds' });
-      }
-
-      const previousBidderId = auction.currentBidderId;
-      const wasReserveMet = auction.reserveMet;
-
-      const uniqueBefore = new Set(auction.bids.map((b) => b.bidderId.toString()));
-      const isNewBidder = !uniqueBefore.has(userId.toString());
-
-      auction.bids.push({
-        bidderId: userId,
-        amount,
-        tick: currentTick,
-        username: user.username,
-      });
-      auction.currentBid = amount;
-      auction.currentBidderId = userId;
-      auction.totalBids += 1;
-
-      const uniqueAfter = new Set(auction.bids.map((b) => b.bidderId.toString()));
-      auction.uniqueBidders = uniqueAfter.size;
-
-      auction.activity.push({
-        type: 'bid',
-        userId,
-        username: user.username,
-        amount,
-        tick: currentTick,
-      });
-
-      if (isNewBidder) {
-        await Auction.updateOne(
-          { _id: auction._id, watchers: { $ne: userId } },
-          { $addToSet: { watchers: userId }, $inc: { watcherCount: 1 } },
-        );
-      }
-
-      await processAntiSniping(auction);
-
-      if (auction.auctionType === 'reserve' && !wasReserveMet && amount >= auction.reservePrice) {
-        auction.reserveMet = true;
-        auction.activity.push({
-          type: 'reserve_met',
-          message: `Reserve price reached at $${amount.toLocaleString()}`,
-          tick: currentTick,
-        });
-
-        for (const watcherId of auction.watchers) {
-          if (watcherId.toString() !== userId.toString()) {
-            await enqueueNotification({
-              userId: watcherId,
-              type: 'system',
-              title: 'Reserve Price Reached',
-              message: `The reserve price has been met on an auction you're watching!`,
-              route: `/auctions/${auction._id}`,
-              entityType: 'auction',
-              entityId: auction._id,
-              relatedId: auction._id,
-              global: false,
-            });
-          }
+        if (owned >= limit) {
+          return res.status(400).json({
+            success: false,
+            error: `You already control the maximum number of properties allowed in ${city.name}`,
+          });
+        }
+        if (potential + extra > limit) {
+          return res.status(400).json({
+            success: false,
+            error: `You cannot place this bid because winning this auction would exceed the property ownership limit for ${city.name}`,
+          });
         }
       }
 
-      await auction.save();
-
-      if (previousBidderId && previousBidderId.toString() !== userId.toString()) {
-        await enqueueNotification({
-          userId: previousBidderId,
-          type: 'system',
-          title: 'Outbid!',
-          message: `You have been outbid on an auction. New high bid: $${amount.toLocaleString()}`,
-          route: `/auctions/${auction._id}`,
-          entityType: 'auction',
-          entityId: auction._id,
-          relatedId: auction._id,
-          global: false,
-        });
-
-        auction.activity.push({
-          type: 'outbid',
-          userId: previousBidderId,
-          tick: currentTick,
-        });
-      }
-
-      try {
-        let rep = await AuctionReputation.findOne({ userId });
-        if (!rep) {
-          rep = await AuctionReputation.create({ userId });
+      let result;
+      await withUserBidLock(userId, async () => {
+        for (let attempt = 0; attempt < 3; attempt++) {
+          result = await tryPlaceBid({ id, amount, userId, currentTick });
+          if (!result.retry) return;
         }
-        rep.totalBidsPlaced += 1;
-        rep.totalParticipations += isNewBidder ? 1 : 0;
-        await rep.save();
-      } catch {
-        // reputation update is best-effort
-      }
-
-      const timing = computeAuctionRemaining(auction, currentTick);
-
-      emitAuctionBid(auction._id.toString(), {
-        currentBid: amount,
-        currentBidderId: userId.toString(),
-        currentBidderUsername: user.username,
-        totalBids: auction.totalBids,
-        uniqueBidders: auction.uniqueBidders,
-        endTick: auction.endTick,
-        currentTick: timing.currentTick,
-        remainingMonths: timing.remainingMonths,
+        result = { status: 409, body: { success: false, error: 'Too many concurrent bids. Please try again.' } };
       });
 
-      emitAuctionActivity(auction._id.toString(), {
-        type: 'bid',
-        userId: userId.toString(),
-        username: user.username,
-        amount,
-        tick: currentTick,
-      });
-
-      await Promise.all([
-        cacheDel(cacheKeys.auction(auction._id.toString())),
-        cacheDel(cacheKeys.auctionFeatured()),
-        cacheDel(cacheKeys.auctionAnalytics()),
-      ]);
-
-      await processPlayerProgress(userId, 'auction_bid');
-
-      return res.json({
-        success: true,
-        auction: {
-          _id: auction._id,
-          currentBid: auction.currentBid,
-          currentBidderId: userId.toString(),
-          totalBids: auction.totalBids,
-          uniqueBidders: auction.uniqueBidders,
-          endTick: auction.endTick,
-          reserveMet: auction.reserveMet,
-          currentTick: timing.currentTick,
-          remainingMonths: timing.remainingMonths,
-        },
-        balance: user.balance,
-      });
+      return res.status(result.status).json(result.body);
     } catch (error) {
       return res.status(500).json({ success: false, error: error.message });
     }
@@ -1048,6 +1184,64 @@ router.get(
     }
   },
 );
+
+router.get('/my/analytics', authenticate, async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const cacheKey = cacheKeys.auctionMyAnalytics(userId.toString());
+    const cached = await cacheGet(cacheKey);
+    if (cached) return res.json({ success: true, stats: cached });
+
+    const [rep, participation, wonCount, watchlistCount, totalSpentAgg, activeWinning, userDoc] = await Promise.all([
+      AuctionReputation.findOne({ userId }).lean(),
+      Auction.countDocuments({ 'bids.bidderId': userId }),
+      Auction.countDocuments({ winnerId: userId, winningBid: { $gt: 0 } }),
+      Auction.countDocuments({ watchers: userId }),
+      Auction.aggregate([
+        { $match: { winnerId: userId, winningBid: { $gt: 0 } } },
+        { $group: { _id: null, total: { $sum: '$winningBid' } } },
+      ]),
+      Auction.countDocuments({
+        currentBidderId: userId,
+        status: { $in: ['active', 'ending'] },
+        winningBid: { $lte: 0 },
+      }),
+      User.findById(userId).select('balance reservedAuctionFunds').lean(),
+    ]);
+
+    const bidAgg = await Auction.aggregate([
+      { $match: { 'bids.bidderId': userId } },
+      { $unwind: '$bids' },
+      { $match: { 'bids.bidderId': userId } },
+      { $group: { _id: null, total: { $sum: '$bids.amount' }, count: { $sum: 1 } } },
+    ]);
+    const totalAmountBid = bidAgg[0]?.total || 0;
+    const bidsPlaced = rep?.totalBidsPlaced || bidAgg[0]?.count || 0;
+    const won = wonCount;
+    const lost = Math.max(0, participation - won);
+
+    const stats = {
+      participation,
+      bidsPlaced,
+      won,
+      lost,
+      totalAmountBid,
+      totalSpent: totalSpentAgg[0]?.total || 0,
+      averageBid: bidsPlaced > 0 ? Math.round(totalAmountBid / bidsPlaced) : 0,
+      winRate: participation > 0 ? Math.round((won / participation) * 100) : 0,
+      watchlistCount,
+      activeWinningBids: activeWinning,
+      balance: userDoc?.balance || 0,
+      reservedAuctionFunds: userDoc?.reservedAuctionFunds || 0,
+      availableBalance: (userDoc?.balance || 0) - (userDoc?.reservedAuctionFunds || 0),
+    };
+
+    await cacheSet(cacheKey, stats, AUCTION_CONFIG.cacheTTL.analytics);
+    return res.json({ success: true, stats });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 router.get('/my/watchlist', authenticate, async (req, res) => {
   try {

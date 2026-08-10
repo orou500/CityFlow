@@ -15,6 +15,7 @@ const userSchema = new mongoose.Schema(
       },
     ],
     balance: { type: Number, default: 100000 },
+    reservedAuctionFunds: { type: Number, default: 0 },
     ownedProperties: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Property' }],
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
     banned: { type: Boolean, default: false },

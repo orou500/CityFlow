@@ -13,6 +13,8 @@ import { onPropertyPurchased, onPropertySold, onPropertyUpgraded } from '../util
 import { processPlayerProgress } from '../utils/playerProgress.js';
 import { getPropertyRiskProfile } from '../engine/propertyRisk.js';
 import { trackEvent, EVENTS } from '../utils/analytics.js';
+import { getAvailableBalance } from '../utils/auctionMoney.js';
+import { getCityPropertyLimit } from '../utils/ownershipLimits.js';
 import {
   GRADE_NAMES,
   MAX_GRADE,
@@ -238,7 +240,7 @@ router.post('/buy', authenticate, async (req, res) => {
     if (!city) return res.status(404).json({ error: 'City not found' });
 
     const ownedInCity = await Property.countDocuments({ ownerId: buyer._id, cityId: city._id });
-    const maxAllowed = Math.max(1, Math.floor(city.propertyCount * 0.05));
+    const maxAllowed = await getCityPropertyLimit(city);
     if (ownedInCity >= maxAllowed) {
       return res.status(400).json({
         error: `City ownership limit reached. You can own at most ${maxAllowed} properties in ${city.name}`,
@@ -248,7 +250,7 @@ router.post('/buy', authenticate, async (req, res) => {
     }
 
     const price = property.currentPrice;
-    if (buyer.balance < price) {
+    if (getAvailableBalance(buyer) < price) {
       return res.status(400).json({ error: 'Insufficient balance' });
     }
 

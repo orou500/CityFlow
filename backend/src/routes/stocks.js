@@ -10,6 +10,7 @@ import { authenticate } from '../middleware/auth.js';
 import { processPlayerProgress } from '../utils/playerProgress.js';
 import { cacheKeys } from '../utils/cacheKeys.js';
 import { cacheDel } from '../utils/cache.js';
+import { getAvailableBalance } from '../utils/auctionMoney.js';
 
 const router = express.Router();
 router.use(authenticate);
@@ -41,7 +42,7 @@ router.post('/buy', async (req, res) => {
 
     const totalCost = shares * company.sharePrice;
     const user = await User.findById(req.user._id);
-    if (user.balance < totalCost) {
+    if (getAvailableBalance(user) < totalCost) {
       return res.status(400).json({ error: 'Insufficient balance' });
     }
 
