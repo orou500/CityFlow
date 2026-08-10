@@ -149,8 +149,8 @@ describe('Auction bid money reservation', () => {
 
   it('handles simultaneous bids by different users without double-spending', async () => {
     const city = await createTestCity({ propertyCount: 200 });
-    const { token: tokenA } = await makeUser('simA', 100000);
-    const { token: tokenB } = await makeUser('simB', 100000);
+    const { user: userA, token: tokenA } = await makeUser('simA', 100000);
+    const { user: userB, token: tokenB } = await makeUser('simB', 100000);
     const auction = await makeAuction({ city });
 
     const [resA, resB] = await Promise.all([
@@ -159,14 +159,25 @@ describe('Auction bid money reservation', () => {
     ]);
 
     const final = await Auction.findById(auction._id);
-    expect(final.currentBid).toBeGreaterThanOrEqual(45000);
-    expect(final.totalBids).toBe(2);
+    // The higher bid always ends up winning the race: if 40k lands first, the
+    // 45k retry clears the new minimum (40k + increment). If 45k lands first,
+    // the 40k retry is rejected for being below the minimum — so totalBids is
+    // either 1 or 2, but the final state is always the 45k bid by userB.
+    expect(final.currentBid).toBe(45000);
+    expect(final.currentBidderId.toString()).toBe(userB._id.toString());
+    expect(final.totalBids).toBeGreaterThanOrEqual(1);
 
+    // Exactly one user holds funds: the highest bidder, for exactly the
+    // current bid amount. No money is double-spent or left stuck.
     const reservations = await AuctionReservation.find({ auctionId: auction._id }).lean();
-    expect(reservations.length).toBe(1); // only the highest bidder holds funds
-    const holders = await User.find({ reservedAuctionFunds: { $gt: 0 } }).lean();
-    expect(holders.length).toBe(1);
-    expect(holders[0].reservedAuctionFunds).toBe(final.currentBid);
+    expect(reservations.length).toBe(1);
+    expect(reservations[0].amount).toBe(45000);
+
+    const userAAfter = await User.findById(userA._id);
+    const userBAfter = await User.findById(userB._id);
+    expect(userAAfter.reservedAuctionFunds).toBe(0);
+    expect(userBAfter.reservedAuctionFunds).toBe(45000);
+    expect(userBAfter.balance).toBe(100000); // balance untouched, funds reserved
 
     const allUsers = await User.find({}).lean();
     for (const u of allUsers) {
