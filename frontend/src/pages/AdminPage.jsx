@@ -989,7 +989,7 @@ export default function AdminPage() {
             const renderPagination = (
               <div className="flex items-center justify-between gap-2 px-3 py-2 border-t border-gray-200 dark:border-gray-700">
                 <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {t('admin.totalUsers', { total: adminUsersTotal })} ·{' '}
+                  {t('admin.totalUsersCount', { total: adminUsersTotal })} ·{' '}
                   {t('admin.pageOf', { page: userPage, total: totalPages })}
                 </span>
                 <div className="flex items-center gap-1">
