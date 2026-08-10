@@ -279,6 +279,7 @@ function CompaniesTab() {
     .sort((a, b) => {
       if (sortBy === 'price') return b.sharePrice - a.sharePrice;
       if (sortBy === 'change') return b.dayChangePercent - a.dayChangePercent;
+      if (sortBy === 'yield') return (b.dividendYield || 0) - (a.dividendYield || 0);
       if (sortBy === 'name') return a.name.localeCompare(b.name);
       return b.marketCap - a.marketCap;
     });
@@ -380,6 +381,7 @@ function CompaniesTab() {
           <option value="marketCap">{t('stocks.marketCap')}</option>
           <option value="price">{t('stocks.sharePrice')}</option>
           <option value="change">{t('stocks.change')}</option>
+          <option value="yield">{t('stocks.dividendYield')}</option>
           <option value="name">{t('stocks.name')}</option>
         </select>
       </div>
@@ -394,6 +396,7 @@ function CompaniesTab() {
                 <th className="px-4 py-3 text-right">{t('stocks.sharePrice')}</th>
                 <th className="px-4 py-3 text-right">{t('stocks.change')}</th>
                 <th className="hidden sm:table-cell px-4 py-3 text-right">{t('stocks.marketCap')}</th>
+                <th className="hidden md:table-cell px-4 py-3 text-right">{t('stocks.dividendYield')}</th>
                 <th className="hidden md:table-cell px-4 py-3 text-right">{t('stocks.employees')}</th>
               </tr>
             </thead>
@@ -429,6 +432,16 @@ function CompaniesTab() {
                     title={formatMoneyExact(c.marketCap)}
                   >
                     {formatMoney(c.marketCap)}
+                  </td>
+                  <td
+                    className="hidden md:table-cell px-4 py-3 text-right text-gray-500 dark:text-gray-400"
+                    title={
+                      c.dividendPerShare
+                        ? `$${c.dividendPerShare.toFixed(2)} ${t('stocks.dividendPerShare')}`
+                        : undefined
+                    }
+                  >
+                    {c.dividendYield ? `${c.dividendYield}%` : '-'}
                   </td>
                   <td
                     className="hidden md:table-cell px-4 py-3 text-right text-gray-500 dark:text-gray-400"

@@ -191,6 +191,53 @@ export const STOCK_MARKET_CONFIG = {
   sentimentDecay: 0.95,
 };
 
+/**
+ * Dividend policy for non-IPO (auto-generated) companies.
+ *
+ * Dividends are never created out of thin air: every payout is deducted
+ * from the company's accumulated cash, which only grows from retained
+ * profit. A company must be profitable, hold enough cash, and carry
+ * limited debt relative to its cash to be eligible.
+ *
+ * Tune these values to change how generous/rare dividends are.
+ */
+export const DIVIDEND_CONFIG = {
+  enabled: true,
+  // Probability per eligible tick
+  regularChancePerTick: 0.03,
+  exceptionalChancePerTick: 0.01,
+  // Minimum ticks between two dividend payments for the same company
+  minIntervalTicks: 20,
+  // Profit = revenue * margin (margin scales with company size)
+  profitMarginBySize: {
+    startup: 0.04,
+    small: 0.06,
+    medium: 0.09,
+    large: 0.12,
+    corporation: 0.15,
+  },
+  // +/- noise applied to the computed margin
+  profitNoise: 0.3,
+  // Chance of a loss-making quarter (erodes cash)
+  lossQuarterChance: 0.15,
+  lossRateRange: [0.01, 0.05],
+  // Payout caps
+  payoutRatioOfProfit: 0.35,
+  exceptionalPayoutMultiplier: 1.5,
+  maxPayoutRatioOfCash: 0.5,
+  maxDividendPerShare: 25,
+  // Eligibility thresholds
+  minCashToPay: 500000,
+  minProfitToPay: 200000,
+  maxDebtRatio: 0.5,
+  // Initial balance sheet (fractions of revenue at creation)
+  baseInitialCashRatio: 0.25,
+  initialDebtRatio: 0.4,
+  // Ticks used to annualize the displayed yield (same convention as IPO)
+  yieldAnnualizedTicks: 48,
+  historyMaxEntries: 20,
+};
+
 export const COMPANY_EVENTS = {
   expansion: {
     employeeGrowth: [0.1, 0.3],
