@@ -92,6 +92,11 @@ export function calculateMonthlyProfit(rentIncome, maintenanceLevel, _propertyVa
  * maintenance all use the same number.
  */
 export function calculatePropertyRentIncome(property) {
+  // A house is a single-family dwelling — it is either occupied or not, so it
+  // always earns its full rent (occupancy does not apply).
+  if (property.type === 'house') {
+    return Math.max(0, Math.round(property.rentPerUnit || property.rent || 0));
+  }
   const unitCount = property.units?.length || 1;
   let grossRent = property.rent || 0;
   if (property.rentPerUnit) {
@@ -127,6 +132,9 @@ export function calculateQualityScore(property) {
 }
 
 export function simulateOccupancy(property, cityDemandIndex, citySupplyIndex) {
+  // Houses are single-family homes and always occupied
+  if (property.type === 'house') return 100;
+
   const quality = property.qualityScore || 50;
   const normalizedQuality = quality / 100;
 
