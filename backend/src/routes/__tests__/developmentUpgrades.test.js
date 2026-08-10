@@ -1,12 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../../test/createApp.js';
-import {
-  createAuthenticatedUser,
-  createTestProperty,
-  createTestCity,
-  authHeader,
-} from '../../test/helpers.js';
+import { createAuthenticatedUser, createTestProperty, createTestCity, authHeader } from '../../test/helpers.js';
 import Property from '../../models/Property.js';
 import Transaction from '../../models/Transaction.js';
 import User from '../../models/User.js';
@@ -141,9 +136,7 @@ describe('Development upgrade endpoints', () => {
     });
 
     it('matches the effects shown in the upgrade preview', async () => {
-      const previewRes = await request(app)
-        .get(`/development/upgrades/${property._id}`)
-        .set(authHeader(ownerToken));
+      const previewRes = await request(app).get(`/development/upgrades/${property._id}`).set(authHeader(ownerToken));
       const preview = previewRes.body.upgrades.find((u) => u.type === 'luxury');
       const expectedEffects = calculateUpgradeEffects('luxury', 0);
 
