@@ -18,6 +18,7 @@ const seasonSchema = new mongoose.Schema(
           portfolioValue: Number,
           propertiesOwned: Number,
           rank: Number,
+          reward: { type: Number, default: null },
         },
       ],
       cityStatistics: [
@@ -48,7 +49,13 @@ const seasonSchema = new mongoose.Schema(
       totalPlayers: { type: Number, default: 0 },
       totalTransactions: { type: Number, default: 0 },
       summary: { type: String, default: '' },
+      hallOfFame: {
+        type: mongoose.Schema.Types.Mixed,
+        default: {},
+      },
     },
+    rewardsDistributed: { type: Boolean, default: false },
+    rewardsDistributedAt: { type: Date, default: null },
   },
   { timestamps: true },
 );

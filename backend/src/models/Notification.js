@@ -19,6 +19,7 @@ const notificationSchema = new mongoose.Schema(
         'mission_complete',
         'mission_reward',
         'mission_chain_unlocked',
+        'season_reward',
       ],
       required: true,
     },

@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLeaderboardStore } from '../store/useLeaderboardStore';
 import { useAuthStore } from '../store/useAuthStore';
-import { formatCount } from '../utils/format';
+import { formatCount, formatMoneyExact } from '../utils/format';
 import CompactValue from '../components/CompactValue';
 import { getAvatarUrl } from '../utils/capacitor';
 import useNativeAvatarUrl from '../hooks/useNativeAvatarUrl';
@@ -264,9 +264,12 @@ export default function LeaderboardPage() {
     myRanks,
     loading,
     total,
+    rewards,
+    seasonNumber,
     fetchRankings,
     fetchMyRank,
     fetchPlayerProfile,
+    fetchLeaderboardRewards,
     playerProfile,
     clearPlayerProfile,
   } = useLeaderboardStore();
@@ -276,6 +279,15 @@ export default function LeaderboardPage() {
   const [showProfile, setShowProfile] = useState(false);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const getRewardForRank = (rank) => {
+    if (!rank || !rewards) return null;
+    return rewards.find((r) => r.rank === rank || (r.minRank && rank >= r.minRank && rank <= r.maxRank)) || null;
+  };
+
+  useEffect(() => {
+    fetchLeaderboardRewards();
+  }, [fetchLeaderboardRewards]);
 
   const loadPage = useCallback(
     (cat, p) => {
@@ -314,12 +326,47 @@ export default function LeaderboardPage() {
   const topThree = isFirstPage ? rankings.slice(0, 3) : [];
   const listRows = isFirstPage ? rankings.slice(3) : rankings;
 
+  const myNetWorthRank = myRanks?.netWorth?.rank || null;
+  const myReward = getRewardForRank(myNetWorthRank);
+
   return (
     <div className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
       <div className="mb-4 sm:mb-5">
         <h1 className="text-xl sm:text-2xl font-bold text-primary">{t('leaderboard.title')}</h1>
         <p className="text-xs sm:text-sm text-secondary mt-1">{t('leaderboard.subtitle')}</p>
       </div>
+
+      {seasonNumber != null && (
+        <div className="bg-card border border-border rounded-xl p-3 sm:p-4 mb-4 sm:mb-5">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-xs sm:text-sm font-semibold text-primary">
+              {t('leaderboard.season', { number: seasonNumber })}
+            </h2>
+            <span className="text-[11px] sm:text-xs text-muted shrink-0">{t('leaderboard.rewards.endOfSeason')}</span>
+          </div>
+
+          {rewards?.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 sm:gap-2 mt-3">
+              {rewards.map((tier, i) => (
+                <div key={i} className="rounded-lg bg-gray-50 dark:bg-gray-800/50 px-2 py-1.5 sm:py-2 text-center">
+                  <div className="text-[10px] sm:text-[11px] text-muted truncate">
+                    {tier.rank ? `#${tier.rank}` : `#${tier.minRank}\u2013#${tier.maxRank}`}
+                  </div>
+                  <div className="text-xs sm:text-sm font-bold text-yellow-600 dark:text-yellow-400">
+                    {formatMoneyExact(tier.reward)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {myReward && (
+            <div className="mt-2.5 text-xs sm:text-sm text-secondary">
+              {t('leaderboard.rewards.yourReward', { rank: myNetWorthRank, amount: formatMoneyExact(myReward.reward) })}
+            </div>
+          )}
+        </div>
+      )}
 
       {user && myRanks && (
         <div className="bg-card border border-border rounded-xl p-3 sm:p-4 mb-4 sm:mb-5">

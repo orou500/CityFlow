@@ -4,9 +4,11 @@ import CompetitiveEvent from '../models/CompetitiveEvent.js';
 import User from '../models/User.js';
 import Season from '../models/Season.js';
 import { authenticate } from '../middleware/auth.js';
+import { requireAdmin } from '../middleware/admin.js';
 import { cacheGet, cacheSet, cacheDelPattern } from '../utils/cache.js';
 import { ACHIEVEMENT_DEFINITIONS } from '../config/achievements.js';
 import { MISSION_DEFINITIONS } from '../config/missions.js';
+import { LEADERBOARD_REWARD_TIERS } from '../config/leaderboardRewards.js';
 
 const router = Router();
 
@@ -89,6 +91,9 @@ router.get('/my-rank', authenticate, async (req, res) => {
       'companyIncome',
       'companyReputation',
       'companyGrowth',
+      'ipoMarketCap',
+      'ipoDividendYield',
+      'ipoPriceGrowth',
     ];
     const categories = category && ALL_CATEGORIES.includes(category) ? [category] : ALL_CATEGORIES;
 
@@ -292,10 +297,8 @@ router.get('/events/:id', async (req, res) => {
   }
 });
 
-router.post('/events', authenticate, async (req, res) => {
+router.post('/events', requireAdmin, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
-
     const { name, description, type, metric, startDate, endDate, minLevel, maxParticipants, rewards } = req.body;
     const activeSeason = await Season.findOne({ status: 'active' });
 
@@ -342,6 +345,9 @@ router.get('/summary', async (req, res) => {
       'companyIncome',
       'companyReputation',
       'companyGrowth',
+      'ipoMarketCap',
+      'ipoDividendYield',
+      'ipoPriceGrowth',
     ];
 
     const snapshots = await LeaderboardSnapshot.find({
@@ -373,6 +379,16 @@ router.get('/summary', async (req, res) => {
     const result = { summary, activeEvents, seasonNumber };
     await cacheSet(cacheKey, result, LEADERBOARD_SUMMARY_TTL);
     res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/rewards', async (req, res) => {
+  try {
+    const activeSeason = await Season.findOne({ status: 'active' });
+    const seasonNumber = activeSeason ? activeSeason.number : 1;
+    res.json({ rewards: LEADERBOARD_REWARD_TIERS, seasonNumber });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -914,7 +914,8 @@
       "improvement": "שיפור",
       "development": "פיתוח",
       "period_bonus": "בונוס תקופה",
-      "login": "כניסה"
+      "login": "כניסה",
+      "season_reward": "פרס עונתי"
     }
   },
   "landing": {
@@ -1378,7 +1379,8 @@
     "activeLoans": "הלוואות פעילות",
     "summary": "סיכום",
     "champion": "אלוף העונה",
-    "properties": "נכסים"
+    "properties": "נכסים",
+    "reward": "פרס"
   },
   "maintenance": {
     "title": "תחזוקה בתהליך",
@@ -1611,6 +1613,11 @@
     "change": "שינוי",
     "showing": "מציג {{count}} מתוך {{total}} שחקנים",
     "yourRank": "הדירוג שלך",
+    "season": "עונה #{{number}}",
+    "rewards": {
+      "endOfSeason": "פרסי העונה מחולקים בסיום העונה",
+      "yourReward": "אתה מדורג #{{rank}} \u2014 תוכל לזכות ב-{{amount}} בסיום העונה!"
+    },
     "categories": {
       "netWorth": "שווי נקי",
       "properties": "נכסים",

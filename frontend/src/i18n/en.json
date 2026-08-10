@@ -923,7 +923,8 @@
       "improvement": "IMPROVE",
       "development": "DEVELOP",
       "period_bonus": "PERIOD BONUS",
-      "login": "LOGIN"
+      "login": "LOGIN",
+      "season_reward": "SEASON REWARD"
     }
   },
   "landing": {
@@ -1387,7 +1388,8 @@
     "activeLoans": "Active Loans",
     "summary": "Summary",
     "champion": "Season Champion",
-    "properties": "Properties"
+    "properties": "Properties",
+    "reward": "Reward"
   },
   "maintenance": {
     "title": "Maintenance In Progress",
@@ -1620,6 +1622,11 @@
     "change": "Change",
     "showing": "Showing {{count}} of {{total}} players",
     "yourRank": "Your Ranking",
+    "season": "Season #{{number}}",
+    "rewards": {
+      "endOfSeason": "Season rewards are distributed when the season ends",
+      "yourReward": "You are ranked #{{rank}} \u2014 you could earn {{amount}} at season end!"
+    },
     "categories": {
       "netWorth": "Net Worth",
       "properties": "Properties",

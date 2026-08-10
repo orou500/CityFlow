@@ -17,6 +17,7 @@ const TYPE_CONFIG = {
   mission_complete: { icon: '🎯', color: 'text-green-500', route: '/missions', tab: 'completed' },
   mission_reward: { icon: '🎁', color: 'text-amber-500', route: '/missions' },
   mission_chain_unlocked: { icon: '🔗', color: 'text-purple-500', route: '/missions' },
+  season_reward: { icon: '🏆', color: 'text-yellow-500', route: '/leaderboards' },
   system: { icon: '📢', color: 'text-gray-500' },
 };
 

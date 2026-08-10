@@ -1,4 +1,4 @@
-import User from '../models/User.js';
+﻿import User from '../models/User.js';
 import Property from '../models/Property.js';
 import Loan from '../models/Loan.js';
 import Transaction from '../models/Transaction.js';
@@ -18,6 +18,13 @@ const COMPANY_CATEGORIES = [
   'companyGrowth',
 ];
 const IPO_CATEGORIES = ['ipoMarketCap', 'ipoDividendYield', 'ipoPriceGrowth'];
+
+function rankCompare(a, b) {
+  if (b.value !== a.value) return b.value - a.value;
+  const aKey = (a.userId || a.companyId || '').toString();
+  const bKey = (b.userId || b.companyId || '').toString();
+  return aKey.localeCompare(bKey);
+}
 
 const UPCOMING_LEAD_TICKS = 12;
 const COMPLETED_RETENTION_TICKS = 28;
@@ -185,7 +192,7 @@ export async function generateCompetitiveEvents(tickNumber) {
         rank: i + 1,
       }));
     } catch {
-      // ignore — event will be populated on next tick
+      // ignore â€” event will be populated on next tick
     }
   }
 
@@ -256,10 +263,10 @@ async function computeNetWorthRankings() {
   }
 
   const loanMap = new Map();
-  const loans = await Loan.find({ status: 'active' }).select('userId outstandingBalance');
+  const loans = await Loan.find({ active: true }).select('userId remainingBalance');
   for (const l of loans) {
     const key = l.userId.toString();
-    loanMap.set(key, (loanMap.get(key) || 0) + (l.outstandingBalance || 0));
+    loanMap.set(key, (loanMap.get(key) || 0) + (l.remainingBalance || 0));
   }
 
   const rankings = users.map((u) => {
@@ -276,7 +283,7 @@ async function computeNetWorthRankings() {
     };
   });
 
-  rankings.sort((a, b) => b.value - a.value);
+  rankings.sort(rankCompare);
   return rankings;
 }
 
@@ -297,7 +304,7 @@ async function computePropertyRankings() {
       },
     },
     { $match: { propertyCount: { $gt: 0 } } },
-    { $sort: { propertyCount: -1 } },
+    { $sort: { propertyCount: -1, _id: 1 } },
     { $project: { username: 1, displayName: 1, avatar: 1, propertyCount: 1 } },
   ]);
 
@@ -326,14 +333,14 @@ async function computePassiveIncomeRankings() {
       },
     },
     { $match: { netIncome: { $gt: 0 } } },
-    { $sort: { netIncome: -1 } },
+    { $sort: { netIncome: -1, _id: 1 } },
   ]);
 
   const loanPaymentMap = new Map();
-  const activeLoans = await Loan.find({ status: 'active' }).select('userId monthlyPayment');
+  const activeLoans = await Loan.find({ active: true }).select('userId paymentPerTick');
   for (const l of activeLoans) {
     const key = l.userId.toString();
-    loanPaymentMap.set(key, (loanPaymentMap.get(key) || 0) + (l.monthlyPayment || 0));
+    loanPaymentMap.set(key, (loanPaymentMap.get(key) || 0) + (l.paymentPerTick || 0));
   }
 
   const userIds = results.map((r) => r._id);
@@ -397,7 +404,7 @@ async function computeDealVolumeRankings() {
 
   const entries = [...volumeMap.entries()]
     .filter(([, v]) => v.totalVolume > 0)
-    .sort((a, b) => b[1].totalVolume - a[1].totalVolume)
+    .sort((a, b) => b[1].totalVolume - a[1].totalVolume || a[0].localeCompare(b[0]))
     .slice(0, 200);
 
   if (entries.length === 0) return [];
@@ -466,7 +473,7 @@ async function computeCityInfluenceRankings() {
       };
     })
     .filter((r) => r.value > 0)
-    .sort((a, b) => b.value - a.value);
+    .sort(rankCompare);
 
   return scored;
 }
@@ -501,7 +508,7 @@ async function computeCompanyNetWorth() {
       };
     })
     .filter((r) => r.value > 0)
-    .sort((a, b) => b.value - a.value);
+    .sort(rankCompare);
 }
 
 async function computeCompanyProperties() {
@@ -516,7 +523,7 @@ async function computeCompanyProperties() {
       value: c.stats?.propertiesOwned || 0,
     }))
     .filter((r) => r.value > 0)
-    .sort((a, b) => b.value - a.value);
+    .sort(rankCompare);
 }
 
 async function computeCompanyIncome() {
@@ -531,7 +538,7 @@ async function computeCompanyIncome() {
       value: c.stats?.totalRentalIncome || 0,
     }))
     .filter((r) => r.value > 0)
-    .sort((a, b) => b.value - a.value);
+    .sort(rankCompare);
 }
 
 async function computeCompanyReputation() {
@@ -546,7 +553,7 @@ async function computeCompanyReputation() {
       value: c.reputation || 0,
     }))
     .filter((r) => r.value > 0)
-    .sort((a, b) => b.value - a.value);
+    .sort(rankCompare);
 }
 
 async function computeCompanyGrowth() {
@@ -565,7 +572,7 @@ async function computeCompanyGrowth() {
       };
     })
     .filter((r) => r.value > 0)
-    .sort((a, b) => b.value - a.value);
+    .sort(rankCompare);
 }
 
 async function computeIpoMarketCap() {
@@ -595,7 +602,7 @@ async function computeIpoMarketCap() {
       };
     })
     .filter((r) => r.value > 0)
-    .sort((a, b) => b.value - a.value);
+    .sort(rankCompare);
 }
 
 async function computeIpoDividendYield() {
@@ -613,7 +620,7 @@ async function computeIpoDividendYield() {
       metadata: { ticker: c.ticker, sharePrice: c.sharePrice, lastDividendTick: c.lastDividendTick },
     }))
     .filter((r) => r.value > 0)
-    .sort((a, b) => b.value - a.value);
+    .sort(rankCompare);
 }
 
 async function computeIpoPriceGrowth() {
@@ -631,7 +638,7 @@ async function computeIpoPriceGrowth() {
       metadata: { ticker: c.ticker, sharePrice: c.sharePrice, dayChangePercent: c.dayChangePercent },
     }))
     .filter((r) => r.value > 0)
-    .sort((a, b) => b.value - a.value);
+    .sort(rankCompare);
 }
 
 async function getPreviousSnapshot(category, currentTick) {
@@ -776,7 +783,7 @@ export async function finalizeExpiredEvents(tickNumber) {
   for (const event of expired) {
     event.status = 'completed';
     event.status = 'completed';
-    const sorted = [...event.participants].sort((a, b) => b.value - a.value);
+    const sorted = [...event.participants].sort(rankCompare);
     sorted.forEach((p, i) => {
       p.rank = i + 1;
     });
