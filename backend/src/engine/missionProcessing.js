@@ -14,6 +14,7 @@ import { enqueueNotification } from '../utils/notificationQueue.js';
 import { emitToUser } from '../socket/index.js';
 import { SOCKET_EVENTS } from '../socket/events.js';
 import { awardXp } from '../utils/leveling.js';
+import { getMultipleStatuses, STATUS } from '../utils/presence.js';
 
 function getDailyPeriodKey() {
   const now = new Date();
@@ -248,18 +249,28 @@ export async function evaluateCondition(userId, missionId, condition, userData) 
       break;
     }
     case 'login_today': {
-      if (!userData.lastLoginAt) {
-        value = 0;
+      const now = new Date();
+      const isSameUtcDay = (d) => {
+        if (!d) return false;
+        const date = new Date(d);
+        return (
+          date.getUTCFullYear() === now.getUTCFullYear() &&
+          date.getUTCMonth() === now.getUTCMonth() &&
+          date.getUTCDate() === now.getUTCDate()
+        );
+      };
+      if (isSameUtcDay(userData.lastLoginAt) || isSameUtcDay(userData.lastDailyLogin)) {
+        value = 1;
         break;
       }
-      const loginDate = new Date(userData.lastLoginAt);
-      const now = new Date();
-      value =
-        loginDate.getUTCFullYear() === now.getUTCFullYear() &&
-        loginDate.getUTCMonth() === now.getUTCMonth() &&
-        loginDate.getUTCDate() === now.getUTCDate()
-          ? 1
-          : 0;
+      const dayStart = new Date();
+      dayStart.setUTCHours(0, 0, 0, 0);
+      const loginTxToday = await Transaction.countDocuments({
+        buyerId: userId,
+        type: 'login',
+        createdAt: { $gte: dayStart },
+      });
+      value = loginTxToday > 0 ? 1 : 0;
       break;
     }
     case 'upgrades_today': {
@@ -577,6 +588,23 @@ export async function refreshWeeklyMissions(userId) {
   await initializeMissionsForUser(userId);
 }
 
+export async function markDailyLoginForUser(userId) {
+  const user = await User.findById(userId).select('lastDailyLogin lastLoginAt').lean();
+  if (!user) return false;
+
+  const now = new Date();
+  const todayKey = now.toISOString().slice(0, 10);
+  const isToday = (d) => !!d && new Date(d).toISOString().slice(0, 10) === todayKey;
+  if (isToday(user.lastDailyLogin) || isToday(user.lastLoginAt)) {
+    return false;
+  }
+
+  await refreshDailyMissions(userId);
+  await User.updateOne({ _id: userId }, { $set: { lastDailyLogin: now } });
+  await updateMissionProgress(userId, 'daily_login');
+  return true;
+}
+
 export async function processMissionReset() {
   const dailyPeriodKey = getDailyPeriodKey();
   const dailyMissions = MISSION_DEFINITIONS.filter((m) => m.type === 'daily');
@@ -587,8 +615,17 @@ export async function processMissionReset() {
     periodKey: { $ne: dailyPeriodKey },
   }).distinct('userId');
 
+  const presenceStatuses = await getMultipleStatuses(oldDaily);
+  const presenceMap = new Map(presenceStatuses.map((p) => [p.userId.toString(), p.status]));
+  let onlineDailyLogins = 0;
+
   for (const userId of oldDaily) {
     await refreshDailyMissions(userId);
+    if (presenceMap.get(userId.toString()) === STATUS.ONLINE || presenceMap.get(userId.toString()) === STATUS.IDLE) {
+      await User.updateOne({ _id: userId }, { $set: { lastDailyLogin: new Date() } });
+      await updateMissionProgress(userId, 'daily_login');
+      onlineDailyLogins++;
+    }
   }
 
   const weeklyPeriodKey = getWeeklyPeriodKey();
@@ -604,7 +641,7 @@ export async function processMissionReset() {
     await refreshWeeklyMissions(userId);
   }
 
-  return { dailyRefreshed: oldDaily.length, weeklyRefreshed: oldWeekly.length };
+  return { dailyRefreshed: oldDaily.length, weeklyRefreshed: oldWeekly.length, onlineDailyLogins };
 }
 
 export async function getMissionDashboard(userId) {

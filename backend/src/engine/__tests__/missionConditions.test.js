@@ -10,7 +10,13 @@ import District from '../../models/District.js';
 import ConstructionProject from '../../models/ConstructionProject.js';
 import MarketReport from '../../models/MarketReport.js';
 import { createTestUser, createTestCity } from '../../test/helpers.js';
-import { initializeMissionsForUser, updateMissionProgress, evaluateCondition } from '../../engine/missionProcessing.js';
+import {
+  initializeMissionsForUser,
+  updateMissionProgress,
+  evaluateCondition,
+  markDailyLoginForUser,
+  processMissionReset,
+} from '../../engine/missionProcessing.js';
 
 const getMissionProgress = async (userId, missionId) => MissionProgress.findOne({ userId, missionId }).lean();
 
@@ -714,5 +720,92 @@ describe('Mission Conditions', () => {
     const mp = await getMissionProgress(user._id, 'weekly_login');
     expect(mp.progress).toBe(0);
     expect(mp.status).toBe('active');
+  });
+});
+
+describe('Daily Login Presence', () => {
+  let user;
+
+  beforeEach(async () => {
+    await MissionProgress.deleteMany({});
+    await User.deleteMany({});
+    await Transaction.deleteMany({});
+    user = await createTestUser({ balance: 10000000 });
+  });
+
+  const twoDaysAgo = () => new Date(Date.now() - 2 * 86400000);
+
+  it('login_today: returns 1 if lastDailyLogin is today (presence-based login)', async () => {
+    const value = await evaluateCondition(
+      user._id,
+      null,
+      { type: 'login_today', target: 1 },
+      { lastDailyLogin: new Date(), lastLoginAt: twoDaysAgo() },
+    );
+    expect(value).toBe(1);
+  });
+
+  it('login_today: returns 1 if a login Transaction exists today', async () => {
+    await Transaction.create({ buyerId: user._id, price: 0, type: 'login' });
+    const value = await evaluateCondition(user._id, null, { type: 'login_today', target: 1 }, {});
+    expect(value).toBe(1);
+  });
+
+  it('login_today: returns 0 when no activity today', async () => {
+    const value = await evaluateCondition(
+      user._id,
+      null,
+      { type: 'login_today', target: 1 },
+      { lastLoginAt: twoDaysAgo(), lastDailyLogin: twoDaysAgo() },
+    );
+    expect(value).toBe(0);
+  });
+
+  it('markDailyLoginForUser: completes daily_login for a returning user with a stale lastLoginAt', async () => {
+    await initializeMissionsForUser(user._id);
+    await User.updateOne({ _id: user._id }, { lastLoginAt: twoDaysAgo(), lastDailyLogin: twoDaysAgo() });
+
+    const marked = await markDailyLoginForUser(user._id);
+    expect(marked).toBe(true);
+
+    const mp = await getMissionProgress(user._id, 'daily_login');
+    expect(mp.progress).toBe(1);
+    expect(mp.status).toBe('completed');
+
+    const dbUser = await User.findById(user._id).lean();
+    expect(new Date(dbUser.lastDailyLogin).toISOString().slice(0, 10)).toBe(new Date().toISOString().slice(0, 10));
+  });
+
+  it('markDailyLoginForUser: refreshes stale daily missions before evaluating', async () => {
+    await initializeMissionsForUser(user._id);
+    await User.updateOne({ _id: user._id }, { lastLoginAt: twoDaysAgo(), lastDailyLogin: twoDaysAgo() });
+    await MissionProgress.updateMany({ userId: user._id }, { $set: { periodKey: 'daily:2000-01-01' } });
+
+    await markDailyLoginForUser(user._id);
+
+    const mp = await getMissionProgress(user._id, 'daily_login');
+    expect(mp.periodKey).not.toBe('daily:2000-01-01');
+  });
+
+  it('markDailyLoginForUser: is a no-op when already logged in today', async () => {
+    await initializeMissionsForUser(user._id);
+    await User.updateOne({ _id: user._id }, { lastDailyLogin: new Date() });
+
+    const marked = await markDailyLoginForUser(user._id);
+    expect(marked).toBe(false);
+
+    const mp = await getMissionProgress(user._id, 'daily_login');
+    expect(mp.status).toBe('active');
+  });
+
+  it('processMissionReset: refreshes stale daily missions (dailyRefreshed count)', async () => {
+    await initializeMissionsForUser(user._id);
+    await MissionProgress.updateMany({ userId: user._id }, { $set: { periodKey: 'daily:2000-01-01' } });
+
+    const result = await processMissionReset();
+    expect(result.dailyRefreshed).toBe(1);
+
+    const mp = await getMissionProgress(user._id, 'daily_login');
+    expect(mp.periodKey).not.toBe('daily:2000-01-01');
   });
 });

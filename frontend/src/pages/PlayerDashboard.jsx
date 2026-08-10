@@ -438,7 +438,7 @@ export default function PlayerDashboard() {
                                             : 'text-gray-500 dark:text-gray-400'
                       }`}
                     >
-                      {t(`transaction.type.${tx.type}`)}
+                      {t(`transaction.type.${tx.type}`, { defaultValue: tx.type.replace(/_/g, ' ').toUpperCase() })}
                     </span>
                     {tx.propertyId && (
                       <span

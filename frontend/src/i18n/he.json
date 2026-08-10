@@ -911,7 +911,10 @@
       "construction": "בנייה",
       "upgrade": "שדרוג",
       "grade_upgrade": "דרגה",
-      "improvement": "שיפור"
+      "improvement": "שיפור",
+      "development": "פיתוח",
+      "period_bonus": "בונוס תקופה",
+      "login": "כניסה"
     }
   },
   "landing": {
