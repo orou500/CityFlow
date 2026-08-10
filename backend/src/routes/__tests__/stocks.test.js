@@ -176,4 +176,97 @@ describe('Stock Routes', () => {
       expect(res.body.error).toBe('No unclaimed dividends');
     });
   });
+
+  describe('non-IPO company dividends', () => {
+    it('GET /stocks/dividends returns unclaimed dividends for non-IPO holdings', async () => {
+      const { user, token } = await createAuthenticatedUser();
+      const stockCompany = await createStockCompany({
+        name: 'Private Div Corp',
+        ticker: 'PDV',
+        industry: 'finance',
+        isIPO: false,
+        active: true,
+        sharePrice: 50,
+        marketCap: 5_000_000,
+        sharesOutstanding: 100_000,
+        dividendPerShare: 2,
+        dividendYield: 1.5,
+        lastDividendTick: 100,
+        revenue: 1_000_000,
+      });
+      await StockHolding.create({
+        userId: user._id,
+        companyId: stockCompany._id,
+        shares: 100,
+        avgBuyPrice: 50,
+        unclaimedDividends: 200,
+      });
+
+      const res = await request(app).get('/stocks/dividends').set(authHeader(token));
+      expect(res.status).toBe(200);
+      expect(res.body.dividends.length).toBe(1);
+      expect(res.body.dividends[0].ticker).toBe('PDV');
+      expect(res.body.dividends[0].unclaimed).toBe(200);
+      expect(res.body.dividends[0].isIPO).toBe(false);
+      expect(res.body.totalUnclaimed).toBe(200);
+    });
+
+    it('POST /stocks/dividends/claim claims non-IPO dividends', async () => {
+      const { user, token } = await createAuthenticatedUser({ balance: 0 });
+      const stockCompany = await createStockCompany({
+        name: 'Private Claim Corp',
+        ticker: 'PCL',
+        industry: 'manufacturing',
+        isIPO: false,
+        active: true,
+        sharePrice: 50,
+        marketCap: 5_000_000,
+        sharesOutstanding: 100_000,
+        dividendPerShare: 2,
+        lastDividendTick: 100,
+        revenue: 1_000_000,
+      });
+      await StockHolding.create({
+        userId: user._id,
+        companyId: stockCompany._id,
+        shares: 100,
+        avgBuyPrice: 50,
+        unclaimedDividends: 200,
+      });
+
+      const res = await request(app).post('/stocks/dividends/claim').set(authHeader(token)).send({});
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.totalClaimed).toBe(200);
+      expect(res.body.balance).toBe(200);
+    });
+
+    it('claims non-IPO dividends even if the company went bankrupt', async () => {
+      const { user, token } = await createAuthenticatedUser({ balance: 0 });
+      const stockCompany = await createStockCompany({
+        name: 'Bankrupt Div Corp',
+        ticker: 'BKD',
+        industry: 'retail',
+        isIPO: false,
+        active: false,
+        sharePrice: 1,
+        marketCap: 100_000,
+        sharesOutstanding: 100_000,
+        dividendPerShare: 2,
+        lastDividendTick: 100,
+        revenue: 100_000,
+      });
+      await StockHolding.create({
+        userId: user._id,
+        companyId: stockCompany._id,
+        shares: 50,
+        avgBuyPrice: 50,
+        unclaimedDividends: 100,
+      });
+
+      const res = await request(app).post('/stocks/dividends/claim').set(authHeader(token)).send({});
+      expect(res.status).toBe(200);
+      expect(res.body.totalClaimed).toBe(100);
+    });
+  });
 });

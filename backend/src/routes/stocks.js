@@ -294,7 +294,7 @@ router.get('/:id/statistics', async (req, res) => {
   try {
     const company = await Company.findById(req.params.id)
       .select(
-        'name ticker sharePrice previousSharePrice marketCap sharesOutstanding dividendPerShare dividendYield dayChangePercent totalReturn high52Week low52Week tradingVolume avgDailyVolume totalTrades activeShareholders floatPercentage revenue employees isIPO weeklyVolume monthlyVolume volumeHistory performance ipoPrice',
+        'name ticker sharePrice previousSharePrice marketCap sharesOutstanding dividendPerShare dividendYield totalDividendsPaid lastDividendPerShare lastDividendTick dividendHistory dayChangePercent totalReturn high52Week low52Week tradingVolume avgDailyVolume totalTrades activeShareholders floatPercentage revenue employees cash debt profit isIPO weeklyVolume monthlyVolume volumeHistory performance ipoPrice',
       )
       .lean();
 
@@ -311,11 +311,11 @@ router.get('/:id/statistics', async (req, res) => {
 router.get('/dividends', async (req, res) => {
   try {
     const holdings = await StockHolding.find({ userId: req.user._id, shares: { $gt: 0 } })
-      .populate('companyId', 'name ticker dividendPerShare dividendYield sharePrice lastDividendTick isIPO')
+      .populate('companyId', 'name ticker dividendPerShare dividendYield sharePrice lastDividendTick isIPO active')
       .lean();
 
     const dividends = holdings
-      .filter((h) => h.companyId?.isIPO && h.unclaimedDividends > 0)
+      .filter((h) => h.companyId && h.unclaimedDividends > 0)
       .map((h) => ({
         companyId: h.companyId._id,
         companyName: h.companyId.name,
@@ -325,6 +325,7 @@ router.get('/dividends', async (req, res) => {
         dividendPerShare: h.companyId.dividendPerShare,
         dividendYield: h.companyId.dividendYield,
         lastDividendTick: h.companyId.lastDividendTick,
+        isIPO: h.companyId.isIPO,
       }));
 
     const totalUnclaimed = dividends.reduce((sum, d) => sum + d.unclaimed, 0);
@@ -348,15 +349,16 @@ router.post('/dividends/claim', async (req, res) => {
       return res.status(400).json({ error: 'No unclaimed dividends' });
     }
 
+    // IPO dividends cannot be claimed once the company is delisted;
+    // non-IPO (auto-generated) company dividends remain claimable even if
+    // the company went bankrupt — the cash was set aside at declaration time.
     const ipoHoldings = holdings.filter((h) => h.companyId?.isIPO);
-    if (ipoHoldings.length === 0) {
-      return res.status(400).json({ error: 'No unclaimed dividends from public companies' });
-    }
-
-    const hasDelisted = ipoHoldings.some((h) => !h.companyId?.active);
-    if (hasDelisted) {
+    const hasDelistedIpo = ipoHoldings.some((h) => !h.companyId?.active);
+    if (hasDelistedIpo) {
       return res.status(400).json({ error: 'Cannot claim dividends from delisted companies' });
     }
+
+    const claimableHoldings = holdings.filter((h) => h.companyId);
 
     const gameState = await GameState.findOne();
     const currentTick = gameState?.tickNumber || 0;
@@ -364,7 +366,7 @@ router.post('/dividends/claim', async (req, res) => {
     let totalClaimed = 0;
     const claimedDetails = [];
 
-    for (const holding of ipoHoldings) {
+    for (const holding of claimableHoldings) {
       const dividendAmount = Math.round(holding.unclaimedDividends * 100) / 100;
       if (dividendAmount <= 0) continue;
 

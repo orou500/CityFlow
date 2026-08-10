@@ -1,12 +1,18 @@
 import City from '../models/City.js';
 import Company from '../models/Company.js';
+import StockHolding from '../models/StockHolding.js';
+import StockMarketEvent from '../models/StockMarketEvent.js';
 import {
   INDUSTRIES,
   COMPANY_SIZES,
   COMPANY_NAME_PARTS,
   STOCK_MARKET_CONFIG as CONFIG,
+  DIVIDEND_CONFIG as DIVIDENDS,
   COMPANY_EVENTS,
 } from '../config/stockMarket.js';
+import { publish, CHANNELS } from '../utils/pubsub.js';
+
+const HOLDINGS_BATCH_SIZE = 500;
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -76,6 +82,8 @@ async function initializeCompanies() {
       const revenue = Math.round(rand(sizeData.revenue[0], sizeData.revenue[1]));
       const sharePrice = rand(sizeData.sharePrice[0], sizeData.sharePrice[1]);
       const sharesOutstanding = Math.round(rand(CONFIG.sharesPerCompany.min, CONFIG.sharesPerCompany.max));
+      const cash = Math.round(revenue * DIVIDENDS.baseInitialCashRatio);
+      const debt = Math.round(revenue * DIVIDENDS.initialDebtRatio);
 
       const name = generateCompanyName(industry);
       let ticker = generateTicker(name);
@@ -92,6 +100,9 @@ async function initializeCompanies() {
         size,
         revenue,
         employees,
+        cash,
+        debt,
+        profit: 0,
         hqCityId: city._id,
         offices: [{ cityId: city._id, type: 'headquarters', employees: Math.round(employees * 0.4), openedTick: 0 }],
         sharePrice: Math.round(sharePrice * 100) / 100,
@@ -386,6 +397,143 @@ async function applyCityUpdates(cityUpdates) {
   }
 }
 
+/**
+ * Simulate a company's financial performance for this tick.
+ *
+ * Profit is derived from revenue using a size-based margin plus noise.
+ * Occasionally a company has a loss-making quarter, which erodes cash.
+ * Cash only ever grows from retained profit, so dividends can never
+ * create money out of thin air.
+ */
+export function updateCompanyFinances(company) {
+  const margin = DIVIDENDS.profitMarginBySize[company.size] || 0.06;
+  const noise = rand(-DIVIDENDS.profitNoise, DIVIDENDS.profitNoise);
+  let profit = Math.round(company.revenue * margin * (1 + noise));
+
+  if (Math.random() < DIVIDENDS.lossQuarterChance) {
+    const lossRate = rand(DIVIDENDS.lossRateRange[0], DIVIDENDS.lossRateRange[1]);
+    profit = -Math.round(company.revenue * lossRate);
+  }
+
+  company.profit = profit;
+  company.cash = Math.max(0, Math.round((company.cash || 0) + profit));
+}
+
+export function isDividendEligible(company, currentTick) {
+  if (!DIVIDENDS.enabled) return false;
+  if (currentTick - (company.lastDividendTick || 0) < DIVIDENDS.minIntervalTicks) return false;
+  if ((company.cash || 0) < DIVIDENDS.minCashToPay) return false;
+  if ((company.profit || 0) < DIVIDENDS.minProfitToPay) return false;
+
+  // Balanced against debt: debt must stay below the configured ratio of capital
+  const totalCapital = (company.cash || 0) + (company.debt || 0);
+  if (totalCapital > 0 && (company.debt || 0) / totalCapital >= DIVIDENDS.maxDebtRatio) return false;
+
+  return true;
+}
+
+function rollDividendType() {
+  const r = Math.random();
+  if (r < DIVIDENDS.exceptionalChancePerTick) return 'exceptional';
+  if (r < DIVIDENDS.exceptionalChancePerTick + DIVIDENDS.regularChancePerTick) return 'regular';
+  return null;
+}
+
+/**
+ * Pay a dividend to all current shareholders. Payout is deducted from the
+ * company's cash and each holder receives `perShare * shares` exactly once
+ * (accrued on their StockHolding as unclaimedDividends).
+ */
+export async function distributeDividend(company, type, tickNumber) {
+  const sharesOutstanding = company.sharesOutstanding || 1;
+  const payoutRatio =
+    DIVIDENDS.payoutRatioOfProfit * (type === 'exceptional' ? DIVIDENDS.exceptionalPayoutMultiplier : 1);
+  const dividendPool = Math.min(
+    Math.floor((company.profit || 0) * payoutRatio),
+    Math.floor((company.cash || 0) * DIVIDENDS.maxPayoutRatioOfCash),
+  );
+  if (dividendPool <= 0) return null;
+
+  let perShare = Math.min(Math.round((dividendPool / sharesOutstanding) * 100) / 100, DIVIDENDS.maxDividendPerShare);
+  if (perShare <= 0) return null;
+
+  // Never pay out more cash than the company holds
+  const maxAffordablePerShare = Math.floor(((company.cash || 0) / sharesOutstanding) * 100) / 100;
+  if (perShare > maxAffordablePerShare) {
+    perShare = maxAffordablePerShare;
+    if (perShare <= 0) return null;
+  }
+
+  let actualDistributed = 0;
+  let holdersPaid = 0;
+  let skip = 0;
+  while (true) {
+    const holdings = await StockHolding.find({ companyId: company._id, shares: { $gt: 0 } })
+      .skip(skip)
+      .limit(HOLDINGS_BATCH_SIZE)
+      .lean();
+    if (holdings.length === 0) break;
+    const bulkOps = holdings.map((h) => {
+      const amount = Math.round(perShare * h.shares * 100) / 100;
+      actualDistributed += amount;
+      return {
+        updateOne: {
+          filter: { _id: h._id },
+          update: { $inc: { unclaimedDividends: amount } },
+        },
+      };
+    });
+    await StockHolding.bulkWrite(bulkOps);
+    holdersPaid += holdings.length;
+    skip += HOLDINGS_BATCH_SIZE;
+  }
+  actualDistributed = Math.round(actualDistributed * 100) / 100;
+  if (actualDistributed <= 0) return null;
+
+  const yieldPct =
+    company.sharePrice > 0
+      ? Math.round(((perShare * DIVIDENDS.yieldAnnualizedTicks) / company.sharePrice) * 10000) / 100
+      : 0;
+
+  company.cash = Math.max(0, Math.round((company.cash || 0) - actualDistributed));
+  company.dividendPerShare = perShare;
+  company.lastDividendPerShare = perShare;
+  company.lastDividendTick = tickNumber;
+  company.dividendYield = yieldPct;
+  company.totalDividendsPaid = (company.totalDividendsPaid || 0) + actualDistributed;
+  if (!company.dividendHistory) company.dividendHistory = [];
+  company.dividendHistory.push({ tick: tickNumber, perShare, total: actualDistributed, yield: yieldPct, type });
+  if (company.dividendHistory.length > DIVIDENDS.historyMaxEntries) {
+    company.dividendHistory = company.dividendHistory.slice(-DIVIDENDS.historyMaxEntries);
+  }
+
+  const headline =
+    type === 'exceptional'
+      ? `${company.ticker} had an exceptional quarter and announced a $${perShare.toFixed(2)} per share dividend`
+      : `${company.ticker} paid $${perShare.toFixed(2)} per share dividend`;
+
+  try {
+    await StockMarketEvent.create({
+      companyId: company._id,
+      tick: tickNumber,
+      type: 'dividend_paid',
+      severity: 'positive',
+      headline,
+      description: `${company.name} distributed $${actualDistributed.toLocaleString()} in dividends to ${holdersPaid} shareholder(s).`,
+      metadata: { perShare, totalPool: actualDistributed, holders: holdersPaid, dividendType: type },
+    });
+  } catch (err) {
+    console.error(`[STOCK] Error saving dividend event for ${company.ticker}:`, err.message);
+  }
+
+  publish(CHANNELS.PUBLIC_COMPANY_DIVIDENDS, {
+    tick: tickNumber,
+    dividends: [{ companyId: company._id, ticker: company.ticker, perShare, holdersInBatch: holdersPaid }],
+  }).catch(() => {});
+
+  return { perShare, total: actualDistributed, yield: yieldPct, holders: holdersPaid, type };
+}
+
 export async function simulateStockMarket(currentTick) {
   const companyCount = await Company.countDocuments();
   if (companyCount === 0) {
@@ -447,6 +595,17 @@ export async function simulateStockMarket(currentTick) {
       }
     }
 
+    updateCompanyFinances(company);
+    company.lastProfitTick = currentTick;
+
+    let dividendResult = null;
+    if (isDividendEligible(company, currentTick)) {
+      const dividendType = rollDividendType();
+      if (dividendType) {
+        dividendResult = await distributeDividend(company, dividendType, currentTick);
+      }
+    }
+
     await company.save();
 
     results.push({
@@ -457,6 +616,7 @@ export async function simulateStockMarket(currentTick) {
       change: company.dayChange,
       changePercent: company.dayChangePercent,
       event: eventResult?.description || null,
+      dividend: dividendResult,
     });
   }
 
