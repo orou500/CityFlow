@@ -5,10 +5,7 @@ import Property from '../../models/Property.js';
 import City from '../../models/City.js';
 import { processRent } from '../rentProcessing.js';
 import { processPropertyManagement } from '../propertyManagement.js';
-import {
-  calculatePropertyRentIncome,
-  simulateOccupancy,
-} from '../../config/propertyManagement.js';
+import { calculatePropertyRentIncome, simulateOccupancy } from '../../config/propertyManagement.js';
 import { createTestUser, createTestCity } from '../../test/helpers.js';
 
 async function makeProperty(overrides = {}) {
