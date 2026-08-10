@@ -114,8 +114,15 @@ router.get('/:username', authenticate, async (req, res) => {
       return true;
     });
 
+    // toJSON() strips password/push tokens etc.; lastLoginAt is private
+    const publicUser = { ...user.toJSON(), achievements: deduplicatedAchievements };
+    if (!isOwner) {
+      delete publicUser.lastLoginAt;
+      delete publicUser.lastDailyLogin;
+    }
+
     res.json({
-      user: { ...user.toObject(), achievements: deduplicatedAchievements },
+      user: publicUser,
       properties: user.profileVisibility.portfolio || isOwner ? properties : [],
       portfolioValue,
       totalRent,

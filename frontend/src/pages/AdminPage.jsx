@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useGameStore } from '../store/useGameStore';
 import { formatMoney, formatCount } from '../utils/format';
@@ -75,11 +75,222 @@ function Table({ headers, rows, renderRow, sortKey, sortDir, onSort }) {
   );
 }
 
+function UserDetailModal({ userId, onClose }) {
+  const { t } = useTranslation();
+  const { adminUserDetail, adminUserActivity, fetchAdminUserDetail, fetchAdminUserActivity } = useGameStore();
+  const [page, setPage] = useState(1);
+  const [category, setCategory] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  function formatDate(date) {
+    if (!date) return '\u2014';
+    const d = new Date(date);
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${mm}/${dd}/${yyyy} ${hh}:${min}`;
+  }
+
+  useEffect(() => {
+    fetchAdminUserDetail(userId);
+  }, [userId, fetchAdminUserDetail]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setSearch(searchInput.trim()), 350);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [category, from, to, search]);
+
+  useEffect(() => {
+    setLoading(true);
+    fetchAdminUserActivity(userId, { page, category, from, to, search, limit: 50 }).finally(() => setLoading(false));
+  }, [userId, page, category, from, to, search, fetchAdminUserActivity]);
+
+  const detail = adminUserDetail;
+  const activity = adminUserActivity || { logs: [], total: 0, page: 1, totalPages: 0, categories: [] };
+  const totalPages = Math.max(1, activity.totalPages || 1);
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-card border border-border rounded-t-2xl sm:rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="min-w-0">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
+              {detail?.displayName || detail?.username || '\u2026'}
+            </h3>
+            <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
+              @{detail?.username || ''} · {detail?.email || ''} · {detail?.role || ''}
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-2xl leading-none text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+          >
+            {'\u00D7'}
+          </button>
+        </div>
+
+        {detail && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 border-b border-gray-200 dark:border-gray-700">
+            <div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{t('admin.balance')}</div>
+              <div className="text-sm font-medium text-gray-900 dark:text-white">
+                {formatMoney(detail.balance || 0)}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{t('admin.level')}</div>
+              <div className="text-sm font-medium text-gray-900 dark:text-white">{detail.level || 1}</div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{t('admin.propertiesShort')}</div>
+              <div className="text-sm font-medium text-gray-900 dark:text-white">{detail.propertyCount || 0}</div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{t('admin.joined')}</div>
+              <div className="text-sm font-medium text-gray-900 dark:text-white">{formatDate(detail.createdAt)}</div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{t('admin.lastLogin')}</div>
+              <div className="text-sm font-medium text-gray-900 dark:text-white">{formatDate(detail.lastLoginAt)}</div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{t('admin.banned')}</div>
+              <div className="text-sm font-medium text-gray-900 dark:text-white">
+                {detail.banned ? t('admin.yes') : t('admin.no')}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="p-4">
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 py-1.5 text-sm text-gray-900 dark:text-white focus:outline-none"
+            >
+              <option value="">{t('admin.allCategories')}</option>
+              {(activity.categories || []).map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+            <input
+              type="date"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+              className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 py-1.5 text-sm text-gray-900 dark:text-white focus:outline-none"
+            />
+            <input
+              type="date"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 py-1.5 text-sm text-gray-900 dark:text-white focus:outline-none"
+            />
+            <input
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder={t('admin.searchLogs')}
+              className="flex-1 min-w-[140px] bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 py-1.5 text-sm text-gray-900 dark:text-white focus:outline-none"
+            />
+          </div>
+
+          {loading ? (
+            <div className="text-center py-8 text-gray-400 dark:text-gray-500">{t('common.loading')}</div>
+          ) : activity.logs.length === 0 ? (
+            <div className="text-center py-8 text-gray-400 dark:text-gray-500">{t('admin.noLogs')}</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
+                    <th className="px-3 py-2 font-medium">{t('admin.date')}</th>
+                    <th className="px-3 py-2 font-medium">{t('admin.category')}</th>
+                    <th className="px-3 py-2 font-medium">{t('admin.event')}</th>
+                    <th className="px-3 py-2 font-medium">{t('admin.amount')}</th>
+                    <th className="px-3 py-2 font-medium">{t('admin.actor')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {activity.logs.map((l) => (
+                    <tr key={l.id} className="border-b border-gray-100 dark:border-gray-800">
+                      <td className="px-3 py-2 text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                        {formatDate(l.timestamp)}
+                      </td>
+                      <td className="px-3 py-2">
+                        <span className="text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                          {l.category}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-gray-900 dark:text-white">{l.description}</td>
+                      <td className="px-3 py-2 text-gray-500 dark:text-gray-400">
+                        {l.amount != null ? `$${l.amount.toLocaleString()}` : ''}
+                      </td>
+                      <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{l.actor}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between pt-3">
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              {t('admin.totalLogs', { total: activity.total })}
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                className="px-2.5 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {t('marketplace.previous')}
+              </button>
+              <span className="px-2 text-xs text-gray-500 dark:text-gray-400">
+                {page} / {totalPages}
+              </span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                className="px-2.5 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {t('marketplace.next')}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const { t } = useTranslation();
   const {
     adminOverview,
     adminUsers,
+    adminUsersTotal,
+    adminUsersTotalPages,
+    adminDeletedUsers,
+    adminUserDetail,
+    adminUserActivity,
     adminProperties,
     adminEvents,
     adminCompanies,
@@ -87,6 +298,10 @@ export default function AdminPage() {
     fetchAdminTicks,
     runTicks,
     fetchAdminUsers,
+    fetchAdminDeletedUsers,
+    fetchAdminUserDetail,
+    fetchAdminUserActivity,
+    clearAdminUserDetail,
     setUserBalance,
     toggleUserBan,
     setUserRole,
@@ -169,11 +384,19 @@ export default function AdminPage() {
   const [editUserCreatedAt, setEditUserCreatedAt] = useState('');
   const [editingCreatedAt, setEditingCreatedAt] = useState(false);
   const [propSearch, setPropSearch] = useState('');
+  const [userSearchInput, setUserSearchInput] = useState('');
   const [userSearch, setUserSearch] = useState('');
   const [userSortKey, setUserSortKey] = useState(null);
-  const [userSortDir, setUserSortDir] = useState('asc');
+  const [userSortDir, setUserSortDir] = useState('desc');
   const [userPage, setUserPage] = useState(1);
-  const USERS_PER_PAGE = 20;
+  const [userPageSize, setUserPageSize] = useState(25);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activityPage, setActivityPage] = useState(1);
+  const [activityCategory, setActivityCategory] = useState('');
+  const [activityFrom, setActivityFrom] = useState('');
+  const [activityTo, setActivityTo] = useState('');
+  const [activitySearch, setActivitySearch] = useState('');
 
   const [maintenanceInfo, setMaintenanceInfo] = useState(null);
   const [maintenanceMessage, setMaintenanceMessage] = useState('');
@@ -215,6 +438,26 @@ export default function AdminPage() {
     loadData();
   }, []);
 
+  // Debounce the user search box, then reset to page 1
+  useEffect(() => {
+    const timer = setTimeout(() => setUserSearch(userSearchInput.trim()), 350);
+    return () => clearTimeout(timer);
+  }, [userSearchInput]);
+
+  useEffect(() => {
+    setUserPage(1);
+  }, [userSearch, userPageSize, userSortKey, userSortDir]);
+
+  useEffect(() => {
+    fetchAdminUsers({
+      page: userPage,
+      limit: userPageSize,
+      search: userSearch,
+      sort: userSortKey || undefined,
+      order: userSortDir,
+    });
+  }, [userPage, userPageSize, userSearch, userSortKey, userSortDir, fetchAdminUsers]);
+
   async function loadData() {
     setLoading(true);
     setPropPage(1);
@@ -223,11 +466,11 @@ export default function AdminPage() {
     try {
       await Promise.all([
         fetchAdminOverview(),
-        fetchAdminUsers(),
         fetchAdminProperties(),
         fetchAdminEvents(),
         fetchCities(),
         fetchAdminCompanies(),
+        fetchAdminDeletedUsers(),
       ]);
       const info = await fetchAdminTicks();
       setTickInfo(info);
@@ -428,11 +671,22 @@ export default function AdminPage() {
     setMaintenanceLoading(false);
   }
 
+  async function reloadUsers() {
+    await fetchAdminUsers({
+      page: userPage,
+      limit: userPageSize,
+      search: userSearch,
+      sort: userSortKey || undefined,
+      order: userSortDir,
+    });
+    await fetchAdminDeletedUsers();
+  }
+
   async function handleSetBalance(userId) {
     try {
       await setUserBalance(userId, parseFloat(editUserBalance));
       setEditUserId(null);
-      await fetchAdminUsers();
+      await reloadUsers();
     } catch (e) {
       console.error(e);
     }
@@ -441,7 +695,7 @@ export default function AdminPage() {
   async function handleToggleBan(userId) {
     try {
       await toggleUserBan(userId);
-      await fetchAdminUsers();
+      await reloadUsers();
     } catch (e) {
       console.error(e);
     }
@@ -454,7 +708,7 @@ export default function AdminPage() {
       await setUserLevel(userId, level);
       setEditUserId(null);
       setEditingLevel(false);
-      await fetchAdminUsers();
+      await reloadUsers();
     } catch (e) {
       console.error(e);
     }
@@ -465,7 +719,7 @@ export default function AdminPage() {
       await setUserCreatedAt(userId, editUserCreatedAt);
       setEditUserId(null);
       setEditingCreatedAt(false);
-      await fetchAdminUsers();
+      await reloadUsers();
     } catch (e) {
       console.error(e);
     }
@@ -475,7 +729,7 @@ export default function AdminPage() {
     try {
       const newRole = currentRole === 'admin' ? 'user' : 'admin';
       await setUserRole(userId, newRole);
-      await fetchAdminUsers();
+      await reloadUsers();
     } catch (e) {
       console.error(e);
     }
@@ -484,7 +738,7 @@ export default function AdminPage() {
   async function handleRestoreUser(userId) {
     try {
       await restoreUser(userId);
-      await fetchAdminUsers();
+      await reloadUsers();
     } catch (e) {
       console.error(e);
     }
@@ -494,7 +748,7 @@ export default function AdminPage() {
     if (!confirm(`Permanently delete "${username}"? This cannot be undone.`)) return;
     try {
       await permanentDeleteUser(userId);
-      await fetchAdminUsers();
+      await reloadUsers();
     } catch (e) {
       console.error(e);
     }
@@ -709,69 +963,71 @@ export default function AdminPage() {
 
       {tab === 'users' && (
         <>
-          <input
-            value={userSearch}
-            onChange={(e) => {
-              setUserSearch(e.target.value);
-              setUserPage(1);
-            }}
-            placeholder={t('searchPlayers')}
-            className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-3 py-1.5 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-blue-500"
-          />
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <input
+              value={userSearchInput}
+              onChange={(e) => setUserSearchInput(e.target.value)}
+              placeholder={t('searchPlayers')}
+              className="flex-1 min-w-[180px] bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-3 py-1.5 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-blue-500"
+            />
+            <select
+              value={userPageSize}
+              onChange={(e) => setUserPageSize(parseInt(e.target.value, 10))}
+              className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 py-1.5 text-sm text-gray-900 dark:text-white focus:outline-none"
+            >
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </div>
 
           {(() => {
-            const searched = userSearch
-              ? adminUsers.filter((u) =>
-                  [u.username, u.email, u.role].some((v) => v?.toLowerCase().includes(userSearch.toLowerCase())),
-                )
-              : adminUsers;
+            const totalPages = Math.max(1, adminUsersTotalPages || 1);
+            const renderPagination = (
+              <div className="flex items-center justify-between gap-2 px-3 py-2 border-t border-gray-200 dark:border-gray-700">
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {t('admin.totalUsers', { total: adminUsersTotal })} ·{' '}
+                  {t('admin.pageOf', { page: userPage, total: totalPages })}
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setUserPage(1)}
+                    disabled={userPage <= 1}
+                    className="px-2.5 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {t('admin.first')}
+                  </button>
+                  <button
+                    onClick={() => setUserPage((p) => Math.max(1, p - 1))}
+                    disabled={userPage <= 1}
+                    className="px-2.5 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {t('marketplace.previous')}
+                  </button>
+                  <span className="px-2 py-1 text-xs text-gray-500 dark:text-gray-400">
+                    {userPage} / {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setUserPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={userPage >= totalPages}
+                    className="px-2.5 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {t('marketplace.next')}
+                  </button>
+                  <button
+                    onClick={() => setUserPage(totalPages)}
+                    disabled={userPage >= totalPages}
+                    className="px-2.5 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {t('admin.last')}
+                  </button>
+                </div>
+              </div>
+            );
 
-            const sorted = [...searched];
-            if (userSortKey) {
-              sorted.sort((a, b) => {
-                let aVal, bVal;
-                switch (userSortKey) {
-                  case 'username':
-                    aVal = a.username || '';
-                    bVal = b.username || '';
-                    return userSortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-                  case 'email':
-                    aVal = a.email || '';
-                    bVal = b.email || '';
-                    return userSortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-                  case 'role':
-                    aVal = a.role || '';
-                    bVal = b.role || '';
-                    return userSortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-                  case 'balance':
-                    aVal = a.balance || 0;
-                    bVal = b.balance || 0;
-                    return userSortDir === 'asc' ? aVal - bVal : bVal - aVal;
-                  case 'level':
-                    aVal = a.level || 1;
-                    bVal = b.level || 1;
-                    return userSortDir === 'asc' ? aVal - bVal : bVal - aVal;
-                  case 'properties':
-                    aVal = a.propertyCount || 0;
-                    bVal = b.propertyCount || 0;
-                    return userSortDir === 'asc' ? aVal - bVal : bVal - aVal;
-                  case 'banned':
-                    aVal = a.banned ? 1 : 0;
-                    bVal = b.banned ? 1 : 0;
-                    return userSortDir === 'asc' ? aVal - bVal : bVal - aVal;
-                  case 'createdAt':
-                    aVal = new Date(a.createdAt).getTime();
-                    bVal = new Date(b.createdAt).getTime();
-                    return userSortDir === 'asc' ? aVal - bVal : bVal - aVal;
-                  default:
-                    return 0;
-                }
-              });
-            }
-
-            const filtered = sorted;
             return (
               <>
+                {renderPagination}
                 <Table
                   headers={[
                     { key: 'username', label: t('admin.username') },
@@ -780,11 +1036,12 @@ export default function AdminPage() {
                     { key: 'balance', label: t('admin.balance') },
                     { key: 'level', label: t('admin.level') },
                     { key: 'createdAt', label: t('admin.joined') },
+                    { key: 'lastLoginAt', label: t('admin.lastLogin') },
                     { key: 'properties', label: t('admin.propertiesShort') },
                     { key: 'banned', label: t('admin.banned') },
                     t('admin.actions'),
                   ]}
-                  rows={filtered.slice(0, userPage * USERS_PER_PAGE)}
+                  rows={adminUsers}
                   sortKey={userSortKey}
                   sortDir={userSortDir}
                   onSort={(key) => {
@@ -888,6 +1145,9 @@ export default function AdminPage() {
                           <span>{formatDate(u.createdAt)}</span>
                         )}
                       </td>
+                      <td className="px-3 py-2 text-gray-500 dark:text-gray-400">
+                        {u.lastLoginAt ? formatDate(u.lastLoginAt) : '\u2014'}
+                      </td>
                       <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{u.propertyCount || 0}</td>
                       <td className="px-3 py-2">
                         <span
@@ -898,6 +1158,12 @@ export default function AdminPage() {
                       </td>
                       <td className="px-3 py-2">
                         <div className="flex gap-2">
+                          <button
+                            onClick={() => setSelectedUser(u)}
+                            className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300"
+                          >
+                            {t('admin.viewLogs')}
+                          </button>
                           <button
                             onClick={() => {
                               setEditUserId(u._id);
@@ -948,43 +1214,17 @@ export default function AdminPage() {
                     </>
                   )}
                 />
-                {filtered.length > USERS_PER_PAGE && (
-                  <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {t('dashboard.showing', {
-                        shown: Math.min(userPage * USERS_PER_PAGE, filtered.length),
-                        total: filtered.length,
-                      })}
-                    </p>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setUserPage((p) => Math.max(1, p - 1))}
-                        disabled={userPage === 1}
-                        className="px-3 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                      >
-                        {t('marketplace.previous')}
-                      </button>
-                      <button
-                        onClick={() => setUserPage((p) => p + 1)}
-                        disabled={userPage * USERS_PER_PAGE >= filtered.length}
-                        className="px-3 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                      >
-                        {t('marketplace.next')}
-                      </button>
-                    </div>
-                  </div>
-                )}
+                {renderPagination}
               </>
             );
           })()}
 
           {(() => {
-            const deletedUsers = adminUsers.filter((u) => u.deletedAt);
-            if (deletedUsers.length === 0) return null;
+            if (adminDeletedUsers.length === 0) return null;
             return (
               <div className="mt-6">
                 <h3 className="text-sm font-semibold text-red-600 dark:text-red-400 mb-3">
-                  {t('admin.deletedUsers')} ({deletedUsers.length})
+                  {t('admin.deletedUsers')} ({adminDeletedUsers.length})
                 </h3>
                 <div className="bg-red-50 dark:bg-red-900/10 rounded-lg border border-red-200 dark:border-red-800 overflow-hidden">
                   <table className="w-full text-sm text-left">
@@ -997,7 +1237,7 @@ export default function AdminPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {deletedUsers.map((u) => {
+                      {adminDeletedUsers.map((u) => {
                         const hoursAgo = Math.round((Date.now() - new Date(u.deletedAt).getTime()) / (1000 * 60 * 60));
                         return (
                           <tr
@@ -1037,6 +1277,7 @@ export default function AdminPage() {
               </div>
             );
           })()}
+          {selectedUser && <UserDetailModal userId={selectedUser._id} onClose={() => setSelectedUser(null)} />}
         </>
       )}
 
@@ -1821,7 +2062,7 @@ export default function AdminPage() {
                         className="flex items-center justify-between bg-gray-50 dark:bg-gray-700/50 rounded p-2"
                       >
                         <div className="text-sm text-gray-900 dark:text-white">
-                          {typeof memberUser === 'object' ? memberUser.username : 'Unknown'} · {m.role}
+                          {typeof memberUser === 'object' ? memberUser.username : 'Unknown'} Â· {m.role}
                         </div>
                         <div className="flex gap-2">
                           <select
@@ -1988,7 +2229,7 @@ export default function AdminPage() {
                     : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
                 }`}
               >
-                {maintenanceInfo?.enabled ? '🔴 Enabled' : '🟢 Disabled'}
+                {maintenanceInfo?.enabled ? 'ðŸ”´ Enabled' : 'ðŸŸ¢ Disabled'}
               </span>
               {maintenanceInfo?.enabledAt && (
                 <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -2141,8 +2382,8 @@ export default function AdminPage() {
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
                         {(b.size / 1024 / 1024).toFixed(1)} MB
-                        {b.duration ? ` · ${b.duration}s` : ''}
-                        {b.createdBy?.username ? ` · ${b.createdBy.username}` : ''}
+                        {b.duration ? ` Â· ${b.duration}s` : ''}
+                        {b.createdBy?.username ? ` Â· ${b.createdBy.username}` : ''}
                       </p>
                     </div>
                     <div className="flex gap-2 ml-4">
@@ -2211,7 +2452,7 @@ export default function AdminPage() {
                             {t('admin.restoreWarning')}
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-                            {new Date(b.createdAt).toLocaleString()} — {(b.size / 1024 / 1024).toFixed(1)} MB
+                            {new Date(b.createdAt).toLocaleString()} â€” {(b.size / 1024 / 1024).toFixed(1)} MB
                           </p>
                           <div className="mb-4">
                             <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">

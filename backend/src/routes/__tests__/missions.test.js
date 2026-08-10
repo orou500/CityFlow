@@ -3,6 +3,7 @@ import request from 'supertest';
 import { createApp } from '../../test/createApp.js';
 import { createAuthenticatedUser, createTestCity, authHeader } from '../../test/helpers.js';
 import MissionProgress from '../../models/MissionProgress.js';
+import Notification from '../../models/Notification.js';
 import User from '../../models/User.js';
 import Property from '../../models/Property.js';
 import {
@@ -21,6 +22,7 @@ describe('Mission System', () => {
     await MissionProgress.deleteMany({});
     await User.deleteMany({});
     await Property.deleteMany({});
+    await Notification.deleteMany({});
     const result = await createAuthenticatedUser({ balance: 1000000 });
     user = result.user;
     token = result.token;
@@ -102,6 +104,56 @@ describe('Mission System', () => {
       const res = await request(app).post('/missions/claim/first_property').set(authHeader(token));
 
       expect(res.status).toBe(400);
+    });
+  });
+
+  describe('Mission completion notifications', () => {
+    async function completeFirstPropertyMission() {
+      await initializeMissionsForUser(user._id);
+      await Property.create({
+        cityId: city._id,
+        name: 'Notif Prop',
+        type: 'apartment',
+        basePrice: 100000,
+        currentPrice: 100000,
+        ownerId: user._id,
+      });
+      await updateMissionProgress(user._id, 'property_buy');
+    }
+
+    it('creates a mission_complete notification and no mission_reward on collect', async () => {
+      await completeFirstPropertyMission();
+
+      const completeNotifs = await Notification.find({ userId: user._id, type: 'mission_complete' });
+      expect(completeNotifs.length).toBeGreaterThanOrEqual(1);
+      expect(completeNotifs.some((n) => /You completed/.test(n.message))).toBe(true);
+
+      const before = await User.findById(user._id);
+      await claimMissionReward(user._id, 'first_property');
+
+      const rewardNotifs = await Notification.find({ userId: user._id, type: 'mission_reward' });
+      expect(rewardNotifs.length).toBe(0);
+
+      const after = await User.findById(user._id);
+      expect(after.balance).toBeGreaterThan(before.balance);
+    });
+
+    it('does not create a mission_reward notification when claiming via HTTP', async () => {
+      await completeFirstPropertyMission();
+
+      const completeBefore = await Notification.countDocuments({ userId: user._id, type: 'mission_complete' });
+      expect(completeBefore).toBeGreaterThanOrEqual(1);
+
+      const res = await request(app).post('/missions/claim/first_property').set(authHeader(token));
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+
+      const rewardNotifs = await Notification.find({ userId: user._id, type: 'mission_reward' });
+      expect(rewardNotifs.length).toBe(0);
+
+      // claiming must not add any new notification at all
+      const completeAfter = await Notification.countDocuments({ userId: user._id, type: 'mission_complete' });
+      expect(completeAfter).toBe(completeBefore);
     });
   });
 

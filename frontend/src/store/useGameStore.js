@@ -171,6 +171,12 @@ export const useGameStore = create((set, get) => ({
 
   adminOverview: null,
   adminUsers: [],
+  adminUsersTotal: 0,
+  adminUsersPage: 1,
+  adminUsersTotalPages: 0,
+  adminDeletedUsers: [],
+  adminUserDetail: null,
+  adminUserActivity: { logs: [], total: 0, page: 1, totalPages: 0, categories: [] },
   adminProperties: [],
   adminEvents: [],
   adminCompanies: [],
@@ -192,11 +198,47 @@ export const useGameStore = create((set, get) => ({
     });
   },
 
-  fetchAdminUsers: async () => {
-    const data = await api('/admin/users');
-    set({ adminUsers: data });
+  fetchAdminUsers: async (params = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') qs.set(k, v);
+    });
+    const query = qs.toString() ? `?${qs.toString()}` : '';
+    const data = await api(`/admin/users${query}`);
+    set({
+      adminUsers: data.users || [],
+      adminUsersTotal: data.total || 0,
+      adminUsersPage: data.page || 1,
+      adminUsersTotalPages: data.totalPages || 0,
+    });
     return data;
   },
+
+  fetchAdminDeletedUsers: async () => {
+    const data = await api('/admin/users?deleted=true&limit=100&page=1');
+    set({ adminDeletedUsers: data.users || [] });
+    return data;
+  },
+
+  fetchAdminUserDetail: async (userId) => {
+    const data = await api(`/admin/users/${userId}`);
+    set({ adminUserDetail: data.user || null });
+    return data;
+  },
+
+  fetchAdminUserActivity: async (userId, params = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') qs.set(k, v);
+    });
+    const query = qs.toString() ? `?${qs.toString()}` : '';
+    const data = await api(`/admin/users/${userId}/activity${query}`);
+    set({ adminUserActivity: data });
+    return data;
+  },
+
+  clearAdminUserDetail: () =>
+    set({ adminUserDetail: null, adminUserActivity: { logs: [], total: 0, page: 1, totalPages: 0, categories: [] } }),
 
   setUserBalance: async (userId, balance) => {
     return await api(`/admin/users/${userId}/balance`, {

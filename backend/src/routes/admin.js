@@ -7,6 +7,7 @@ import Transaction from '../models/Transaction.js';
 import Event from '../models/Event.js';
 import Loan from '../models/Loan.js';
 import Season from '../models/Season.js';
+import Notification from '../models/Notification.js';
 import ConstructionProject from '../models/ConstructionProject.js';
 import { getGameState } from '../models/GameState.js';
 import { requireAdmin } from '../middleware/admin.js';
@@ -21,10 +22,45 @@ import { getXpForLevel } from '../utils/leveling.js';
 import { sendEmail, verifyConnection } from '../services/email.js';
 import emailTemplates from '../services/emailTemplates.js';
 import { sendDiscordNotification } from '../services/discordBot.js';
+import AdminAuditLog from '../models/AdminAuditLog.js';
+import StockTransaction from '../models/StockTransaction.js';
+import LeaderboardReward from '../models/LeaderboardReward.js';
+import CompanyAuditLog from '../models/CompanyAuditLog.js';
+import Auction from '../models/Auction.js';
 
 const router = Router();
 
 router.use(requireAdmin);
+
+async function logAdminAction(req, action, targetUser, details = {}) {
+  try {
+    await AdminAuditLog.create({
+      adminId: req.user._id,
+      adminUsername: req.user.username,
+      action,
+      targetUserId: targetUser?._id || targetUser || null,
+      targetUsername: targetUser?.username || '',
+      details,
+    });
+  } catch (err) {
+    console.error('[AdminAudit] Log error:', err.message);
+  }
+}
+
+function stripSensitiveUserFields(userDoc) {
+  const obj = userDoc.toObject ? userDoc.toObject() : { ...userDoc };
+  delete obj.password;
+  delete obj.passwordResetToken;
+  delete obj.passwordResetExpires;
+  delete obj.verificationToken;
+  delete obj.verificationExpires;
+  delete obj.pushTokens;
+  delete obj.discordId;
+  if (obj.oauthProviders) {
+    obj.oauthProviders = obj.oauthProviders.map((p) => ({ provider: p.provider }));
+  }
+  return obj;
+}
 
 router.get('/overview', async (req, res) => {
   try {
@@ -120,23 +156,402 @@ router.post('/tick/run', async (req, res) => {
 
 router.get('/users', async (req, res) => {
   try {
-    const [users, propCounts] = await Promise.all([
-      User.find().select('+deletedAt').sort({ createdAt: -1 }),
-      Property.aggregate([{ $group: { _id: '$ownerId', count: { $sum: 1 } } }]),
+    const { search, role, deleted, page = 1, limit = 25, sort = 'createdAt', order = 'desc' } = req.query;
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 25));
+
+    const filter = {};
+    if (deleted === 'true' || deleted === '1') {
+      filter.deletedAt = { $ne: null };
+    }
+    if (search) {
+      const regex = { $regex: String(search).trim(), $options: 'i' };
+      filter.$or = [{ username: regex }, { email: regex }, { normalizedUsername: regex }];
+    }
+    if (role && ['user', 'admin'].includes(role)) {
+      filter.role = role;
+    }
+
+    const allowedSorts = ['username', 'email', 'role', 'balance', 'level', 'createdAt', 'banned', 'lastLoginAt'];
+    const sortKey = allowedSorts.includes(sort) ? sort : 'createdAt';
+    const sortOpts = { [sortKey]: order === 'asc' ? 1 : -1 };
+
+    const [users, total] = await Promise.all([
+      User.find(filter)
+        .select('+deletedAt')
+        .sort(sortOpts)
+        .skip((pageNum - 1) * limitNum)
+        .limit(limitNum),
+      User.countDocuments(filter),
     ]);
+
+    const ids = users.map((u) => u._id);
+    const propCounts =
+      ids.length > 0
+        ? await Property.aggregate([
+            { $match: { ownerId: { $in: ids } } },
+            { $group: { _id: '$ownerId', count: { $sum: 1 } } },
+          ])
+        : [];
     const propCountMap = new Map(propCounts.map((p) => [p._id?.toString(), p.count]));
-    const usersWithStats = users.map((u) => {
-      const obj = u.toObject();
-      delete obj.password;
-      delete obj.passwordResetToken;
-      delete obj.passwordResetExpires;
-      delete obj.verificationToken;
-      delete obj.verificationExpires;
-      return { ...obj, propertyCount: propCountMap.get(u._id.toString()) || 0 };
-    });
-    res.json(usersWithStats);
+
+    const result = users.map((u) => ({
+      ...stripSensitiveUserFields(u),
+      propertyCount: propCountMap.get(u._id.toString()) || 0,
+    }));
+
+    res.json({ users: result, total, page: pageNum, totalPages: Math.ceil(total / limitNum), limit: limitNum });
   } catch (err) {
     console.error('[Admin Users] Error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/users/:id', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('+deletedAt');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const propertyCount = await Property.countDocuments({ ownerId: user._id });
+    const stockCount = await StockTransaction.countDocuments({ userId: user._id });
+    const transactionCount = await Transaction.countDocuments({
+      $or: [{ buyerId: user._id }, { sellerId: user._id }],
+    });
+
+    res.json({
+      user: {
+        ...stripSensitiveUserFields(user),
+        propertyCount,
+        stockCount,
+        transactionCount,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── USER ACTIVITY LOG (admin-only) ────────────────────────────
+// Aggregated from existing systems — no duplicate logging.
+
+const TX_CATEGORY_MAP = {
+  buy: 'market',
+  sell: 'market',
+  penalty: 'market',
+  repossess: 'market',
+  rent: 'rent',
+  loan: 'loans',
+  loan_payment: 'loans',
+  loan_repay: 'loans',
+  construction: 'development',
+  upgrade: 'development',
+  grade_upgrade: 'development',
+  improvement: 'development',
+  development: 'development',
+  period_bonus: 'income',
+  season_reward: 'season',
+  login: 'auth',
+};
+
+const TX_ACTION_LABEL = {
+  buy: 'Property purchased',
+  sell: 'Property sold',
+  penalty: 'Penalty charged',
+  repossess: 'Property repossessed',
+  rent: 'Rent collected',
+  loan: 'Loan taken',
+  loan_payment: 'Loan payment',
+  loan_repay: 'Loan repaid',
+  construction: 'Construction',
+  upgrade: 'Property upgraded',
+  grade_upgrade: 'Property graded',
+  improvement: 'Property improved',
+  development: 'Development',
+  period_bonus: 'Period bonus',
+  season_reward: 'Season leaderboard reward',
+  login: 'Logged in',
+};
+
+router.get('/users/:id/activity', async (req, res) => {
+  try {
+    const { category, from, to, search, page = 1, limit = 50 } = req.query;
+    const userId = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ error: 'Invalid user id' });
+    }
+
+    const user = await User.findById(userId).select('_id username createdAt').lean();
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 50));
+    const dateFilter = {};
+    if (from) dateFilter.$gte = new Date(from);
+    if (to) dateFilter.$lte = new Date(to);
+    const timeQuery = Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {};
+    const CAP = 500;
+
+    const CATEGORY_TX_TYPES = category
+      ? Object.entries(TX_CATEGORY_MAP)
+          .filter(([, cat]) => cat === category)
+          .map(([type]) => type)
+      : null;
+
+    const logs = [];
+
+    // Transactions (market/rent/loans/development/income/season/auth)
+    const txFilter = {
+      $or: [{ buyerId: userId }, { sellerId: userId }],
+      ...timeQuery,
+    };
+    if (CATEGORY_TX_TYPES) {
+      if (CATEGORY_TX_TYPES.length === 0) {
+        txFilter.type = { $in: [] }; // category has no transaction types (e.g. stock)
+      } else {
+        txFilter.type = { $in: CATEGORY_TX_TYPES };
+      }
+    }
+    const txns = await Transaction.find(txFilter).sort({ createdAt: -1 }).limit(CAP).lean();
+    for (const t of txns) {
+      logs.push({
+        id: `tx:${t._id}`,
+        timestamp: t.createdAt,
+        category: TX_CATEGORY_MAP[t.type] || 'account',
+        action: t.type,
+        description: TX_ACTION_LABEL[t.type] || t.type,
+        amount: t.price || 0,
+        entityType: 'property',
+        entityId: t.propertyId || null,
+        actor: 'user',
+        source: 'transaction',
+      });
+    }
+
+    // Stock transactions
+    if (!category || category === 'stock') {
+      const stockTx = await StockTransaction.find({ userId, ...timeQuery })
+        .sort({ createdAt: -1 })
+        .limit(CAP)
+        .lean();
+      for (const t of stockTx) {
+        logs.push({
+          id: `stock:${t._id}`,
+          timestamp: t.createdAt,
+          category: 'stock',
+          action: `stock_${t.type}`,
+          description: t.type === 'buy' ? 'Bought shares' : t.type === 'sell' ? 'Sold shares' : 'Dividend received',
+          amount: t.total || 0,
+          entityType: 'company',
+          entityId: t.companyId || null,
+          actor: 'user',
+          source: 'stock',
+        });
+      }
+    }
+
+    // Notifications (missions / achievements / career / system)
+    if (!category || ['missions', 'achievements', 'career', 'company', 'season', 'account'].includes(category)) {
+      const notifCategoryMap = {
+        mission: 'missions',
+        achievement: 'achievements',
+        career: 'career',
+        season: 'season',
+        company: 'company',
+      };
+      const notifFilter = { userId, ...timeQuery };
+      if (category) {
+        const mapped = Object.entries(notifCategoryMap).find(([, cat]) => cat === category);
+        notifFilter.entityType = mapped ? mapped[0] : { $exists: true };
+      }
+      const notifs = await Notification.find(notifFilter).sort({ createdAt: -1 }).limit(CAP).lean();
+      for (const n of notifs) {
+        logs.push({
+          id: `notif:${n._id}`,
+          timestamp: n.createdAt,
+          category: notifCategoryMap[n.entityType] || 'account',
+          action: `notification:${n.type}`,
+          description: `${n.title} — ${n.message}`,
+          amount: null,
+          entityType: n.entityType || 'notification',
+          entityId: n.entityId || n.relatedId || null,
+          actor: 'system',
+          source: 'notification',
+        });
+      }
+    }
+
+    // Company audit logs
+    if (!category || category === 'company') {
+      const companyLogs = await CompanyAuditLog.find({ userId, ...timeQuery })
+        .sort({ createdAt: -1 })
+        .limit(CAP)
+        .lean();
+      for (const l of companyLogs) {
+        logs.push({
+          id: `company:${l._id}`,
+          timestamp: l.createdAt,
+          category: 'company',
+          action: l.action,
+          description: l.action.replace(/_/g, ' '),
+          amount: null,
+          entityType: 'company',
+          entityId: l.companyId || null,
+          actor: 'user',
+          source: 'company',
+        });
+      }
+    }
+
+    // Season leaderboard rewards
+    if (!category || category === 'season') {
+      const rewards = await LeaderboardReward.find({ userId, ...timeQuery })
+        .sort({ createdAt: -1 })
+        .limit(CAP)
+        .lean();
+      for (const r of rewards) {
+        logs.push({
+          id: `season:${r._id}`,
+          timestamp: r.distributedAt || r.createdAt,
+          category: 'season',
+          action: 'season_reward',
+          description: `Season ${r.seasonNumber} leaderboard reward — rank #${r.rank}`,
+          amount: r.reward || 0,
+          entityType: 'season',
+          entityId: r.seasonId || null,
+          actor: 'system',
+          source: 'season',
+        });
+      }
+    }
+
+    // Admin actions affecting the user
+    if (!category || category === 'admin') {
+      const adminLogs = await AdminAuditLog.find({ targetUserId: userId, ...timeQuery })
+        .sort({ createdAt: -1 })
+        .limit(CAP)
+        .lean();
+      for (const l of adminLogs) {
+        logs.push({
+          id: `admin:${l._id}`,
+          timestamp: l.createdAt,
+          category: 'admin',
+          action: l.action,
+          description: `${l.action.replace(/_/g, ' ')}${l.adminUsername ? ` (by ${l.adminUsername})` : ''}`,
+          amount: l.details?.amount ?? null,
+          entityType: 'user',
+          entityId: userId,
+          actor: 'admin',
+          source: 'admin',
+        });
+      }
+    }
+
+    // Auction activity (bids + wins)
+    if (!category || category === 'auction') {
+      const auctions = await Auction.find({ $or: [{ 'bids.bidderId': userId }, { winnerId: userId }], ...timeQuery })
+        .select('_id bids winnerId winningBid status propertyId')
+        .sort({ createdAt: -1 })
+        .limit(CAP)
+        .lean();
+      for (const a of auctions) {
+        for (const bid of a.bids || []) {
+          if (bid.bidderId?.toString() !== userId) continue;
+          if (dateFilter.$gte && bid.createdAt < dateFilter.$gte) continue;
+          if (dateFilter.$lte && bid.createdAt > dateFilter.$lte) continue;
+          logs.push({
+            id: `auction:${a._id}:${bid._id || bid.tick}`,
+            timestamp: bid.createdAt,
+            category: 'auction',
+            action: 'auction_bid',
+            description: `Placed a bid of $${(bid.amount || 0).toLocaleString()} in auction`,
+            amount: bid.amount || 0,
+            entityType: 'auction',
+            entityId: a._id,
+            actor: 'user',
+            source: 'auction',
+          });
+        }
+        if (a.winnerId?.toString() === userId) {
+          logs.push({
+            id: `auction:${a._id}:won`,
+            timestamp: a.createdAt,
+            category: 'auction',
+            action: 'auction_won',
+            description: `Won auction with a bid of $${(a.winningBid || 0).toLocaleString()}`,
+            amount: a.winningBid || 0,
+            entityType: 'auction',
+            entityId: a._id,
+            actor: 'user',
+            source: 'auction',
+          });
+        }
+      }
+    }
+
+    // Registration (from the user document itself)
+    if (!category || category === 'account') {
+      const regDate = user.createdAt;
+      if (!dateFilter.$gte || regDate >= dateFilter.$gte) {
+        if (!dateFilter.$lte || regDate <= dateFilter.$lte) {
+          logs.push({
+            id: 'registration',
+            timestamp: regDate,
+            category: 'account',
+            action: 'registered',
+            description: 'Account registered',
+            amount: null,
+            entityType: 'user',
+            entityId: user._id,
+            actor: 'system',
+            source: 'registration',
+          });
+        }
+      }
+    }
+
+    logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    let filtered = logs;
+    if (search) {
+      const q = String(search).toLowerCase();
+      filtered = filtered.filter(
+        (l) =>
+          (l.description || '').toLowerCase().includes(q) ||
+          (l.action || '').toLowerCase().includes(q) ||
+          (l.category || '').toLowerCase().includes(q),
+      );
+    }
+
+    const total = filtered.length;
+    const start = (pageNum - 1) * limitNum;
+    const paginated = filtered.slice(start, start + limitNum);
+
+    res.json({
+      logs: paginated,
+      total,
+      page: pageNum,
+      totalPages: Math.ceil(total / limitNum),
+      limit: limitNum,
+      categories: [
+        'auth',
+        'market',
+        'rent',
+        'loans',
+        'development',
+        'income',
+        'stock',
+        'missions',
+        'achievements',
+        'career',
+        'company',
+        'season',
+        'auction',
+        'admin',
+        'account',
+      ],
+    });
+  } catch (err) {
+    console.error('[Admin Activity] Error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -148,6 +563,7 @@ router.post('/users/:id/restore', async (req, res) => {
     if (!user.deletedAt) return res.status(400).json({ error: 'Account is not deleted' });
     user.deletedAt = null;
     await user.save({ validateBeforeSave: false });
+    await logAdminAction(req, 'user_restored', user);
     res.json({ success: true, message: 'Account restored' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -159,6 +575,7 @@ router.delete('/users/:id/permanent', async (req, res) => {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ error: 'User not found' });
     await User.deleteOne({ _id: user._id });
+    await logAdminAction(req, 'user_permanently_deleted', user);
     res.json({ success: true, message: 'Account permanently deleted' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -171,8 +588,14 @@ router.put('/users/:id/balance', async (req, res) => {
     if (balance == null || balance < 0) {
       return res.status(400).json({ error: 'Invalid balance' });
     }
+    const prev = await User.findById(req.params.id).select('balance username');
     const user = await User.findByIdAndUpdate(req.params.id, { balance }, { new: true }).select('-password');
     if (!user) return res.status(404).json({ error: 'User not found' });
+    await logAdminAction(req, 'user_balance_changed', user, {
+      previous: prev?.balance ?? null,
+      new: balance,
+      amount: balance - (prev?.balance ?? 0),
+    });
     res.json(user);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -185,6 +608,7 @@ router.put('/users/:id/ban', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
     user.banned = !user.banned;
     await user.save();
+    await logAdminAction(req, user.banned ? 'user_banned' : 'user_unbanned', user);
     res.json({ _id: user._id, username: user.username, banned: user.banned });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -202,8 +626,10 @@ router.put('/users/:id/role', async (req, res) => {
     if (user._id.toString() === req.user._id.toString()) {
       return res.status(400).json({ error: 'Cannot change your own role' });
     }
+    const previousRole = user.role;
     user.role = role;
     await user.save();
+    await logAdminAction(req, 'user_role_changed', user, { previous: previousRole, new: role });
     res.json({ _id: user._id, username: user.username, role: user.role });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -218,10 +644,12 @@ router.put('/users/:id/level', async (req, res) => {
     }
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ error: 'User not found' });
+    const previousLevel = user.level;
     user.level = level;
     user.xp = 0;
     user.xpToNextLevel = getXpForLevel(level);
     await user.save();
+    await logAdminAction(req, 'user_level_changed', user, { previous: previousLevel, new: level });
     res.json({
       _id: user._id,
       username: user.username,
@@ -250,6 +678,15 @@ router.put('/users/:id/created-at', async (req, res) => {
       { returnDocument: 'after' },
     );
     if (!result) return res.status(404).json({ error: 'User not found' });
+    await logAdminAction(
+      req,
+      'user_created_at_changed',
+      {
+        _id: result._id,
+        username: result.username,
+      },
+      { new: date.toISOString() },
+    );
     res.json({ _id: result._id, username: result.username, createdAt: result.createdAt });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -571,6 +1008,10 @@ router.post('/seasons/end', async (req, res) => {
     }
 
     const newSeason = await endCurrentSeasonAndStartNew();
+    await logAdminAction(req, 'season_ended', null, {
+      endedSeason: activeSeason.number,
+      newSeason: newSeason.number,
+    });
 
     res.json({
       message: `Season ${activeSeason.number} ended. Season ${newSeason.number} started.`,
@@ -596,6 +1037,7 @@ router.post('/maintenance/enable', async (req, res) => {
     const { message } = req.body;
     await setMaintenanceMode(true, message, req.user._id);
     console.log(`[ADMIN] Maintenance Mode Enabled by ${req.user.username}`);
+    await logAdminAction(req, 'maintenance_enabled', null, { message: message || '' });
     await enqueueNotification({
       userId: null,
       type: 'system',
@@ -619,6 +1061,7 @@ router.post('/maintenance/disable', async (req, res) => {
   try {
     await setMaintenanceMode(false, '', req.user._id);
     console.log(`[ADMIN] Maintenance Mode Disabled by ${req.user.username}`);
+    await logAdminAction(req, 'maintenance_disabled', null);
     await enqueueNotification({
       userId: null,
       type: 'system',

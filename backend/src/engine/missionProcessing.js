@@ -556,16 +556,9 @@ export async function claimMissionReward(userId, missionId) {
     rewards: def.rewards,
   });
 
-  await enqueueNotification({
-    userId,
-    type: 'mission_reward',
-    title: 'Reward Claimed!',
-    message: `You claimed rewards for "${def.name}"!`,
-    relatedId: mp._id,
-    route: '/missions',
-    tab: 'completed',
-    entityType: 'mission',
-  });
+  // No notification on collect: the player was already notified when the
+  // mission was completed ("Mission Complete"). Collecting only grants the
+  // reward — creating another notification here caused duplicates.
 
   await initializeMissionsForUser(userId);
 
