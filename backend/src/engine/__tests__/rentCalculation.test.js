@@ -5,7 +5,10 @@ import Property from '../../models/Property.js';
 import City from '../../models/City.js';
 import { processRent } from '../rentProcessing.js';
 import { processPropertyManagement } from '../propertyManagement.js';
-import { calculatePropertyRentIncome } from '../../config/propertyManagement.js';
+import {
+  calculatePropertyRentIncome,
+  simulateOccupancy,
+} from '../../config/propertyManagement.js';
 import { createTestUser, createTestCity } from '../../test/helpers.js';
 
 async function makeProperty(overrides = {}) {
@@ -47,6 +50,17 @@ describe('calculatePropertyRentIncome', () => {
   it('clamps occupancy to 0-100', () => {
     expect(calculatePropertyRentIncome({ rent: 1000, occupancy: 150 })).toBe(1000);
     expect(calculatePropertyRentIncome({ rent: 1000, occupancy: -10 })).toBe(0);
+  });
+
+  it('houses always earn their full rent regardless of occupancy', () => {
+    expect(calculatePropertyRentIncome({ type: 'house', rent: 4300, occupancy: 35 })).toBe(4300);
+    expect(calculatePropertyRentIncome({ type: 'house', rent: 4300, occupancy: 0 })).toBe(4300);
+    expect(calculatePropertyRentIncome({ type: 'house', rentPerUnit: 5000, rent: 4000, occupancy: 10 })).toBe(5000);
+  });
+
+  it('simulateOccupancy returns 100 for houses', () => {
+    expect(simulateOccupancy({ type: 'house', rent: 1000 }, 0.8, 1.3)).toBe(100);
+    expect(simulateOccupancy({ type: 'apartment', rent: 1000 }, 0.8, 1.3)).not.toBe(100);
   });
 });
 
