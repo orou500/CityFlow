@@ -27,7 +27,7 @@ export async function invalidateCity(cityId) {
 }
 
 export async function invalidateLeaderboards() {
-  await cacheDelPattern('cf:lb:*');
+  await cacheDelPattern('lb:*');
 }
 
 export async function invalidateMarket() {

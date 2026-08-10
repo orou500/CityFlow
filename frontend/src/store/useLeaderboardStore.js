@@ -21,6 +21,8 @@ export const useLeaderboardStore = create((set) => ({
   events: [],
   selectedEvent: null,
   summary: null,
+  rewards: null,
+  seasonNumber: null,
   total: 0,
   loading: false,
   error: null,
@@ -37,6 +39,7 @@ export const useLeaderboardStore = create((set) => ({
       set({
         rankings: data.rankings,
         total: data.total,
+        seasonNumber: data.seasonNumber ?? null,
         loading: false,
       });
       return data;
@@ -109,6 +112,17 @@ export const useLeaderboardStore = create((set) => ({
       set({ summary: data });
       return data;
     } catch {
+      return null;
+    }
+  },
+
+  fetchLeaderboardRewards: async () => {
+    try {
+      const data = await api('/leaderboards/rewards');
+      set({ rewards: data.rewards || [], seasonNumber: data.seasonNumber ?? null });
+      return data;
+    } catch {
+      set({ rewards: [] });
       return null;
     }
   },

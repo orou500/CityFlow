@@ -25,6 +25,7 @@ const transactionSchema = new mongoose.Schema(
         'development',
         'period_bonus',
         'login',
+        'season_reward',
       ],
       required: true,
     },

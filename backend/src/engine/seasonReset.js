@@ -18,9 +18,12 @@ import IndexHolding from '../models/IndexHolding.js';
 import IndexTransaction from '../models/IndexTransaction.js';
 import LeaderboardSnapshot from '../models/LeaderboardSnapshot.js';
 import CompetitiveEvent from '../models/CompetitiveEvent.js';
+import LeaderboardReward from '../models/LeaderboardReward.js';
 import CompanyInvestment from '../models/CompanyInvestment.js';
 import Auction from '../models/Auction.js';
 import AuctionReputation from '../models/AuctionReputation.js';
+import { enqueueNotification } from '../utils/notificationQueue.js';
+import { getLeaderboardRewardForRank } from '../config/leaderboardRewards.js';
 import { sendDiscordNotification } from '../services/discordBot.js';
 
 const CITIES_DATA = [
@@ -497,9 +500,31 @@ export async function archiveSeason(seasonId) {
   const [playerRankings, cityStats, totalTransactions, totalVolume, totalPlayers] = await Promise.all([
     User.aggregate([
       { $lookup: { from: 'properties', localField: '_id', foreignField: 'ownerId', as: 'props' } },
-      { $addFields: { portfolioValue: { $sum: '$props.currentPrice' }, propertiesOwned: { $size: '$props' } } },
+      {
+        $lookup: {
+          from: 'loans',
+          let: { uid: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $and: [{ $eq: ['$userId', '$$uid'] }, { $eq: ['$active', true] }] },
+              },
+            },
+            { $project: { remainingBalance: 1 } },
+          ],
+          as: 'userLoans',
+        },
+      },
+      {
+        $addFields: {
+          portfolioValue: { $sum: '$props.currentPrice' },
+          propertiesOwned: { $size: '$props' },
+          loanDebt: { $ifNull: [{ $sum: '$userLoans.remainingBalance' }, 0] },
+        },
+      },
       { $addFields: { netWorth: { $add: ['$balance', '$portfolioValue'] } } },
-      { $sort: { netWorth: -1 } },
+      { $addFields: { netWorth: { $subtract: ['$netWorth', '$loanDebt'] } } },
+      { $sort: { netWorth: -1, _id: 1 } },
       { $limit: 100 },
       {
         $project: {
@@ -787,16 +812,120 @@ export async function createNewSeason() {
   return season;
 }
 
+/**
+ * Distribute end-of-season leaderboard rewards exactly once.
+ *
+ * Rewards are based on the final net-worth rank stored in the season archive.
+ * Each player receives: balance credit, a `season_reward` Transaction,
+ * a LeaderboardReward audit record, and a notification. The distribution is
+ * idempotent — guarded by the season's `rewardsDistributed` flag and by the
+ * unique {seasonNumber, rank} index on LeaderboardReward.
+ */
+export async function distributeSeasonLeaderboardRewards(season) {
+  if (!season || season.status !== 'completed') {
+    return { distributed: 0, skipped: true, reason: 'season_not_completed' };
+  }
+
+  if (season.rewardsDistributed) {
+    return { distributed: 0, skipped: true, reason: 'already_distributed' };
+  }
+
+  const alreadyDistributed = await LeaderboardReward.exists({ seasonNumber: season.number });
+  if (alreadyDistributed) {
+    season.rewardsDistributed = true;
+    season.rewardsDistributedAt = new Date();
+    await season.save();
+    return { distributed: 0, skipped: true, reason: 'already_distributed' };
+  }
+
+  const playerRankings = season.archive?.playerRankings || [];
+  const distributed = [];
+
+  for (const entry of playerRankings) {
+    const tier = getLeaderboardRewardForRank(entry.rank);
+    if (!tier) continue;
+    distributed.push({
+      userId: entry.userId,
+      username: entry.username || '',
+      rank: entry.rank,
+      reward: tier.reward,
+    });
+  }
+
+  if (distributed.length === 0) {
+    season.rewardsDistributed = true;
+    season.rewardsDistributedAt = new Date();
+    await season.save();
+    return { distributed: 0, skipped: false, reason: 'no_eligible_players' };
+  }
+
+  const balanceBulkOps = distributed.map((d) => ({
+    updateOne: { filter: { _id: d.userId }, update: { $inc: { balance: d.reward } } },
+  }));
+  const transactionDocs = distributed.map((d) => ({
+    buyerId: d.userId,
+    price: d.reward,
+    type: 'season_reward',
+  }));
+  const rewardDocs = distributed.map((d) => ({
+    seasonNumber: season.number,
+    seasonId: season._id,
+    userId: d.userId,
+    username: d.username,
+    rank: d.rank,
+    reward: d.reward,
+  }));
+
+  await User.bulkWrite(balanceBulkOps);
+  await Transaction.insertMany(transactionDocs);
+  await LeaderboardReward.insertMany(rewardDocs);
+
+  for (const d of distributed) {
+    await enqueueNotification({
+      userId: d.userId,
+      type: 'season_reward',
+      title: `Season ${season.number} Leaderboard Reward`,
+      message: `You finished #${d.rank} and received $${d.reward.toLocaleString()}.`,
+      route: '/leaderboards',
+      entityType: 'season',
+      entityId: season._id,
+      relatedId: season._id,
+      global: false,
+    });
+  }
+
+  season.rewardsDistributed = true;
+  season.rewardsDistributedAt = new Date();
+  const rewardByUser = new Map(distributed.map((d) => [d.userId.toString(), d.reward]));
+  for (const entry of season.archive.playerRankings) {
+    const reward = rewardByUser.get(entry.userId.toString());
+    if (reward != null) entry.reward = reward;
+  }
+  await season.save();
+
+  console.log(`[SEASON] Distributed ${distributed.length} leaderboard rewards for season ${season.number}`);
+
+  return { distributed: distributed.length, skipped: false };
+}
+
 export async function endCurrentSeasonAndStartNew() {
   const activeSeason = await getCurrentSeason();
 
+  let archivedSeason = null;
   if (activeSeason) {
-    await archiveSeason(activeSeason._id);
+    archivedSeason = await archiveSeason(activeSeason._id);
   }
 
   await resetWorld();
 
   const newSeason = await createNewSeason();
+
+  if (archivedSeason) {
+    const rewardResult = await distributeSeasonLeaderboardRewards(archivedSeason);
+    if (!rewardResult.skipped) {
+      console.log(`[SEASON] ${rewardResult.distributed} leaderboard rewards distributed`);
+    }
+  }
 
   console.log(`[SEASON] Season ${newSeason.number} started`);
 

@@ -42,7 +42,12 @@ router.get('/', async (req, res) => {
 
 router.get('/player/:userId', async (req, res) => {
   try {
-    const userId = new mongoose.Types.ObjectId(req.params.userId);
+    let userId;
+    try {
+      userId = new mongoose.Types.ObjectId(req.params.userId);
+    } catch {
+      return res.status(400).json({ error: 'Invalid user id' });
+    }
     const seasons = await Season.find({
       status: 'completed',
       'archive.playerRankings.userId': userId,
@@ -64,6 +69,7 @@ router.get('/player/:userId', async (req, res) => {
         balance: playerData?.balance,
         portfolioValue: playerData?.portfolioValue,
         propertiesOwned: playerData?.propertiesOwned,
+        reward: playerData?.reward ?? null,
         totalPlayers: season.archive.totalPlayers,
         monthsPlayed: season.archive.economicStatistics?.tickCount,
         winner: season.archive.winner,

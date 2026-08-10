@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useGameStore } from '../store/useGameStore';
-import { formatMoney } from '../utils/format';
+import { formatMoney, formatMoneyExact } from '../utils/format';
 import CompactValue from '../components/CompactValue';
 
 function StatCard({ label, value }) {
@@ -162,6 +162,7 @@ export default function SeasonHistoryPage() {
                               <th className="text-left px-3 py-2">{t('seasons.balance')}</th>
                               <th className="text-left px-3 py-2">{t('seasons.portfolioValue')}</th>
                               <th className="text-left px-3 py-2">{t('seasons.properties')}</th>
+                              <th className="text-left px-3 py-2">{t('seasons.reward')}</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -194,6 +195,9 @@ export default function SeasonHistoryPage() {
                                 </td>
                                 <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
                                   {player.propertiesOwned || 0}
+                                </td>
+                                <td className="px-3 py-2 text-yellow-600 dark:text-yellow-400 font-medium">
+                                  {player.reward ? formatMoneyExact(player.reward) : '\u2014'}
                                 </td>
                               </tr>
                             ))}

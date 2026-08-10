@@ -286,7 +286,8 @@ describe('Season Reset — Economy Validation', () => {
     // Stock value: $0 (already liquidated, but counted in balance)
     // Total NW = $310M
     // Carryover 50% = $155M
-    expect(founderAfter.balance).toBe(155_000_000);
+    // Season leaderboard reward: rank 1 = $100K (full value, added after carryover)
+    expect(founderAfter.balance).toBe(155_100_000);
     expect(founderAfter.lifetimeStats.totalSeasonsCompleted).toBe(1);
   });
 
