@@ -667,7 +667,10 @@ export default function UserProfilePage() {
                   {profileUser.title}
                 </span>
               )}
-              <span className="text-sm text-gray-500 dark:text-gray-400">
+              <span
+                className="text-sm text-gray-500 dark:text-gray-400 cursor-help"
+                title={`${Math.round(profileUser.xp || 0).toLocaleString()} / ${Math.round(profileUser.xpToNextLevel || 100).toLocaleString()} XP`}
+              >
                 {formatCompact(profileUser.xp || 0)} / {formatCompact(profileUser.xpToNextLevel || 100)} XP
               </span>
             </div>

@@ -135,7 +135,10 @@ export default function CareerPage() {
                 </span>
               )}
             </div>
-            <span className="text-xs text-muted">
+            <span
+              className="text-xs text-muted cursor-help"
+              title={`${Math.round(career.xp || 0).toLocaleString()} / ${Math.round(career.xpToNextLevel || 0).toLocaleString()} XP`}
+            >
               {formatCompact(career.xp)} / {formatCompact(career.xpToNextLevel)} XP
             </span>
           </div>
