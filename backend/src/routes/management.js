@@ -7,6 +7,7 @@ import {
   MAINTENANCE_TIERS,
   RENT_BOUNDS,
   calculateMonthlyProfit,
+  calculatePropertyRentIncome,
   calculateQualityScore,
   simulateOccupancy,
 } from '../config/propertyManagement.js';
@@ -46,7 +47,9 @@ router.get('/:propertyId', authenticate, async (req, res) => {
 
     const unitCount = property.units?.length || 1;
     const perUnitRent = property.rentPerUnit || (unitCount > 0 ? Math.round(property.rent / unitCount) : 0);
-    const actualRentIncome = property.rent || 0;
+    // Show the occupancy-adjusted income — this is what actually accrues to
+    // the rent pool (same formula the engine uses every tick).
+    const actualRentIncome = calculatePropertyRentIncome(property);
     const tier = MAINTENANCE_TIERS[property.maintenanceLevel] || MAINTENANCE_TIERS.none;
     const maintenanceCost = Math.round(actualRentIncome * tier.costPercentOfRent);
     const profit = calculateMonthlyProfit(actualRentIncome, property.maintenanceLevel, property.currentPrice);
