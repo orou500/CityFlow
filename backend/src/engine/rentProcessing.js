@@ -3,7 +3,11 @@ import User from '../models/User.js';
 import Notification from '../models/Notification.js';
 import { enqueueNotification, createNotification } from '../utils/notificationQueue.js';
 import { onNotificationDeleted } from '../utils/cacheInvalidation.js';
-import { calculatePropertyRentIncome, calculateMaintenanceCost, calculateOperatingExpenses } from '../config/propertyManagement.js';
+import {
+  calculatePropertyRentIncome,
+  calculateMaintenanceCost,
+  calculateOperatingExpenses,
+} from '../config/propertyManagement.js';
 import { MIN_RENT_READY_AMOUNT, RENT_READY_EVENT_KEY, PRIORITY } from '../config/notificationConfig.js';
 
 const RENT_STORAGE_DURATION_MS = 24 * 60 * 60 * 1000;
@@ -81,7 +85,14 @@ export async function processRent() {
     // NET INCOME and nothing is deducted twice.
     const netIncome = Math.max(0, rentIncome - maintenanceCost - operatingExpenses);
     if (netIncome <= 0) {
-      results.push({ propertyId: property._id, ownerId: owner._id, rentIncome, maintenanceCost, operatingExpenses, netIncome });
+      results.push({
+        propertyId: property._id,
+        ownerId: owner._id,
+        rentIncome,
+        maintenanceCost,
+        operatingExpenses,
+        netIncome,
+      });
       continue;
     }
 
@@ -96,7 +107,14 @@ export async function processRent() {
       earned: Math.max(0, netIncome),
     });
 
-    results.push({ propertyId: property._id, ownerId: owner._id, rentIncome, maintenanceCost, operatingExpenses, netIncome });
+    results.push({
+      propertyId: property._id,
+      ownerId: owner._id,
+      rentIncome,
+      maintenanceCost,
+      operatingExpenses,
+      netIncome,
+    });
   }
 
   if (rentPoolUpdates.length > 0) {

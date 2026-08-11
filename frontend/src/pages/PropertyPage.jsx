@@ -907,7 +907,9 @@ export default function PropertyPage() {
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-500 dark:text-gray-400">{t('propertyManagement.monthlyIncrease')}</span>
+                      <span className="text-gray-500 dark:text-gray-400">
+                        {t('propertyManagement.monthlyIncrease')}
+                      </span>
                       <span
                         className={`font-bold ${managementData.monthlyIncrease >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}
                       >
@@ -936,7 +938,9 @@ export default function PropertyPage() {
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-500 dark:text-gray-400">{t('propertyManagement.estimatedPotential')}</span>
+                      <span className="text-gray-500 dark:text-gray-400">
+                        {t('propertyManagement.estimatedPotential')}
+                      </span>
                       <span className="font-semibold text-blue-600 dark:text-blue-400">
                         {formatMoney(managementData.rentPotential)}
                         <span className="text-xs text-gray-400 font-normal"> {t('propertyManagement.perMonth')}</span>

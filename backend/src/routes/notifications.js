@@ -4,10 +4,7 @@ import { authenticate } from '../middleware/auth.js';
 import { emitToUser } from '../socket/index.js';
 import { SOCKET_EVENTS } from '../socket/events.js';
 import { runNotificationRetention } from '../engine/notificationRetention.js';
-import {
-  getUserNotificationPreferences,
-  updateUserNotificationPreferences,
-} from '../utils/notificationPreferences.js';
+import { getUserNotificationPreferences, updateUserNotificationPreferences } from '../utils/notificationPreferences.js';
 import { VALID_PRIORITIES, VALID_CATEGORIES, DEFAULT_PREFERENCES } from '../config/notificationConfig.js';
 
 const router = Router();
@@ -50,7 +47,11 @@ router.get('/', async (req, res) => {
       page,
       totalPages: Math.ceil(total / limit),
       limit,
-      filters: { priority: query.priority || null, category: query.category || null, unread: query.read === undefined ? null : query.read },
+      filters: {
+        priority: query.priority || null,
+        category: query.category || null,
+        unread: query.read === undefined ? null : query.read,
+      },
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -26,10 +26,7 @@ export async function runNotificationRetention(force = false) {
     const removed = await Notification.deleteMany({
       read: true,
       readAt: { $exists: true, $lt: standardCutoff },
-      $or: [
-        { priority: { $ne: PRIORITY.CRITICAL } },
-        { priority: PRIORITY.CRITICAL, readAt: { $lt: criticalCutoff } },
-      ],
+      $or: [{ priority: { $ne: PRIORITY.CRITICAL } }, { priority: PRIORITY.CRITICAL, readAt: { $lt: criticalCutoff } }],
     });
 
     // Legacy rows (no readAt) fall back to updatedAt so old data is still pruned.

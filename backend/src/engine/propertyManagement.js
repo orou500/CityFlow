@@ -51,7 +51,12 @@ export async function processPropertyManagement(currentTick) {
       // folded into the rent pool by processRent, so nothing is charged here.
       const actualRentIncome = calculatePropertyRentIncome(property);
 
-      const profit = calculateMonthlyProfit(actualRentIncome, property.maintenanceLevel, property.currentPrice, property);
+      const profit = calculateMonthlyProfit(
+        actualRentIncome,
+        property.maintenanceLevel,
+        property.currentPrice,
+        property,
+      );
 
       const historyEntry = {
         tick: currentTick,

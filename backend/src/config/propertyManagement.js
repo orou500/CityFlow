@@ -132,7 +132,10 @@ export function calculateOperatingExpenses(property, rentIncome) {
  */
 export function calculateNetRentIncome(property) {
   const rentIncome = calculatePropertyRentIncome(property);
-  return Math.max(0, rentIncome - calculateMaintenanceCost(property, rentIncome) - calculateOperatingExpenses(property, rentIncome));
+  return Math.max(
+    0,
+    rentIncome - calculateMaintenanceCost(property, rentIncome) - calculateOperatingExpenses(property, rentIncome),
+  );
 }
 
 /**

@@ -3,11 +3,7 @@ import mongoose from 'mongoose';
 import { isRedisConnected, getRedis } from '../config/redis.js';
 import Notification from '../models/Notification.js';
 import { onNotificationCreated } from './cacheInvalidation.js';
-import {
-  resolveNotificationMeta,
-  PRIORITY,
-  MAX_UNREAD_NOTIFICATIONS,
-} from '../config/notificationConfig.js';
+import { resolveNotificationMeta, PRIORITY, MAX_UNREAD_NOTIFICATIONS } from '../config/notificationConfig.js';
 import { isNotificationAllowed } from './notificationPreferences.js';
 
 const QUEUE_KEY = 'notifications:queue';
@@ -181,7 +177,12 @@ export async function bulkCreateNotifications(items = [], opts = {}) {
 
   // LOW-priority unread cap — count once per batch per user.
   const unreadOverCap = new Set();
-  const cappedUsers = new Set(items.filter((d) => resolveNotificationMeta(d).priority === PRIORITY.LOW).map((d) => getUserId(d)).filter(Boolean));
+  const cappedUsers = new Set(
+    items
+      .filter((d) => resolveNotificationMeta(d).priority === PRIORITY.LOW)
+      .map((d) => getUserId(d))
+      .filter(Boolean),
+  );
   if (cappedUsers.size > 0) {
     const agg = await Notification.aggregate([
       { $match: { userId: { $in: [...cappedUsers] }, read: false } },

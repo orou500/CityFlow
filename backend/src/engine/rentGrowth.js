@@ -29,9 +29,10 @@ export async function processRentGrowth(tickNumber) {
     const city = property.cityId && typeof property.cityId === 'object' ? property.cityId : null;
     const growth = calculateMonthlyRentGrowth(property, city);
 
-    const rentHistory = [...(property.rentHistory || []), { tick: tickNumber, rent: growth.newRent, potential: growth.rentPotential }].slice(
-      -RENT_SYSTEM.RENT_HISTORY_MAX_ENTRIES,
-    );
+    const rentHistory = [
+      ...(property.rentHistory || []),
+      { tick: tickNumber, rent: growth.newRent, potential: growth.rentPotential },
+    ].slice(-RENT_SYSTEM.RENT_HISTORY_MAX_ENTRIES);
 
     ops.push({
       updateOne: {

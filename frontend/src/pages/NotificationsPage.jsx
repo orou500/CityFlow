@@ -23,10 +23,34 @@ const TYPE_CONFIG = {
 };
 
 const PRIORITY_CONFIG = {
-  critical: { label: 'Critical', badge: 'bg-red-500', dot: 'bg-red-500', border: 'border-l-red-500', ring: 'ring-red-500/30' },
-  high: { label: 'High', badge: 'bg-orange-500', dot: 'bg-orange-500', border: 'border-l-orange-500', ring: 'ring-orange-500/30' },
-  medium: { label: 'Medium', badge: 'bg-blue-500', dot: 'bg-blue-400', border: 'border-l-blue-500', ring: 'ring-blue-500/30' },
-  low: { label: 'Low', badge: 'bg-gray-400', dot: 'bg-gray-400', border: 'border-l-gray-400', ring: 'ring-gray-400/30' },
+  critical: {
+    label: 'Critical',
+    badge: 'bg-red-500',
+    dot: 'bg-red-500',
+    border: 'border-l-red-500',
+    ring: 'ring-red-500/30',
+  },
+  high: {
+    label: 'High',
+    badge: 'bg-orange-500',
+    dot: 'bg-orange-500',
+    border: 'border-l-orange-500',
+    ring: 'ring-orange-500/30',
+  },
+  medium: {
+    label: 'Medium',
+    badge: 'bg-blue-500',
+    dot: 'bg-blue-400',
+    border: 'border-l-blue-500',
+    ring: 'ring-blue-500/30',
+  },
+  low: {
+    label: 'Low',
+    badge: 'bg-gray-400',
+    dot: 'bg-gray-400',
+    border: 'border-l-gray-400',
+    ring: 'ring-gray-400/30',
+  },
 };
 
 const FILTER_TABS = [

@@ -140,14 +140,40 @@ describe('Notification system overhaul', () => {
     it('dedupes identical eventKeys within one bulk call and creates distinct ones', async () => {
       const user = await createTestUser();
       const result = await bulkCreateNotifications([
-        { userId: user._id, type: 'system', title: 'A', message: 'a1', eventKey: `bulk:same:${user._id}`, global: false },
-        { userId: user._id, type: 'system', title: 'A', message: 'a2', eventKey: `bulk:same:${user._id}`, global: false },
-        { userId: user._id, type: 'system', title: 'B', message: 'b', eventKey: `bulk:other:${user._id}`, global: false },
+        {
+          userId: user._id,
+          type: 'system',
+          title: 'A',
+          message: 'a1',
+          eventKey: `bulk:same:${user._id}`,
+          global: false,
+        },
+        {
+          userId: user._id,
+          type: 'system',
+          title: 'A',
+          message: 'a2',
+          eventKey: `bulk:same:${user._id}`,
+          global: false,
+        },
+        {
+          userId: user._id,
+          type: 'system',
+          title: 'B',
+          message: 'b',
+          eventKey: `bulk:other:${user._id}`,
+          global: false,
+        },
       ]);
 
       expect(result.created).toBe(2);
       expect(result.duplicates).toBe(1);
-      expect(await Notification.countDocuments({ userId: user._id, eventKey: { $in: [`bulk:same:${user._id}`, `bulk:other:${user._id}`] } })).toBe(2);
+      expect(
+        await Notification.countDocuments({
+          userId: user._id,
+          eventKey: { $in: [`bulk:same:${user._id}`, `bulk:other:${user._id}`] },
+        }),
+      ).toBe(2);
     });
 
     it('suppresses notifications for users with the category disabled (bulk + single)', async () => {
@@ -166,8 +192,22 @@ describe('Notification system overhaul', () => {
       expect(await Notification.countDocuments({ userId: user._id, eventKey: 'mission:skipme:completed' })).toBe(0);
 
       const bulk = await bulkCreateNotifications([
-        { userId: user._id, type: 'mission_complete', title: 'M1', message: 'm', eventKey: `mission:bulk1:completed`, global: false },
-        { userId: user._id, type: 'system', title: 'S', message: 's', eventKey: `system:always:${user._id}`, global: false },
+        {
+          userId: user._id,
+          type: 'mission_complete',
+          title: 'M1',
+          message: 'm',
+          eventKey: `mission:bulk1:completed`,
+          global: false,
+        },
+        {
+          userId: user._id,
+          type: 'system',
+          title: 'S',
+          message: 's',
+          eventKey: `system:always:${user._id}`,
+          global: false,
+        },
       ]);
       expect(bulk.skipped).toBe(1);
       expect(await Notification.countDocuments({ userId: user._id, eventKey: 'mission:bulk1:completed' })).toBe(0);
@@ -187,7 +227,9 @@ describe('Notification system overhaul', () => {
         global: false,
       });
       expect(result.created).toBe(true);
-      expect(await Notification.countDocuments({ userId: user._id, eventKey: `rent:${user._id}:expired:2026-01-01` })).toBe(1);
+      expect(
+        await Notification.countDocuments({ userId: user._id, eventKey: `rent:${user._id}:expired:2026-01-01` }),
+      ).toBe(1);
     });
 
     it('drops new LOW-priority notifications when the user is over the unread cap', async () => {

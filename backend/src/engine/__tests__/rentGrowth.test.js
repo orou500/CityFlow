@@ -74,16 +74,36 @@ describe('calculateRentPotential', () => {
   });
 
   it('responds to city demand and supply', () => {
-    const hot = calculateRentPotential(baseProperty(200000), { demandIndex: 2.0, supplyIndex: 1.0, economicCondition: 'stable' });
-    const cold = calculateRentPotential(baseProperty(200000), { demandIndex: 0.5, supplyIndex: 1.0, economicCondition: 'stable' });
-    const oversupplied = calculateRentPotential(baseProperty(200000), { demandIndex: 1.0, supplyIndex: 2.5, economicCondition: 'stable' });
+    const hot = calculateRentPotential(baseProperty(200000), {
+      demandIndex: 2.0,
+      supplyIndex: 1.0,
+      economicCondition: 'stable',
+    });
+    const cold = calculateRentPotential(baseProperty(200000), {
+      demandIndex: 0.5,
+      supplyIndex: 1.0,
+      economicCondition: 'stable',
+    });
+    const oversupplied = calculateRentPotential(baseProperty(200000), {
+      demandIndex: 1.0,
+      supplyIndex: 2.5,
+      economicCondition: 'stable',
+    });
     expect(hot).toBeGreaterThan(cold);
     expect(oversupplied).toBeLessThan(hot);
   });
 
   it('responds to the city economy', () => {
-    const boom = calculateRentPotential(baseProperty(200000), { demandIndex: 1.0, supplyIndex: 1.0, economicCondition: 'boom' });
-    const recession = calculateRentPotential(baseProperty(200000), { demandIndex: 1.0, supplyIndex: 1.0, economicCondition: 'recession' });
+    const boom = calculateRentPotential(baseProperty(200000), {
+      demandIndex: 1.0,
+      supplyIndex: 1.0,
+      economicCondition: 'boom',
+    });
+    const recession = calculateRentPotential(baseProperty(200000), {
+      demandIndex: 1.0,
+      supplyIndex: 1.0,
+      economicCondition: 'recession',
+    });
     expect(boom).toBeGreaterThan(recession);
   });
 
@@ -131,19 +151,13 @@ describe('calculateMonthlyRentGrowth', () => {
       baseProperty(1000000, { rent: 1000, rentHistory: [{}] }),
       STABLE_CITY, // potential ~11940
     );
-    const near = calculateMonthlyRentGrowth(
-      baseProperty(1000000, { rent: 10000, rentHistory: [{}] }),
-      STABLE_CITY,
-    );
+    const near = calculateMonthlyRentGrowth(baseProperty(1000000, { rent: 10000, rentHistory: [{}] }), STABLE_CITY);
     expect(far.growthRate).toBeGreaterThan(near.growthRate);
     expect(far.increasePct).toBeGreaterThan(near.increasePct);
   });
 
   it('never overshoots the rent potential and stays within the cap', () => {
-    const growth = calculateMonthlyRentGrowth(
-      baseProperty(1000000, { rent: 8000, rentHistory: [{}] }),
-      STABLE_CITY,
-    );
+    const growth = calculateMonthlyRentGrowth(baseProperty(1000000, { rent: 8000, rentHistory: [{}] }), STABLE_CITY);
     expect(growth.newRent).toBeLessThanOrEqual(growth.rentPotential);
     expect(growth.newRent).toBeLessThanOrEqual(MAX_MONTHLY_RENT);
   });
@@ -229,7 +243,13 @@ describe('processRentGrowth (engine)', () => {
 
   it('holds rent steady once a property has reached its potential', async () => {
     const user = await createTestUser({ balance: 0, uncollectedRent: 0 });
-    const p = await makeProperty({ ownerId: user._id, rent: 2388, currentPrice: 200000, basePrice: 200000, rentHistory: [{ tick: 1, rent: 2388 }] });
+    const p = await makeProperty({
+      ownerId: user._id,
+      rent: 2388,
+      currentPrice: 200000,
+      basePrice: 200000,
+      rentHistory: [{ tick: 1, rent: 2388 }],
+    });
 
     for (let t = 2; t <= 14; t += 1) {
       await processRentGrowth(t);
@@ -286,7 +306,13 @@ describe('rent growth + collection integration', () => {
   it('occupancy and maintenance never rewrite the rent baseline; the pool matches displayed net income', async () => {
     const user = await createTestUser({ balance: 100000, uncollectedRent: 0 });
     const city = await createTestCity();
-    const p = await makeProperty({ ownerId: user._id, cityId: city._id, rent: 2000, occupancy: 80, maintenanceLevel: 'basic' });
+    const p = await makeProperty({
+      ownerId: user._id,
+      cityId: city._id,
+      rent: 2000,
+      occupancy: 80,
+      maintenanceLevel: 'basic',
+    });
 
     const results = await processRent();
     const r = results.find((x) => x.propertyId.toString() === p._id.toString());

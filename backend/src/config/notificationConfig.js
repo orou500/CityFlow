@@ -171,7 +171,12 @@ export function getNotificationMeta(eventKey = '', type = 'system') {
       key.includes(':insufficient_funds:')
     ) {
       priority = PRIORITY.HIGH;
-    } else if (key.includes(':level_up:') || key.includes(':invite:') || key.includes(':joined:') || key.includes(':removed:')) {
+    } else if (
+      key.includes(':level_up:') ||
+      key.includes(':invite:') ||
+      key.includes(':joined:') ||
+      key.includes(':removed:')
+    ) {
       priority = PRIORITY.MEDIUM;
     } else {
       priority = PRIORITY.MEDIUM;
