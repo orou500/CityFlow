@@ -49,6 +49,10 @@ export async function connectSocket() {
     triggerListeners('notification:new', data);
   });
 
+  socket.on('notification:deleted', (data) => {
+    triggerListeners('notification:deleted', data);
+  });
+
   socket.on('company:treasury:updated', (data) => {
     triggerListeners('company:treasury:updated', data);
   });

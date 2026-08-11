@@ -1322,8 +1322,21 @@
     "title": "Notifications",
     "markAllRead": "Mark all as read",
     "delete": "Delete",
+    "deleteError": "Could not delete notification",
     "empty": "No notifications yet",
     "emptyHint": "When you receive offers, friend requests, or other updates, they will appear here.",
+    "filters": {
+      "all": "All",
+      "unread": "Unread",
+      "critical": "Critical",
+      "high": "High"
+    },
+    "priority": {
+      "critical": "Critical",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
     "time": {
       "justNow": "just now",
       "minutes": "{{count}}m ago",

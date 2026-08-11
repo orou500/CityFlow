@@ -76,6 +76,7 @@ export const CHANNELS = {
   TICK: 'cityflow:tick',
   MARKET_UPDATE: 'cityflow:market:update',
   NOTIFICATION_CREATED: 'cityflow:notification:created',
+  NOTIFICATION_DELETED: 'cityflow:notification:deleted',
   PROPERTY_PURCHASED: 'cityflow:property:purchased',
   PROPERTY_SOLD: 'cityflow:property:sold',
   PROPERTY_UPGRADED: 'cityflow:property:upgraded',

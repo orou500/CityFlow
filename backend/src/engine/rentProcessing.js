@@ -1,10 +1,55 @@
 import Property from '../models/Property.js';
 import User from '../models/User.js';
 import Notification from '../models/Notification.js';
-import { enqueueNotification } from '../utils/notificationQueue.js';
+import { enqueueNotification, createNotification } from '../utils/notificationQueue.js';
+import { onNotificationDeleted } from '../utils/cacheInvalidation.js';
 import { calculatePropertyRentIncome, calculateMaintenanceCost, calculateOperatingExpenses } from '../config/propertyManagement.js';
+import { MIN_RENT_READY_AMOUNT, RENT_READY_EVENT_KEY, PRIORITY } from '../config/notificationConfig.js';
 
 const RENT_STORAGE_DURATION_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Keep a single merged "rent ready to collect" notification per user.
+ * Reruns upsert+merge on the same (user, eventKey) so the amount always
+ * reflects the latest accrual and only ONE notification is ever shown.
+ * Suppressed below MIN_RENT_READY_AMOUNT to avoid spam for tiny amounts.
+ */
+export async function ensureRentReadyNotification(userId, amount = 0) {
+  const amountNum = Math.max(0, Number(amount) || 0);
+  if (amountNum < MIN_RENT_READY_AMOUNT) return { created: false, notification: null, skipped: true };
+
+  return createNotification(
+    {
+      userId,
+      type: 'system',
+      category: 'rent',
+      title: 'Rent Ready to Collect',
+      message: `You have $${amountNum.toLocaleString()} in uncollected rent. Collect it before it expires.`,
+      eventKey: RENT_READY_EVENT_KEY(userId),
+      route: '/dashboard',
+      tab: 'rent',
+      entityType: 'dashboard',
+      global: false,
+      // Always critical so preference gating never hides an expiring pool.
+      priority: PRIORITY.CRITICAL,
+    },
+    { merge: true },
+  );
+}
+
+/**
+ * Remove the rent-ready notification once the pool is collected or forfeited.
+ * Emits notification:deleted so open clients drop the record immediately.
+ */
+export async function clearRentReadyNotification(userId) {
+  const userIdStr = userId?.toString?.() || userId;
+  if (!userIdStr) return;
+
+  const deleted = await Notification.findOneAndDelete({ userId: userIdStr, eventKey: RENT_READY_EVENT_KEY(userIdStr) });
+  if (deleted) {
+    await onNotificationDeleted(userIdStr, deleted._id.toString()).catch(() => {});
+  }
+}
 
 export async function processRent() {
   const properties = await Property.find({ ownerId: { $ne: null }, companyId: null })
@@ -75,6 +120,16 @@ export async function processRent() {
       poolBulkOps.push({ updateOne: { filter: { _id: userIdStr }, update } });
     }
     await User.bulkWrite(poolBulkOps);
+
+    // One merged "rent ready" notification per user whose pool crossed the
+    // minimum threshold — never per property, never per tick.
+    await Promise.all(
+      [...grouped.entries()].map(([userIdStr, { amount }]) => {
+        const user = userMap.get(userIdStr);
+        const poolTotal = (user?.uncollectedRent || 0) + amount;
+        return ensureRentReadyNotification(userIdStr, poolTotal);
+      }),
+    );
   }
 
   if (userLifetimeUpdates.length > 0) {
@@ -118,6 +173,9 @@ export async function expireUncollectedRent() {
   }));
   await User.bulkWrite(ops);
 
+  // Remove the merged rent-ready notification — the pool is now forfeited.
+  await Promise.all(expired.map((u) => clearRentReadyNotification(u._id)));
+
   await Promise.all(
     expired.map((u) =>
       enqueueNotification({
@@ -149,10 +207,11 @@ export async function sendRentExpiryWarnings() {
 
   if (users.length === 0) return 0;
 
+  // Idempotency by eventKey prefix, not fragile title text — message wording
+  // may drift between versions without ever creating duplicates.
   const existingNotifications = await Notification.find({
     userId: { $in: users.map((u) => u._id) },
-    type: 'system',
-    title: 'Rent Collection Warning',
+    eventKey: { $regex: '^rent:warning:' },
   }).select('userId');
 
   const warnedUserIds = new Set(existingNotifications.map((n) => n.userId.toString()));
@@ -165,6 +224,7 @@ export async function sendRentExpiryWarnings() {
       enqueueNotification({
         userId: u._id,
         type: 'system',
+        category: 'rent',
         title: 'Rent Collection Warning',
         message: `You have $${u.uncollectedRent.toLocaleString()} in uncollected rent. Collect it within the next hour or it will be forfeited!`,
         eventKey: `rent:warning:${u._id}:${(u.rentStorageStartedAt || new Date(0)).toISOString()}`,

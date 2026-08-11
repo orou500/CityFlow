@@ -5,6 +5,7 @@ import { acquireTickLock, releaseTickLock } from '../models/GameState.js';
 import { createBackup, enforceRetention } from './backup.js';
 import { config } from '../config/index.js';
 import { processNotificationQueue } from '../utils/notificationQueue.js';
+import { runNotificationRetention } from './notificationRetention.js';
 import { reconcilePendingDonations } from '../routes/donations.js';
 
 const ownerId = crypto.randomUUID();
@@ -51,6 +52,17 @@ export function startScheduler() {
       }
     });
   }
+
+  cron.schedule('0 3 * * *', async () => {
+    try {
+      const result = await runNotificationRetention();
+      if (result.removed > 0) {
+        console.log(`[SCHEDULER] Notification retention removed ${result.removed} old read notifications`);
+      }
+    } catch (err) {
+      console.error('[SCHEDULER] Notification retention failed:', err.message);
+    }
+  });
 
   cron.schedule('* * * * *', async () => {
     try {

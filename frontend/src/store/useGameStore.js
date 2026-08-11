@@ -419,9 +419,13 @@ export const useGameStore = create((set, get) => ({
     return await api(`/offers/accept-counter/${offerId}`, { method: 'POST' });
   },
 
-  fetchNotifications: async (page = 1, limit = 20) => {
+  fetchNotifications: async (page = 1, limit = 20, filters = {}) => {
     try {
-      const data = await api(`/notifications?page=${page}&limit=${limit}`);
+      const params = new URLSearchParams({ page, limit });
+      if (filters.priority) params.set('priority', filters.priority);
+      if (filters.category) params.set('category', filters.category);
+      if (filters.unread !== undefined && filters.unread !== null) params.set('unread', String(filters.unread));
+      const data = await api(`/notifications?${params.toString()}`);
       // Defensive dedup by _id: poll + socket events can deliver the same
       // notification twice (initial fetch, reconnect, page change). The
       // server guarantees one DB record per event; this dedup keeps the UI
@@ -432,15 +436,9 @@ export const useGameStore = create((set, get) => ({
         seen.add(n._id);
         return true;
       });
-      let merged = deduped;
-      if (page === 1) {
-        const existing = get().notifications || [];
-        merged = [...existing, ...deduped].reduce((acc, n) => {
-          if (n._id && acc.some((x) => x._id === n._id)) return acc;
-          return [...acc, n];
-        }, []);
-      }
-      set({ notifications: merged, notificationPage: data.page, notificationTotalPages: data.totalPages });
+      // Server is the source of truth: page 1 replaces the list (items
+      // deleted on the server must never be re-merged from stale state).
+      set({ notifications: deduped, notificationPage: data.page, notificationTotalPages: data.totalPages });
       return deduped;
     } catch {
       return [];
@@ -458,15 +456,77 @@ export const useGameStore = create((set, get) => ({
   },
 
   markNotificationRead: async (id) => {
-    return await api(`/notifications/${id}/read`, { method: 'PUT' });
+    const list = get().notifications || [];
+    const item = list.find((n) => n._id === id);
+    const wasUnread = item ? !item.read : false;
+    const updated = await api(`/notifications/${id}/read`, { method: 'PUT' });
+    set({
+      notifications: list.map((n) => (n._id === id ? { ...n, read: true } : n)),
+      unreadCount: wasUnread ? Math.max(0, (get().unreadCount || 0) - 1) : get().unreadCount,
+    });
+    return updated;
   },
 
   markAllRead: async () => {
-    return await api('/notifications/read-all', { method: 'PUT' });
+    const result = await api('/notifications/read-all', { method: 'PUT' });
+    set({
+      notifications: (get().notifications || []).map((n) => ({ ...n, read: true })),
+      unreadCount: 0,
+    });
+    return result;
   },
 
+  notificationPreferences: null,
+
+  fetchNotificationPreferences: async () => {
+    try {
+      const { preferences } = await api('/notifications/preferences');
+      set({ notificationPreferences: preferences });
+      return preferences;
+    } catch {
+      return null;
+    }
+  },
+
+  updateNotificationPreferences: async (updates) => {
+    const { preferences } = await api('/notifications/preferences', {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+    set({ notificationPreferences: preferences });
+    return preferences;
+  },
+
+  removeNotification: (id) => {
+    const list = get().notifications || [];
+    const item = list.find((n) => n._id === id);
+    if (!item) return false;
+    set({
+      notifications: list.filter((n) => n._id !== id),
+      unreadCount: Math.max(0, (get().unreadCount || 0) - (item.read ? 0 : 1)),
+    });
+    return true;
+  },
+
+  restoreNotification: (notification) => {
+    set({
+      notifications: [...(get().notifications || []), notification],
+      unreadCount: (get().unreadCount || 0) + (notification.read ? 0 : 1),
+    });
+  },
+
+  // Optimistic delete: remove immediately, roll back on failure. The API
+  // error propagates so callers can surface it to the user.
   deleteNotification: async (id) => {
-    return await api(`/notifications/${id}`, { method: 'DELETE' });
+    const list = get().notifications || [];
+    const item = list.find((n) => n._id === id);
+    get().removeNotification(id);
+    try {
+      return await api(`/notifications/${id}`, { method: 'DELETE' });
+    } catch (err) {
+      if (item) get().restoreNotification(item);
+      throw err;
+    }
   },
 
   developmentOptions: [],

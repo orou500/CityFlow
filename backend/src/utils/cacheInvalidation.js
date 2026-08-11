@@ -175,9 +175,32 @@ export async function onInvestmentMatured(companyId, investmentId, profit) {
   emitToCompany(companyId, SOCKET_EVENTS.INVESTMENT_MATURED, { companyId, investmentId, profit });
 }
 
-export async function onNotificationCreated(userId) {
+export async function onNotificationCreated(userId, notification = null) {
   await publish(CHANNELS.NOTIFICATION_CREATED, { userId });
-  emitToUser(userId, SOCKET_EVENTS.NOTIFICATION_NEW, { userId });
+  emitToUser(userId, SOCKET_EVENTS.NOTIFICATION_NEW, {
+    userId,
+    notification: notification
+      ? {
+          _id: String(notification._id),
+          title: notification.title,
+          message: notification.message,
+          type: notification.type,
+          route: notification.route,
+          tab: notification.tab,
+          priority: notification.priority,
+          category: notification.category,
+          createdAt: notification.createdAt,
+        }
+      : null,
+  });
+}
+
+export async function onNotificationDeleted(userId, notificationId) {
+  await publish(CHANNELS.NOTIFICATION_DELETED, { userId, notificationId });
+  emitToUser(userId, SOCKET_EVENTS.NOTIFICATION_DELETED, {
+    userId,
+    notificationId,
+  });
 }
 
 export async function onDevelopmentStarted(userId, companyId) {

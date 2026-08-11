@@ -15,6 +15,7 @@ export const cacheKeys = {
 
   user: (id) => `${prefix}:user:${id}`,
   userProfile: (username) => `${prefix}:user:profile:${username}`,
+  notificationPrefs: (id) => `${prefix}:notif:prefs:${id}`,
 
   city: (id) => `${prefix}:city:${id}`,
   cities: () => `${prefix}:cities`,

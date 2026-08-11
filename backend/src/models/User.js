@@ -74,6 +74,18 @@ const userSchema = new mongoose.Schema(
       },
     ],
     pushNotificationsEnabled: { type: Boolean, default: true },
+    // Per-category opt-out for in-game notifications. Missing keys fall back
+    // to enabled. Critical/security notifications always bypass these.
+    notificationPreferences: {
+      mission: { type: Boolean, default: true },
+      achievement: { type: Boolean, default: true },
+      auction: { type: Boolean, default: true },
+      company: { type: Boolean, default: true },
+      friend: { type: Boolean, default: true },
+      market: { type: Boolean, default: true },
+      property: { type: Boolean, default: true },
+      system: { type: Boolean, default: true },
+    },
     level: { type: Number, default: 1 },
     xp: { type: Number, default: 0 },
     xpToNextLevel: { type: Number, default: 100 },

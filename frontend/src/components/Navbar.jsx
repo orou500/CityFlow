@@ -19,7 +19,7 @@ export default function Navbar() {
   const navigate = useNavigate();
   const unreadCount = useGameStore((s) => s.unreadCount);
   const fetchUnreadCount = useGameStore((s) => s.fetchUnreadCount);
-  const fetchNotifications = useGameStore((s) => s.fetchNotifications);
+  const removeNotification = useGameStore((s) => s.removeNotification);
   const { preference, setPreference } = useTheme();
   const { checkForNewNotifications } = useToast();
 
@@ -51,27 +51,35 @@ export default function Navbar() {
   useEffect(() => {
     if (user) {
       fetchUnreadCount();
-      const poll = async () => {
-        const count = await fetchUnreadCount();
-        const notifications = await fetchNotifications();
-        const latest = notifications?.length > 0 ? notifications[0] : null;
-        checkForNewNotifications(count, latest);
-      };
-      poll();
-      const interval = setInterval(poll, 30000);
+      // Poll only the badge count — never the list, so the notifications
+      // page's current page is never clobbered by background polling.
+      const interval = setInterval(() => {
+        fetchUnreadCount();
+      }, 30000);
       return () => clearInterval(interval);
     }
   }, [user]);
 
-  useSocketEvent('notification:new', () => {
+  useSocketEvent('notification:new', (data) => {
     if (!user) return;
     fetchUnreadCount();
-    fetchNotifications().then((notifications) => {
-      const latest = notifications?.length > 0 ? notifications[0] : null;
-      if (latest && !latest.read) {
-        checkForNewNotifications(unreadCount + 1, latest);
+    const notification = data?.notification;
+    if (notification && !notification.read) {
+      // Toasts only for critical/high priority — medium/low just bump the
+      // badge so the bell doesn't spam pop-ups for every minor event.
+      const priority = notification.priority || 'low';
+      if (priority === 'critical' || priority === 'high') {
+        checkForNewNotifications(unreadCount + 1, notification);
       }
-    });
+    }
+  });
+
+  useSocketEvent('notification:deleted', (data) => {
+    if (!user || !data?.notificationId) return;
+    // Removes from the store list and decrements unread locally; the next
+    // unread fetch reconciles the badge with the server.
+    removeNotification(data.notificationId);
+    fetchUnreadCount();
   });
 
   useEffect(() => {

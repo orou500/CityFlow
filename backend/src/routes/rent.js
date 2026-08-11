@@ -5,6 +5,7 @@ import { authenticate } from '../middleware/auth.js';
 import { collectOperatingFee } from '../utils/companyFees.js';
 import { onRentCollected } from '../utils/cacheInvalidation.js';
 import { processPlayerProgress } from '../utils/playerProgress.js';
+import { clearRentReadyNotification } from '../engine/rentProcessing.js';
 
 const router = Router();
 
@@ -74,6 +75,7 @@ router.post('/collect', authenticate, async (req, res) => {
     collectOperatingFee(user._id, collected, 'rent_income');
 
     await onRentCollected(user._id);
+    await clearRentReadyNotification(user._id);
 
     await Transaction.create({
       buyerId: user._id,

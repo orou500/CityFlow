@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../store/useGameStore';
 import { useAuthStore } from '../store/useAuthStore';
+import { useToast } from '../components/Toast';
 import Pagination from '../components/Pagination';
 
 const TYPE_CONFIG = {
@@ -20,6 +21,20 @@ const TYPE_CONFIG = {
   season_reward: { icon: '🏆', color: 'text-yellow-500', route: '/leaderboards' },
   system: { icon: '📢', color: 'text-gray-500' },
 };
+
+const PRIORITY_CONFIG = {
+  critical: { label: 'Critical', badge: 'bg-red-500', dot: 'bg-red-500', border: 'border-l-red-500', ring: 'ring-red-500/30' },
+  high: { label: 'High', badge: 'bg-orange-500', dot: 'bg-orange-500', border: 'border-l-orange-500', ring: 'ring-orange-500/30' },
+  medium: { label: 'Medium', badge: 'bg-blue-500', dot: 'bg-blue-400', border: 'border-l-blue-500', ring: 'ring-blue-500/30' },
+  low: { label: 'Low', badge: 'bg-gray-400', dot: 'bg-gray-400', border: 'border-l-gray-400', ring: 'ring-gray-400/30' },
+};
+
+const FILTER_TABS = [
+  { key: 'all', labelKey: 'notifications.filters.all', filters: {} },
+  { key: 'unread', labelKey: 'notifications.filters.unread', filters: { unread: true } },
+  { key: 'critical', labelKey: 'notifications.filters.critical', filters: { priority: 'critical' } },
+  { key: 'high', labelKey: 'notifications.filters.high', filters: { priority: 'high' } },
+];
 
 function timeAgo(dateStr, t) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -48,14 +63,17 @@ export default function NotificationsPage() {
     deleteNotification,
   } = useGameStore();
   const [loading, setLoading] = useState(true);
+  const [activeFilter, setActiveFilter] = useState('all');
+  const { addToast } = useToast();
 
   const load = useCallback(
-    async (page) => {
+    async (page, filterKey = activeFilter) => {
       setLoading(true);
-      await Promise.all([fetchNotifications(page), fetchUnreadCount()]);
+      const filterDef = FILTER_TABS.find((f) => f.key === filterKey) || FILTER_TABS[0];
+      await Promise.all([fetchNotifications(page, 20, filterDef.filters), fetchUnreadCount()]);
       setLoading(false);
     },
-    [fetchNotifications, fetchUnreadCount],
+    [fetchNotifications, fetchUnreadCount, activeFilter],
   );
 
   useEffect(() => {
@@ -63,8 +81,13 @@ export default function NotificationsPage() {
       navigate('/login');
       return;
     }
-    load(1);
+    load(1, 'all');
   }, [user]);
+
+  const handleFilterChange = (key) => {
+    setActiveFilter(key);
+    load(1, key);
+  };
 
   const handlePageChange = (page) => {
     load(page);
@@ -110,8 +133,25 @@ export default function NotificationsPage() {
 
   const handleDelete = async (e, id) => {
     e.stopPropagation();
-    await deleteNotification(id);
-    await Promise.all([fetchNotifications(notificationPage), fetchUnreadCount()]);
+    try {
+      await deleteNotification(id); // optimistic removal in the store
+      await fetchUnreadCount();
+      // If the deleted item emptied the current page, fall back to the last
+      // available page so the list never shows an empty page.
+      const { notifications: list, notificationTotalPages: total } = useGameStore.getState();
+      if (list.length === 0 && total > 1 && notificationPage > 1) {
+        await load(Math.min(notificationPage, total - 1));
+      }
+    } catch (err) {
+      const message = err?.message || '';
+      addToast({
+        _id: `delete-error-${id}`,
+        title: t('notifications.deleteError'),
+        message,
+        type: 'system',
+        read: true,
+      });
+    }
   };
 
   if (!user) return null;
@@ -119,8 +159,23 @@ export default function NotificationsPage() {
   return (
     <div className="flex-1 p-4 md:p-6 overflow-y-auto">
       <div className="max-w-3xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-primary">{t('notifications.title')}</h1>
+        <h1 className="text-2xl font-bold text-primary mb-4">{t('notifications.title')}</h1>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div className="flex gap-1.5">
+            {FILTER_TABS.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => handleFilterChange(tab.key)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
+                  activeFilter === tab.key
+                    ? 'bg-blue-500 text-white border-blue-500'
+                    : 'bg-card text-secondary border-border hover:border-blue-400'
+                }`}
+              >
+                {t(tab.labelKey)}
+              </button>
+            ))}
+          </div>
           {notifications.some((n) => !n.read) && (
             <button
               onClick={handleMarkAllRead}
@@ -143,20 +198,28 @@ export default function NotificationsPage() {
           <div className="space-y-2">
             {notifications.map((n) => {
               const cfg = TYPE_CONFIG[n.type] || { icon: '📄', color: 'text-gray-500' };
+              const pcfg = PRIORITY_CONFIG[n.priority] || PRIORITY_CONFIG.low;
               return (
                 <button
                   key={n._id}
                   onClick={() => handleClick(n)}
-                  className={`w-full text-left flex items-start gap-3 p-4 rounded-lg border transition-colors ${
+                  className={`w-full text-left flex items-start gap-3 p-4 rounded-lg border-l-4 transition-colors ${
                     n.read
                       ? 'bg-card border-border'
                       : 'bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800'
-                  }`}
+                  } ${pcfg.border}`}
                 >
                   <span className={`text-xl shrink-0 mt-0.5 ${cfg.color}`}>{cfg.icon}</span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
-                      <p className={`text-sm font-medium ${n.read ? 'text-primary' : 'text-primary'}`}>{n.title}</p>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <p className="text-sm font-medium text-primary truncate">{n.title}</p>
+                        <span
+                          className={`text-[9px] font-bold uppercase tracking-wide text-white px-1.5 py-0.5 rounded ${pcfg.badge}`}
+                        >
+                          {t(`notifications.priority.${n.priority || 'low'}`)}
+                        </span>
+                      </div>
                       <span className="text-[10px] text-muted whitespace-nowrap shrink-0 mt-0.5">
                         {timeAgo(n.createdAt, t)}
                       </span>
@@ -164,7 +227,7 @@ export default function NotificationsPage() {
                     <p className="text-xs text-secondary mt-0.5 line-clamp-2">{n.message}</p>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0 mt-1">
-                    {!n.read && <span className="w-2 h-2 rounded-full bg-blue-500" />}
+                    {!n.read && <span className={`w-2 h-2 rounded-full ${pcfg.dot}`} />}
                     <button
                       onClick={(e) => handleDelete(e, n._id)}
                       className="text-muted hover:text-red-500 transition-colors p-0.5"

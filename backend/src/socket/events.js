@@ -37,6 +37,7 @@ export const SOCKET_EVENTS = {
   INVESTMENT_FAILED: 'investment:failed',
 
   NOTIFICATION_NEW: 'notification:new',
+  NOTIFICATION_DELETED: 'notification:deleted',
 
   PRESENCE_UPDATE: 'presence:update',
   LEADERBOARD_UPDATED: 'leaderboard:updated',

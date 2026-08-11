@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { VALID_PRIORITIES, CATEGORIES, PRIORITY, CATEGORY } from '../config/notificationConfig.js';
 
 const notificationSchema = new mongoose.Schema(
   {
@@ -32,6 +33,14 @@ const notificationSchema = new mongoose.Schema(
     entityType: { type: String },
     entityId: { type: mongoose.Schema.Types.ObjectId },
     read: { type: Boolean, default: false },
+    // When the user marked this read — drives read-notification retention.
+    // Nullable for legacy notifications that predate the field.
+    readAt: { type: Date, default: null },
+    // Priority tells the player how much attention this deserves. Derived
+    // from the logical event at creation time (see notificationConfig).
+    priority: { type: String, enum: VALID_PRIORITIES, default: PRIORITY.LOW },
+    // Category lets users filter and later disable notification types.
+    category: { type: String, enum: CATEGORIES, default: CATEGORY.SYSTEM },
     global: { type: Boolean, default: false },
     // Stable idempotency key for the logical event that produced this
     // notification, e.g. "mission:65f0abc...:completed" or
@@ -50,5 +59,10 @@ notificationSchema.index(
   { userId: 1, eventKey: 1 },
   { unique: true, partialFilterExpression: { eventKey: { $type: 'string' } } },
 );
+// Priority / category list filtering (GET /notifications?priority=&category=)
+notificationSchema.index({ userId: 1, priority: 1, read: 1, createdAt: -1 });
+notificationSchema.index({ userId: 1, category: 1, createdAt: -1 });
+// Retention cleanup: prune old read notifications efficiently.
+notificationSchema.index({ read: 1, priority: 1, updatedAt: 1 });
 
 export default mongoose.model('Notification', notificationSchema);
