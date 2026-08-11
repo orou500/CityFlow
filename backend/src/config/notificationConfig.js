@@ -40,6 +40,8 @@ export const CATEGORIES = Object.values(CATEGORY);
 
 export const VALID_PRIORITIES = Object.values(PRIORITY);
 
+export const VALID_CATEGORIES = Object.values(CATEGORY);
+
 /**
  * Preference keys exposed to the user (future settings UI). Critical /
  * security notifications always bypass preferences — the flag only gates
