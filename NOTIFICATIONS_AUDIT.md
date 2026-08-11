@@ -74,3 +74,21 @@ Status of the global notification overhaul: **implemented, tested, green** (back
 - Use `bulkCreateNotifications()` for engine/tick fan-outs, not loops of single creates.
 - New categories need: a `CATEGORY` entry in `notificationConfig.js`, a `CATEGORY_TO_PREFERENCE` mapping, an eventKey rule in `getNotificationMeta()`, and (if surfaced in settings) a `DEFAULT_PREFERENCES` key + EN/HE strings.
 - Critical/security notifications must stay gate-proof (bypass preferences and the unread cap).
+
+## Follow-up fix — deleted-notification resurrection (August 2026)
+
+The queue mirror was **NOT** a no-op: `createNotification()` pushed a copy of every
+notification onto the Redis `notifications:queue` list, and the scheduler's
+`processNotificationQueue()` re-invoked `createNotification()` per item. Because that
+call upserts on `(userId, eventKey)`, a notification the user had deleted was
+**re-inserted and re-emitted as `notification:new` every minute**.
+
+Fixed in `backend/src/utils/notificationQueue.js`:
+- `createNotification()` / `bulkCreateNotifications()` no longer push to Redis — MongoDB
+  writes and socket delivery happen synchronously there, so the queue is not a write path.
+- `processNotificationQueue()` now only **drains** stale entries left by older versions and
+  must never call `createNotification()` for a popped item.
+- Regression coverage: `backend/src/engine/__tests__/notificationResurrection.test.js`
+  (7 cases) — stale copies of deleted notifications are discarded, never re-inserted;
+  queue pushes removed; drain is capped at `BATCH_SIZE`.
+

@@ -7,7 +7,6 @@ import { resolveNotificationMeta, PRIORITY, MAX_UNREAD_NOTIFICATIONS } from '../
 import { isNotificationAllowed } from './notificationPreferences.js';
 
 const QUEUE_KEY = 'notifications:queue';
-const MAX_QUEUE_SIZE = 10000;
 const BATCH_SIZE = 50;
 
 function getUserId(notificationData) {
@@ -125,18 +124,6 @@ export async function createNotification(notificationData, opts = {}) {
     onNotificationCreated(userId, doc).catch(() => {});
   }
 
-  if (isRedisConnected()) {
-    try {
-      const redis = getRedis();
-      const queueLen = await redis.llen(QUEUE_KEY);
-      if (queueLen < MAX_QUEUE_SIZE) {
-        await redis.rpush(QUEUE_KEY, JSON.stringify({ ...candidate, _id: doc._id.toString() }));
-      }
-    } catch (err) {
-      console.error('[NOTIF] Redis enqueue error:', err.message);
-    }
-  }
-
   return { created, notification: doc, skipped: false };
 }
 
@@ -249,20 +236,6 @@ export async function bulkCreateNotifications(items = [], opts = {}) {
     }
   }
 
-  if (isRedisConnected()) {
-    try {
-      const redis = getRedis();
-      const queueLen = await redis.llen(QUEUE_KEY);
-      const room = Math.max(0, MAX_QUEUE_SIZE - queueLen);
-      const toPush = insertedCandidates.slice(0, room);
-      if (toPush.length > 0) {
-        await redis.rpush(QUEUE_KEY, ...toPush.map((c) => JSON.stringify({ ...c, _id: c._id.toString() })));
-      }
-    } catch (err) {
-      console.error('[NOTIF] Redis enqueue error:', err.message);
-    }
-  }
-
   const created = insertedCandidates.length;
   const duplicates = Math.max(0, ops.length - created);
 
@@ -275,30 +248,36 @@ export async function bulkCreateNotifications(items = [], opts = {}) {
   };
 }
 
+/**
+ * Safely drain the legacy Redis notification queue.
+ *
+ * Notifications are persisted to MongoDB synchronously inside
+ * `createNotification()`, and socket delivery happens there too — the Redis
+ * queue is no longer a write path. It is only drained here to clean up any
+ * stale copies enqueued by older versions.
+ *
+ * CRITICAL: this must never call `createNotification()` for a popped item.
+ * Doing so would `findOneAndUpdate({ userId, eventKey }, …, { upsert: true })`
+ * and RE-INSERT a notification the user had deleted — resurrecting it.
+ * Pops are discarded without any DB write.
+ */
 export async function processNotificationQueue() {
   if (!isRedisConnected()) return 0;
 
   const redis = getRedis();
-  let processed = 0;
+  let drained = 0;
 
   try {
-    while (processed < BATCH_SIZE) {
+    while (drained < BATCH_SIZE) {
       const data = await redis.lpop(QUEUE_KEY);
       if (!data) break;
-
-      try {
-        const notification = JSON.parse(data);
-        await createNotification(notification);
-        processed++;
-      } catch (err) {
-        console.error('[NOTIF QUEUE] Process error:', err.message);
-      }
+      drained++;
     }
   } catch (err) {
-    console.error('[NOTIF QUEUE] Batch error:', err.message);
+    console.error('[NOTIF QUEUE] Drain error:', err.message);
   }
 
-  return processed;
+  return drained;
 }
 
 export async function getNotificationQueueSize() {

@@ -287,7 +287,7 @@ cityflow/
 - **Cache utility**: `backend/src/utils/cache.js` — `cacheGet`, `cacheSet`, `cacheDel`, `cacheGetOrSet`, `cacheMget`, `cacheDelPattern`
 - **Distributed lock**: `backend/src/utils/redisLock.js` — `acquireLock`, `releaseLock` with Lua script for owner verification
 - **Rate limiting**: `backend/src/middleware/rateLimit.js` — Redis sliding window (sorted set), falls back to in-memory
-- **Notification queue**: `backend/src/utils/notificationQueue.js` — Redis list-based queue with batch processing
+- **Notification queue**: `backend/src/utils/notificationQueue.js` — `createNotification()`/`bulkCreateNotifications()` write directly to MongoDB (the DB-level unique `(userId, eventKey)` index is the dedup guard) and emit socket events there; the legacy Redis list `notifications:queue` is NOT a write path. `processNotificationQueue()` (run by `scheduler.js` every minute) only drains stale items left by older versions and must NEVER call `createNotification()` for a popped item — that would `upsert` and resurrect a notification the user deleted. `getNotificationQueueSize()` feeds `/metrics`.
 - **Pub/Sub**: `backend/src/utils/pubsub.js` — `publish`, `subscribe` for real-time events
 - **Job queues**: `backend/src/utils/jobQueue.js` — BullMQ for tick, email, backup, discord, notifications, analytics
 
