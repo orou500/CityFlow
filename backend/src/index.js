@@ -53,6 +53,7 @@ import { getCacheMetrics, getHitRate, getCacheKeyCount } from './utils/cache.js'
 import { getPubSubMetrics } from './utils/pubsub.js';
 import { getQueueStats, QUEUE_NAMES } from './utils/jobQueue.js';
 import { getNotificationQueueSize } from './utils/notificationQueue.js';
+import { isEmailConfigured } from './services/email.js';
 import { initSocketIO, getAdapterStatus, shutdownSocketIO } from './socket/index.js';
 import { startJobProcessors, shutdownJobProcessors } from './utils/jobProcessors.js';
 import { getOnlineCount, getMultipleStatuses } from './utils/presence.js';
@@ -195,6 +196,14 @@ async function start() {
 
     await ensureBackupDir();
     await enforceRetention().catch(() => {});
+
+    if (!isEmailConfigured()) {
+      console.error(
+        '[STARTUP] SMTP is NOT configured (SMTP_USER / SMTP_PASS missing). ' +
+          'Registration verification emails will NOT be delivered. ' +
+          'Fix the backend Kubernetes secret before releasing new user signups.',
+      );
+    }
 
     await initSocketIO(httpServer);
     startJobProcessors();

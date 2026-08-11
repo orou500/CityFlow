@@ -174,12 +174,20 @@ kubectl create secret generic mongodb-credentials \
   --dry-run=client -o yaml | kubectl apply -f -
 
 # Backend application secrets
+# IMPORTANT: SMTP_USER/SMTP_PASS/EMAIL_FROM are REQUIRED — without them the
+# backend silently cannot send registration verification emails (the server
+# logs an error at startup). Use your Brevo SMTP login + SMTP key:
 kubectl create secret generic backend-secrets \
   --namespace=cityflow \
   --from-literal=MONGODB_URI="mongodb://${MONGO_USER}:${MONGO_PASS}@cityflow-mongodb-0.cityflow-mongodb:27017/cityflow?authSource=admin" \
   --from-literal=JWT_SECRET="$JWT_SECRET" \
   --from-literal=ADMIN_PASSWORD="$ADMIN_PASS" \
   --from-literal=FRONTEND_URL="https://cityflow.sizops.co.il" \
+  --from-literal=SMTP_HOST="smtp-relay.brevo.com" \
+  --from-literal=SMTP_PORT="587" \
+  --from-literal=SMTP_USER="$BREVO_SMTP_LOGIN" \
+  --from-literal=SMTP_PASS="$BREVO_SMTP_KEY" \
+  --from-literal=EMAIL_FROM="noreply@sizops.co.il" \
   --dry-run=client -o yaml | kubectl apply -f -
 
 # OAuth secrets (create after setting up Google/Discord OAuth apps)

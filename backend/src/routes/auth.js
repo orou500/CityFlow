@@ -55,6 +55,33 @@ function generateToken(userId) {
   return jwt.sign({ userId }, config.jwtSecret, { expiresIn: '7d' });
 }
 
+/** Base URL for links embedded in emails (frontend origin, never an email address). */
+function getFrontendBaseUrl() {
+  return (config.frontendUrl || 'https://cityflow.sizops.co.il').replace(/\/+$/, '');
+}
+
+/**
+ * Sends an email and logs a structured server-side error on failure. The
+ * sendEmail service never rejects — it returns { sent, reason|error } — so
+ * callers must inspect the result; a bare .catch() would silently swallow
+ * undelivered verification emails. Never logs tokens or credentials.
+ */
+function sendEmailChecked({ to, subject, html, text }) {
+  return sendEmail({ to, subject, html, text }).then((result) => {
+    if (!result || !result.sent) {
+      console.error(
+        JSON.stringify({
+          event: 'email_send_failed',
+          subject,
+          to,
+          reason: result?.reason || result?.error || 'unknown',
+        }),
+      );
+    }
+    return result;
+  });
+}
+
 router.post('/register', registerLimiter, async (req, res) => {
   try {
     if (await isMaintenanceMode()) {
@@ -96,17 +123,13 @@ router.post('/register', registerLimiter, async (req, res) => {
     const verificationToken = user.createVerificationToken();
     await user.save({ validateBeforeSave: false });
 
-    const verifyUrl = `${config.emailFrom?.includes('http') ? config.emailFrom : 'https://cityflow.sizops.co.il'}/verify-email?token=${verificationToken}`;
+    const verifyUrl = `${getFrontendBaseUrl()}/verify-email?token=${verificationToken}`;
     const template = emailTemplates.verification({ username: user.username, verifyUrl });
 
-    sendEmail({ to: user.email, ...template }).catch((err) => {
-      console.error(`[AUTH] Failed to send verification email to ${user.email}: ${err.message}`);
-    });
+    sendEmailChecked({ to: user.email, ...template });
 
     const welcomeTemplate = emailTemplates.welcome({ username: user.username });
-    sendEmail({ to: user.email, ...welcomeTemplate }).catch((err) => {
-      console.error(`[AUTH] Failed to send welcome email to ${user.email}: ${err.message}`);
-    });
+    sendEmailChecked({ to: user.email, ...welcomeTemplate });
 
     res.status(201).json({ message: 'Account created. Please verify your email before logging in.' });
   } catch (err) {
@@ -219,12 +242,10 @@ router.post('/resend-verification', resendVerifyLimiter, async (req, res) => {
     const verificationToken = user.createVerificationToken();
     await user.save({ validateBeforeSave: false });
 
-    const verifyUrl = `${config.emailFrom?.includes('http') ? config.emailFrom : 'https://cityflow.sizops.co.il'}/verify-email?token=${verificationToken}`;
+    const verifyUrl = `${getFrontendBaseUrl()}/verify-email?token=${verificationToken}`;
     const template = emailTemplates.verification({ username: user.username, verifyUrl });
 
-    sendEmail({ to: user.email, ...template }).catch((err) => {
-      console.error(`[AUTH] Failed to resend verification email to ${user.email}: ${err.message}`);
-    });
+    sendEmailChecked({ to: user.email, ...template });
 
     res.json({ success: true, message: 'If an unverified account exists, a new link has been sent.' });
   } catch (err) {
@@ -246,12 +267,10 @@ router.post('/forgot-password', forgotPwLimiter, async (req, res) => {
     const resetToken = user.createPasswordResetToken();
     await user.save({ validateBeforeSave: false });
 
-    const resetUrl = `${config.emailFrom?.includes('http') ? config.emailFrom : 'https://cityflow.sizops.co.il'}/reset-password?token=${resetToken}`;
+    const resetUrl = `${getFrontendBaseUrl()}/reset-password?token=${resetToken}`;
     const template = emailTemplates.passwordReset({ username: user.username, resetUrl });
 
-    sendEmail({ to: user.email, ...template }).catch((err) => {
-      console.error(`[AUTH] Failed to send password reset email to ${user.email}: ${err.message}`);
-    });
+    sendEmailChecked({ to: user.email, ...template });
 
     res.json({ success: true, message: 'If an account with that email exists, a reset link has been sent.' });
   } catch (err) {

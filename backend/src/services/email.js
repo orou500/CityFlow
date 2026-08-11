@@ -7,7 +7,10 @@ function getTransporter() {
   if (transporter) return transporter;
 
   if (!config.smtp.user || !config.smtp.pass) {
-    console.warn('[EMAIL] SMTP credentials not configured. Emails will not be sent.');
+    console.error(
+      '[EMAIL] SMTP credentials not configured (SMTP_USER / SMTP_PASS). ' +
+        'Verification and other emails will NOT be sent. Check the backend Kubernetes secret.',
+    );
     return null;
   }
 
@@ -41,7 +44,7 @@ export async function verifyConnection() {
 export async function sendEmail({ to, subject, html, text, from, replyTo, attachments }) {
   const transport = getTransporter();
   if (!transport) {
-    console.warn(`[EMAIL] Skipped (no SMTP): ${subject} → ${to}`);
+    console.error(`[EMAIL] Email NOT sent (SMTP not configured): "${subject}" → ${to}`);
     return { sent: false, reason: 'SMTP not configured' };
   }
 
@@ -74,6 +77,11 @@ export async function sendEmail({ to, subject, html, text, from, replyTo, attach
 
   console.error(`[EMAIL] All ${maxRetries} attempts failed for "${subject}" to ${to}: ${lastError.message}`);
   return { sent: false, error: lastError.message };
+}
+
+/** True when SMTP credentials are present so emails can actually be sent. */
+export function isEmailConfigured() {
+  return !!(config.smtp.user && config.smtp.pass);
 }
 
 export async function sendBulkEmail(recipients, { subject, html, text, from }) {

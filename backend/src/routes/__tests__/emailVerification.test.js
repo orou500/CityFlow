@@ -1,0 +1,245 @@
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
+import request from 'supertest';
+import crypto from 'node:crypto';
+import { createApp } from '../../test/createApp.js';
+import { createTestUser } from '../../test/helpers.js';
+import { config } from '../../config/index.js';
+import User from '../../models/User.js';
+
+/**
+ * Email verification pipeline regression tests.
+ *
+ * Root cause of the production bug: the documented backend Kubernetes secret
+ * did not include SMTP_USER/SMTP_PASS, so getTransporter() returned null and
+ * sendEmail() resolved { sent: false } WITHOUT throwing — the registration
+ * route's `.catch()` never fired, and users registered with no verification
+ * email and no server error. These tests pin the contract: token generation,
+ * persistence, exactly-one verification email, correct link, verification,
+ * invalid/expired rejection, resend, rate limiting, and OAuth unaffectedness.
+ */
+
+vi.mock('../../services/email.js', () => ({
+  sendEmail: vi.fn().mockResolvedValue({ sent: true }),
+  isEmailConfigured: vi.fn(() => true),
+}));
+
+import { sendEmail } from '../../services/email.js';
+
+const app = createApp();
+const mockSendEmail = vi.mocked(sendEmail);
+
+function verificationCalls() {
+  return mockSendEmail.mock.calls.filter(([opts]) => opts.subject === 'Verify your CityFlow email');
+}
+
+beforeAll(async () => {
+  await User.deleteMany({});
+});
+
+afterAll(async () => {
+  await User.deleteMany({});
+});
+
+beforeEach(async () => {
+  mockSendEmail.mockClear();
+  await User.deleteMany({});
+});
+
+async function registerUser(overrides = {}) {
+  const email = `verify_${Date.now()}@example.com`;
+  const res = await request(app)
+    .post('/auth/register')
+    .send({
+      username: `verifyuser_${Date.now()}`,
+      email,
+      password: 'SecurePass1',
+      confirmPassword: 'SecurePass1',
+      acceptedTerms: true,
+      acceptedPrivacy: true,
+      ...overrides,
+    });
+  return { res, email };
+}
+
+describe('registration → verification email', () => {
+  it('creates the user with a persisted verification token', async () => {
+    const { res, email } = await registerUser();
+    expect(res.status).toBe(201);
+
+    const user = await User.findOne({ email });
+    expect(user).toBeTruthy();
+    expect(user.emailVerified).toBe(false);
+    expect(user.verificationToken).toBeTruthy();
+    expect(user.verificationExpires).toBeInstanceOf(Date);
+    expect(user.verificationExpires.getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it('sends exactly one verification email with the correct link', async () => {
+    const { res, email } = await registerUser();
+    expect(res.status).toBe(201);
+
+    const calls = verificationCalls();
+    expect(calls.length).toBe(1);
+    const [mail] = calls[0];
+    expect(mail.to).toBe(email);
+    expect(mail.html).toContain('Verify Email');
+
+    // Extract the raw token from the email link and validate the URL.
+    const match = mail.html.match(/verify-email\?token=([a-f0-9]+)/);
+    expect(match).toBeTruthy();
+    const rawToken = match[1];
+    const expectedBase = (config.frontendUrl || 'https://cityflow.sizops.co.il').replace(/\/+$/, '');
+    expect(mail.html).toContain(`${expectedBase}/verify-email?token=${rawToken}`);
+
+    // The DB stores the SHA-256 hash, never the raw token.
+    const user = await User.findOne({ email });
+    const expectedHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    expect(user.verificationToken).toBe(expectedHash);
+    expect(user.verificationToken).not.toBe(rawToken);
+  });
+
+  it('verifies the account with the emailed token', async () => {
+    const { email } = await registerUser();
+    const mail = verificationCalls()[0][0];
+    const rawToken = mail.html.match(/verify-email\?token=([a-f0-9]+)/)[1];
+
+    const verifyRes = await request(app).get(`/auth/verify-email?token=${rawToken}`);
+    expect(verifyRes.status).toBe(200);
+    expect(verifyRes.body.success).toBe(true);
+
+    const user = await User.findOne({ email });
+    expect(user.emailVerified).toBe(true);
+    expect(user.emailVerifiedAt).toBeTruthy();
+    expect(user.verificationToken).toBeNull();
+  });
+
+  it('rejects an invalid token', async () => {
+    await registerUser();
+    const res = await request(app).get('/auth/verify-email?token=deadbeefdeadbeefdeadbeefdeadbeef');
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects an expired token', async () => {
+    const { email } = await registerUser();
+    const user = await User.findOne({ email });
+    user.verificationExpires = new Date(Date.now() - 1000);
+    await user.save({ validateBeforeSave: false });
+
+    const mail = verificationCalls()[0][0];
+    const rawToken = mail.html.match(/verify-email\?token=([a-f0-9]+)/)[1];
+    const verifyRes = await request(app).get(`/auth/verify-email?token=${rawToken}`);
+    expect(verifyRes.status).toBe(400);
+    expect((await User.findById(user._id)).emailVerified).toBe(false);
+  });
+
+  it('emails stay valid for a token generated by registration only once (no duplicates)', async () => {
+    await registerUser();
+    const mail = verificationCalls()[0][0];
+    const rawToken = mail.html.match(/verify-email\?token=([a-f0-9]+)/)[1];
+
+    // Verifying twice: second attempt must be rejected, not re-verified.
+    await request(app).get(`/auth/verify-email?token=${rawToken}`);
+    const second = await request(app).get(`/auth/verify-email?token=${rawToken}`);
+    expect(second.status).toBe(400);
+  });
+});
+
+describe('resend verification', () => {
+  it('sends a new verification email with a fresh token', async () => {
+    const { email } = await registerUser();
+    const firstToken = verificationCalls()[0][0].html.match(/verify-email\?token=([a-f0-9]+)/)[1];
+
+    const resend = await request(app).post('/auth/resend-verification').send({ email });
+    expect(resend.status).toBe(200);
+
+    const calls = verificationCalls();
+    expect(calls.length).toBe(2);
+    const secondToken = calls[1][0].html.match(/verify-email\?token=([a-f0-9]+)/)[1];
+    expect(secondToken).not.toBe(firstToken);
+
+    // The new token verifies the account.
+    const verifyRes = await request(app).get(`/auth/verify-email?token=${secondToken}`);
+    expect(verifyRes.status).toBe(200);
+  });
+
+  it('does not leak whether an email is registered', async () => {
+    const res = await request(app).post('/auth/resend-verification').send({ email: 'nobody@example.com' });
+    expect(res.status).toBe(200);
+    expect(verificationCalls().length).toBe(0);
+  });
+});
+
+describe('resend rate limiting', () => {
+  it('still enforces the resend limit', async () => {
+    const { rateLimit } = await import('../../middleware/rateLimit.js');
+    const limiter = rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 3,
+      keyPrefix: `rl:rv-test-${Date.now()}`,
+      message: 'Too many verification emails requested',
+    });
+
+    // The middleware bypasses limiting when NODE_ENV=test; simulate a real
+    // environment for this unit test and restore afterwards.
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    try {
+      const statuses = [];
+      for (let i = 0; i < 5; i++) {
+        let status = null;
+        const req = { ip: '203.0.113.7', connection: { remoteAddress: '203.0.113.7' } };
+        const res = {
+          set: () => {},
+          status: (code) => {
+            status = code;
+            return { json: () => {} };
+          },
+        };
+        await new Promise((resolve) => {
+          limiter(req, res, () => resolve());
+          if (status) resolve();
+        });
+        statuses.push(status ?? 200);
+      }
+
+      expect(statuses[0]).toBe(200);
+      expect(statuses[1]).toBe(200);
+      expect(statuses[2]).toBe(200);
+      expect(statuses[3]).toBe(429);
+      expect(statuses[4]).toBe(429);
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+    }
+  });
+});
+
+describe('OAuth users are unaffected', () => {
+  it('OAuth-created users (emailVerified) are never in the email-verification flow', async () => {
+    const oauthUser = await User.create({
+      username: `oauthuser_${Date.now()}`,
+      normalizedUsername: `oauthuser_${Date.now()}`,
+      email: `oauth_${Date.now()}@example.com`,
+      password: null,
+      emailVerified: true,
+      emailVerifiedAt: new Date(),
+      oauthProviders: [{ provider: 'google', providerId: 'g-123' }],
+    });
+
+    // No verification email is sent on OAuth creation — sendEmail is only
+    // invoked by the email/password registration and resend routes.
+    expect(verificationCalls().length).toBe(0);
+
+    // A verification attempt with an arbitrary token fails (nothing stored).
+    const res = await request(app).get(`/auth/verify-email?token=${'a'.repeat(64)}`);
+    expect(res.status).toBe(400);
+    expect((await User.findById(oauthUser._id)).emailVerified).toBe(true);
+  });
+
+  it('existing email/password users keep working (regression)', async () => {
+    const user = await createTestUser();
+    const res = await request(app).post('/auth/login').send({ login: user.email, password: 'Password123' });
+    expect(res.status).toBe(200);
+    expect(res.body.token).toBeTruthy();
+    expect(res.body.user._id).toBe(user._id.toString());
+  });
+});
