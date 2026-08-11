@@ -4,6 +4,7 @@ import User from '../models/User.js';
 import Property from '../models/Property.js';
 import City from '../models/City.js';
 import Transaction from '../models/Transaction.js';
+import { clampMonthlyRent } from '../config/propertyManagement.js';
 import Loan from '../models/Loan.js';
 import PropertyOffer from '../models/PropertyOffer.js';
 import Notification from '../models/Notification.js';
@@ -764,7 +765,7 @@ export async function resetWorld() {
         name: `${PROPERTY_NAMES[nameIndex]} - ${city.name}`,
         basePrice: Math.round(baseP),
         currentPrice: Math.round(baseP),
-        rent: Math.round(baseP * 0.004),
+        rent: clampMonthlyRent(baseP * 0.004),
         volatility: 0.05 + Math.random() * 0.15,
         forSale: true,
         ...(type === 'land'

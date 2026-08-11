@@ -66,6 +66,9 @@ export default function DevelopmentPage() {
     if (propertyId && tab === 'improvements') {
       setImprovementModal(propertyId);
     }
+    if (propertyId && tab === 'buildings') {
+      setUpgradeModal(propertyId);
+    }
   }, [searchParams, tab]);
 
   async function handleSelectLand(land) {

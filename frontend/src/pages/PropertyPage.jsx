@@ -830,6 +830,134 @@ export default function PropertyPage() {
                 </div>
               </div>
 
+              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded mb-4">
+                <p className="text-sm font-semibold mb-3">{t('propertyManagement.monthlyRentTitle')}</p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-500 dark:text-gray-400">{t('propertyManagement.grossRentMonth')}</span>
+                    <span className="font-semibold text-gray-900 dark:text-white">
+                      {formatMoney(managementData.potentialRentIncome)}
+                      <span className="text-xs text-gray-400 font-normal"> {t('propertyManagement.perMonth')}</span>
+                    </span>
+                  </div>
+                  {property?.type !== 'house' && managementData.potentialRentIncome > managementData.rentIncome && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-500 dark:text-gray-400">
+                        {t('propertyManagement.occupancyAdjustment', { occupancy: managementData.occupancy })}
+                      </span>
+                      <span className="font-semibold text-red-500">
+                        &minus;{formatMoney(managementData.potentialRentIncome - managementData.rentIncome)}
+                        <span className="text-xs text-gray-400 font-normal"> {t('propertyManagement.perMonth')}</span>
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-500 dark:text-gray-400">
+                      {t('propertyManagement.maintenanceDeducted', {
+                        level: t(
+                          `propertyManagement.${managementData.maintenanceLevel === 'none' ? 'noMaintenance' : managementData.maintenanceLevel + 'Maintenance'}`,
+                        ),
+                      })}
+                    </span>
+                    <span className="font-semibold text-red-500">
+                      &minus;{formatMoney(managementData.maintenanceCost)}
+                      <span className="text-xs text-gray-400 font-normal"> {t('propertyManagement.perMonth')}</span>
+                    </span>
+                  </div>
+                  {managementData.operatingExpenses > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-500 dark:text-gray-400">{t('propertyManagement.otherExpenses')}</span>
+                      <span className="font-semibold text-red-500">
+                        &minus;{formatMoney(managementData.operatingExpenses)}
+                        <span className="text-xs text-gray-400 font-normal"> {t('propertyManagement.perMonth')}</span>
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center border-t border-gray-200 dark:border-gray-700 pt-2 mt-1">
+                    <span className="font-semibold text-gray-900 dark:text-white">
+                      {t('propertyManagement.netIncome')}
+                    </span>
+                    <span
+                      className={`text-lg font-bold ${managementData.netProfit >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-500'}`}
+                    >
+                      {formatMoney(managementData.netProfit)}
+                      <span className="text-xs text-gray-400 font-normal"> {t('propertyManagement.perMonth')}</span>
+                    </span>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">{t('propertyManagement.accrualNote')}</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded">
+                  <p className="text-sm font-semibold mb-2">{t('propertyManagement.monthlyGrowth')}</p>
+                  <div className="space-y-1.5 text-sm">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-500 dark:text-gray-400">{t('propertyManagement.currentRent')}</span>
+                      <span className="font-semibold text-gray-900 dark:text-white">
+                        {formatMoney(managementData.rent)}
+                        <span className="text-xs text-gray-400 font-normal"> {t('propertyManagement.perMonth')}</span>
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-500 dark:text-gray-400">{t('propertyManagement.previousMonth')}</span>
+                      <span className="font-semibold text-gray-900 dark:text-white">
+                        {formatMoney(managementData.previousMonthRent)}
+                        <span className="text-xs text-gray-400 font-normal"> {t('propertyManagement.perMonth')}</span>
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-500 dark:text-gray-400">{t('propertyManagement.monthlyIncrease')}</span>
+                      <span
+                        className={`font-bold ${managementData.monthlyIncrease >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}
+                      >
+                        {managementData.monthlyIncrease >= 0 ? '+' : '&minus;'}
+                        {formatMoney(Math.abs(managementData.monthlyIncrease))}
+                        {managementData.monthlyIncreasePct !== 0 && (
+                          <span className="text-xs font-normal">
+                            {' '}
+                            ({managementData.monthlyIncreasePct >= 0 ? '+' : '&minus;'}
+                            {Math.abs(managementData.monthlyIncreasePct)}%)
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded">
+                  <p className="text-sm font-semibold mb-2">{t('propertyManagement.rentPotentialTitle')}</p>
+                  <div className="space-y-1.5 text-sm">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-500 dark:text-gray-400">{t('propertyManagement.currentRent')}</span>
+                      <span className="font-semibold text-gray-900 dark:text-white">
+                        {formatMoney(managementData.rent)}
+                        <span className="text-xs text-gray-400 font-normal"> {t('propertyManagement.perMonth')}</span>
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-500 dark:text-gray-400">{t('propertyManagement.estimatedPotential')}</span>
+                      <span className="font-semibold text-blue-600 dark:text-blue-400">
+                        {formatMoney(managementData.rentPotential)}
+                        <span className="text-xs text-gray-400 font-normal"> {t('propertyManagement.perMonth')}</span>
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-500 dark:text-gray-400">{t('propertyManagement.maximum')}</span>
+                      <span className="font-semibold text-gray-900 dark:text-white">
+                        {formatMoney(managementData.maxMonthlyRent)}
+                        <span className="text-xs text-gray-400 font-normal"> {t('propertyManagement.perMonth')}</span>
+                      </span>
+                    </div>
+                    {managementData.rentPotential > managementData.rent && (
+                      <p className="text-xs text-gray-400 dark:text-gray-500 pt-1">
+                        {t('propertyManagement.potentialHint')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded">
                   <p className="text-sm font-semibold mb-2">{t('propertyManagement.setRent')}</p>

@@ -113,6 +113,8 @@ Never remove existing functionality unless requested.
 ---
 
 
+
+
 ## Backup Rules
 
 The admin backup system automatically includes **every MongoDB collection** (it enumerates `db.listCollections()`), so new models are covered by default. The following rules keep it that way:
@@ -139,6 +141,13 @@ Every notification-producing event must be **at most one notification per user p
 - Read/unread state, deletion, pagination and the `eventId` legacy field are unchanged; `eventKey` is nullable for pre-existing notifications.
 
 ---
+
+## Onboarding Tour Rules
+
+- New-player guided tour state lives in `User.onboardingV2` (`{ status, currentStep, completedSteps, startedAt, completedAt, skippedAt }`) — persisted server-side, never client-only.
+- Steps are defined in `backend/src/config/onboardingTour.js`. Informational steps advance via `POST /onboarding/tour/advance`; event-gated steps (`buy_property`, `collect_rent`, `upgrade_property`, `missions`) ONLY advance when the real gameplay event fires server-side (wired through `processPlayerProgress()` and the mission engine) — the client can never claim them.
+- Migration is lazy and runs once: existing players get event steps marked complete when their history proves them (owned properties, rent collected, upgrades, completed missions) and never see first-time steps.
+- Skip (`POST /onboarding/tour/skip`) persists; completion creates exactly one idempotent notification (`onboarding:{userId}:completed`).
 ## Before Every Task
 
 Understand the existing architecture.

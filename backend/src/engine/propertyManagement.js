@@ -45,12 +45,13 @@ export async function processPropertyManagement(currentTick) {
 
       property.qualityScore = calculateQualityScore(property);
 
-      // Effective income for display/history/maintenance. property.rent is
-      // deliberately NOT overwritten here — it stays the stable gross rent,
-      // so income never compounds down tick after tick.
+      // Effective income for display/history. property.rent is deliberately
+      // NOT overwritten here — it stays the stable gross rent, so income never
+      // compounds down tick after tick. Maintenance and operating expenses are
+      // folded into the rent pool by processRent, so nothing is charged here.
       const actualRentIncome = calculatePropertyRentIncome(property);
 
-      const profit = calculateMonthlyProfit(actualRentIncome, property.maintenanceLevel, property.currentPrice);
+      const profit = calculateMonthlyProfit(actualRentIncome, property.maintenanceLevel, property.currentPrice, property);
 
       const historyEntry = {
         tick: currentTick,
@@ -72,15 +73,6 @@ export async function processPropertyManagement(currentTick) {
       property.lastQualityTick = currentTick;
 
       await property.save();
-
-      if (profit.maintenanceCost > 0 && property.ownerId) {
-        const owner = await User.findById(property.ownerId);
-        if (owner) {
-          owner.balance -= profit.maintenanceCost;
-          if (owner.balance < 0) owner.balance = 0;
-          await owner.save();
-        }
-      }
     } catch (err) {
       console.error(`Management processing error for property ${property._id}:`, err.message);
     }

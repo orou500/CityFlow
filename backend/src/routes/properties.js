@@ -24,6 +24,7 @@ import {
   getGradeUpgradeCost,
   getGradeRentMultiplier,
 } from '../config/propertyGrades.js';
+import { clampMonthlyRent } from '../config/propertyManagement.js';
 
 const router = Router();
 const PROPERTY_XP_COOLDOWN_MS = 24 * 60 * 60 * 1000;
@@ -464,7 +465,7 @@ router.post('/grade/upgrade', authenticate, async (req, res) => {
     property.currentPrice = Math.round(property.currentPrice * (1 + oneTimeBoost));
     property.grade = newGrade;
     const gradeRentFactor = getGradeRentMultiplier(newGrade);
-    property.rent = Math.round(property.currentPrice * 0.004 * 0.75 * gradeRentFactor);
+    property.rent = clampMonthlyRent(property.currentPrice * 0.004 * 0.75 * gradeRentFactor);
     property.gradeHistory = property.gradeHistory || [];
     property.gradeHistory.push({ grade: newGrade, upgradedAt: new Date(), cost });
     property.lastGradeUpgradeAt = new Date();

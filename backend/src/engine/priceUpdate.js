@@ -170,15 +170,6 @@ export async function updatePrices(activeEvents) {
     const ceiling = Math.round(anchorPrice * 3.0);
     newPrice = clamp(newPrice, floor || 1, ceiling || Infinity);
 
-    const ratingRentMultiplier = 1 + (ratingBonuses.rentBonus || 0);
-    const unitCount = property.units?.length || 1;
-    const cityAvgRent = city.avgRent || Math.round(newPrice * 0.004);
-    const rentFromCity = Math.round((cityAvgRent * unitCount * econ.rentModifier) / unitCount);
-    const rentFromPrice = Math.round(newPrice * 0.004 * (0.5 + Math.random() * 0.5));
-    const newRent = Math.round(
-      (rentFromCity * 0.6 + rentFromPrice * 0.4) * ratingRentMultiplier * investmentFactors.rentMultiplier,
-    );
-
     const priceHistory = (property.priceHistory || []).concat({ tick: tickNumber, price: newPrice });
     const trimmedHistory = priceHistory.length > 100 ? priceHistory.slice(-100) : priceHistory;
 
@@ -188,7 +179,6 @@ export async function updatePrices(activeEvents) {
         update: {
           $set: {
             currentPrice: newPrice,
-            rent: newRent,
             priceHistory: trimmedHistory,
             regime,
             regimeEndTick,

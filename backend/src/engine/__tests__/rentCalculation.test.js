@@ -4,7 +4,11 @@ import Property from '../../models/Property.js';
 import City from '../../models/City.js';
 import { processRent } from '../rentProcessing.js';
 import { processPropertyManagement } from '../propertyManagement.js';
-import { calculatePropertyRentIncome, simulateOccupancy } from '../../config/propertyManagement.js';
+import {
+  calculatePropertyRentIncome,
+  simulateOccupancy,
+  calculateNetRentIncome,
+} from '../../config/propertyManagement.js';
 import { createTestUser, createTestCity } from '../../test/helpers.js';
 
 async function makeProperty(overrides = {}) {
@@ -69,25 +73,25 @@ describe('processRent', () => {
     user = await createTestUser({ balance: 0, uncollectedRent: 0 });
   });
 
-  it('accrues exactly the occupancy-adjusted rent into the collection pool', async () => {
+  it('accrues the occupancy-adjusted rent minus operating expenses into the collection pool', async () => {
     await makeProperty({ ownerId: user._id, rent: 1000, occupancy: 100 });
     await makeProperty({ ownerId: user._id, rent: 2000, occupancy: 50 });
 
     const results = await processRent();
 
     const total = results.reduce((s, r) => s + r.netIncome, 0);
-    expect(total).toBe(2000); // 1000 + 1000 (2000 * 0.5)
+    expect(total).toBe(1960); // (1000-20) + (1000-20), apartment 2% operating expense
 
     const updated = await User.findById(user._id);
-    expect(updated.uncollectedRent).toBe(2000);
+    expect(updated.uncollectedRent).toBe(1960);
   });
 
   it('does not deduct any hidden maintenance from the pool', async () => {
-    await makeProperty({ ownerId: user._id, rent: 1000, occupancy: 100 });
+    const property = await makeProperty({ ownerId: user._id, rent: 1000, occupancy: 100 }); // maintenance: none
     await processRent();
 
     const updated = await User.findById(user._id);
-    expect(updated.uncollectedRent).toBe(1000);
+    expect(updated.uncollectedRent).toBe(calculateNetRentIncome(property)); // only operating expense, no maintenance
   });
 
   it('uses rentPerUnit adjustments set through the management panel', async () => {
@@ -98,15 +102,16 @@ describe('processRent', () => {
     await processRent();
 
     const updated = await User.findById(user._id);
-    expect(updated.uncollectedRent).toBe(2500);
+    expect(updated.uncollectedRent).toBe(calculateNetRentIncome(property)); // 2500 - 2% operating = 2450
   });
 
   it('is deterministic — repeated ticks with the same state accrue identically', async () => {
-    await makeProperty({ ownerId: user._id, rent: 1000, occupancy: 75 });
+    const property = await makeProperty({ ownerId: user._id, rent: 1000, occupancy: 75 });
     const first = await processRent();
     const second = await processRent();
-    expect(first[0].netIncome).toBe(750);
-    expect(second[0].netIncome).toBe(750);
+    const expected = calculateNetRentIncome(property); // 750 - 2% operating = 735
+    expect(first[0].netIncome).toBe(expected);
+    expect(second[0].netIncome).toBe(expected);
   });
 });
 
@@ -133,21 +138,30 @@ describe('processPropertyManagement', () => {
     expect(persisted.rent).toBe(1000); // gross rent stays stable
   });
 
-  it('charges tier maintenance from balance only (tier none = no charge)', async () => {
+  it('never charges maintenance from the balance — it folds into the rent pool', async () => {
     const property = await makeProperty({ ownerId: user._id, cityId: city._id, rent: 1000, occupancy: 100 });
-    await processPropertyManagement(1);
-
-    const updated = await User.findById(user._id);
-    expect(updated.balance).toBe(100000); // 'none' tier costs nothing
-
     property.maintenanceLevel = 'basic';
     await property.save();
-    await processPropertyManagement(2);
+    await processPropertyManagement(1);
 
-    const persisted = await Property.findById(property._id);
-    // basic = 10% of the effective (occupancy-adjusted) income used for the charge
-    const expectedCharge = Math.round(calculatePropertyRentIncome(persisted) * 0.1);
-    const after = await User.findById(user._id);
-    expect(after.balance).toBe(100000 - expectedCharge);
+    const afterMgmt = await User.findById(user._id);
+    expect(afterMgmt.balance).toBe(100000); // management never touches the balance
+
+    await processRent();
+    const afterRent = await User.findById(user._id);
+    const expectedNet = calculateNetRentIncome(property); // 1000 - 100 maint - 20 operating = 880
+    expect(afterRent.uncollectedRent).toBe(expectedNet);
+  });
+
+  it('matches the displayed net income exactly when collecting rent', async () => {
+    const property = await makeProperty({ ownerId: user._id, cityId: city._id, rent: 2000, occupancy: 80 });
+    property.maintenanceLevel = 'basic'; // 10%
+    await property.save();
+
+    await processRent();
+    const net = calculateNetRentIncome(property); // 2000*0.8=1600 - 160 maint - 2% operating = 1408
+
+    const updated = await User.findById(user._id);
+    expect(updated.uncollectedRent).toBe(net);
   });
 });

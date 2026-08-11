@@ -17,6 +17,7 @@ import UserVisit from '../models/UserVisit.js';
 import Company from '../models/Company.js';
 import { MISSION_DEFINITIONS, getMissionById } from '../config/missions.js';
 import { enqueueNotification } from '../utils/notificationQueue.js';
+import { advanceOnboarding } from '../utils/onboardingTour.js';
 import { emitToUser } from '../socket/index.js';
 import { SOCKET_EVENTS } from '../socket/events.js';
 import { awardXp } from '../utils/leveling.js';
@@ -856,6 +857,12 @@ export async function claimMissionReward(userId, missionId) {
   // No notification on collect: the player was already notified when the
   // mission was completed ("Mission Complete"). Collecting only grants the
   // reward — creating another notification here caused duplicates.
+
+  // The onboarding "missions" step completes when the reward is actually
+  // collected (the player closed the loop), not when the mission completes.
+  advanceOnboarding(userId, 'mission_claimed').catch((err) =>
+    console.error('[ONBOARDING] mission claim advance error:', err.message),
+  );
 
   await initializeMissionsForUser(userId);
 

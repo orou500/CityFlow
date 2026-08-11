@@ -3,6 +3,7 @@ import { simulateDemographics } from './demographics.js';
 import { simulateStockMarket } from './stockMarket.js';
 import { simulateIndexes } from './indexSimulation.js';
 import { updatePrices } from './priceUpdate.js';
+import { processRentGrowth } from './rentGrowth.js';
 import { processRent, expireUncollectedRent, sendRentExpiryWarnings } from './rentProcessing.js';
 import { processLoans } from './loanProcessing.js';
 import { balanceMarket } from './marketBalancing.js';
@@ -87,6 +88,10 @@ export async function executeTick() {
     const intrinsicCount = await updateIntrinsicValues();
 
     const priceUpdates = await updatePrices(activeEvents);
+
+    // One rent growth step per month (tick), applied before accrual so the
+    // newly grown rent is what lands in the collection pool this tick.
+    const rentGrowthResults = await processRentGrowth(tickNumber);
 
     const rentResults = await processRent();
 
@@ -211,6 +216,7 @@ export async function executeTick() {
     console.log(`  Demographics simulated: ${demoResults.length}`);
     console.log(`  Stock market: ${stockResults.length} companies updated`);
     console.log(`  Prices: ${priceUpdates.length} updated, Intrinsic values: ${intrinsicCount}`);
+    console.log(`  Rent growth: ${rentGrowthResults.length} properties updated`);
     console.log(`  Rent processed: ${rentResults.length}`);
     console.log(`  Loans processed: ${loanResults.length}`);
     console.log(`  Credit scores updated: ${creditResults.length}`);
@@ -278,6 +284,7 @@ export async function executeTick() {
       demographics: demoResults,
       stockMarket: stockResults,
       priceUpdates: priceUpdates.length,
+      rentGrowth: rentGrowthResults,
       rentProcessed: rentResults.length,
       loansProcessed: loanResults.length,
       constructionProcessed: constructionResults.length,

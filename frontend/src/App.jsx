@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import OnboardingWrapper from './components/OnboardingWrapper';
+import OnboardingTour from './components/OnboardingTour';
 import ProtectedRoute from './components/ProtectedRoute';
 import GuestRoute from './components/GuestRoute';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -446,6 +447,7 @@ export default function App() {
               <OnboardingWrapper>
                 <AppRoutes />
               </OnboardingWrapper>
+              <OnboardingTour />
             </Layout>
           )}
         </BrowserRouter>

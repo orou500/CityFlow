@@ -429,6 +429,24 @@
     "qualityDecay": "Quality Decay",
     "occupancyBonus": "Occupancy Bonus",
     "none": "None",
+    "rentCalculation": "Rent Calculation",
+    "grossRentMonth": "Gross rent per month",
+    "maintenanceDeducted": "Maintenance ({{level}})",
+    "receivePerMonth": "You receive per month",
+    "monthlyRentTitle": "Monthly Rent",
+    "occupancyAdjustment": "Occupancy adjustment ({{occupancy}}%)",
+    "otherExpenses": "Other expenses",
+    "netIncome": "NET INCOME",
+    "monthlyGrowth": "Monthly Growth",
+    "currentRent": "Current Rent",
+    "previousMonth": "Previous Month",
+    "monthlyIncrease": "Monthly Increase",
+    "rentPotentialTitle": "Rent Potential",
+    "estimatedPotential": "Estimated Rent Potential",
+    "maximum": "Maximum",
+    "potentialHint": "Upgrade or improve this property to raise its rent potential.",
+    "perMonth": "/month",
+    "accrualNote": "Rent accrues every 6 hours. Uncollected rent expires after 24 hours — collect it from your dashboard.",
     "history": "Performance History",
     "historyDesc": "Monthly profit, occupancy, and quality trends over time.",
     "month": "Month",
@@ -871,6 +889,69 @@
       "explore": "Explore",
       "gotIt": "Got It",
       "close": "Close"
+    },
+    "tour": {
+      "progress": "{{current}}/{{total}}",
+      "waitingAction": "Waiting for you to complete this action...",
+      "buttons": {
+        "getStarted": "Get Started",
+        "next": "Next",
+        "explore": "Explore",
+        "goThere": "Go There",
+        "startPlaying": "Start Playing"
+      },
+      "skip": "Skip Tutorial",
+      "skipConfirm": "Skip the tutorial?",
+      "skipYes": "Yes, Skip",
+      "skipNo": "Cancel",
+      "minimize": "Minimize",
+      "advanceError": "Something went wrong. Please try again.",
+      "steps": {
+        "welcome": {
+          "title": "Welcome to CityFlow!",
+          "description": "Build your real estate empire — buy properties, collect rent, and grow your wealth.\n\nLet's take a quick tour of the essentials."
+        },
+        "dashboard": {
+          "title": "Your Dashboard",
+          "description": "Everything at a glance: balance, net worth, properties, rent and missions. Your dashboard is your home base."
+        },
+        "cities": {
+          "title": "Choose Your City",
+          "description": "Each city has its own economy. Demand, supply and prices differ between cities — pick your market wisely."
+        },
+        "buy_property": {
+          "title": "Buy Your First Property",
+          "description": "Head to the marketplace and buy a property. This step completes when you actually own one."
+        },
+        "property_page": {
+          "title": "Understand Your Property",
+          "description": "Each property shows market value, base value, rent, condition and risk. Invest in what you own."
+        },
+        "collect_rent": {
+          "title": "Collect Rent",
+          "description": "Rent accrues every 6 hours. Collect it from your dashboard to keep cash flowing."
+        },
+        "upgrade_property": {
+          "title": "Upgrade Your Property",
+          "description": "Upgrades and improvements raise your property's value and rent. This step completes when you perform an upgrade."
+        },
+        "missions": {
+          "title": "Complete Missions",
+          "description": "Missions give you goals and rewards between rent cycles. This step completes when you collect your first mission reward."
+        },
+        "marketplace": {
+          "title": "The Marketplace",
+          "description": "Buy and sell properties, make offers, and watch market prices. Property auctions add a competitive twist."
+        },
+        "companies": {
+          "title": "Real Estate Companies",
+          "description": "Join a company, own shares, develop properties together and take loans. You can start later — no need to join now."
+        },
+        "complete": {
+          "title": "You're Ready!",
+          "description": "You now know the basics of CityFlow. From here, build your portfolio, explore cities, complete missions, join companies, and grow your real estate empire."
+        }
+      }
     },
     "systems": {
       "properties": {

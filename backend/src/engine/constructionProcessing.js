@@ -4,6 +4,7 @@ import User from '../models/User.js';
 import { enqueueNotification } from '../utils/notificationQueue.js';
 import { getTickNumber } from '../models/GameState.js';
 import { getAllProjects, calculateUnitRent } from '../config/developmentProjects.js';
+import { clampMonthlyRent } from '../config/propertyManagement.js';
 import { sendDiscordNotification } from '../services/discordBot.js';
 import { triggerMissionProgress } from '../utils/missionTrigger.js';
 
@@ -59,7 +60,7 @@ export async function processConstruction() {
             land.units = units;
             land.occupancy = occupancy;
             land.maintenanceCost = maintenanceCost;
-            land.rent = Math.max(0, effectiveRent);
+            land.rent = clampMonthlyRent(Math.max(0, effectiveRent));
             land.name = `${project.projectName} - ${land.cityId?.name || ''}`;
             land.basePrice = project.totalCost;
             land.currentPrice = project.totalCost;

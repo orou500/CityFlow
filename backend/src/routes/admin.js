@@ -13,6 +13,7 @@ import { getGameState } from '../models/GameState.js';
 import { requireAdmin } from '../middleware/admin.js';
 import { executeTick } from '../engine/tick.js';
 import { DEVELOPMENT_PROJECTS } from '../config/developmentProjects.js';
+import { clampMonthlyRent } from '../config/propertyManagement.js';
 import { getCurrentSeason, endCurrentSeasonAndStartNew, createNewSeason } from '../engine/seasonReset.js';
 import { setMaintenanceMode, getMaintenanceInfo } from '../models/GameState.js';
 import { enqueueNotification } from '../utils/notificationQueue.js';
@@ -725,7 +726,7 @@ router.post('/properties', async (req, res) => {
       name,
       basePrice,
       currentPrice: basePrice,
-      rent: Math.round(basePrice * 0.004),
+      rent: clampMonthlyRent(basePrice * 0.004),
       ownerId: ownerId || null,
       forSale: true,
     });

@@ -3,6 +3,7 @@ import User from '../models/User.js';
 import { enqueueNotification } from '../utils/notificationQueue.js';
 import { getTickNumber } from '../models/GameState.js';
 import { IMPROVEMENT_PROJECTS, calculatePropertyRating } from '../config/improvementProjects.js';
+import { clampMonthlyRent } from '../config/propertyManagement.js';
 import { sendDiscordNotification } from '../services/discordBot.js';
 
 export async function processImprovements() {
@@ -65,7 +66,7 @@ export async function processImprovements() {
         }
         const totalRent = property.units.reduce((sum, u) => sum + u.rentPrice, 0);
         const occupiedCount = property.units.filter((u) => u.occupied).length;
-        property.rent = Math.round((totalRent / property.units.length) * occupiedCount);
+        property.rent = clampMonthlyRent((totalRent / property.units.length) * occupiedCount);
       }
 
       if (improvement.conditionBonus) {

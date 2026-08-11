@@ -2,7 +2,7 @@ import Property from '../models/Property.js';
 import User from '../models/User.js';
 import Notification from '../models/Notification.js';
 import { enqueueNotification } from '../utils/notificationQueue.js';
-import { calculatePropertyRentIncome } from '../config/propertyManagement.js';
+import { calculatePropertyRentIncome, calculateMaintenanceCost, calculateOperatingExpenses } from '../config/propertyManagement.js';
 
 const RENT_STORAGE_DURATION_MS = 24 * 60 * 60 * 1000;
 
@@ -25,18 +25,20 @@ export async function processRent() {
     if (!owner) continue;
 
     // Effective occupancy-adjusted income — same formula used by
-    // processPropertyManagement for display/maintenance, so the accrued
-    // rent always matches what the player sees.
+    // processPropertyManagement for display/history, so the accrued rent
+    // always matches what the player sees.
     const rentIncome = calculatePropertyRentIncome(property);
-    if (rentIncome <= 0) {
-      results.push({ propertyId: property._id, ownerId: owner._id, rentIncome, maintenanceCost: 0, netIncome: 0 });
+    const maintenanceCost = calculateMaintenanceCost(property, rentIncome);
+    const operatingExpenses = calculateOperatingExpenses(property, rentIncome);
+
+    // Maintenance + operating expenses are folded INTO the rent pool (the
+    // true net income), so the amount collected exactly matches the displayed
+    // NET INCOME and nothing is deducted twice.
+    const netIncome = Math.max(0, rentIncome - maintenanceCost - operatingExpenses);
+    if (netIncome <= 0) {
+      results.push({ propertyId: property._id, ownerId: owner._id, rentIncome, maintenanceCost, operatingExpenses, netIncome });
       continue;
     }
-
-    // Maintenance is charged by processPropertyManagement directly from the
-    // owner's balance (matching its displayed net profit) — it is NOT hidden
-    // inside the collected rent pool.
-    const netIncome = rentIncome;
 
     rentPoolUpdates.push({
       userId: owner._id.toString(),
@@ -49,7 +51,7 @@ export async function processRent() {
       earned: Math.max(0, netIncome),
     });
 
-    results.push({ propertyId: property._id, ownerId: owner._id, rentIncome, maintenanceCost: 0, netIncome });
+    results.push({ propertyId: property._id, ownerId: owner._id, rentIncome, maintenanceCost, operatingExpenses, netIncome });
   }
 
   if (rentPoolUpdates.length > 0) {

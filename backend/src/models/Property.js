@@ -98,6 +98,16 @@ const propertySchema = new mongoose.Schema(
     },
     rentPerUnit: { type: Number, default: 0 },
     lastRentAdjustTick: { type: Number, default: 0 },
+    rentPotential: { type: Number, default: 0 },
+    previousMonthRent: { type: Number, default: 0 },
+    lastRentGrowthTick: { type: Number, default: 0 },
+    rentHistory: [
+      {
+        tick: { type: Number },
+        rent: { type: Number },
+        potential: { type: Number },
+      },
+    ],
     lastQualityTick: { type: Number, default: 0 },
     managementHistory: [
       {

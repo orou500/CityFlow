@@ -22,6 +22,7 @@ import {
   getRatingBonuses,
   getAvailableImprovements,
 } from '../config/improvementProjects.js';
+import { clampMonthlyRent } from '../config/propertyManagement.js';
 import {
   UPGRADE_TYPES,
   getUpgradePreview,
@@ -376,7 +377,7 @@ router.post('/upgrade', async (req, res) => {
 
     if (effects.rentBoost) {
       const oldRent = property.rent || 0;
-      property.rent = Math.round(oldRent * (1 + effects.rentBoost));
+      property.rent = clampMonthlyRent(oldRent * (1 + effects.rentBoost));
       if (property.units && property.units.length > 0) {
         for (const unit of property.units) {
           unit.rentPrice = Math.round(unit.rentPrice * (1 + effects.rentBoost));

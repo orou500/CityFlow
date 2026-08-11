@@ -23,6 +23,9 @@ async function api(path, options = {}) {
  * unlocked and not yet completed, a contextual modal explains it once and can
  * navigate straight to the feature. Completion state lives on the backend
  * (`User.completedOnboarding`), so onboarding never repeats.
+ *
+ * While the guided tour (OnboardingTour) is active for a new player, unlock
+ * modals are suppressed so the two systems never stack.
  */
 export default function OnboardingWrapper({ children }) {
   const { t, i18n } = useTranslation();
@@ -30,23 +33,40 @@ export default function OnboardingWrapper({ children }) {
   const navigate = useNavigate();
   const [queue, setQueue] = useState([]);
   const [visible, setVisible] = useState(false);
+  const [tourActive, setTourActive] = useState(false);
   const isRtl = i18n.language === 'he';
 
   useEffect(() => {
     if (!user) {
       setQueue([]);
       setVisible(false);
+      setTourActive(false);
       return;
     }
     let cancelled = false;
-    api('/onboarding/status')
+    api('/onboarding/tour/status')
       .then((data) => {
         if (cancelled) return;
-        const pending = data.pending || [];
-        setQueue(pending);
-        setVisible(pending.length > 0);
+        setTourActive(data.status === 'active');
+        if (data.status === 'active') return;
+        return api('/onboarding/status').then((unlocks) => {
+          if (cancelled) return;
+          const pending = unlocks.pending || [];
+          setQueue(pending);
+          setVisible(pending.length > 0);
+        });
       })
-      .catch(() => {});
+      .catch(() => {
+        // fall back to unlock status alone
+        api('/onboarding/status')
+          .then((data) => {
+            if (cancelled) return;
+            const pending = data.pending || [];
+            setQueue(pending);
+            setVisible(pending.length > 0);
+          })
+          .catch(() => {});
+      });
     return () => {
       cancelled = true;
     };
@@ -75,7 +95,7 @@ export default function OnboardingWrapper({ children }) {
     completeCurrent();
   }
 
-  if (!visible || !current) {
+  if (!visible || !current || tourActive) {
     return <>{children}</>;
   }
 
@@ -95,7 +115,7 @@ export default function OnboardingWrapper({ children }) {
             <button
               onClick={completeCurrent}
               className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl leading-none"
-              aria-label={t('onboarding.controls.close')}
+              aria-label={t('onboarding.progressive.close')}
             >
               {'\u00D7'}
             </button>

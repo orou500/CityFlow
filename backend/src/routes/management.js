@@ -6,9 +6,11 @@ import RealEstateCompany from '../models/RealEstateCompany.js';
 import {
   MAINTENANCE_TIERS,
   RENT_BOUNDS,
+  MAX_MONTHLY_RENT,
   calculateMonthlyProfit,
   calculatePropertyRentIncome,
   calculateQualityScore,
+  calculateRentPotential,
   simulateOccupancy,
 } from '../config/propertyManagement.js';
 
@@ -34,7 +36,7 @@ router.get('/:propertyId', authenticate, async (req, res) => {
   try {
     const property = await Property.findById(req.params.propertyId).populate(
       'cityId',
-      'name demandIndex supplyIndex growthRate',
+      'name demandIndex supplyIndex growthRate economicCondition',
     );
 
     if (!property) {
@@ -52,13 +54,18 @@ router.get('/:propertyId', authenticate, async (req, res) => {
     const actualRentIncome = calculatePropertyRentIncome(property);
     const tier = MAINTENANCE_TIERS[property.maintenanceLevel] || MAINTENANCE_TIERS.none;
     const maintenanceCost = Math.round(actualRentIncome * tier.costPercentOfRent);
-    const profit = calculateMonthlyProfit(actualRentIncome, property.maintenanceLevel, property.currentPrice);
+    const profit = calculateMonthlyProfit(actualRentIncome, property.maintenanceLevel, property.currentPrice, property);
 
     const currentOccupancy =
       property.occupancy || simulateOccupancy(property, property.cityId?.demandIndex, property.cityId?.supplyIndex);
 
     const gameState = await GameState.findOne({ key: 'global' });
     const currentTick = gameState?.tickNumber || 0;
+
+    const baselineRent = property.rent || 0;
+    const previousMonthRent = property.previousMonthRent || baselineRent;
+    const monthlyIncrease = baselineRent - previousMonthRent;
+    const monthlyIncreasePct = previousMonthRent > 0 ? (monthlyIncrease / previousMonthRent) * 100 : 0;
 
     res.json({
       propertyId: property._id,
@@ -70,14 +77,23 @@ router.get('/:propertyId', authenticate, async (req, res) => {
       unitCount,
       perUnitRent,
       rentPerUnit: property.rentPerUnit || 0,
+      rent: baselineRent,
       rentIncome: actualRentIncome,
       potentialRentIncome: unitCount * perUnitRent,
       maintenanceCost,
+      operatingExpenses: profit.operatingExpenses,
       netProfit: profit.netProfit,
+      netIncome: profit.netProfit,
+      rentPotential: calculateRentPotential(property, property.cityId),
+      maxMonthlyRent: MAX_MONTHLY_RENT,
+      previousMonthRent,
+      monthlyIncrease,
+      monthlyIncreasePct: Math.round(monthlyIncreasePct * 100) / 100,
       currentPrice: property.currentPrice,
       condition: property.condition,
       currentTick,
       lastRentAdjustTick: property.lastRentAdjustTick || 0,
+      lastRentGrowthTick: property.lastRentGrowthTick || 0,
       rentChangeAvailable: currentTick - (property.lastRentAdjustTick || 0) >= RENT_BOUNDS.rentChangeCooldownTicks,
       city: property.cityId
         ? {
@@ -155,6 +171,13 @@ router.post('/:propertyId/rent', authenticate, async (req, res) => {
           error: `Rent must be between ${Math.round(marketRate * RENT_BOUNDS.minMultiplier)} and ${Math.round(marketRate * RENT_BOUNDS.maxMultiplier)} per unit`,
         });
       }
+    }
+
+    const maxPerUnit = Math.floor(MAX_MONTHLY_RENT / unitCount);
+    if (rentPerUnit > maxPerUnit) {
+      return res.status(400).json({
+        error: `Rent per unit cannot exceed $${maxPerUnit.toLocaleString()} (maximum $${MAX_MONTHLY_RENT.toLocaleString()}/month)`,
+      });
     }
 
     property.rentPerUnit = Math.round(rentPerUnit);

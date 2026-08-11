@@ -2,6 +2,7 @@ import User from '../models/User.js';
 import { updateMissionProgress } from '../engine/missionProcessing.js';
 import { checkAndAwardAchievements } from '../engine/careerProcessing.js';
 import { awardXp } from './leveling.js';
+import { advanceOnboarding } from './onboardingTour.js';
 import { cacheDel } from './cache.js';
 import { cacheKeys } from './cacheKeys.js';
 import { emitToUser } from '../socket/index.js';
@@ -77,6 +78,12 @@ export async function processPlayerProgress(userId, event, options = {}) {
     } catch (err) {
       console.error(`[PROGRESS] ERROR in awardXp:`, err);
     }
+  }
+
+  try {
+    await advanceOnboarding(userIdStr, event);
+  } catch (err) {
+    console.error(`[PROGRESS] ERROR in advanceOnboarding:`, err);
   }
 
   try {
