@@ -527,3 +527,43 @@ Every gameplay action route calls `processPlayerProgress()` with the correct eve
 `frontend/src/utils/capacitor.js`:
 - Android native: `isDev ? 'http://10.0.2.2:5000' : 'https://cityflow.sizops.co.il/api'`
 - Production APK on real devices auto-connects to production API (no `VITE_API_URL` needed)
+
+---
+
+## SizOps SSO Integration (OIDC, August 2026)
+
+### Non-negotiable rules
+
+> Never modify or replace the production CityFlow JWT secret when implementing SizOps integration. Never migrate or merge users based solely on email. All identity linking must preserve the existing CityFlow user `_id` and all existing game data.
+
+- Never share `JWT_SECRET` (or any signing secret) between CityFlow and SizOps. CityFlow keeps its HS256 7-day JWT; SizOps OIDC uses its **own RS256 key pair** (`OIDC_PRIVATE_KEY`).
+- Never auto-link SizOps accounts by email — the only trusted identity is the verified ID-token `sub` → `User.sizopsUserId`.
+- Never modify an existing CityFlow `_id`; never recreate/migrate/duplicate users; linking only adds `sizopsUserId`/`sizopsLinkedAt`.
+- Never replace CityFlow JWTs with SizOps tokens — SizOps auth only ever issues the existing CityFlow session.
+- Never expose OIDC client secrets / `SIZOPS_OIDC_CLIENT_SECRET` / `OIDC_PRIVATE_KEY` to the frontend or logs.
+- Never change existing Google/Discord/email login behavior.
+
+### Key files (CityFlow)
+
+- `backend/src/routes/sizopsAuth.js` — `GET /auth/sizops` (login start), `POST /auth/sizops/link-start` (authenticated), `GET /auth/sizops/callback` (code exchange + ID-token validation), `GET /auth/sizops/status`, `POST /auth/sizops/unlink`.
+- `backend/src/services/sizopsOidc.js` — discovery/JWKS (cached), RS256 ID-token validation (issuer, audience, exp, nonce), PKCE code exchange, `registerGamePlayer()` (SizOps game API, identity only, fire-and-forget).
+- `backend/src/models/User.js` — `sizopsUserId` (unique sparse index — the one-to-one guard), `sizopsLinkedAt`. **Unlink must `$unset` these fields** — writing explicit `null` collides with the sparse unique index.
+- `backend/src/models/SizopsAuditLog.js` — audit events `sizops.login/link/unlink/login_failed/oauth_error`; never log passwords, secrets, or tokens.
+- Config block: `config.sizops.oidc` (`SIZOPS_OIDC_*`) + `config.sizops.api` (`SIZOPS_API_KEY`, `SIZOPS_CLIENT_ID`).
+
+### Key files (SizOps, sibling repo `../SizOps`)
+
+- `server/src/services/oauth.service.ts` + `server/src/routes/oauth.routes.ts` — OIDC provider (authorize/token/userinfo/jwks, PKCE S256, single-use hashed auth codes).
+- `server/src/models/OAuthClient.ts`, `server/src/models/AuthCode.ts`, `server/src/utils/jwks.ts` (RS256).
+- Client registration: admin `POST /api/v1/admin/oauth-clients` or `npm run seed` with `SEED_OIDC_CLIENT_*`.
+
+### Env vars
+
+- `SIZOPS_OIDC_ENABLED` (feature flag; start `false`), `SIZOPS_OIDC_ISSUER`, `SIZOPS_OIDC_CLIENT_ID`, `SIZOPS_OIDC_CLIENT_SECRET`, `SIZOPS_OIDC_REDIRECT_URI`, `SIZOPS_OIDC_SCOPE`.
+- `SIZOPS_API_KEY` + `SIZOPS_CLIENT_ID` — **optional** server-to-server game API credentials for GamePlayer registration only; OIDC SSO must never depend on them. Registration failures are logged, never block login/link.
+- SizOps side requires a **persistent** `OIDC_PRIVATE_KEY` in production — SizOps fails fast at startup if it is missing (`assertOidcKeysConfigured()` in `server/src/utils/jwks.ts`). Never allow an ephemeral key in production: restarts would invalidate all previously issued ID tokens.
+- Tests: `backend/src/routes/__tests__/sizopsAuth.test.js` mocks the SizOps OIDC endpoints with a local RS256 key pair; keep the production-safety regression test green (linking must not change any user data).
+
+### ADR
+
+See `docs/adr/0001-sizops-oidc.md`.

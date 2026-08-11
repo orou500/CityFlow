@@ -55,4 +55,34 @@ export const config = {
       },
     },
   },
+  sizops: {
+    oidc: {
+      enabled: process.env.SIZOPS_OIDC_ENABLED === 'true',
+      issuer: process.env.SIZOPS_OIDC_ISSUER || '',
+      clientId: process.env.SIZOPS_OIDC_CLIENT_ID || '',
+      clientSecret: process.env.SIZOPS_OIDC_CLIENT_SECRET || '',
+      redirectUri: process.env.SIZOPS_OIDC_REDIRECT_URI || '',
+      scope: process.env.SIZOPS_OIDC_SCOPE || 'openid profile email',
+      // Optional endpoint overrides (used by tests; discovery is fetched from
+      // the issuer otherwise).
+      authorizationEndpoint: process.env.SIZOPS_OIDC_AUTHORIZATION_ENDPOINT || '',
+      tokenEndpoint: process.env.SIZOPS_OIDC_TOKEN_ENDPOINT || '',
+      userinfoEndpoint: process.env.SIZOPS_OIDC_USERINFO_ENDPOINT || '',
+      jwksUri: process.env.SIZOPS_OIDC_JWKS_URI || '',
+      get ready() {
+        return this.enabled && !!(this.issuer && this.clientId && this.clientSecret && this.redirectUri);
+      },
+    },
+    api: {
+      // Server-to-server SizOps game API (API-key auth). Used to register the
+      // GamePlayer on the SizOps side after OIDC login/link — identity only,
+      // never game data. Optional: when unset, registration is skipped.
+      baseUrl: process.env.SIZOPS_API_BASE_URL || '',
+      clientId: process.env.SIZOPS_CLIENT_ID || '',
+      apiKey: process.env.SIZOPS_API_KEY || '',
+      get enabled() {
+        return !!(this.apiKey && (this.baseUrl || process.env.SIZOPS_OIDC_ISSUER));
+      },
+    },
+  },
 };

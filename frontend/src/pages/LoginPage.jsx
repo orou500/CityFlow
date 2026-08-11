@@ -338,6 +338,15 @@ export default function LoginPage() {
                   </svg>
                   {t('auth.signInWithDiscord')}
                 </a>
+                <a
+                  href={`${getApiBaseUrl()}/auth/sizops`}
+                  className="w-full flex items-center justify-center gap-2 bg-gray-900 dark:bg-gray-700 hover:bg-gray-800 dark:hover:bg-gray-600 text-white py-2 rounded transition-colors"
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1.41 16.09V20h-2v-1.91c-1.79-.26-3.17-1.2-3.17-2.57 0-1.49 1.36-2.53 3.17-2.79v2.56c.66.16 1.24.42 1.24 1.11 0 .63-.57.95-1.24 1.11zm4.82-1.03c0 1.27-1.02 2.14-2.47 2.42V20h-2v-1.52c-1.45-.28-2.47-1.15-2.47-2.42 0-1.28 1.05-2.08 2.47-2.36v2.42c.53.15 1.1.31 1.1.99 0 .68-.57.84-1.1.99v-2.42c-1.42.28-2.47 1.08-2.47 2.36zm.9-5.15v-2.56c-1.79.26-3.17 1.3-3.17 2.79 0 1.37 1.38 2.31 3.17 2.57V20h2v-1.91c1.79-.26 3.17-1.2 3.17-2.57 0-1.49-1.36-2.53-3.17-2.79zm-3.17-3.26c.67-.16 1.24-.48 1.24-1.11 0-.69-.58-.83-1.24-.99V5h-2v1.52c-1.45.28-2.47 1.15-2.47 2.42 0 1.28 1.05 2.08 2.47 2.36V9.65z" />
+                  </svg>
+                  {t('auth.signInWithSizOps')}
+                </a>
               </>
             )}
 

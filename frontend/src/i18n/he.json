@@ -233,6 +233,7 @@
     "orContinueWith": "או המשך עם",
     "signInWithGoogle": "התחבר עם Google",
     "signInWithDiscord": "התחבר עם Discord",
+    "signInWithSizOps": "המשך עם SizOps",
     "welcomeToCityFlow": "ברוך הבא ל-CityFlow",
     "acceptTermsPrompt": "לפני שמתחילים, אנא סקור וקבל את תנאי השירות ומדיניות הפרטיות שלנו.",
     "readFullDocs": "קרא את",
@@ -1633,7 +1634,23 @@
     "backToHome": "חזרה לדף הבית"
   },
   "settings": {
-    "title": "הגדרות"
+    "title": "הגדרות",
+    "sizops": {
+      "title": "חשבון SizOps",
+      "description": "חבר את חשבון SizOps שלך כדי להתחבר עם הזהות של SizOps בין משחקים. חשבון CityFlow, הנכסים והמאזן שלך לא משתנים לעולם.",
+      "connected": "מחובר",
+      "notConnected": "לא מחובר",
+      "connect": "חבר SizOps",
+      "disconnect": "נתק",
+      "confirmDisconnect": "אישור ניתוק",
+      "confirmUnlink": "האם אתה בטוח שברצונך לנתק את SizOps מהחשבון הזה?",
+      "sizopsId": "מזהה SizOps",
+      "currentPassword": "סיסמה נוכחית",
+      "linkSuccess": "חשבון SizOps חובר בהצלחה!",
+      "unlinkSuccess": "חשבון SizOps נותק.",
+      "failedToStart": "החיבור ל-SizOps נכשל.",
+      "failedToUnlink": "ניתוק חשבון SizOps נכשל."
+    }
   },
   "discord": {
     "linkTitle": "אינטגרציית Discord",

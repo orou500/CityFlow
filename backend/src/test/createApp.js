@@ -23,6 +23,7 @@ import stockRoutes from '../routes/stocks.js';
 import auctionRoutes from '../routes/auctions.js';
 import leaderboardRoutes from '../routes/leaderboards.js';
 import onboardingRoutes from '../routes/onboarding.js';
+import sizopsAuthRoutes from '../routes/sizopsAuth.js';
 
 export function createApp() {
   const app = express();
@@ -52,6 +53,7 @@ export function createApp() {
   app.use('/auctions', auctionRoutes);
   app.use('/leaderboards', leaderboardRoutes);
   app.use('/onboarding', onboardingRoutes);
+  app.use('/auth', sizopsAuthRoutes);
 
   app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });

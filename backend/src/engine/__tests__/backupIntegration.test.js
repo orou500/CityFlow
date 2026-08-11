@@ -389,6 +389,13 @@ describe('Backup — full audit & restore', () => {
     const emailIndex = userIndexes.find((i) => i.name === 'email_1');
     expect(emailIndex).toBeDefined();
 
+    // Sparse options are preserved (unique+sparse on sizopsUserId — dropping
+    // sparse would reject unlinked users after a restore).
+    const sizopsIndex = userIndexes.find((i) => i.name === 'sizopsUserId_1');
+    expect(sizopsIndex).toBeDefined();
+    expect(sizopsIndex.unique).toBe(true);
+    expect(sizopsIndex.sparse).toBe(true);
+
     // Maintenance mode was turned back off
     const finalState = await GameState.findOne({ key: 'global' }).lean();
     expect(finalState.maintenanceMode).toBe(false);

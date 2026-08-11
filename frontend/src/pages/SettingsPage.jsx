@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
 import { getApiBaseUrl } from '../utils/capacitor';
 import DiscordSettings from '../components/DiscordSettings';
+import SizOpsSettings from '../components/SizOpsSettings';
 
 export default function SettingsPage() {
   const { t } = useTranslation();
@@ -39,6 +40,10 @@ export default function SettingsPage() {
 
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
         <DiscordSettings />
+      </div>
+
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <SizOpsSettings />
       </div>
 
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">

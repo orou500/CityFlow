@@ -66,6 +66,11 @@ const userSchema = new mongoose.Schema(
     lastRentCollectedAt: { type: Date, default: null },
     lastUpgradeAt: { type: Date, default: null },
     discordId: { type: String, default: null, sparse: true },
+    // SizOps central-identity link (SSO). Null until the user explicitly links
+    // their account. The unique sparse index enforces one-to-one mapping —
+    // never set from client input, only from a verified OIDC ID-token `sub`.
+    sizopsUserId: { type: String, unique: true, sparse: true, index: true },
+    sizopsLinkedAt: { type: Date, default: null },
     pushTokens: [
       {
         token: { type: String, required: true },

@@ -894,6 +894,71 @@ All routes except `GET /` require authentication.
 
 ## Database Models
 
+### SizOps SSO Integration (OIDC)
+
+CityFlow integrates with **SizOps** as its central identity provider using
+OIDC authorization-code + PKCE flow.
+
+**Architecture:**
+
+```text
+CityFlow (OIDC client) ──authorize──▶ SizOps (OIDC provider, RS256)
+        ▲                                  │
+        │          code + PKCE             │ SizOps login + consent
+        └──────── token exchange ◀─────────┘
+        │  ID-token validation: JWKS signature, issuer, audience, exp, nonce
+        ▼
+find/create/link CityFlow user by `sub` (User.sizopsUserId)
+        ▼
+issue the EXISTING CityFlow HS256 7-day JWT
+```
+
+**Rules (non-negotiable):**
+
+- `JWT_SECRET` is never shared or modified — SizOps signs OIDC tokens with its
+  own RS256 key pair.
+- Accounts are **never** auto-linked by email. The only trusted identity is the
+  verified ID-token `sub` → `User.sizopsUserId`.
+- Existing users keep the same `_id` and all game data; linking only adds the
+  identity fields.
+- Existing email/password, Google and Discord login continue unchanged.
+- SizOps auth always results in CityFlow issuing its normal JWT — a raw SizOps
+  token is never accepted as a game session.
+
+**Backend routes** (`backend/src/routes/sizopsAuth.js`):
+
+| Route | Purpose |
+|---|---|
+| `GET /auth/sizops` | Start SizOps login (redirects to SizOps authorize) |
+| `POST /auth/sizops/link-start` | Start linking (authenticated CityFlow session) |
+| `GET /auth/sizops/callback` | Code exchange, ID-token validation, login/link |
+| `GET /auth/sizops/status` | Connection status (masked SizOps ID) |
+| `POST /auth/sizops/unlink` | Unlink (guarded: needs password or another login method) |
+
+**Environment variables:**
+
+```env
+SIZOPS_OIDC_ENABLED=false            # feature flag — enable after verification
+SIZOPS_OIDC_ISSUER=https://sizops.co.il
+SIZOPS_OIDC_CLIENT_ID=szoc_...       # OIDC client (registered on SizOps)
+SIZOPS_OIDC_CLIENT_SECRET=...        # server-side only
+SIZOPS_OIDC_REDIRECT_URI=https://cityflow.sizops.co.il/api/auth/sizops/callback
+SIZOPS_OIDC_SCOPE=openid profile email
+SIZOPS_API_KEY=szak_...              # OPTIONAL — only for GamePlayer registration on the SizOps side
+SIZOPS_CLIENT_ID=szp_...             # OPTIONAL — SizOps game application ID
+```
+
+- **`SIZOPS_API_KEY` is optional.** OIDC SSO works without it; it is only used
+  for the optional, fire-and-forget GamePlayer registration (identity only),
+  and failures there never block login/linking.
+- **SizOps must use a persistent RS256 key in production** (`OIDC_PRIVATE_KEY`
+  as a Kubernetes Secret). SizOps fails fast at startup if the key is missing
+  in production — ephemeral keys would invalidate every previously issued ID
+  token after a restart.
+
+See `docs/adr/0001-sizops-oidc.md` and the SizOps repo
+(`server/src/services/oauth.service.ts`) for details.
+
 ### User
 
 | Field                         | Type                           | Description                                                                                         |
@@ -903,6 +968,8 @@ All routes except `GET /` require authentication.
 | `email`                       | String                         | Unique email                                                                                        |
 | `password`                    | String                         | bcrypt hash (not returned)                                                                          |
 | `oauthProviders`              | [{provider, providerId}]       | Linked OAuth accounts (google, discord)                                                             |
+| `sizopsUserId`                | String (unique, sparse)        | SizOps central identity link (verified OIDC `sub`; null until explicit linking)                     |
+| `sizopsLinkedAt`              | Date                           | When the SizOps link was established                                                                |
 | `balance`                     | Number                         | Cash balance (default 100,000)                                                                      |
 | `ownedProperties`             | [ObjectId]                     | References to Property                                                                              |
 | `friends`                     | [ObjectId]                     | References to User                                                                                  |

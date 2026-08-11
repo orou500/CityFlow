@@ -233,6 +233,7 @@
     "orContinueWith": "or continue with",
     "signInWithGoogle": "Sign in with Google",
     "signInWithDiscord": "Sign in with Discord",
+    "signInWithSizOps": "Continue with SizOps",
     "welcomeToCityFlow": "Welcome to CityFlow",
     "acceptTermsPrompt": "Before you start, please review and accept our Terms of Service and Privacy Policy.",
     "readFullDocs": "Read the full",
@@ -1642,7 +1643,23 @@
     "backToHome": "Back to Home"
   },
   "settings": {
-    "title": "Settings"
+    "title": "Settings",
+    "sizops": {
+      "title": "SizOps Account",
+      "description": "Connect your SizOps account to sign in with your SizOps identity across games. Your CityFlow account, properties and balance never change.",
+      "connected": "Connected",
+      "notConnected": "Not connected",
+      "connect": "Connect SizOps",
+      "disconnect": "Disconnect",
+      "confirmDisconnect": "Confirm Disconnect",
+      "confirmUnlink": "Are you sure you want to disconnect SizOps from this account?",
+      "sizopsId": "SizOps ID",
+      "currentPassword": "Current password",
+      "linkSuccess": "SizOps account linked successfully!",
+      "unlinkSuccess": "SizOps account unlinked.",
+      "failedToStart": "Failed to start SizOps linking.",
+      "failedToUnlink": "Failed to unlink SizOps account."
+    }
   },
   "discord": {
     "linkTitle": "Discord Integration",

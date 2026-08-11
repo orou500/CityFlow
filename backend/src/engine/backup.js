@@ -683,13 +683,23 @@ export async function restoreBackup(backupId, userId) {
         collectionsRestored++;
       }
 
-      // Recreate indexes captured at backup time (dropCollection destroys them)
+      // Recreate indexes captured at backup time (dropCollection destroys
+      // them). ALL options are preserved (unique, sparse, expireAfterSeconds,
+      // partialFilterExpression, …) — dropping `sparse` from a unique index
+      // would reject documents with a missing field and fail the whole batch.
       const toCreate = (indexes || []).filter((idx) => idx.name !== '_id_' && idx.key);
       if (toCreate.length > 0) {
         try {
-          await db
-            .collection(collName)
-            .createIndexes(toCreate.map((idx) => ({ key: idx.key, ...(idx.unique ? { unique: true } : {}) })));
+          await db.collection(collName).createIndexes(
+            toCreate.map((idx) => {
+              const { key } = idx;
+              const options = { ...idx };
+              delete options.key;
+              delete options.name;
+              delete options.v;
+              return { key, ...options };
+            }),
+          );
         } catch (indexErr) {
           await logBackup(backup, 'warn', `Failed to recreate indexes on ${collName}: ${indexErr.message}`);
         }
