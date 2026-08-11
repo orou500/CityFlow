@@ -22,6 +22,7 @@ async function createFriendNotification(userId, sender, type) {
     type: 'friend_request',
     title,
     message,
+    eventKey: `friend:${userId}:${type}:${sender._id}`,
     route: '/friends',
     tab,
     entityType: 'friends',

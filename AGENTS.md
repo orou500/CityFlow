@@ -112,6 +112,33 @@ Never remove existing functionality unless requested.
 
 ---
 
+
+## Backup Rules
+
+The admin backup system automatically includes **every MongoDB collection** (it enumerates `db.listCollections()`), so new models are covered by default. The following rules keep it that way:
+
+- When adding a new persistent Mongoose model: place it in `backend/src/models/`, do NOT give it a custom collection name, and ensure it is registered (imported) somewhere — the model-coverage test (`backend/src/engine/__tests__/backupIntegration.test.js`) fails if any registered model's collection is missing from a backup.
+- Do NOT add collections to a hardcoded backup list — the system is dynamic. If a collection must be excluded, add it to `EXCLUDED_BACKUP_COLLECTIONS` in `backend/src/engine/backup.js` WITH a documented reason (the coverage test exempts only collections listed there).
+- Backup format is versioned (`BACKUP_VERSION` in `backend/src/engine/backup.js`). Bump it and document the change in `README.md` whenever the on-disk format changes.
+- Serialization uses EJSON (ObjectIds, Dates, Buffers). Do not hand-roll JSON serialization of documents.
+- Keep restore safe: it must create a pre-restore safety backup, preserve the performing admin, recreate indexes, validate counts, and leave maintenance mode ON on failure.
+- Every new feature that persists data must remain restore-safe — if restoring from a backup would break the feature, fix the backup/restore code in the same PR.
+
+---
+
+## Notification Idempotency Rules
+
+Every notification-producing event must be **at most one notification per user per logical event**. The database, not an `if (!existing)` pre-check, is the final protection.
+
+- All notifications MUST be created via `enqueueNotification()` / `createNotification()` in `backend/src/utils/notificationQueue.js` — never `Notification.create()` directly in routes/engine (except tests).
+- Every call site MUST pass a stable, content-free `eventKey` identifying the logical event, e.g. `mission:{missionProgressId}:completed`, `auction:{auctionId}:won:{userId}`, `company:{companyId}:loan:{requestId}:approved:{userId}`, `season:{seasonId}:reward:{userId}`, `levelup:{userId}:{level}`.
+- `eventKey` is unique per `(userId, eventKey)` at the DB level (unique partial index on the Notification model) — concurrent requests, engine retries, tick re-runs and socket reconnects can never create a second record.
+- NEVER derive the key from `title`/`message` text — amounts and wording drift between versions and would create duplicates (or suppress distinct events). Never reuse one key for a fan-out to multiple users; include `userId` (or a per-user id) in every key.
+- Socket events (`emitToUser`) are delivery, not creation: `createNotification()` returns `{ created, notification }` and the socket emit only fires on actual creation. Reconnects/polls must never create a notification.
+- New notification types/sites are covered by `backend/src/engine/__tests__/notificationIdempotency.test.js` (one event → one notification, including concurrency and dual-path cases).
+- Read/unread state, deletion, pagination and the `eventId` legacy field are unchanged; `eventKey` is nullable for pre-existing notifications.
+
+---
 ## Before Every Task
 
 Understand the existing architecture.
@@ -188,7 +215,7 @@ cityflow/
 │       ├── config/       # Environment, DB, simulation constants
 │       ├── engine/       # Tick-based simulation logic (22 files) (22 files)
 │       ├── middleware/    # JWT auth, admin, maintenance, rate limiting
-│       ├── models/       # Mongoose schemas (25 models)
+│       ├── models/       # Mongoose schemas (39 models)
 │       ├── routes/       # Express routes (27 files)
 │       ├── services/     # Email, push notifications, Discord bot API
 │       ├── test/         # Vitest setup, helpers, MongoDB Memory Server

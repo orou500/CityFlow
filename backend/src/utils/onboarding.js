@@ -68,6 +68,7 @@ export async function notifyOnboardingUnlocks(user) {
         type: 'system',
         title: unlock.notificationTitle || 'New Feature Unlocked',
         message: unlock.notificationMessage || `${unlock.titleKey} is now available!`,
+        eventKey: `onboarding:${user._id}:${unlock.id}`,
         route: unlock.route,
         entityType: 'onboarding',
         entityId: user._id,

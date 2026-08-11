@@ -37,6 +37,7 @@ export async function awardXp(user, xpAmount, _action) {
       type: 'system',
       title: 'Level Up!',
       message: levelText,
+      eventKey: `levelup:${user._id}:${user.level}`,
       route: '/career',
       tab: 'overview',
       entityType: 'career',

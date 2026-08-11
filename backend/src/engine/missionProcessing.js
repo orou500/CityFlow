@@ -802,6 +802,7 @@ export async function updateMissionProgress(userId, _triggerType) {
         type: 'mission_complete',
         title: 'Mission Complete!',
         message: `You completed "${def.name}". Tap to claim your reward!`,
+        eventKey: `mission:${mp._id}:completed`,
         relatedId: mp._id,
         route: '/missions',
         tab: 'completed',

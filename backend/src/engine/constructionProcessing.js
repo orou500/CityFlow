@@ -94,6 +94,7 @@ export async function processConstruction() {
               type: 'construction_complete',
               title: 'Construction Complete!',
               message: `${project.projectName} has been completed. Your new building is generating income.`,
+              eventKey: `construction:${project._id}:completed`,
               route: '/development',
               entityType: 'construction',
               entityId: land._id,

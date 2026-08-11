@@ -86,6 +86,7 @@ export async function processImprovements() {
           type: 'improvement_complete',
           title: 'Improvement Complete!',
           message: `${improvement.name} has been completed on ${property.name}. Rating: ${newRating}`,
+          eventKey: `improvement:${property._id}:completed:${improvement.improvementId}`,
           route: '/development',
           entityType: 'construction',
           entityId: property._id,

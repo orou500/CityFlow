@@ -422,8 +422,26 @@ export const useGameStore = create((set, get) => ({
   fetchNotifications: async (page = 1, limit = 20) => {
     try {
       const data = await api(`/notifications?page=${page}&limit=${limit}`);
-      set({ notifications: data.notifications, notificationPage: data.page, notificationTotalPages: data.totalPages });
-      return data.notifications;
+      // Defensive dedup by _id: poll + socket events can deliver the same
+      // notification twice (initial fetch, reconnect, page change). The
+      // server guarantees one DB record per event; this dedup keeps the UI
+      // list free of visual duplicates regardless.
+      const seen = new Set();
+      const deduped = (data.notifications || []).filter((n) => {
+        if (!n._id || seen.has(n._id)) return false;
+        seen.add(n._id);
+        return true;
+      });
+      let merged = deduped;
+      if (page === 1) {
+        const existing = get().notifications || [];
+        merged = [...existing, ...deduped].reduce((acc, n) => {
+          if (n._id && acc.some((x) => x._id === n._id)) return acc;
+          return [...acc, n];
+        }, []);
+      }
+      set({ notifications: merged, notificationPage: data.page, notificationTotalPages: data.totalPages });
+      return deduped;
     } catch {
       return [];
     }

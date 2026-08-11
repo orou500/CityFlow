@@ -21,6 +21,7 @@ async function notify(userId, type, title, message, relatedId) {
     type,
     title,
     message,
+    eventKey: `offer:${relatedId}:${type}:${userId}`,
     relatedId,
     route: '/marketplace',
     entityType: 'marketplace',

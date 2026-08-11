@@ -1043,6 +1043,7 @@ router.post('/maintenance/enable', async (req, res) => {
       type: 'system',
       title: 'Maintenance Mode Enabled',
       message: message || 'Maintenance mode has been enabled by an administrator.',
+      eventKey: 'system:maintenance:enabled',
       entityType: 'system',
       global: true,
     });
@@ -1067,6 +1068,7 @@ router.post('/maintenance/disable', async (req, res) => {
       type: 'system',
       title: 'Maintenance Completed',
       message: 'Maintenance completed. Gameplay is available again.',
+      eventKey: 'system:maintenance:disabled',
       entityType: 'system',
       global: true,
     });

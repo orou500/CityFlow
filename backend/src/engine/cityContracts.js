@@ -45,7 +45,7 @@ export async function generateCityContracts(tickNumber) {
       if (!contractData) continue;
 
       try {
-        await CityContract.create(contractData);
+        const contract = await CityContract.create(contractData);
         generated++;
 
         const memberUserIds = company.members.map((m) => m.userId);
@@ -54,7 +54,8 @@ export async function generateCityContracts(tickNumber) {
             userId,
             type: 'system',
             title: 'New City Contract Available',
-            message: `"${company.name}" has a new contract opportunity: ${contractData.name} in ${city.name} for $${contractData.cost.toLocaleString()}`,
+            message: `"${company.name}" has a new contract opportunity: ${contract.name} in ${city.name} for $${contract.cost.toLocaleString()}`,
+            eventKey: `company:${company._id}:contract:${contract._id}:available:${userId}`,
             route: `/real-estate-companies/${company._id}`,
             tab: 'contracts',
             entityType: 'company',
@@ -140,6 +141,7 @@ export async function processCityContracts(tickNumber) {
           type: 'system',
           title: 'City Contract Completed',
           message: `"${company.name}" completed contract: ${contract.name}. Reward: $${contract.reward.toLocaleString()}`,
+          eventKey: `company:${company._id}:contract:${contract._id}:completed:${userId}`,
           route: `/real-estate-companies/${company._id}`,
           tab: 'contracts',
           entityType: 'company',
@@ -278,6 +280,7 @@ export async function processContractProposals(tickNumber) {
           type: 'system',
           title: 'Contract Proposal Approved',
           message: `Voting expired for the "${contract.name}" contract. ${yesVotes - autoCount} member(s) voted YES and ${autoCount} inactive member(s) were automatically counted as YES.`,
+          eventKey: `company:${company._id}:contract:${contract._id}:proposal_approved:${proposal.proposedBy}`,
           route: `/real-estate-companies/${company._id}`,
           tab: 'contracts',
           entityType: 'company',
@@ -311,6 +314,7 @@ export async function processContractProposals(tickNumber) {
           type: 'system',
           title: 'Contract Proposal Expired',
           message: `The "${contract.name}" contract proposal expired. ${autoCount} inactive member(s) were counted as YES, but the proposal did not reach the required threshold.`,
+          eventKey: `company:${company._id}:contract:${contract._id}:proposal_expired:${proposal.proposedBy}`,
           route: `/real-estate-companies/${company._id}`,
           tab: 'contracts',
           entityType: 'company',
@@ -390,6 +394,7 @@ async function approveContract(contract, company, tickNumber) {
       type: 'system',
       title: 'City Contract Started',
       message: `"${company.name}" started contract: ${contract.name}. Completion in ${contract.durationTicks} months.`,
+      eventKey: `company:${company._id}:contract:${contract._id}:started:${userId}`,
       route: `/real-estate-companies/${company._id}`,
       tab: 'contracts',
       entityType: 'company',

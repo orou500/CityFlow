@@ -490,6 +490,7 @@ router.post('/grade/upgrade', authenticate, async (req, res) => {
       type: 'system',
       title: 'Property Grade Upgraded',
       message: `"${property.name}" upgraded to Grade ${GRADE_NAMES[newGrade - 1]}. Value: $${prevPrice.toLocaleString()} → $${property.currentPrice.toLocaleString()}. Rent: $${prevRent.toLocaleString()} → $${property.rent.toLocaleString()}.`,
+      eventKey: `property:${property._id}:grade:${newGrade}`,
       route: `/property/${property._id}`,
       entityType: 'property',
       entityId: property._id,

@@ -33,11 +33,22 @@ const notificationSchema = new mongoose.Schema(
     entityId: { type: mongoose.Schema.Types.ObjectId },
     read: { type: Boolean, default: false },
     global: { type: Boolean, default: false },
+    // Stable idempotency key for the logical event that produced this
+    // notification, e.g. "mission:65f0abc...:completed" or
+    // "auction:65f0abc...:won:65f0def...". Nullable — legacy notifications
+    // predating the key have no value. The compound unique index on
+    // (userId, eventKey) is the database-level duplicate guard: the same
+    // logical event can never create more than one notification per user.
+    eventKey: { type: String, default: null },
   },
   { timestamps: true },
 );
 
 notificationSchema.index({ userId: 1, read: 1, createdAt: -1 });
 notificationSchema.index({ eventId: 1 }, { unique: true, sparse: true });
+notificationSchema.index(
+  { userId: 1, eventKey: 1 },
+  { unique: true, partialFilterExpression: { eventKey: { $type: 'string' } } },
+);
 
 export default mongoose.model('Notification', notificationSchema);

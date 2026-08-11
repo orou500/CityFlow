@@ -886,6 +886,7 @@ export async function distributeSeasonLeaderboardRewards(season) {
       type: 'season_reward',
       title: `Season ${season.number} Leaderboard Reward`,
       message: `You finished #${d.rank} and received $${d.reward.toLocaleString()}.`,
+      eventKey: `season:${season._id}:reward:${d.userId}`,
       route: '/leaderboards',
       entityType: 'season',
       entityId: season._id,
