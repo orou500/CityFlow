@@ -58,3 +58,9 @@ spec:
     - ports:
         - protocol: TCP
           port: 443
+    # Allow outbound SMTP to the email relay (Brevo smtp-relay.brevo.com,
+    # STARTTLS on 587) — without this, verification/reset emails fail with
+    # ECONNREFUSED and are silently undelivered.
+    - ports:
+        - protocol: TCP
+          port: 587
