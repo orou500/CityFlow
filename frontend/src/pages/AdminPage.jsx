@@ -2333,6 +2333,7 @@ export default function AdminPage() {
             >
               {backupLoading ? t('admin.running') : t('admin.createBackup')}
             </button>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">{t('admin.backupExcludedNote')}</p>
           </div>
 
           <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
@@ -2385,8 +2386,11 @@ export default function AdminPage() {
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
                         {(b.size / 1024 / 1024).toFixed(1)} MB
-                        {b.duration ? ` Â· ${b.duration}s` : ''}
-                        {b.createdBy?.username ? ` Â· ${b.createdBy.username}` : ''}
+                        {b.documents ? ` · ${b.documents.toLocaleString()} docs` : ''}
+                        {b.collections ? ` · ${b.collections} collections` : ''}
+                        {b.backupVersion ? ` · v${b.backupVersion}` : ''}
+                        {b.duration ? ` · ${b.duration}s` : ''}
+                        {b.createdBy?.username ? ` · ${b.createdBy.username}` : ''}
                       </p>
                     </div>
                     <div className="flex gap-2 ml-4">

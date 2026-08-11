@@ -816,6 +816,7 @@
     "restore": "Restore",
     "backupHistory": "Backup History",
     "noBackups": "No backups available",
+    "backupExcludedNote": "Every collection is backed up automatically. Excluded: backups (metadata is recreated by the system).",
     "confirmDeleteBackup": "Delete this backup? This cannot be undone.",
     "restoreWarning": "This will overwrite the current database. A backup will be created automatically before restore.",
     "logs": "Logs",

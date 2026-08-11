@@ -13,6 +13,36 @@ import { setMaintenanceMode } from '../models/GameState.js';
 
 const LOG_FILE = path.join(config.backupDir, 'backup.log');
 
+/**
+ * Backup format version. Bump when the on-disk format changes so restores
+ * can detect incompatible files.
+ *
+ * v1 — initial: one EJSON line per collection `{collection, documents}`.
+ * v2 — header line `{header: true, backupVersion, createdAt, collections,
+ *      excludedCollections}`, per-collection `indexes` captured and restored,
+ *      Backup records carry backupVersion + document counts.
+ */
+export const BACKUP_VERSION = 2;
+
+/**
+ * Collections intentionally excluded from backup/restore, with documented
+ * reasons. Every other registered Mongoose collection is included.
+ */
+export const EXCLUDED_BACKUP_COLLECTIONS = {
+  backups:
+    'Backup metadata/logs — the system recreates these records itself; backing them up would self-reference the backup store.',
+};
+
+export function getExcludedBackupCollections() {
+  return Object.keys(EXCLUDED_BACKUP_COLLECTIONS);
+}
+
+const SKIP_RESTORE_COLLECTIONS = new Set(getExcludedBackupCollections());
+
+export function shouldSkipRestoreCollection(collectionName) {
+  return SKIP_RESTORE_COLLECTIONS.has(collectionName);
+}
+
 function appendLog(level, message) {
   const ts = new Date().toISOString();
   const line = `[${ts}] [${level.toUpperCase()}] ${message}\n`;
@@ -124,14 +154,73 @@ export async function validateBackupGzip(filepath) {
   });
 }
 
-function pushLog(backup, level, message) {
-  return Backup.updateOne({ _id: backup._id }, { $push: { logs: { timestamp: new Date(), level, message } } });
+/**
+ * Validate a backup file and return its header metadata.
+ * The first line is a header `{header: true, backupVersion, ...}` in v2+.
+ * Files without a header are treated as v1 (backward compatible). Files with
+ * a NEWER backupVersion than this server supports are rejected.
+ */
+export function inspectBackupHeader(filepath) {
+  return new Promise((resolve, reject) => {
+    const stream = createReadStream(filepath).pipe(createGunzip());
+    let buffer = '';
+    let finished = false;
+
+    const cleanup = () => {
+      finished = true;
+      stream.destroy();
+    };
+
+    const parseLine = (line) => {
+      const trimmed = line.trim();
+      if (!trimmed) return;
+      try {
+        const data = EJSON.parse(trimmed, { relaxed: true });
+        if (data && data.header === true) {
+          const version = Number(data.backupVersion) || 1;
+          if (version > BACKUP_VERSION) {
+            throw new Error(
+              `Backup format version ${version} is newer than supported version ${BACKUP_VERSION}. Update the server before restoring this backup.`,
+            );
+          }
+          resolve({ backupVersion: version, createdAt: data.createdAt, collections: data.collections || [] });
+        } else {
+          // v1 format (no header line) — accepted for backward compatibility
+          resolve({ backupVersion: 1, createdAt: null, collections: [] });
+        }
+      } catch (err) {
+        reject(err instanceof Error ? err : new Error(`Invalid backup header: ${err.message}`));
+      } finally {
+        cleanup();
+      }
+    };
+
+    stream.on('data', (chunk) => {
+      buffer += chunk.toString();
+      const newlineIndex = buffer.indexOf('\n');
+      if (newlineIndex === -1) return;
+      parseLine(buffer.slice(0, newlineIndex));
+    });
+
+    stream.on('end', () => {
+      if (finished) return;
+      if (buffer.trim()) {
+        parseLine(buffer);
+      } else {
+        reject(new Error('Backup file is empty or not a valid backup'));
+      }
+    });
+
+    stream.on('error', (err) => {
+      if (!finished) {
+        reject(new Error(`Invalid backup file: ${err.message}`));
+      }
+    });
+  });
 }
 
-const SKIP_RESTORE_COLLECTIONS = new Set(['backups']);
-
-export function shouldSkipRestoreCollection(collectionName) {
-  return SKIP_RESTORE_COLLECTIONS.has(collectionName);
+function pushLog(backup, level, message) {
+  return Backup.updateOne({ _id: backup._id }, { $push: { logs: { timestamp: new Date(), level, message } } });
 }
 
 function isObjectIdLikeBufferObject(value) {
@@ -343,6 +432,7 @@ export async function createBackup(userId, type = 'manual') {
     filename,
     type,
     status: 'creating',
+    backupVersion: BACKUP_VERSION,
     createdBy: userId,
     logs: [{ timestamp: new Date(), level: 'info', message: 'Backup creation started' }],
   });
@@ -352,6 +442,7 @@ export async function createBackup(userId, type = 'manual') {
   try {
     const db = mongoose.connection.db;
     const collections = await db.listCollections().toArray();
+    const excluded = getExcludedBackupCollections();
     await pushLog(
       backup,
       'info',
@@ -363,18 +454,31 @@ export async function createBackup(userId, type = 'manual') {
     const pipePromise = pipeline(gzip, writeStream);
 
     let totalDocs = 0;
+    const backedUpCollections = [];
+
+    // Header line (v2 format) — version + metadata for validation/UI
+    const backedUpNames = collections.map((c) => c.name).filter((n) => !excluded.includes(n));
+    const header = {
+      header: true,
+      backupVersion: BACKUP_VERSION,
+      createdAt: new Date().toISOString(),
+      collections: backedUpNames,
+      excludedCollections: excluded,
+    };
+    gzip.write(EJSON.stringify(header) + '\n');
 
     for (const colInfo of collections) {
       const collName = colInfo.name;
-      if (collName === 'backups') {
+      if (excluded.includes(collName)) {
         await pushLog(backup, 'info', `Skipped backing up collection: ${collName}`);
         continue;
       }
 
       const collection = db.collection(collName);
-      const docs = await collection.find().toArray();
+      const [docs, indexes] = await Promise.all([collection.find().toArray(), collection.indexes()]);
+      backedUpCollections.push(collName);
 
-      const chunk = EJSON.stringify({ collection: collName, documents: docs }) + '\n';
+      const chunk = EJSON.stringify({ collection: collName, documents: docs, indexes }) + '\n';
       gzip.write(chunk);
       totalDocs += docs.length;
 
@@ -389,18 +493,19 @@ export async function createBackup(userId, type = 'manual') {
 
     backup.size = stat.size;
     backup.duration = duration;
-    backup.collections = collections.length;
+    backup.collections = backedUpCollections.length;
+    backup.documents = totalDocs;
     backup.status = 'completed';
     await backup.save();
     await pushLog(
       backup,
       'info',
-      `Backup completed: ${formatBytes(stat.size)}, ${totalDocs} documents in ${collections.length} collections, ${duration}s`,
+      `Backup completed: ${formatBytes(stat.size)}, ${totalDocs} documents in ${backedUpCollections.length} collections, ${duration}s`,
     );
 
     appendLog(
       'info',
-      `Created ${filename} (${formatBytes(stat.size)}) - ${totalDocs} docs in ${collections.length} collections, ${duration}s`,
+      `Created ${filename} (${formatBytes(stat.size)}) - ${totalDocs} docs in ${backedUpCollections.length} collections, ${duration}s`,
     );
     return backup;
   } catch (err) {
@@ -425,6 +530,14 @@ export async function restoreBackup(backupId, userId) {
     throw new Error('Backup file not found on disk');
   }
 
+  // Reject corrupt/incompatible files before touching the database
+  let headerInfo;
+  try {
+    headerInfo = await inspectBackupHeader(filepath);
+  } catch (err) {
+    throw new Error(`Backup rejected: ${err.message}`, { cause: err });
+  }
+
   await logBackup(backup, 'info', 'Restore started, enabling maintenance mode');
   await setMaintenanceMode(true, 'Database restoration in progress.', userId);
   appendLog('info', `Restore started for ${backup.filename}, maintenance mode enabled`);
@@ -433,6 +546,19 @@ export async function restoreBackup(backupId, userId) {
     backup.status = 'restoring';
     backup.error = undefined;
     await backup.save();
+  }
+
+  // ── Safety: snapshot the current state before touching anything ───────
+  // Gives a safe rollback point if the restore fails midway.
+  let preRestore;
+  try {
+    preRestore = await createBackup(userId, 'pre-restore');
+    await logBackup(backup, 'info', `Pre-restore safety backup created: ${preRestore.filename}`);
+  } catch (preErr) {
+    await setMaintenanceMode(false, '', userId);
+    throw new Error(`Restore aborted — could not create pre-restore safety backup: ${preErr.message}`, {
+      cause: preErr,
+    });
   }
 
   try {
@@ -470,36 +596,43 @@ export async function restoreBackup(backupId, userId) {
       stream.on('error', reject);
     });
 
-    let collectionsRestored = 0;
-    const expectedCounts = {};
+    // Parse all lines into { collection -> { documents, indexes } }
+    const collectionData = {};
     for (const line of pendingLines) {
-      let collName, documents;
+      let data;
       try {
-        const data = typeof line === 'string' ? EJSON.parse(line, { relaxed: true }) : line;
-        collName = data.collection;
-        documents = Array.isArray(data.documents) ? data.documents : [];
-        expectedCounts[collName] = documents.length;
+        data = typeof line === 'string' ? EJSON.parse(line, { relaxed: true }) : line;
       } catch (parseErr) {
         try {
-          const data = JSON.parse(line);
-          collName = data.collection;
-          documents = Array.isArray(data.documents) ? data.documents : [];
+          data = JSON.parse(line);
         } catch (jsonErr) {
           throw new Error(
             `Failed to parse backup collection: ${parseErr.message}; fallback failed: ${jsonErr.message}`,
-            {
-              cause: jsonErr,
-            },
+            { cause: jsonErr },
           );
         }
       }
 
-      if (shouldSkipRestoreCollection(collName)) {
-        await logBackup(backup, 'info', `Skipping restore of ${collName} collection to preserve current system state`);
-        continue;
+      if (data && data.header === true) continue; // header line
+      if (!data || typeof data.collection !== 'string') {
+        throw new Error(`Invalid backup line: missing collection metadata`);
       }
 
-      documents = documents.map((doc) => {
+      const collName = data.collection;
+      if (shouldSkipRestoreCollection(collName)) continue;
+      collectionData[collName] = {
+        documents: Array.isArray(data.documents) ? data.documents : [],
+        indexes: Array.isArray(data.indexes) ? data.indexes : [],
+      };
+    }
+
+    let collectionsRestored = 0;
+    const expectedCounts = {};
+
+    for (const [collName, { documents: rawDocs, indexes }] of Object.entries(collectionData)) {
+      expectedCounts[collName] = rawDocs.length;
+
+      const documents = rawDocs.map((doc) => {
         const converted = convertExtendedJSONValue(doc);
         const normalized = normalizeAllObjectIds(converted);
 
@@ -523,36 +656,50 @@ export async function restoreBackup(backupId, userId) {
         return normalized;
       });
 
+      // Drop the collection (whether or not it has documents) so the
+      // restored state exactly matches the backup — no stale leftovers.
+      try {
+        await db.dropCollection(collName);
+      } catch {
+        // Only acceptable if the collection genuinely does not exist
+        const stillExists = await db.listCollections({ name: collName }).hasNext();
+        if (stillExists) {
+          throw new Error(`Failed to drop collection ${collName} before restore — aborting to avoid a broken state`);
+        }
+      }
+
       if (documents.length > 0) {
         try {
-          await db.dropCollection(collName);
-        } catch {
-          // collection may not exist
-        }
-
-        try {
-          const result = await db.collection(collName).insertMany(documents, { ordered: false });
-
-          if (collName === 'properties' && result.insertedIds.length > 0) {
-            const insertedId = result.insertedIds[0];
-            const inserted = await db.collection(collName).findOne({ _id: insertedId });
-            appendLog(
-              'info',
-              `Property inserted: _id=${inserted._id} (type: ${typeof inserted._id}), cityId type: ${typeof inserted.cityId}`,
-            );
-          }
-
+          await db.collection(collName).insertMany(documents, { ordered: false });
           collectionsRestored++;
         } catch (insertErr) {
-          throw new Error(`Failed to insert documents into ${collName}: ${insertErr.message}`, { cause: insertErr });
+          throw new Error(`Failed to insert documents into ${collName}: ${insertErr.message}`, {
+            cause: insertErr,
+          });
         }
+      } else {
+        // empty collection — restore the collection itself for exact state
+        await db.createCollection(collName);
+        collectionsRestored++;
+      }
 
-        if (collName === 'users' && preservedAdmin) {
-          const adminExists = await db.collection('users').findOne({ _id: preservedAdmin._id });
-          if (!adminExists) {
-            await db.collection('users').insertOne(preservedAdmin);
-            appendLog('info', `Re-inserted admin user: ${preservedAdmin.username}`);
-          }
+      // Recreate indexes captured at backup time (dropCollection destroys them)
+      const toCreate = (indexes || []).filter((idx) => idx.name !== '_id_' && idx.key);
+      if (toCreate.length > 0) {
+        try {
+          await db
+            .collection(collName)
+            .createIndexes(toCreate.map((idx) => ({ key: idx.key, ...(idx.unique ? { unique: true } : {}) })));
+        } catch (indexErr) {
+          await logBackup(backup, 'warn', `Failed to recreate indexes on ${collName}: ${indexErr.message}`);
+        }
+      }
+
+      if (collName === 'users' && preservedAdmin) {
+        const adminExists = await db.collection('users').findOne({ _id: preservedAdmin._id });
+        if (!adminExists) {
+          await db.collection('users').insertOne(preservedAdmin);
+          appendLog('info', `Re-inserted admin user: ${preservedAdmin.username}`);
         }
       }
     }
@@ -589,6 +736,24 @@ export async function restoreBackup(backupId, userId) {
       );
     }
 
+    // Refresh in-memory engine state + caches so the server continues from
+    // the restored state without a restart.
+    try {
+      const restoredState = await db.collection('gamestates').findOne({ key: 'global' });
+      if (restoredState && typeof restoredState.tickNumber === 'number') {
+        global.currentTick = restoredState.tickNumber;
+        appendLog('info', `Engine tick refreshed to ${restoredState.tickNumber}`);
+      }
+    } catch {
+      // gamestates may not exist in the backup — engine keeps its current tick
+    }
+    try {
+      const { cacheDelPattern } = await import('../utils/cache.js');
+      await cacheDelPattern('cf:*');
+    } catch {
+      // cache invalidation is best-effort
+    }
+
     await logBackup(backup, 'info', `Restore completed: ${collectionsRestored} collections restored`);
     if (backup._id) {
       backup.status = 'completed';
@@ -597,7 +762,12 @@ export async function restoreBackup(backupId, userId) {
     }
     await setMaintenanceMode(false, '', userId);
     appendLog('info', `Restored from ${backup.filename}, maintenance mode disabled`);
-    return { success: true, message: `Database restored from ${backup.filename}. Please log in again.` };
+    return {
+      success: true,
+      message: `Database restored from ${backup.filename}. Please log in again.`,
+      preRestoreBackup: preRestore ? preRestore.filename : null,
+      backupVersion: headerInfo.backupVersion,
+    };
   } catch (err) {
     await logBackup(backup, 'error', `Restore failed: ${err.message}`);
     if (backup._id) {
@@ -605,9 +775,16 @@ export async function restoreBackup(backupId, userId) {
       backup.error = err.message;
       await backup.save();
     }
-    await setMaintenanceMode(false, '', userId);
-    appendLog('error', `Restore failed for ${backup.filename}: ${err.message}`);
-    throw new Error(`Restore failed: ${err.message}`, { cause: err });
+    // Keep maintenance mode ON — a half-restored database must not serve
+    // traffic. The pre-restore safety backup is the rollback point.
+    appendLog(
+      'error',
+      `Restore failed for ${backup.filename}: ${err.message}. Maintenance mode left enabled; restore the pre-restore backup ${preRestore?.filename || '(failed to create)'} to roll back.`,
+    );
+    throw new Error(
+      `Restore failed: ${err.message}. The database was left in maintenance mode. Use the pre-restore safety backup (${preRestore?.filename || 'unavailable'}) to roll back.`,
+      { cause: err },
+    );
   }
 }
 
@@ -670,8 +847,10 @@ export { convertExtendedJSONValue };
 
 export async function uploadBackup(filepath, originalName, userId) {
   await ensureBackupDir();
+  let headerInfo;
   try {
     await validateBackupGzip(filepath);
+    headerInfo = await inspectBackupHeader(filepath);
   } catch (err) {
     await fs.unlink(filepath).catch(() => {});
     throw err;
@@ -690,6 +869,7 @@ export async function uploadBackup(filepath, originalName, userId) {
     size: stat.size,
     type: 'upload',
     status: 'completed',
+    backupVersion: headerInfo.backupVersion,
     createdBy: userId,
     logs: [{ timestamp: new Date(), level: 'info', message: `Uploaded ${originalName} (${formatBytes(stat.size)})` }],
   });

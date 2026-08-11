@@ -1292,11 +1292,62 @@ Email is sent via **Brevo SMTP** (`smtp-relay.brevo.com:587`) from the `sizops.c
 
 ### Backup & Restore
 
-Managed from the Admin Panel. Uses native MongoDB driver with gzip compression.
+Managed from the Admin Panel (**Admin → Database tab**). Uses the native MongoDB driver with gzip compression.
 
-- Every collection exported as EJSON lines
-- Automatic retention keeps last 5 backups
-- Full-fidelity restore with admin preservation
+- **Format**: versioned (`backupVersion: 2`) gzip NDJSON. A header line carries the version, timestamp, collection list and excluded collections; each following line is `EJSON {collection, documents, indexes}`. EJSON preserves ObjectIds, Dates and Buffers exactly.
+- **What is backed up**: every MongoDB collection automatically (discovered via `listCollections()` at backup time). The only excluded collection is `backups` (backup metadata is recreated by the system). A regression test (`backupIntegration.test.js`) fails if any registered Mongoose model's collection is not covered.
+- **Versioning**: `BACKUP_VERSION = 2` in `backend/src/engine/backup.js`. Restores reject files with a newer version. Legacy v1 files (no header line) restore with backward compatibility.
+- **Backup metadata**: each backup records size, duration, collection count, document count, backup version, creator and a log trail — visible in the Admin UI.
+- **Restore**: enables maintenance mode, automatically creates a **pre-restore safety backup** (rollback point), drops each backed-up collection (including empty ones), re-inserts documents, **recreates indexes**, re-inserts the performing admin user (prevents lockout), validates document counts per collection, refreshes the engine tick and clears Redis caches. On failure the database is left in maintenance mode so a half-restored state is never served — restore the pre-restore backup to roll back.
+- **Retention**: automatic retention keeps the newest `BACKUP_RETENTION_COUNT` backups (default **10**).
+- **Scheduling**: optional daily/weekly/monthly backups via `BACKUP_SCHEDULE` (`daily` | `weekly` | `monthly`).
+- **Storage**: files on the `cityflow-backups` PVC (mounted at `/app/backups`).
+
+## Persistent Collections
+
+All persistent Mongoose collections (39) are included in backups automatically:
+
+| Collection | Stores |
+|---|---|
+| `users` | Player accounts: balance, reserved auction funds, XP/level, achievements, onboarding, push tokens, OAuth, lifetime stats |
+| `properties` | Properties: price, rent, condition, units, improvements, risk, history |
+| `cities` | Cities: demand/supply/population, economic condition, demographics history |
+| `districts` | Districts: economy, player influence, history |
+| `seasons` | Seasons + archive (rankings, hall of fame, rewards) |
+| `gamestates` | Global engine state: tick number, season id, maintenance, tick lock |
+| `transactions` | Game transaction ledger |
+| `notifications` | User notifications |
+| `loans` | Player loans |
+| `creditscorehistories` | Credit score changes |
+| `missions` → `missionprogresses` | Mission progress per user |
+| `realestatecompanies` | Player companies: members, shares, treasury, requests, IPO |
+| `companyauditlogs` | Company action audit trail |
+| `companyinvestments` | Company treasury investments |
+| `investmentopportunities` | Investment products |
+| `citycontracts` | City contracts + votes |
+| `companies` | Stock-market companies: prices, revenue, dividends, IPO |
+| `stockholdings` | User stock positions incl. locked shares + dividends |
+| `stocktransactions` | Stock buy/sell/dividend ledger |
+| `stockindexes` | Market indices |
+| `indexholdings` | Index fund positions |
+| `indextransactions` | Index buy/sell ledger |
+| `stockmarketevent` | Stock news/events |
+| `auctions` | Auctions: bids, watchers, activity, status |
+| `auctionreservations` | Reserved auction funds per user+auction |
+| `auctionreputations` | Per-user auction stats |
+| `leaderboardsnapshots` | Ranking snapshots |
+| `leaderboardrewards` | Season leaderboard payouts |
+| `competitiveevents` | Competitive events + participants |
+| `constructionprojects` | Building projects |
+| `propertyoffers` | Buy offers/counter-offers |
+| `marketreports` | Purchased market intelligence reports |
+| `friendrequests` | Friend requests |
+| `uservisits` | Profile/city/district/market visit tracking |
+| `events` | Global/local market events |
+| `discordnotificationsettings` | Discord notification preferences |
+| `donations` | Donations/supporter status |
+| `adminauditlogs` | Admin action audit trail |
+| `backups` | **Excluded** — backup metadata, recreated by the system |
 
 ## Compact Number Formatting
 

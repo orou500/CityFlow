@@ -435,18 +435,28 @@ Backups are managed from the **Admin Panel** (Database tab) or via API endpoints
 ### How It Works
 
 - Backups use the native MongoDB driver (no CLI tools like `mongodump`)
-- Data is exported as EJSON lines (one document per line) and gzip-compressed
+- Data is exported as versioned gzip NDJSON: a header line (format version, timestamp, collection list, excluded collections) followed by one `EJSON {collection, documents, indexes}` line per collection
+- EJSON preserves ObjectIds, Dates and Buffers exactly — IDs and references survive restore
+- Every MongoDB collection is backed up automatically (discovered at backup time). Only `backups` (backup metadata) is excluded
+- Backup format version: `BACKUP_VERSION = 2` (`backend/src/engine/backup.js`). Restores reject files with a newer version; legacy v1 files restore with backward compatibility
 - Backup files are stored on a PersistentVolumeClaim (`cityflow-backups`, 5Gi)
-- Automatic retention keeps a configurable number of backups (default: 5)
-- Logs are stored per-backup and visible in the admin panel
+- Automatic retention keeps a configurable number of backups (default: **10**, `BACKUP_RETENTION_COUNT`)
+- Logs are stored per-backup and visible in the admin panel; each backup records size, duration, collection/document counts and version
 
 ### Restore Process
 
-1. Drops each collection and re-inserts documents with proper ObjectId conversion
-2. Restores the `users` collection (including balances, portfolios, settings)
-3. Preserves the performing admin user to prevent lockout
-4. Validates document counts after restore
-5. Frontend clears auth state and redirects to login
+1. Enables maintenance mode ("Database restoration in progress.")
+2. Automatically creates a **pre-restore safety backup** (rollback point). If it cannot be created, the restore aborts
+3. Validates the backup file (gzip integrity + format version); newer-version files are rejected
+4. Drops each backed-up collection (including empty ones) and re-inserts documents with proper ObjectId conversion
+5. **Recreates indexes** captured at backup time (unique constraints remain enforced)
+6. Restores the `users` collection (balances, reserved auction funds, portfolios, progression)
+7. Preserves the performing admin user to prevent lockout
+8. Validates document counts per collection (warns on mismatch)
+9. Refreshes the engine tick and clears Redis caches so the server continues from the restored state
+10. Frontend clears auth state and redirects to login
+
+**On failure**: the database is left in maintenance mode — a half-restored state is never served. Restore the pre-restore safety backup to roll back.
 
 ### Admin Endpoints
 
@@ -455,12 +465,20 @@ Backups are managed from the **Admin Panel** (Database tab) or via API endpoints
 | Create backup | POST | `/api/admin/backups` |
 | List backups | GET | `/api/admin/backups` |
 | Get settings | GET | `/api/admin/backups/settings` |
+| Get backup details | GET | `/api/admin/backups/:id` |
 | Download backup | GET | `/api/admin/backups/:id/download` |
-| Upload & restore | POST | `/api/admin/backups/upload` |
+| Upload & validate | POST | `/api/admin/backups/upload` |
 | Restore from backup | POST | `/api/admin/backups/:id/restore` |
 | Delete backup | DELETE | `/api/admin/backups/:id` |
 | View logs | GET | `/api/admin/backups/:id/logs` |
 | Run retention | POST | `/api/admin/backups/retention` |
+
+### Operational Recovery
+
+1. **Create a backup**: Admin → Database → Create Backup (or `POST /api/admin/backups`). Verify it shows `completed` with the expected size/version/document counts.
+2. **Verify it**: download the file and confirm the header line contains `backupVersion` and the expected collection list. Optionally restore it into a fresh environment first.
+3. **Restore**: Admin → Database → type `RESTORE` → Restore. The system creates a pre-restore safety backup, drops and re-inserts every backed-up collection, recreates indexes, and validates counts.
+4. **Verify the application**: log back in as the preserved admin, confirm the current tick/season match the backed-up state, spot-check a user's balance/reserved funds and an active auction, then review the backup logs for `Restore validation: all N collections match expected counts`.
 
 ---
 

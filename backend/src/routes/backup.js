@@ -88,6 +88,18 @@ router.get('/:id/logs', async (req, res) => {
   }
 });
 
+router.get('/:id', async (req, res) => {
+  try {
+    const backup = await Backup.findById(req.params.id).populate('createdBy', 'username');
+    if (!backup) {
+      return res.status(404).json({ error: 'Backup not found' });
+    }
+    res.json({ backup });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/:id/restore', async (req, res) => {
   try {
     const result = await restoreBackup(req.params.id, req.user._id);

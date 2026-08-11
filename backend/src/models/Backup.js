@@ -16,8 +16,10 @@ const backupSchema = new mongoose.Schema(
       default: 'creating',
     },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    backupVersion: { type: Number, default: 1 },
     error: { type: String },
     collections: { type: Number, default: 0 },
+    documents: { type: Number, default: 0 },
     duration: { type: Number, default: 0 },
     logs: [
       {
