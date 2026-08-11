@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import crypto from 'node:crypto';
@@ -184,6 +184,75 @@ describe('SizOps SSO — configuration gate', () => {
     expect(url.searchParams.get('code_challenge')).toBeTruthy();
     expect(url.searchParams.get('state')).toBeTruthy();
     expect(url.searchParams.get('nonce')).toBeTruthy();
+  });
+});
+
+describe('SizOps OIDC — credential-type validation', () => {
+  const oidc = config.sizops.oidc;
+  const api = config.sizops.api;
+
+  afterEach(() => {
+    // Restore the valid OIDC + Game API configuration.
+    oidc.clientId = CLIENT_ID;
+    oidc.clientSecret = CLIENT_SECRET;
+    oidc.enabled = true;
+    api.apiKey = 'szak_testapikey';
+    api.clientId = 'szp_testclient';
+    api.baseUrl = ISSUER;
+  });
+
+  it('rejects a GameApplication client ID (szp_) as the OIDC client ID', async () => {
+    oidc.clientId = 'szp_1G-Kv5AQR6xNYbiHWOmHTg';
+    expect(oidc.clientIdValid).toBe(false);
+    expect(oidc.ready).toBe(false);
+
+    const res = await request(app).get('/auth/sizops');
+    expect(res.status).toBe(503);
+    expect(JSON.stringify(res.body)).not.toContain('szp_1G-Kv5AQR6xNYbiHWOmHTg');
+  });
+
+  it('rejects a Game API key (szak_) as the OIDC client secret', async () => {
+    oidc.clientSecret = 'szak_I6mtf_16Sto_KEUb0M0VvOeCZN38-q6o_HJxQb-QqGY';
+    expect(oidc.clientSecretValid).toBe(false);
+    expect(oidc.ready).toBe(false);
+
+    const res = await request(app).get('/auth/sizops');
+    expect(res.status).toBe(503);
+    expect(JSON.stringify(res.body)).not.toContain('szak_I6mtf_16Sto_KEUb0M0VvOeCZN38-q6o_HJxQb-QqGY');
+  });
+
+  it('rejects a mix of Game API credentials and OIDC credentials', async () => {
+    oidc.clientId = 'szp_gameapplication';
+    oidc.clientSecret = 'szcs_testsecret';
+    expect(oidc.ready).toBe(false);
+
+    oidc.clientId = 'szoc_testclient';
+    oidc.clientSecret = 'szak_gameapikey';
+    expect(oidc.ready).toBe(false);
+  });
+
+  it('accepts szoc_ + szcs_ OIDC credentials', async () => {
+    oidc.clientId = CLIENT_ID;
+    oidc.clientSecret = CLIENT_SECRET;
+    expect(oidc.clientIdValid).toBe(true);
+    expect(oidc.clientSecretValid).toBe(true);
+    expect(oidc.ready).toBe(true);
+
+    const res = await request(app).get('/auth/sizops');
+    expect(res.status).toBe(302);
+  });
+
+  it('keeps the Game API credentials (SIZOPS_CLIENT_ID / SIZOPS_API_KEY) independent', async () => {
+    const api = config.sizops.api;
+    api.clientId = 'szp_1G-Kv5AQR6xNYbiHWOmHTg';
+    api.apiKey = 'szak_I6mtf_16Sto_KEUb0M0VvOeCZN38-q6o_HJxQb-QqGY';
+    oidc.clientId = CLIENT_ID;
+    oidc.clientSecret = CLIENT_SECRET;
+
+    expect(api.enabled).toBe(true);
+    expect(oidc.ready).toBe(true);
+    expect(oidc.clientId).not.toBe(api.clientId);
+    expect(oidc.clientSecret).not.toBe(api.apiKey);
   });
 });
 

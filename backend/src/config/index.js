@@ -69,8 +69,22 @@ export const config = {
       tokenEndpoint: process.env.SIZOPS_OIDC_TOKEN_ENDPOINT || '',
       userinfoEndpoint: process.env.SIZOPS_OIDC_USERINFO_ENDPOINT || '',
       jwksUri: process.env.SIZOPS_OIDC_JWKS_URI || '',
+      /**
+       * Credential-type guards: OIDC SSO requires a dedicated SizOps OAuth
+       * client. The Game API credentials (SIZOPS_CLIENT_ID `szp_...` and
+       * SIZOPS_API_KEY `szak_...`) are for server-to-server calls only and
+       * must NEVER be accepted as OIDC credentials. A client id not starting
+       * with `szoc_` (or a secret not starting with `szcs_`) makes OIDC
+       * unusable so misconfiguration fails loudly instead of failing late.
+       */
+      get clientIdValid() {
+        return typeof this.clientId === 'string' && this.clientId.startsWith('szoc_');
+      },
+      get clientSecretValid() {
+        return typeof this.clientSecret === 'string' && this.clientSecret.startsWith('szcs_');
+      },
       get ready() {
-        return this.enabled && !!(this.issuer && this.clientId && this.clientSecret && this.redirectUri);
+        return this.enabled && !!this.issuer && this.clientIdValid && this.clientSecretValid && !!this.redirectUri;
       },
     },
     api: {
