@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 import { createServer } from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { config } from './config/index.js';
+import { config, describeOidcMisconfig } from './config/index.js';
 import { connectDB } from './config/db.js';
 import { connectRedis, disconnectRedis, isRedisConnected } from './config/redis.js';
 import { startScheduler } from './engine/scheduler.js';
@@ -179,24 +179,6 @@ app.use((req, res) => {
   console.warn(`404 API Route: ${req.method} ${req.originalUrl}`);
   res.status(404).json({ success: false, error: 'Route not found' });
 });
-
-/**
- * Explains WHY OIDC is not ready for the startup log. Describes the cause
- * without ever logging the client id, secret, or any other credential value.
- */
-function describeOidcMisconfig(oidc) {
-  if (!oidc.issuer) return 'SIZOPS_OIDC_ISSUER is missing';
-  if (!oidc.redirectUri) return 'SIZOPS_OIDC_REDIRECT_URI is missing';
-  if (!oidc.clientId) return 'SIZOPS_OIDC_CLIENT_ID is missing';
-  if (!oidc.clientSecret) return 'SIZOPS_OIDC_CLIENT_SECRET is missing';
-  if (!oidc.clientIdValid) {
-    return 'SIZOPS_OIDC_CLIENT_ID must start with "szoc_" — Game API credentials (szp_...) are not valid OIDC credentials';
-  }
-  if (!oidc.clientSecretValid) {
-    return 'SIZOPS_OIDC_CLIENT_SECRET must start with "szcs_" — Game API keys (szak_...) are not valid OIDC credentials';
-  }
-  return 'unknown misconfiguration';
-}
 
 async function start() {
   try {

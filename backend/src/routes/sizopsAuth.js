@@ -2,7 +2,7 @@ import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import SizopsAuditLog from '../models/SizopsAuditLog.js';
-import { config } from '../config/index.js';
+import { config, describeOidcMisconfig } from '../config/index.js';
 import { authenticate } from '../middleware/auth.js';
 import { isMaintenanceMode } from '../models/GameState.js';
 import { rateLimit } from '../middleware/rateLimit.js';
@@ -190,7 +190,7 @@ router.get('/sizops', async (req, res) => {
   try {
     const oidc = config.sizops.oidc;
     if (!oidc.ready) {
-      return res.status(503).json({ error: 'SizOps SSO is not configured' });
+      return res.status(503).json({ error: 'SizOps SSO is not configured', reason: describeOidcMisconfig(oidc) });
     }
     if (await isMaintenanceMode()) {
       return res.status(503).json({ error: 'CityFlow is currently undergoing maintenance' });
@@ -214,7 +214,7 @@ router.post('/sizops/link-start', authenticate, async (req, res) => {
   try {
     const oidc = config.sizops.oidc;
     if (!oidc.ready) {
-      return res.status(503).json({ error: 'SizOps SSO is not configured' });
+      return res.status(503).json({ error: 'SizOps SSO is not configured', reason: describeOidcMisconfig(oidc) });
     }
     if (await isMaintenanceMode()) {
       return res.status(503).json({ error: 'CityFlow is currently undergoing maintenance' });

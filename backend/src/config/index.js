@@ -100,3 +100,23 @@ export const config = {
     },
   },
 };
+
+/**
+ * Explains WHY the SizOps OIDC config is not `ready`, for startup logs and
+ * 503 diagnostics. Describes the cause without ever logging the client id,
+ * secret, or any other credential value.
+ */
+export function describeOidcMisconfig(oidc) {
+  if (!oidc.enabled) return 'SIZOPS_OIDC_ENABLED is not "true"';
+  if (!oidc.issuer) return 'SIZOPS_OIDC_ISSUER is missing';
+  if (!oidc.redirectUri) return 'SIZOPS_OIDC_REDIRECT_URI is missing';
+  if (!oidc.clientId) return 'SIZOPS_OIDC_CLIENT_ID is missing';
+  if (!oidc.clientSecret) return 'SIZOPS_OIDC_CLIENT_SECRET is missing';
+  if (!oidc.clientIdValid) {
+    return 'SIZOPS_OIDC_CLIENT_ID must start with "szoc_" — Game API credentials (szp_...) are not valid OIDC credentials';
+  }
+  if (!oidc.clientSecretValid) {
+    return 'SIZOPS_OIDC_CLIENT_SECRET must start with "szcs_" — Game API keys (szak_...) are not valid OIDC credentials';
+  }
+  return 'unknown misconfiguration';
+}

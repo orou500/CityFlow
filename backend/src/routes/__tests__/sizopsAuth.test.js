@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'node:crypto';
 import { createApp } from '../../test/createApp.js';
 import { createTestUser, createAuthenticatedUser, authHeader } from '../../test/helpers.js';
-import { config } from '../../config/index.js';
+import { config, describeOidcMisconfig } from '../../config/index.js';
 import User from '../../models/User.js';
 import Property from '../../models/Property.js';
 import Transaction from '../../models/Transaction.js';
@@ -167,6 +167,17 @@ describe('SizOps SSO — configuration gate', () => {
     disableSizOps();
     const res = await request(app).get('/auth/sizops');
     expect(res.status).toBe(503);
+    expect(res.body.error).toBe('SizOps SSO is not configured');
+    expect(res.body.reason).toContain('SIZOPS_OIDC_ENABLED');
+    enableSizOps();
+  });
+
+  it('returns 503 with a diagnostic reason on the link-start endpoint', async () => {
+    disableSizOps();
+    const { token } = await createAuthenticatedUser({});
+    const res = await request(app).post('/auth/sizops/link-start').set(authHeader(token)).send({});
+    expect(res.status).toBe(503);
+    expect(res.body.reason).toBeTruthy();
     enableSizOps();
   });
 
@@ -253,6 +264,73 @@ describe('SizOps OIDC — credential-type validation', () => {
     expect(oidc.ready).toBe(true);
     expect(oidc.clientId).not.toBe(api.clientId);
     expect(oidc.clientSecret).not.toBe(api.apiKey);
+  });
+});
+
+describe('SizOps OIDC — configuration diagnostics', () => {
+  const oidc = config.sizops.oidc;
+
+  afterEach(() => {
+    oidc.enabled = true;
+    oidc.issuer = ISSUER;
+    oidc.clientId = CLIENT_ID;
+    oidc.clientSecret = CLIENT_SECRET;
+    oidc.redirectUri = REDIRECT_URI;
+  });
+
+  it('describes each missing requirement without echoing credential values', () => {
+    oidc.enabled = false;
+    expect(describeOidcMisconfig(oidc)).toContain('SIZOPS_OIDC_ENABLED');
+
+    oidc.enabled = true;
+    oidc.issuer = '';
+    expect(describeOidcMisconfig(oidc)).toBe('SIZOPS_OIDC_ISSUER is missing');
+
+    oidc.issuer = ISSUER;
+    oidc.redirectUri = '';
+    expect(describeOidcMisconfig(oidc)).toBe('SIZOPS_OIDC_REDIRECT_URI is missing');
+
+    oidc.redirectUri = REDIRECT_URI;
+    oidc.clientId = '';
+    expect(describeOidcMisconfig(oidc)).toBe('SIZOPS_OIDC_CLIENT_ID is missing');
+
+    oidc.clientId = CLIENT_ID;
+    oidc.clientSecret = '';
+    expect(describeOidcMisconfig(oidc)).toBe('SIZOPS_OIDC_CLIENT_SECRET is missing');
+
+    oidc.clientSecret = CLIENT_SECRET;
+    oidc.clientId = 'szp_gameapp';
+    expect(describeOidcMisconfig(oidc)).toContain('szoc_');
+    expect(describeOidcMisconfig(oidc)).not.toContain('szp_gameapp');
+
+    oidc.clientId = CLIENT_ID;
+    oidc.clientSecret = 'szak_gameapikey';
+    expect(describeOidcMisconfig(oidc)).toContain('szcs_');
+    expect(describeOidcMisconfig(oidc)).not.toContain('szak_gameapikey');
+  });
+
+  it('503 responses include the diagnostic reason but never the actual values', async () => {
+    oidc.clientSecret = 'supersecretvalue';
+    const res = await request(app).get('/auth/sizops');
+    expect(res.status).toBe(503);
+    expect(res.body.reason).toContain('szcs_');
+    expect(JSON.stringify(res.body)).not.toContain('supersecretvalue');
+  });
+
+  it('reports the Game-API-credentials-misuse reason when szp_/szak_ are used', async () => {
+    oidc.clientSecret = CLIENT_SECRET;
+    oidc.clientId = 'szp_1G-Kv5AQR6xNYbiHWOmHTg';
+    const res = await request(app).get('/auth/sizops');
+    expect(res.status).toBe(503);
+    expect(res.body.reason).toContain('szoc_');
+    expect(JSON.stringify(res.body)).not.toContain('szp_1G-Kv5AQR6xNYbiHWOmHTg');
+
+    oidc.clientId = CLIENT_ID;
+    oidc.clientSecret = 'szak_I6mtf_16Sto_KEUb0M0VvOeCZN38-q6o_HJxQb-QqGY';
+    const res2 = await request(app).get('/auth/sizops');
+    expect(res2.status).toBe(503);
+    expect(res2.body.reason).toContain('szcs_');
+    expect(JSON.stringify(res2.body)).not.toContain('szak_I6mtf_16Sto_KEUb0M0VvOeCZN38-q6o_HJxQb-QqGY');
   });
 });
 
