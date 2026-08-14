@@ -183,6 +183,9 @@ export function getNotificationMeta(eventKey = '', type = 'system') {
     } else {
       priority = PRIORITY.MEDIUM;
     }
+  } else if (key.startsWith('sizops:')) {
+    category = CATEGORY.SYSTEM;
+    priority = key.includes(':welcome:') ? PRIORITY.HIGH : PRIORITY.MEDIUM;
   } else if (key.startsWith('onboarding:')) {
     category = CATEGORY.ONBOARDING;
     priority = PRIORITY.LOW;

@@ -26,6 +26,7 @@ const transactionSchema = new mongoose.Schema(
         'period_bonus',
         'login',
         'season_reward',
+        'sizops_welcome',
       ],
       required: true,
     },

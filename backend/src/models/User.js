@@ -71,6 +71,11 @@ const userSchema = new mongoose.Schema(
     // never set from client input, only from a verified OIDC ID-token `sub`.
     sizopsUserId: { type: String, unique: true, sparse: true, index: true },
     sizopsLinkedAt: { type: Date, default: null },
+    // Set exactly once, atomically, when the SizOps welcome reward is granted
+    // ($100,000 for the first login/link). Null until claimed — the DB-level
+    // `findOneAndUpdate({ sizopsWelcomeRewardClaimedAt: null })` guard makes
+    // the reward one-time per account even under concurrent requests.
+    sizopsWelcomeRewardClaimedAt: { type: Date, default: null },
     pushTokens: [
       {
         token: { type: String, required: true },

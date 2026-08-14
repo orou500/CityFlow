@@ -493,6 +493,109 @@ describe('SizOps SSO — login', () => {
   });
 });
 
+describe('SizOps SSO — $100,000 welcome reward', () => {
+  const REWARD = 100000;
+  // New CityFlow users start with the default 100,000 balance (User.js), so
+  // the first SizOps connection lands on 200,000 total.
+  const STARTING_BALANCE = 100000;
+
+  it('grants the exact reward once on first login and stamps the claim', async () => {
+    const { callback } = await runLoginFlow({ sub: 'siz_reward1', email: 'reward@sizops.test' });
+    expect(callback.status).toBe(302);
+    const token = new URL(callback.headers.location).searchParams.get('token');
+    const userId = jwt.verify(token, config.jwtSecret).userId;
+
+    const user = await User.findById(userId);
+    expect(user.balance).toBe(STARTING_BALANCE + REWARD);
+    expect(user.sizopsWelcomeRewardClaimedAt).toBeTruthy();
+
+    const txs = await Transaction.find({ buyerId: userId, type: 'sizops_welcome' });
+    expect(txs).toHaveLength(1);
+    expect(txs[0].price).toBe(REWARD);
+
+    const notif = await Notification.findOne({ userId, eventKey: `sizops:welcome:${userId}` });
+    expect(notif).toBeTruthy();
+    expect(notif.priority).toBe('high');
+    expect(notif.route).toBe('/dashboard');
+    expect(notif.message).toContain('100,000');
+  });
+
+  it('does not double-credit on a second login (idempotent replay)', async () => {
+    await runLoginFlow({ sub: 'siz_reward2', email: 'reward2@sizops.test' });
+    const user = await User.findOne({ sizopsUserId: 'siz_reward2' });
+    const claimedAt = user.sizopsWelcomeRewardClaimedAt;
+
+    await runLoginFlow({ sub: 'siz_reward2', email: 'reward2@sizops.test' });
+
+    const after = await User.findById(user._id);
+    expect(after.balance).toBe(STARTING_BALANCE + REWARD);
+    expect(after.sizopsWelcomeRewardClaimedAt.getTime()).toBe(claimedAt.getTime());
+    expect(await Transaction.countDocuments({ buyerId: user._id, type: 'sizops_welcome' })).toBe(1);
+  });
+
+  it('concurrent first logins with the same sub credit exactly once (atomic guard)', async () => {
+    const startA = await request(app).get('/auth/sizops');
+    const startB = await request(app).get('/auth/sizops');
+    const urlA = new URL(startA.headers.location);
+    const urlB = new URL(startB.headers.location);
+    const stateA = urlA.searchParams.get('state');
+    const stateB = urlB.searchParams.get('state');
+    const verifierA = jwt.verify(stateA, config.jwtSecret).verifier;
+    const verifierB = jwt.verify(stateB, config.jwtSecret).verifier;
+
+    tokenEndpointHandler = async (body) => {
+      const verifier = body.get('code_verifier');
+      if (verifier === verifierA) {
+        return jsonResponse({
+          id_token: signIdToken({ sub: 'siz_rewardrace1', nonce: urlA.searchParams.get('nonce'), email: 'rrace@sizops.test' }),
+        });
+      }
+      expect(verifier).toBe(verifierB);
+      return jsonResponse({
+        id_token: signIdToken({ sub: 'siz_rewardrace1', nonce: urlB.searchParams.get('nonce'), email: 'rrace@sizops.test' }),
+      });
+    };
+
+    const [a, b] = await Promise.all([
+      request(app).get('/auth/sizops/callback').query({ code: 'c1', state: stateA }),
+      request(app).get('/auth/sizops/callback').query({ code: 'c2', state: stateB }),
+    ]);
+    expect(a.status).toBe(302);
+    expect(b.status).toBe(302);
+
+    const users = await User.find({ sizopsUserId: 'siz_rewardrace1' });
+    expect(users).toHaveLength(1);
+    expect(users[0].balance).toBe(STARTING_BALANCE + REWARD);
+    expect(await Transaction.countDocuments({ buyerId: users[0]._id, type: 'sizops_welcome' })).toBe(1);
+  });
+
+  it('grants the reward on first link and not on a subsequent link replay', async () => {
+    const { user, token } = await createAuthenticatedUser({ balance: 0 });
+    const userId = user._id.toString();
+
+    const start = await request(app).post('/auth/sizops/link-start').set(authHeader(token));
+    const authorizeUrl = new URL(start.body.url);
+    const state = authorizeUrl.searchParams.get('state');
+    tokenEndpointHandler = async () =>
+      jsonResponse({
+        id_token: signIdToken({ sub: 'siz_rewardlink1', nonce: authorizeUrl.searchParams.get('nonce'), email: user.email }),
+      });
+
+    const cb = await request(app).get('/auth/sizops/callback').query({ code: 'c', state });
+    expect(cb.status).toBe(302);
+    const linked = await User.findById(userId);
+    expect(linked.balance).toBe(REWARD);
+    expect(linked.sizopsWelcomeRewardClaimedAt).toBeTruthy();
+    expect(await Transaction.countDocuments({ buyerId: userId, type: 'sizops_welcome' })).toBe(1);
+
+    // Linking again is blocked at link-start (already linked) — no re-credit.
+    const start2 = await request(app).post('/auth/sizops/link-start').set(authHeader(token));
+    expect(start2.status).toBe(400);
+    expect((await User.findById(userId)).balance).toBe(REWARD);
+    expect(await Transaction.countDocuments({ buyerId: userId, type: 'sizops_welcome' })).toBe(1);
+  });
+});
+
 describe('SizOps SSO — callback validation', () => {
   it('rejects an invalid state', async () => {
     const res = await request(app).get('/auth/sizops/callback').query({ code: 'x', state: 'forged.state.token' });
@@ -722,8 +825,10 @@ describe('SizOps SSO — account linking', () => {
     const notifsAfter = await Notification.countDocuments({ userId: user._id });
 
     // _id and every data field are identical except the two identity fields.
+    // The ONLY deliberate data change is the one-time $100,000 welcome reward
+    // granted on first SizOps link.
     expect(after._id.toString()).toBe(before._id.toString());
-    expect(after.balance).toBe(before.balance);
+    expect(after.balance).toBe(before.balance + 100000);
     expect(after.level).toBe(before.level);
     expect(after.xp).toBe(before.xp);
     expect(after.creditScore).toBe(before.creditScore);
@@ -734,8 +839,12 @@ describe('SizOps SSO — account linking', () => {
       before.companyId ? before.companyId.toString() : null,
     );
     expect(propsAfter).toBe(propsBefore);
-    expect(txsAfter).toBe(txsBefore);
-    expect(notifsAfter).toBe(notifsBefore);
+    // Exactly ONE new transaction: the sizops_welcome reward.
+    expect(txsAfter).toBe(txsBefore + 1);
+    const welcomeTx = await Transaction.findOne({ buyerId: user._id, type: 'sizops_welcome' });
+    expect(welcomeTx).toBeTruthy();
+    expect(welcomeTx.price).toBe(100000);
+    expect(notifsAfter).toBe(notifsBefore + 1);
 
     expect(after.sizopsUserId).toBe('siz_safety1');
     expect(after.sizopsLinkedAt).toBeTruthy();

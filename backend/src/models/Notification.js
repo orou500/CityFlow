@@ -21,6 +21,7 @@ const notificationSchema = new mongoose.Schema(
         'mission_reward',
         'mission_chain_unlocked',
         'season_reward',
+        'sizops_welcome',
       ],
       required: true,
     },

@@ -98,6 +98,11 @@ export const config = {
         return !!(this.apiKey && (this.baseUrl || process.env.SIZOPS_OIDC_ISSUER));
       },
     },
+    // One-time welcome reward for the first SizOps login/link on an account.
+    // Granted atomically (idempotent); see grantSizopsWelcomeReward().
+    welcomeReward: {
+      amount: parseInt(process.env.SIZOPS_WELCOME_REWARD_AMOUNT, 10) || 100000,
+    },
   },
 };
 

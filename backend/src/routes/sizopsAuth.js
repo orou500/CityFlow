@@ -7,6 +7,7 @@ import { authenticate } from '../middleware/auth.js';
 import { isMaintenanceMode } from '../models/GameState.js';
 import { rateLimit } from '../middleware/rateLimit.js';
 import { processPlayerProgress } from '../utils/playerProgress.js';
+import { createNotification } from '../utils/notificationQueue.js';
 import Transaction from '../models/Transaction.js';
 import {
   buildAuthorizeUrl,
@@ -119,6 +120,42 @@ async function finalizeLogin(user, req, isNewUser) {
   const params = new URLSearchParams({ token });
   if (isNewUser) params.set('new_user', '1');
   return { redirect: `${config.frontendUrl}/auth/callback?${params.toString()}` };
+}
+
+/**
+ * One-time welcome reward for the first SizOps login/link on a CityFlow
+ * account. Atomic + idempotent: the `findOneAndUpdate` only matches accounts
+ * that have never claimed the reward (`sizopsWelcomeRewardClaimedAt: null`),
+ * so concurrent logins, link retries and callback replays can never double-
+ * credit. Returns `{ granted, amount }` — callers may pass `granted` through
+ * to the frontend to show a reward banner.
+ */
+async function grantSizopsWelcomeReward(userId) {
+  const amount = config.sizops.welcomeReward.amount;
+  if (!amount || amount <= 0) return { granted: false, amount: 0 };
+
+  const claimed = await User.findOneAndUpdate(
+    { _id: userId, sizopsWelcomeRewardClaimedAt: null },
+    { $set: { sizopsWelcomeRewardClaimedAt: new Date() }, $inc: { balance: amount } },
+    { new: true },
+  ).select('balance');
+  if (!claimed) return { granted: false, amount: 0 };
+
+  await Transaction.create({ buyerId: userId, price: amount, type: 'sizops_welcome' }).catch(
+    (err) => console.error(`[SIZOPS] Reward transaction failed (${userId}): ${err.message}`),
+  );
+
+  await createNotification({
+    userId,
+    type: 'sizops_welcome',
+    title: 'SizOps Welcome Reward',
+    message: `You received a one-time welcome reward of ${amount.toLocaleString()} as a new SizOps player!`,
+    route: '/dashboard',
+    priority: 'high',
+    eventKey: `sizops:welcome:${userId}`,
+  }).catch((err) => console.error(`[SIZOPS] Reward notification failed (${userId}): ${err.message}`));
+
+  return { granted: true, amount };
 }
 
 /** Finds the CityFlow user for a verified SizOps `sub`, creating one if needed. */
@@ -303,6 +340,8 @@ router.get('/sizops/callback', callbackLimiter, async (req, res) => {
 
     const { user, isNewUser } = await findOrCreateUserForSizOps(sub, claims);
     const result = await finalizeLogin(user, req, isNewUser);
+    // One-time welcome reward for the first SizOps connection.
+    await grantSizopsWelcomeReward(user._id);
     await writeAudit('sizops.login', user._id, req, { isNewUser, sizopsUserId: maskUserId(sub) });
     // Register the GamePlayer on SizOps (identity only, fire-and-forget).
     registerGamePlayer(sub, claims.name).catch(() => {});
@@ -360,6 +399,8 @@ async function handleLinkCallback(req, res, state, sub) {
   await writeAudit('sizops.link', user._id, req, { sizopsUserId: maskUserId(sub) });
   // Register the GamePlayer on SizOps (identity only, fire-and-forget).
   registerGamePlayer(sub, user.displayName || user.username).catch(() => {});
+  // One-time welcome reward for the first SizOps connection.
+  await grantSizopsWelcomeReward(user._id);
   return res.redirect(`${config.frontendUrl}/settings?sizops=linked`);
 }
 
