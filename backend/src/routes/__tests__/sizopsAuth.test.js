@@ -547,12 +547,20 @@ describe('SizOps SSO — $100,000 welcome reward', () => {
       const verifier = body.get('code_verifier');
       if (verifier === verifierA) {
         return jsonResponse({
-          id_token: signIdToken({ sub: 'siz_rewardrace1', nonce: urlA.searchParams.get('nonce'), email: 'rrace@sizops.test' }),
+          id_token: signIdToken({
+            sub: 'siz_rewardrace1',
+            nonce: urlA.searchParams.get('nonce'),
+            email: 'rrace@sizops.test',
+          }),
         });
       }
       expect(verifier).toBe(verifierB);
       return jsonResponse({
-        id_token: signIdToken({ sub: 'siz_rewardrace1', nonce: urlB.searchParams.get('nonce'), email: 'rrace@sizops.test' }),
+        id_token: signIdToken({
+          sub: 'siz_rewardrace1',
+          nonce: urlB.searchParams.get('nonce'),
+          email: 'rrace@sizops.test',
+        }),
       });
     };
 
@@ -578,7 +586,11 @@ describe('SizOps SSO — $100,000 welcome reward', () => {
     const state = authorizeUrl.searchParams.get('state');
     tokenEndpointHandler = async () =>
       jsonResponse({
-        id_token: signIdToken({ sub: 'siz_rewardlink1', nonce: authorizeUrl.searchParams.get('nonce'), email: user.email }),
+        id_token: signIdToken({
+          sub: 'siz_rewardlink1',
+          nonce: authorizeUrl.searchParams.get('nonce'),
+          email: user.email,
+        }),
       });
 
     const cb = await request(app).get('/auth/sizops/callback').query({ code: 'c', state });

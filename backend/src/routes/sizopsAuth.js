@@ -141,8 +141,8 @@ async function grantSizopsWelcomeReward(userId) {
   ).select('balance');
   if (!claimed) return { granted: false, amount: 0 };
 
-  await Transaction.create({ buyerId: userId, price: amount, type: 'sizops_welcome' }).catch(
-    (err) => console.error(`[SIZOPS] Reward transaction failed (${userId}): ${err.message}`),
+  await Transaction.create({ buyerId: userId, price: amount, type: 'sizops_welcome' }).catch((err) =>
+    console.error(`[SIZOPS] Reward transaction failed (${userId}): ${err.message}`),
   );
 
   await createNotification({

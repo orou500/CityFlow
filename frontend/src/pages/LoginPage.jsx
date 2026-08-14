@@ -350,8 +350,7 @@ export default function LoginPage() {
                 <div className="flex items-start gap-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-3 text-sm text-blue-900 dark:text-blue-200">
                   <span className="mt-0.5">🎁</span>
                   <span>
-                    <strong>{t('auth.sizopsRewardTitle')}</strong>{' '}
-                    {t('auth.sizopsRewardBody')}
+                    <strong>{t('auth.sizopsRewardTitle')}</strong> {t('auth.sizopsRewardBody')}
                   </span>
                 </div>
               </>
