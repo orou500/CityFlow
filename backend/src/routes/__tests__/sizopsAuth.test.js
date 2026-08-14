@@ -961,6 +961,10 @@ describe('SizOps SSO — bidirectional disconnect', () => {
     const res = await request(app).post('/auth/sizops/unlink').set(authHeader(token)).send({ password: 'Password123' });
     expect(res.status).toBe(200);
 
+    // The remote notify is durable (outbox): drain it before asserting.
+    const { processSizopsDisconnectOutbox } = await import('../../services/sizopsDisconnectOutbox.js');
+    await processSizopsDisconnectOutbox();
+
     const disconnectCall = vi
       .mocked(fetch)
       .mock.calls.find(([u]) => String(u).endsWith('/api/v1/game/games/disconnect'));

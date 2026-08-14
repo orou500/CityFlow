@@ -10,7 +10,15 @@ const sizopsAuditLogSchema = new mongoose.Schema(
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     action: {
       type: String,
-      enum: ['sizops.login', 'sizops.link', 'sizops.unlink', 'sizops.login_failed', 'sizops.oauth_error'],
+      enum: [
+        'sizops.login',
+        'sizops.link',
+        'sizops.unlink',
+        'sizops.login_failed',
+        'sizops.oauth_error',
+        'sizops.disconnect_notify',
+        'sizops.disconnect_notify_failed',
+      ],
       required: true,
     },
     // Non-sensitive context (client id, masked sizops user id, failure reason).

@@ -14,10 +14,10 @@ import {
   exchangeCode,
   generatePkcePair,
   registerGamePlayer,
-  unregisterGamePlayer,
   verifyIdToken,
   verifyServiceToken,
 } from '../services/sizopsOidc.js';
+import { enqueueSizopsDisconnect, processSizopsDisconnectOutbox } from '../services/sizopsDisconnectOutbox.js';
 import { emitToUser } from '../socket/index.js';
 import { SOCKET_EVENTS } from '../socket/events.js';
 
@@ -468,10 +468,12 @@ router.post('/sizops/unlink', authenticate, unlinkLimiter, async (req, res) => {
 
     await writeAudit('sizops.unlink', user._id, req, { sizopsUserId: maskUserId(removed) });
 
-    // Remove the GamePlayer link on the SizOps side (fire-and-forget, like
-    // registerGamePlayer) and tell open clients the connection is gone.
-    unregisterGamePlayer(removed).catch((err) =>
-      console.error(`[SIZOPS] GamePlayer unregistration failed (${user._id}): ${err.message}`),
+    // Remove the GamePlayer link on the SizOps side. The notification is
+    // durable (outbox) so a transient SizOps/network failure never leaves the
+    // two systems out of sync silently — the scheduler retries until done.
+    await enqueueSizopsDisconnect(removed);
+    processSizopsDisconnectOutbox().catch((err) =>
+      console.error(`[SIZOPS] Disconnect outbox processing failed (${user._id}): ${err.message}`),
     );
     emitToUser(user._id.toString(), SOCKET_EVENTS.SIZOPS_CONNECTION_UPDATED, { connected: false });
 

@@ -934,6 +934,35 @@ issue the EXISTING CityFlow HS256 7-day JWT
 | `GET /auth/sizops/callback` | Code exchange, ID-token validation, login/link |
 | `GET /auth/sizops/status` | Connection status (masked SizOps ID) |
 | `POST /auth/sizops/unlink` | Unlink (guarded: needs password or another login method) |
+| `POST /auth/sizops/disconnect-notify` | Server-to-server webhook (SizOps→CityFlow), RS256 service JWT |
+
+**Disconnect keeps both sides consistent (idempotent, audit-logged):**
+
+- **CityFlow → SizOps**: unlink does the local `$unset` first, then enqueues a
+  durable `SizopsOutbox` record (`disconnect` event). A scheduler job
+  (`* * * * *`, exponential backoff, max 10 attempts) calls SizOps
+  `POST /api/v1/game/games/disconnect` (game API key) which removes ONLY the
+  CityFlow GamePlayer — never the SizOps user or other games. Audit events:
+  `sizops.disconnect_notify` / `sizops.disconnect_notify_failed`. A temporary
+  SizOps/network failure never blocks the local disconnect and is retried.
+- **SizOps → CityFlow**: SizOps removes the local GamePlayer and calls
+  `POST /auth/sizops/disconnect-notify` with a SizOps-signed service JWT
+  (verified: RS256 via JWKS, issuer, audience = OIDC client id,
+  `purpose: cityflow:disconnect`); CityFlow unsets the link only for the user
+  in the token's `sub`. Idempotent.
+- SizOps login/register sets an httpOnly `sizops_session` cookie so the OIDC
+  authorize endpoint recognizes already-signed-in users and skips a second
+  login (forged cookies fall through to the login page).
+
+**Connection audit/repair tooling** (`backend/scripts/`):
+
+- `auditSizopsConnections.js` — read-only cross-check of CityFlow links vs
+  SizOps GamePlayers (healthy / linked-but-missing / orphaned / duplicates /
+  invalid). Requires `SIZOPS_MONGODB_URI`, or `SIZOPS_CONNECTIONS_JSON` when
+  cluster NetworkPolicies block direct DB access.
+- `repairSizopsConnections.js` — removes ONLY orphaned CityFlow GamePlayers via
+  the authenticated game API. Dry-run by default; `--apply` to execute;
+  idempotent. Ambiguous cases are reported, never auto-fixed.
 
 **Environment variables:**
 

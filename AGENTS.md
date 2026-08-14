@@ -545,15 +545,19 @@ Every gameplay action route calls `processPlayerProgress()` with the correct eve
 
 ### Key files (CityFlow)
 
-- `backend/src/routes/sizopsAuth.js` — `GET /auth/sizops` (login start), `POST /auth/sizops/link-start` (authenticated), `GET /auth/sizops/callback` (code exchange + ID-token validation), `GET /auth/sizops/status`, `POST /auth/sizops/unlink`.
-- `backend/src/services/sizopsOidc.js` — discovery/JWKS (cached), RS256 ID-token validation (issuer, audience, exp, nonce), PKCE code exchange, `registerGamePlayer()` (SizOps game API, identity only, fire-and-forget).
+- `backend/src/routes/sizopsAuth.js` — `GET /auth/sizops` (login start), `POST /auth/sizops/link-start` (authenticated), `GET /auth/sizops/callback` (code exchange + ID-token validation), `GET /auth/sizops/status`, `POST /auth/sizops/unlink`, `POST /auth/sizops/disconnect-notify` (SizOps→CityFlow, RS256 service JWT, idempotent).
+- `backend/src/services/sizopsOidc.js` — discovery/JWKS (cached), RS256 ID-token validation (issuer, audience, exp, nonce), PKCE code exchange, `registerGamePlayer()`/`unregisterGamePlayer()` (SizOps game API, identity only, fire-and-forget).
+- `backend/src/services/sizopsDisconnectOutbox.js` + `backend/src/models/SizopsOutbox.js` — durable disconnect outbox: unlink enqueues `disconnect`, scheduler (`* * * * *`, backoff, max 10 attempts) calls SizOps `/api/v1/game/games/disconnect` until done; audit `sizops.disconnect_notify` / `sizops.disconnect_notify_failed`. The local unlink NEVER depends on the remote call.
 - `backend/src/models/User.js` — `sizopsUserId` (unique sparse index — the one-to-one guard), `sizopsLinkedAt`. **Unlink must `$unset` these fields** — writing explicit `null` collides with the sparse unique index.
-- `backend/src/models/SizopsAuditLog.js` — audit events `sizops.login/link/unlink/login_failed/oauth_error`; never log passwords, secrets, or tokens.
-- Config block: `config.sizops.oidc` (`SIZOPS_OIDC_*`) + `config.sizops.api` (`SIZOPS_API_KEY`, `SIZOPS_CLIENT_ID`).
+- `backend/src/models/SizopsAuditLog.js` — audit events `sizops.login/link/unlink/login_failed/oauth_error/disconnect_notify/disconnect_notify_failed`; never log passwords, secrets, or tokens.
+- Config block: `config.sizops.oidc` (`SIZOPS_OIDC_*`) + `config.sizops.api` (`SIZOPS_API_KEY`, `SIZOPS_CLIENT_ID`; `baseUrl` falls back to the OIDC issuer).
+- `backend/scripts/auditSizopsConnections.js` / `repairSizopsConnections.js` — read-only audit + dry-run-by-default repair of CityFlow↔SizOps link inconsistencies (removes ONLY orphaned CityFlow GamePlayers via the game API; ambiguous cases are reported, never auto-fixed).
 
 ### Key files (SizOps, sibling repo `../SizOps`)
 
-- `server/src/services/oauth.service.ts` + `server/src/routes/oauth.routes.ts` — OIDC provider (authorize/token/userinfo/jwks, PKCE S256, single-use hashed auth codes).
+- `server/src/services/oauth.service.ts` + `server/src/routes/oauth.routes.ts` — OIDC provider (authorize/token/userinfo/jwks, PKCE S256, single-use hashed auth codes). The authorize page's register-panel inputs use `reg_*` names — never duplicate `email`/`password` names in one form (duplicates arrive as arrays and break login). An httpOnly `sizops_session` cookie (signed HS256, SameSite=Lax) lets `authorize` skip login for already-signed-in users; forged cookies fall through to the page.
+- `server/src/services/sessionCookie.ts` — shared session-cookie helpers (set on login/register + OIDC authorize sign-in/register).
+- `server/src/services/connections.service.ts` — SizOps-side disconnect: deletes ONLY the CityFlow GamePlayer and notifies CityFlow with a signed service JWT (`aud` = OIDC client id, `purpose: cityflow:disconnect`); notify URL derived from the client redirect URI.
 - `server/src/models/OAuthClient.ts`, `server/src/models/AuthCode.ts`, `server/src/utils/jwks.ts` (RS256).
 - Client registration: admin `POST /api/v1/admin/oauth-clients` or `npm run seed` with `SEED_OIDC_CLIENT_*`.
 

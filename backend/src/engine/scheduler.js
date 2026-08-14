@@ -7,6 +7,7 @@ import { config } from '../config/index.js';
 import { processNotificationQueue } from '../utils/notificationQueue.js';
 import { runNotificationRetention } from './notificationRetention.js';
 import { reconcilePendingDonations } from '../routes/donations.js';
+import { processSizopsDisconnectOutbox } from '../services/sizopsDisconnectOutbox.js';
 
 const ownerId = crypto.randomUUID();
 
@@ -72,6 +73,17 @@ export function startScheduler() {
       }
     } catch (err) {
       console.error('[SCHEDULER] Notification queue processing failed:', err.message);
+    }
+  });
+
+  cron.schedule('* * * * *', async () => {
+    try {
+      const processed = await processSizopsDisconnectOutbox();
+      if (processed > 0) {
+        console.log(`[SCHEDULER] Processed ${processed} SizOps disconnect notifications`);
+      }
+    } catch (err) {
+      console.error('[SCHEDULER] SizOps disconnect outbox processing failed:', err.message);
     }
   });
 

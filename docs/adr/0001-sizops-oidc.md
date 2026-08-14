@@ -64,6 +64,66 @@ SizOps **fails fast** in production when `OIDC_PRIVATE_KEY` is missing
 all previously issued ID tokens on restart. The key pair must live in a
 persistent Kubernetes Secret (`sizops-secrets`).
 
+## Bidirectional disconnect (August 2026, post-incident)
+
+Two independent disconnect paths keep the relationship consistent in both
+directions, each idempotent and audit-logged:
+
+### CityFlow → SizOps (user unlinks in CityFlow Settings)
+
+1. Authenticated CityFlow session + current password (when present).
+2. Local `$unset` of `sizopsUserId`/`sizopsLinkedAt` (never `null` — the sparse
+   unique index indexes explicit nulls).
+3. A durable outbox record is enqueued (`SizopsOutbox`, event `disconnect`) and
+   processed immediately; the scheduler (`* * * * *`) retries failures with
+   exponential backoff (max 10 attempts) until SizOps confirms.
+4. Processing calls SizOps `POST /api/v1/game/games/disconnect` (game API key)
+   which deletes ONLY the CityFlow GamePlayer — never the SizOps user, never
+   other games' connections.
+5. Audit events: `sizops.unlink`, `sizops.disconnect_notify`,
+   `sizops.disconnect_notify_failed`. Socket event
+   `sizops:connection-updated` to open clients.
+
+The local unlink NEVER depends on the remote call: if the network/SizOps is
+down, the user is still disconnected locally and the outbox reconciles later.
+
+### SizOps → CityFlow (user disconnects CityFlow in SizOps Settings)
+
+1. SizOps deletes the CityFlow GamePlayer locally (idempotent).
+2. SizOps calls CityFlow `POST /auth/sizops/disconnect-notify` with an RS256
+   service JWT (verified via SizOps JWKS, issuer, audience = our OIDC client
+   id, `purpose: cityflow:disconnect`).
+3. CityFlow unsets `sizopsUserId` only for the user named in the token `sub`
+   (idempotent; 200 with `disconnected:false` when already unlinked).
+
+The notify URL is derived from the OIDC client's registered redirect URI (the
+`/api` prefix is reused) — never a hardcoded path.
+
+### SizOps "already signed in" recognition
+
+SizOps login/register (API and OIDC authorize page) set an httpOnly
+`sizops_session` cookie (HS256, signed with the SizOps access-token secret,
+SameSite=Lax, 7 days). The OIDC `authorize` GET validates it and issues the
+authorization code without a second login when valid; forged/invalid cookies
+fall through to the login page. The authorize page's sign-in and register
+panels share one form — register inputs use `reg_*` names so a browser submit
+can never send duplicate `email`/`password` fields (duplicates arrive as
+arrays and broke form login).
+
+### Production repair procedure
+
+1. Create a full CityFlow backup (`POST /admin/backups` or the scheduled
+   backup) and verify a SizOps backup exists.
+2. Read-only audit: `node backend/scripts/auditSizopsConnections.js` (needs
+   `SIZOPS_MONGODB_URI`, or `SIZOPS_CONNECTIONS_JSON` fetched read-only when
+   cluster NetworkPolicies block cross-namespace DB access).
+3. Review the report; ambiguous cases (duplicate `sizopsUserId`, disabled
+   SizOps users, CityFlow-linked-but-SizOps-missing) are reported, never
+   auto-fixed.
+4. `node backend/scripts/repairSizopsConnections.js --dry-run` — no changes.
+5. `node backend/scripts/repairSizopsConnections.js --apply` — removes ONLY
+   orphaned CityFlow GamePlayers via the authenticated game API. Idempotent.
+
 ## Consequences
 
 - Existing CityFlow users keep their `_id`, balance, properties, companies,
@@ -80,9 +140,17 @@ persistent Kubernetes Secret (`sizops-secrets`).
 ## References
 
 - CityFlow backend: `backend/src/routes/sizopsAuth.js`,
-  `backend/src/services/sizopsOidc.js`, `backend/src/models/User.js`
+  `backend/src/services/sizopsOidc.js`,
+  `backend/src/services/sizopsDisconnectOutbox.js`,
+  `backend/src/models/User.js`, `backend/src/models/SizopsOutbox.js`,
+  `backend/scripts/auditSizopsConnections.js`,
+  `backend/scripts/repairSizopsConnections.js`
 - SizOps backend: `server/src/services/oauth.service.ts`,
+  `server/src/services/sessionCookie.ts`,
+  `server/src/services/connections.service.ts`,
   `server/src/routes/oauth.routes.ts`, `server/src/models/OAuthClient.ts`,
   `server/src/models/AuthCode.ts`, `server/src/utils/jwks.ts`
 - Tests: `backend/src/routes/__tests__/sizopsAuth.test.js`,
-  `SizOps/server/src/oauth.test.ts`
+  `backend/src/routes/__tests__/sizopsDisconnect.test.js`,
+  `SizOps/server/src/oauth.test.ts`,
+  `SizOps/server/src/connections.test.ts`
