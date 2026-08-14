@@ -9,6 +9,7 @@ import { formatMoney, formatMoneyExact, formatCompact } from '../utils/format';
 import CompactValue from '../components/CompactValue';
 import RiskDashboard from '../components/RiskDashboard';
 import PropertyImage from '../components/PropertyImage';
+import RentInfoPanel from '../components/RentInfoPanel';
 import { getApiBaseUrl } from '../utils/capacitor';
 
 const API = getApiBaseUrl();
@@ -961,6 +962,8 @@ export default function PropertyPage() {
                   </div>
                 </div>
               </div>
+
+              <RentInfoPanel data={managementData} />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded">

@@ -978,7 +978,9 @@ describe('SizOps SSO — bidirectional disconnect', () => {
     const claimedAt = new Date();
     await User.updateOne(
       { _id: user._id },
-      { $set: { sizopsUserId: 'siz_rewardkeep1', sizopsLinkedAt: new Date(), sizopsWelcomeRewardClaimedAt: claimedAt } },
+      {
+        $set: { sizopsUserId: 'siz_rewardkeep1', sizopsLinkedAt: new Date(), sizopsWelcomeRewardClaimedAt: claimedAt },
+      },
     );
 
     await request(app).post('/auth/sizops/unlink').set(authHeader(token)).send({ password: 'Password123' });
@@ -1063,9 +1065,9 @@ describe('SizOps SSO — bidirectional disconnect', () => {
       expect(res.body).toEqual({ success: true, disconnected: true });
       expect((await User.findById(userId)).sizopsUserId).toBeFalsy();
       expect((await User.findById(userId)).sizopsLinkedAt).toBeFalsy();
-      expect(
-        await SizopsAuditLog.countDocuments({ action: 'sizops.unlink', userId, 'details.source': 'sizops' }),
-      ).toBe(1);
+      expect(await SizopsAuditLog.countDocuments({ action: 'sizops.unlink', userId, 'details.source': 'sizops' })).toBe(
+        1,
+      );
 
       const again = await request(app)
         .post('/auth/sizops/disconnect-notify')

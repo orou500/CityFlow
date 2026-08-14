@@ -97,6 +97,7 @@ const propertySchema = new mongoose.Schema(
       default: 'none',
     },
     rentPerUnit: { type: Number, default: 0 },
+    maxValidatedRentPerUnit: { type: Number, default: 0 },
     lastRentAdjustTick: { type: Number, default: 0 },
     rentPotential: { type: Number, default: 0 },
     previousMonthRent: { type: Number, default: 0 },

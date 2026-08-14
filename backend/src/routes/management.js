@@ -32,6 +32,25 @@ async function isAuthorizedForProperty(property, userId) {
   return false;
 }
 
+function computeRentValidation(property) {
+  const unitCount = property.units?.length || 1;
+  const marketRate = unitCount > 0 ? property.rent / unitCount : 0;
+  const maxPerUnit = Math.floor(MAX_MONTHLY_RENT / unitCount);
+  const currentMaxPerUnit = marketRate > 0 ? Math.round(marketRate * RENT_BOUNDS.maxMultiplier) : maxPerUnit;
+  const grandfathered = Math.max(property.maxValidatedRentPerUnit || 0, property.rentPerUnit || 0);
+  const effectiveMaxPerUnit = Math.max(currentMaxPerUnit, grandfathered);
+  const currentRentPerUnit = property.rentPerUnit || 0;
+  return {
+    unitCount,
+    marketRate,
+    maxPerUnit,
+    currentMaxPerUnit,
+    grandfathered,
+    effectiveMaxPerUnit,
+    currentRentPerUnit,
+  };
+}
+
 router.get('/:propertyId', authenticate, async (req, res) => {
   try {
     const property = await Property.findById(req.params.propertyId).populate(
@@ -47,7 +66,8 @@ router.get('/:propertyId', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    const unitCount = property.units?.length || 1;
+    const rentValidation = computeRentValidation(property);
+    const unitCount = rentValidation.unitCount;
     const perUnitRent = property.rentPerUnit || (unitCount > 0 ? Math.round(property.rent / unitCount) : 0);
     // Show the occupancy-adjusted income — this is what actually accrues to
     // the rent pool (same formula the engine uses every tick).
@@ -95,6 +115,20 @@ router.get('/:propertyId', authenticate, async (req, res) => {
       lastRentAdjustTick: property.lastRentAdjustTick || 0,
       lastRentGrowthTick: property.lastRentGrowthTick || 0,
       rentChangeAvailable: currentTick - (property.lastRentAdjustTick || 0) >= RENT_BOUNDS.rentChangeCooldownTicks,
+      marketRate: Math.round(rentValidation.marketRate * 100) / 100,
+      currentMaxPerUnit: rentValidation.currentMaxPerUnit,
+      maxValidatedRentPerUnit: property.maxValidatedRentPerUnit || 0,
+      effectiveMaxPerUnit: rentValidation.effectiveMaxPerUnit,
+      nextAvailableIncrease: Math.max(
+        0,
+        Math.min(rentValidation.effectiveMaxPerUnit, rentValidation.maxPerUnit) - rentValidation.currentRentPerUnit,
+      ),
+      canIncreaseRent:
+        rentValidation.currentRentPerUnit > 0 &&
+        Math.max(
+          0,
+          Math.min(rentValidation.effectiveMaxPerUnit, rentValidation.maxPerUnit) - rentValidation.currentRentPerUnit,
+        ) > 0,
       city: property.cityId
         ? {
             name: property.cityId.name,
@@ -161,26 +195,23 @@ router.post('/:propertyId/rent', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Rent change cooldown active. Try again next month.' });
     }
 
-    const unitCount = property.units?.length || 1;
-    const marketRate = unitCount > 0 ? property.rent / unitCount : 0;
+    const { marketRate, maxPerUnit, effectiveMaxPerUnit } = computeRentValidation(property);
 
-    if (marketRate > 0) {
-      const multiplier = rentPerUnit / marketRate;
-      if (multiplier < RENT_BOUNDS.minMultiplier || multiplier > RENT_BOUNDS.maxMultiplier) {
-        return res.status(400).json({
-          error: `Rent must be between ${Math.round(marketRate * RENT_BOUNDS.minMultiplier)} and ${Math.round(marketRate * RENT_BOUNDS.maxMultiplier)} per unit`,
-        });
-      }
-    }
-
-    const maxPerUnit = Math.floor(MAX_MONTHLY_RENT / unitCount);
     if (rentPerUnit > maxPerUnit) {
       return res.status(400).json({
         error: `Rent per unit cannot exceed $${maxPerUnit.toLocaleString()} (maximum $${MAX_MONTHLY_RENT.toLocaleString()}/month)`,
       });
     }
 
+    const minPerUnit = marketRate > 0 ? Math.round(marketRate * RENT_BOUNDS.minMultiplier) : 0;
+    if (rentPerUnit < minPerUnit || rentPerUnit > effectiveMaxPerUnit) {
+      return res.status(400).json({
+        error: `Rent must be between ${minPerUnit} and ${effectiveMaxPerUnit} per unit`,
+      });
+    }
+
     property.rentPerUnit = Math.round(rentPerUnit);
+    property.maxValidatedRentPerUnit = property.rentPerUnit;
     // Keep unit rents in sync so the rent engine accrues the adjusted amount
     if (property.units && property.units.length > 0) {
       for (const unit of property.units) {
@@ -193,6 +224,7 @@ router.post('/:propertyId/rent', authenticate, async (req, res) => {
     res.json({
       rentPerUnit: property.rentPerUnit,
       lastRentAdjustTick: property.lastRentAdjustTick,
+      maxValidatedRentPerUnit: property.maxValidatedRentPerUnit,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
