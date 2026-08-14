@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
 import { getApiBaseUrl } from '../utils/capacitor';
+import { onSocketEvent } from '../utils/socket';
 
 export default function SizOpsSettings() {
   const { t } = useTranslation();
@@ -27,6 +28,17 @@ export default function SizOpsSettings() {
 
   useEffect(() => {
     fetchStatus();
+  }, [fetchStatus]);
+
+  // When the connection is removed server-side (disconnect initiated from the
+  // SizOps settings), refresh so the UI always reflects the real state.
+  useEffect(() => {
+    return onSocketEvent('sizops:connection:updated', (data) => {
+      if (data && data.connected === false) {
+        setStatus((prev) => (prev ? { ...prev, connected: false, sizopsUserId: '' } : prev));
+        fetchStatus();
+      }
+    });
   }, [fetchStatus]);
 
   async function handleConnect() {

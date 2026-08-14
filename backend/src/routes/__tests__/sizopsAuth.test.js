@@ -57,6 +57,28 @@ function signIdToken({
   return jwt.sign(payload, key, { algorithm: 'RS256', expiresIn, header: { kid: 'sizops-rs256-1' } });
 }
 
+/** Signs a SizOps-issued service JWT the way SizOps's own server would. */
+function signServiceToken({
+  sub,
+  purpose = 'cityflow:disconnect',
+  issuer = ISSUER,
+  audience = CLIENT_ID,
+  expiresIn = '5m',
+  key = privatePem,
+}) {
+  return jwt.sign(
+    {
+      sub,
+      iss: issuer,
+      aud: audience,
+      purpose,
+      iat: Math.floor(Date.now() / 1000),
+    },
+    key,
+    { algorithm: 'RS256', expiresIn, header: { kid: 'sizops-rs256-1' } },
+  );
+}
+
 let tokenEndpointHandler = null;
 
 function stubSizOpsFetch() {
@@ -927,6 +949,148 @@ describe('SizOps SSO — status & unlink', () => {
     const res = await request(app).post('/auth/sizops/unlink').set(authHeader(token)).send({});
     expect(res.status).toBe(200);
     expect((await User.findById(user._id)).sizopsUserId).toBeFalsy();
+  });
+});
+
+describe('SizOps SSO — bidirectional disconnect', () => {
+  it('notifies SizOps games/disconnect when the user unlinks', async () => {
+    const { user, token } = await createAuthenticatedUser();
+    const userId = user._id.toString();
+    await User.updateOne({ _id: user._id }, { $set: { sizopsUserId: 'siz_disconnect1', sizopsLinkedAt: new Date() } });
+
+    const res = await request(app).post('/auth/sizops/unlink').set(authHeader(token)).send({ password: 'Password123' });
+    expect(res.status).toBe(200);
+
+    const disconnectCall = vi
+      .mocked(fetch)
+      .mock.calls.find(([u]) => String(u).endsWith('/api/v1/game/games/disconnect'));
+    expect(disconnectCall).toBeTruthy();
+    expect(disconnectCall[1].headers.Authorization).toBe('Bearer szak_testapikey');
+    expect(JSON.parse(disconnectCall[1].body)).toEqual({ userId: 'siz_disconnect1' });
+
+    expect((await User.findById(userId)).sizopsUserId).toBeFalsy();
+    expect(await SizopsAuditLog.countDocuments({ action: 'sizops.unlink', userId })).toBe(1);
+  });
+
+  it('does not reset the welcome-reward claim on unlink, so re-connect grants $0', async () => {
+    const { user, token } = await createAuthenticatedUser({ balance: 150000 });
+    const userId = user._id.toString();
+    const claimedAt = new Date();
+    await User.updateOne(
+      { _id: user._id },
+      { $set: { sizopsUserId: 'siz_rewardkeep1', sizopsLinkedAt: new Date(), sizopsWelcomeRewardClaimedAt: claimedAt } },
+    );
+
+    await request(app).post('/auth/sizops/unlink').set(authHeader(token)).send({ password: 'Password123' });
+
+    const afterUnlink = await User.findById(userId);
+    expect(afterUnlink.sizopsUserId).toBeFalsy();
+    expect(afterUnlink.sizopsWelcomeRewardClaimedAt.getTime()).toBe(claimedAt.getTime());
+
+    // Re-link the same SizOps identity through the real flow.
+    const start = await request(app).post('/auth/sizops/link-start').set(authHeader(token));
+    const state = new URL(start.body.url).searchParams.get('state');
+    const nonce = new URL(start.body.url).searchParams.get('nonce');
+    tokenEndpointHandler = async () =>
+      jsonResponse({ id_token: signIdToken({ sub: 'siz_rewardkeep1', nonce, email: user.email }) });
+    const cb = await request(app).get('/auth/sizops/callback').query({ code: 'c', state });
+    expect(cb.status).toBe(302);
+
+    const afterRelink = await User.findById(userId);
+    expect(afterRelink.sizopsUserId).toBe('siz_rewardkeep1');
+    expect(afterRelink.balance).toBe(150000);
+    expect(afterRelink.sizopsWelcomeRewardClaimedAt.getTime()).toBe(claimedAt.getTime());
+    expect(await Transaction.countDocuments({ buyerId: userId, type: 'sizops_welcome' })).toBe(0);
+  });
+
+  describe('POST /auth/sizops/disconnect-notify (SizOps-initiated)', () => {
+    it('requires a Bearer service token', async () => {
+      const res = await request(app).post('/auth/sizops/disconnect-notify').send({});
+      expect(res.status).toBe(401);
+    });
+
+    it('rejects a token with the wrong purpose', async () => {
+      const svc = signServiceToken({ sub: 'siz_notify1', purpose: 'something_else' });
+      const res = await request(app)
+        .post('/auth/sizops/disconnect-notify')
+        .set('Authorization', `Bearer ${svc}`)
+        .send({});
+      expect(res.status).toBe(401);
+    });
+
+    it('rejects a token signed by the wrong key', async () => {
+      const { privateKey: wrongKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+      const svc = signServiceToken({
+        sub: 'siz_notify1',
+        key: wrongKey.export({ type: 'pkcs8', format: 'pem' }).toString(),
+      });
+      const res = await request(app)
+        .post('/auth/sizops/disconnect-notify')
+        .set('Authorization', `Bearer ${svc}`)
+        .send({});
+      expect(res.status).toBe(401);
+    });
+
+    it('rejects a wrong audience', async () => {
+      const svc = signServiceToken({ sub: 'siz_notify1', audience: 'szoc_otherclient' });
+      const res = await request(app)
+        .post('/auth/sizops/disconnect-notify')
+        .set('Authorization', `Bearer ${svc}`)
+        .send({});
+      expect(res.status).toBe(401);
+    });
+
+    it('rejects a wrong issuer', async () => {
+      const svc = signServiceToken({ sub: 'siz_notify1', issuer: 'https://evil.test' });
+      const res = await request(app)
+        .post('/auth/sizops/disconnect-notify')
+        .set('Authorization', `Bearer ${svc}`)
+        .send({});
+      expect(res.status).toBe(401);
+    });
+
+    it('clears the link for the sub in the token and is idempotent', async () => {
+      const { user } = await createAuthenticatedUser();
+      const userId = user._id.toString();
+      await User.updateOne({ _id: user._id }, { $set: { sizopsUserId: 'siz_notify1', sizopsLinkedAt: new Date() } });
+
+      const svc = signServiceToken({ sub: 'siz_notify1' });
+      const res = await request(app)
+        .post('/auth/sizops/disconnect-notify')
+        .set('Authorization', `Bearer ${svc}`)
+        .send({});
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ success: true, disconnected: true });
+      expect((await User.findById(userId)).sizopsUserId).toBeFalsy();
+      expect((await User.findById(userId)).sizopsLinkedAt).toBeFalsy();
+      expect(
+        await SizopsAuditLog.countDocuments({ action: 'sizops.unlink', userId, 'details.source': 'sizops' }),
+      ).toBe(1);
+
+      const again = await request(app)
+        .post('/auth/sizops/disconnect-notify')
+        .set('Authorization', `Bearer ${svc}`)
+        .send({});
+      expect(again.status).toBe(200);
+      expect(again.body).toEqual({ success: true, disconnected: false });
+    });
+
+    it('does not clear the link of a different user', async () => {
+      const { user } = await createAuthenticatedUser();
+      await User.updateOne(
+        { _id: user._id },
+        { $set: { sizopsUserId: 'siz_notify_other', sizopsLinkedAt: new Date() } },
+      );
+
+      const svc = signServiceToken({ sub: 'siz_notify_target' });
+      const res = await request(app)
+        .post('/auth/sizops/disconnect-notify')
+        .set('Authorization', `Bearer ${svc}`)
+        .send({});
+      expect(res.status).toBe(200);
+      expect(res.body.disconnected).toBe(false);
+      expect((await User.findById(user._id)).sizopsUserId).toBe('siz_notify_other');
+    });
   });
 });
 

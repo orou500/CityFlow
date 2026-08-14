@@ -14,8 +14,12 @@ import {
   exchangeCode,
   generatePkcePair,
   registerGamePlayer,
+  unregisterGamePlayer,
   verifyIdToken,
+  verifyServiceToken,
 } from '../services/sizopsOidc.js';
+import { emitToUser } from '../socket/index.js';
+import { SOCKET_EVENTS } from '../socket/events.js';
 
 const router = Router();
 
@@ -31,6 +35,13 @@ const unlinkLimiter = rateLimit({
   max: 5,
   keyPrefix: 'rl:sizops-unlink',
   message: 'Too many unlink attempts. Please try again later.',
+});
+
+const disconnectNotifyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  keyPrefix: 'rl:sizops-disconnect-notify',
+  message: 'Too many disconnect notifications. Please try again later.',
 });
 
 function generateToken(userId) {
@@ -456,9 +467,65 @@ router.post('/sizops/unlink', authenticate, unlinkLimiter, async (req, res) => {
     await User.updateOne({ _id: user._id }, { $unset: { sizopsUserId: 1, sizopsLinkedAt: 1 } });
 
     await writeAudit('sizops.unlink', user._id, req, { sizopsUserId: maskUserId(removed) });
+
+    // Remove the GamePlayer link on the SizOps side (fire-and-forget, like
+    // registerGamePlayer) and tell open clients the connection is gone.
+    unregisterGamePlayer(removed).catch((err) =>
+      console.error(`[SIZOPS] GamePlayer unregistration failed (${user._id}): ${err.message}`),
+    );
+    emitToUser(user._id.toString(), SOCKET_EVENTS.SIZOPS_CONNECTION_UPDATED, { connected: false });
+
     res.json({ success: true, message: 'SizOps account unlinked' });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /auth/sizops/disconnect-notify — server-to-server webhook called by
+ * SizOps when a user disconnects CityFlow on the SizOps side.
+ *
+ * Authenticated by a SizOps-signed RS256 service JWT (verified against the
+ * SizOps JWKS + issuer + our own OIDC client id + the `cityflow:disconnect`
+ * purpose), never by a CityFlow session — so only SizOps can trigger it, and
+ * only for the identity named in the token's `sub`. Idempotent: notifying for
+ * an already-disconnected user returns 200 with `disconnected: false`.
+ */
+router.post('/sizops/disconnect-notify', disconnectNotifyLimiter, async (req, res) => {
+  try {
+    const header = req.headers.authorization || '';
+    const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+    if (!token) {
+      return res.status(401).json({ error: 'Service token required' });
+    }
+
+    let payload;
+    try {
+      payload = await verifyServiceToken(token);
+    } catch (err) {
+      await writeAudit('sizops.oauth_error', null, req, { reason: err.code || 'invalid_service_token' });
+      return res.status(401).json({ error: 'Invalid service token' });
+    }
+
+    const sizopsUserId = String(payload.sub);
+    const updated = await User.findOneAndUpdate(
+      { sizopsUserId },
+      { $unset: { sizopsUserId: 1, sizopsLinkedAt: 1 } },
+      { new: true },
+    ).select('_id');
+
+    if (updated) {
+      await writeAudit('sizops.unlink', updated._id, req, {
+        sizopsUserId: maskUserId(sizopsUserId),
+        source: 'sizops',
+      });
+      emitToUser(updated._id.toString(), SOCKET_EVENTS.SIZOPS_CONNECTION_UPDATED, { connected: false });
+    }
+
+    res.json({ success: true, disconnected: !!updated });
+  } catch (err) {
+    console.error('[SIZOPS] Disconnect notify error:', err.message);
+    res.status(500).json({ error: 'Failed to process disconnect notification' });
   }
 });
 

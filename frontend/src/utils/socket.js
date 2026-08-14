@@ -53,6 +53,10 @@ export async function connectSocket() {
     triggerListeners('notification:deleted', data);
   });
 
+  socket.on('sizops:connection:updated', (data) => {
+    triggerListeners('sizops:connection:updated', data);
+  });
+
   socket.on('company:treasury:updated', (data) => {
     triggerListeners('company:treasury:updated', data);
   });

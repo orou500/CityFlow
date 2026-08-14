@@ -39,6 +39,8 @@ export const SOCKET_EVENTS = {
   NOTIFICATION_NEW: 'notification:new',
   NOTIFICATION_DELETED: 'notification:deleted',
 
+  SIZOPS_CONNECTION_UPDATED: 'sizops:connection:updated',
+
   PRESENCE_UPDATE: 'presence:update',
   LEADERBOARD_UPDATED: 'leaderboard:updated',
 

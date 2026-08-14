@@ -244,3 +244,69 @@ export async function registerGamePlayer(sizopsUserId, displayName) {
     return false;
   }
 }
+
+/**
+ * Removes the GamePlayer record on the SizOps side when a CityFlow user
+ * disconnects (server-to-server, API-key auth). Identity only. Fire-and-forget:
+ * failures are logged and never block the local disconnect.
+ */
+export async function unregisterGamePlayer(sizopsUserId) {
+  const api = config.sizops.api;
+  if (!api.enabled || !sizopsUserId) return false;
+
+  const base = (api.baseUrl || config.sizops.oidc.issuer || '').replace(/\/+$/, '');
+  if (!base) return false;
+
+  try {
+    const res = await fetch(`${base}/api/v1/game/games/disconnect`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${api.apiKey}`,
+      },
+      body: JSON.stringify({ userId: sizopsUserId }),
+    });
+    if (!res.ok) {
+      console.error(`[SIZOPS] GamePlayer unregistration failed: HTTP ${res.status}`);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error(`[SIZOPS] GamePlayer unregistration error: ${err.message}`);
+    return false;
+  }
+}
+
+/**
+ * Verifies a SizOps-signed server-to-server service JWT (e.g. the disconnect
+ * notification sent when a user unlinks CityFlow from the SizOps side).
+ * Enforces the same trust as ID tokens — RS256 signature via the SizOps JWKS,
+ * issuer + audience (our own OIDC client id) — plus the required `purpose`
+ * claim so a token minted for one purpose can never be replayed elsewhere.
+ * Returns the verified payload.
+ */
+export async function verifyServiceToken(token) {
+  const oidc = oidcConfig();
+  const keys = await getJwks();
+
+  const header = decodeJwtHeader(token);
+  const jwk = keys.find((k) => k.kid === header.kid) || keys.find((k) => k.alg === 'RS256') || keys[0];
+
+  let payload;
+  try {
+    const publicKey = crypto.createPublicKey({ key: jwk, format: 'jwk' });
+    payload = jwt.verify(token, publicKey, {
+      algorithms: ['RS256'],
+      issuer: oidc.issuer.replace(/\/+$/, ''),
+      audience: oidc.clientId,
+    });
+  } catch (err) {
+    throw new SizOpsOidcError(`Service token validation failed: ${err.message}`, 'invalid_service_token');
+  }
+
+  if (!payload.sub || payload.purpose !== 'cityflow:disconnect') {
+    throw new SizOpsOidcError('Service token missing required claims', 'invalid_service_token');
+  }
+
+  return payload;
+}
