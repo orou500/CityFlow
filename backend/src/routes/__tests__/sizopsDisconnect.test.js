@@ -109,6 +109,20 @@ describe('SizOps disconnect outbox', () => {
     expect(await SizopsOutbox.countDocuments({ sizopsUserId: 'siz_idem_user' })).toBe(1);
   });
 
+  it('a re-linked user who disconnects again gets a fresh record (done records are not reused)', async () => {
+    stubDisconnectApi();
+    const first = await enqueueSizopsDisconnect('siz_relink_user');
+    await processSizopsDisconnectOutbox();
+    expect((await SizopsOutbox.findById(first._id)).status).toBe('done');
+
+    await enqueueSizopsDisconnect('siz_relink_user');
+    const records = await SizopsOutbox.find({ sizopsUserId: 'siz_relink_user' }).sort({ createdAt: 1 });
+    expect(records).toHaveLength(2);
+
+    await processSizopsDisconnectOutbox();
+    expect((await SizopsOutbox.findById(records[1]._id)).status).toBe('done');
+  });
+
   it('a done record is never reprocessed', async () => {
     stubDisconnectApi();
     const record = await enqueueSizopsDisconnect('siz_done_user');

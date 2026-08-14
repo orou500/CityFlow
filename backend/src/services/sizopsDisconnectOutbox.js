@@ -8,16 +8,17 @@ const RETRY_BASE_MS = 60 * 1000;
 /**
  * Enqueues a remote GamePlayer unregistration for a SizOps user id. The local
  * CityFlow unlink already happened; this is the durable intent to remove the
- * CityFlow connection on the SizOps side. Idempotent per (user, event, status):
- * if a pending or in-flight record already exists for the same user, it is not
- * duplicated.
+ * CityFlow connection on the SizOps side. Dedupes ONLY against in-flight
+ * (`pending`) records: a `done` record describes a previous disconnect, so a
+ * user who re-linked and disconnects again gets a fresh record. `failed`
+ * records are terminal and must never swallow a new disconnect either.
  */
 export async function enqueueSizopsDisconnect(sizopsUserId) {
   if (!sizopsUserId) return null;
   const existing = await SizopsOutbox.findOne({
     sizopsUserId,
     event: 'disconnect',
-    status: { $in: ['pending', 'done'] },
+    status: 'pending',
   });
   if (existing) return existing;
 
