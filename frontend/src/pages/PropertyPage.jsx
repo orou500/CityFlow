@@ -1030,7 +1030,7 @@ export default function PropertyPage() {
 
               <RentInfoPanel data={managementData} />
 
-              {isDirectOwner && (
+              {isOwner && (
                 <div id="offers-section" className="bg-gray-50 dark:bg-gray-800 p-4 rounded mb-4 scroll-mt-20">
                   <p className="text-sm font-semibold mb-1">{t('propertyDetail.offersTitle')}</p>
                   {offerActionMsg && (
