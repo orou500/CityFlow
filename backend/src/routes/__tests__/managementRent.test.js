@@ -138,6 +138,51 @@ describe('Management rent caps (grandfathering)', () => {
     expect(res.status).toBe(400);
   });
 
+  it('a rent set at exactly 2x the baseline stays valid after the baseline declines; increases wait for the market', async () => {
+    // Heritage-Building scenario: the owner set rentPerUnit at the legal max
+    // (2 x 4681 = 9362), then the auto-grown baseline dropped to 4356.
+    await Property.findByIdAndUpdate(property._id, {
+      rent: 4681,
+      rentPerUnit: 9362,
+      maxValidatedRentPerUnit: 9362,
+      previousMonthRent: 4681,
+    });
+    await Property.findByIdAndUpdate(property._id, { rent: 4356 });
+
+    // Re-saving the (still legal, grandfathered) value works.
+    const resave = await request(app)
+      .post(`/management/${property._id}/rent`)
+      .set(authHeader(token))
+      .send({ rentPerUnit: 9362 });
+    expect(resave.status).toBe(200);
+
+    // Any increase above the grandfathered ceiling is rejected while the
+    // market baseline gives a 2x cap below it.
+    await GameState.updateOne({ key: 'global' }, { $set: { tickNumber: TICK + 1 } });
+    const increase = await request(app)
+      .post(`/management/${property._id}/rent`)
+      .set(authHeader(token))
+      .send({ rentPerUnit: 9363 });
+    expect(increase.status).toBe(400);
+    expect(increase.body.error).toMatch(/Rent must be between 2178 and 9362 per unit/);
+
+    // The GET endpoint reports the state faithfully (no headroom).
+    const get = await request(app).get(`/management/${property._id}`).set(authHeader(token));
+    expect(get.body.currentMaxPerUnit).toBe(8712);
+    expect(get.body.effectiveMaxPerUnit).toBe(9362);
+    expect(get.body.nextAvailableIncrease).toBe(0);
+    expect(get.body.canIncreaseRent).toBe(false);
+
+    // Once the market baseline rises, increases unlock again.
+    await Property.findByIdAndUpdate(property._id, { rent: 5000 });
+    await GameState.updateOne({ key: 'global' }, { $set: { tickNumber: TICK + 2 } });
+    const unlocked = await request(app)
+      .post(`/management/${property._id}/rent`)
+      .set(authHeader(token))
+      .send({ rentPerUnit: 9600 });
+    expect(unlocked.status).toBe(200);
+  });
+
   it('H: enforces the 0.5x minimum multiplier', async () => {
     const minPerUnit = Math.round(6528 * RENT_BOUNDS.minMultiplier);
     const res = await request(app)

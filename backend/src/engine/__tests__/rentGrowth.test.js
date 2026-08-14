@@ -174,6 +174,84 @@ describe('calculateMonthlyRentGrowth', () => {
     expect(growth.rentPotential).toBe(0);
     expect(growth.newRent).toBe(0);
   });
+
+  it('declines toward a fallen potential (intended market decline), never below it', () => {
+    // A property whose quality collapsed: potential dropped well below the
+    // current rent. The engine may decrease rent — bounded by the decline
+    // rate and never below the potential.
+    const runDown = baseProperty(300000, { rent: 5000, qualityScore: 30, condition: 40, rentHistory: [{}] });
+    const growth = calculateMonthlyRentGrowth(runDown, STABLE_CITY);
+    expect(growth.rentPotential).toBeLessThan(5000);
+    expect(growth.newRent).toBeLessThanOrEqual(5000);
+    expect(growth.newRent).toBeGreaterThanOrEqual(growth.rentPotential);
+    expect(growth.growthRate).toBeGreaterThanOrEqual(RENT_SYSTEM.GROWTH_MAX_DECLINE_RATE);
+    expect(growth.growthRate).toBeLessThan(0);
+  });
+
+  it('accelerates while far from potential: Month 1 < Month 2 < Month 3 (early phase)', () => {
+    const prop = baseProperty(1000000, { rent: 1000, rentHistory: [{}] }); // potential ~11940
+    const increases = [];
+    let sim = prop;
+    for (let m = 1; m <= 3; m += 1) {
+      const g = calculateMonthlyRentGrowth(sim, STABLE_CITY);
+      increases.push(g.increase);
+      sim = { ...sim, rent: g.newRent, rentHistory: [{}] };
+    }
+    expect(increases[0]).toBeGreaterThan(0);
+    expect(increases[1]).toBeGreaterThan(increases[0]);
+    expect(increases[2]).toBeGreaterThan(increases[1]);
+  });
+
+  it('a maintenance upgrade raises the potential used by growth (no stale-quality dip)', () => {
+    // Production Los-Angeles factors (slowdown, low supply) + the auction
+    // investment, mirroring the Heritage Building incident.
+    const LA = { demandIndex: 1.09, supplyIndex: 0.3, economicCondition: 'slowdown' };
+    const baseState = {
+      rent: 4681,
+      rentHistory: [{}],
+      currentPrice: 381886,
+      basePrice: 375147,
+      propertyRating: 'premium',
+      investmentHistory: [{ type: 'purchase', amount: 262602, tick: 218 }],
+    };
+    const lowQuality = baseProperty(381886, { ...baseState, type: 'house', qualityScore: 60, condition: 100 });
+    const upgraded = baseProperty(381886, { ...baseState, type: 'house', qualityScore: 85, condition: 100 });
+
+    const lowGrowth = calculateMonthlyRentGrowth(lowQuality, LA);
+    const upgradedGrowth = calculateMonthlyRentGrowth(upgraded, LA);
+
+    expect(upgradedGrowth.rentPotential).toBeGreaterThan(lowGrowth.rentPotential);
+    expect(upgradedGrowth.newRent).toBeGreaterThan(4681);
+    expect(lowGrowth.newRent).toBeLessThanOrEqual(4681);
+  });
+
+  it('a temporary quality boost cannot permanently inflate rent — growth self-corrects when quality falls', () => {
+    // Anti-exploit guard: flipping maintenance to premium before a tick may
+    // raise one month's potential, but the NEXT tick recomputes the potential
+    // from the actual quality, so rent converges back down (never above the
+    // honest potential, never below the fallen one).
+    const LA = { demandIndex: 1.09, supplyIndex: 0.3, economicCondition: 'slowdown' };
+    const mk = (qualityScore) =>
+      baseProperty(381886, {
+        type: 'house',
+        qualityScore,
+        condition: 100,
+        propertyRating: 'premium',
+        investmentHistory: [{ type: 'purchase', amount: 262602, tick: 218 }],
+        rentHistory: [{}],
+      });
+
+    let sim = { ...mk(85), rent: 4000 };
+    const bumped = calculateMonthlyRentGrowth(sim, LA);
+    expect(bumped.newRent).toBeGreaterThan(4000);
+
+    // Maintenance flipped back to none: quality collapses next month.
+    sim = { ...mk(35), rent: bumped.newRent };
+    const corrected = calculateMonthlyRentGrowth(sim, LA);
+    expect(corrected.rentPotential).toBeLessThan(bumped.newRent);
+    expect(corrected.newRent).toBeLessThan(bumped.newRent);
+    expect(corrected.newRent).toBeGreaterThanOrEqual(corrected.rentPotential);
+  });
 });
 
 describe('processRentGrowth (engine)', () => {
@@ -258,6 +336,42 @@ describe('processRentGrowth (engine)', () => {
     const doc = await Property.findById(p._id);
     expect(doc.rent).toBe(2388);
     expect(doc.rent).toBeLessThanOrEqual(doc.rentPotential);
+  });
+
+  it('uses the CURRENT stored quality score — a freshly upgraded property grows instead of declining', async () => {
+    const user = await createTestUser({ balance: 0, uncollectedRent: 0 });
+    // Heritage-Building scenario (LA factors + auction investment): rent growth
+    // must see the maintenance-upgraded quality (85). With a stale decayed
+    // quality the potential would sit below the rent and drive a negative
+    // monthly increase.
+    const p = await makeProperty({
+      ownerId: user._id,
+      type: 'house',
+      rent: 4681,
+      previousMonthRent: 4681,
+      qualityScore: 85,
+      condition: 100,
+      propertyRating: 'premium',
+      maintenanceLevel: 'premium',
+      rentPerUnit: 9362,
+      maxValidatedRentPerUnit: 9362,
+      currentPrice: 381886,
+      basePrice: 375147,
+      investmentHistory: [{ type: 'purchase', amount: 262602, tick: 218 }],
+      rentHistory: [{ tick: 218, rent: 4681, potential: 4681 }],
+    });
+    const city = await createTestCity({
+      demandIndex: 1.09,
+      supplyIndex: 0.3,
+      economicCondition: 'slowdown',
+    });
+    await Property.updateOne({ _id: p._id }, { $set: { cityId: city._id } });
+
+    await processRentGrowth(219);
+
+    const doc = await Property.findById(p._id);
+    expect(doc.rentPotential).toBeGreaterThan(doc.previousMonthRent || 0);
+    expect(doc.rent).toBeGreaterThanOrEqual(4681);
   });
 });
 

@@ -89,13 +89,17 @@ export async function executeTick() {
 
     const priceUpdates = await updatePrices(activeEvents);
 
+    // Property management (quality, occupancy) must run BEFORE rent growth so
+    // the growth step uses the CURRENT quality score — otherwise a maintenance
+    // upgrade only affects rent a tick later and a stale (decayed) quality can
+    // drive the baseline down even though the property just improved.
+    await processPropertyManagement(tickNumber);
+
     // One rent growth step per month (tick), applied before accrual so the
     // newly grown rent is what lands in the collection pool this tick.
     const rentGrowthResults = await processRentGrowth(tickNumber);
 
     const rentResults = await processRent();
-
-    await processPropertyManagement(tickNumber);
 
     const loanResults = await processLoans();
 
