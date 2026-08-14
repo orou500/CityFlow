@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../../test/createApp.js';
 import { createAuthenticatedUser, createTestCity, authHeader } from '../../test/helpers.js';
@@ -6,6 +6,7 @@ import User from '../../models/User.js';
 import GameState from '../../models/GameState.js';
 import SizopsOutbox from '../../models/SizopsOutbox.js';
 import SizopsAuditLog from '../../models/SizopsAuditLog.js';
+import { config } from '../../config/index.js';
 import {
   enqueueSizopsDisconnect,
   processSizopsDisconnectOutbox,
@@ -15,6 +16,12 @@ import {
 const app = createApp();
 
 let fetchMock;
+
+beforeAll(() => {
+  // CI has no .env: enable the game-API path exactly like sizopsAuth.test.js.
+  config.sizops.api.apiKey = 'szak_testapikey';
+  config.sizops.api.baseUrl = 'https://sizops.test';
+});
 
 function stubDisconnectApi({ ok = true, status = 200 } = {}) {
   fetchMock = vi.fn(async (url, _init) => {
