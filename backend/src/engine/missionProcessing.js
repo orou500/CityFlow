@@ -514,21 +514,49 @@ export async function evaluateCondition(userId, missionId, condition, userData) 
       break;
     }
     case 'property_sale_profit': {
-      const sellTxs = await Transaction.find({ sellerId: userId, type: 'sell' }).select('propertyId price').lean();
-      const propIds = sellTxs.map((t) => t.propertyId).filter(Boolean);
+      // A sale event is: a type 'sell' transaction (marketplace sale), or a
+      // type 'buy' transaction where the user is the SELLER with no sibling
+      // 'sell' transaction (offer-accepted sales only write 'buy'). This
+      // avoids double-counting marketplace sales, which write both sides.
+      const [sellTxs, buyTxs] = await Promise.all([
+        Transaction.find({ sellerId: userId, type: 'sell' }).select('propertyId price createdAt').lean(),
+        Transaction.find({ sellerId: userId, type: 'buy' }).select('propertyId price createdAt').lean(),
+      ]);
+      const sellKey = (t) => `${t.propertyId}|${Math.round(new Date(t.createdAt).getTime() / 120000)}`;
+      const sellKeys = new Set(sellTxs.map(sellKey));
+      const events = [
+        ...sellTxs.map((t) => ({ ...t, kind: 'sell' })),
+        ...buyTxs.filter((t) => !sellKeys.has(sellKey(t))).map((t) => ({ ...t, kind: 'buy' })),
+      ];
+
+      const propIds = events.map((t) => t.propertyId).filter(Boolean);
+      // Acquisition basis: the seller's OWN most recent purchase transaction
+      // for the property before the sale (handles resales correctly), with
+      // the property's lastPurchasePrice as a legacy fallback.
       const props =
         propIds.length > 0
           ? await Property.find({ _id: { $in: propIds } })
               .select('lastPurchasePrice')
               .lean()
           : [];
-      const costMap = new Map(props.map((p) => [p._id.toString(), p.lastPurchasePrice || 0]));
-      value = sellTxs.filter((t) => {
-        if (!t.propertyId) return false;
-        const cost = costMap.get(t.propertyId.toString()) ?? null;
-        if (cost == null) return false;
-        return (t.price || 0) > cost;
-      }).length;
+
+      let profitable = 0;
+      for (const t of events) {
+        if (!t.propertyId) continue;
+        const cost = await Transaction.findOne({
+          propertyId: t.propertyId,
+          buyerId: userId,
+          type: 'buy',
+          createdAt: { $lt: t.createdAt },
+        })
+          .sort({ createdAt: -1 })
+          .select('price')
+          .lean();
+        const fallback = props.find((p) => p._id.toString() === t.propertyId.toString());
+        const basis = cost ? cost.price || 0 : fallback?.lastPurchasePrice || 0;
+        if (basis > 0 && (t.price || 0) > basis) profitable += 1;
+      }
+      value = profitable;
       break;
     }
     case 'property_improvements': {
@@ -843,6 +871,9 @@ export async function claimMissionReward(userId, missionId) {
     updates.badge = def.rewards.badge;
   }
   if (def.rewards.title) {
+    // Titles from missions (High Roller, Prophet, IPO Founder, ...) must be
+    // added to the user's titles so the Career page and title display work.
+    await User.updateOne({ _id: userId }, { $addToSet: { titles: def.rewards.title } });
     updates.title = def.rewards.title;
   }
 

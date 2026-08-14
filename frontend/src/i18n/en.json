@@ -1,4 +1,4 @@
-{
+﻿{
   "app": {
     "title": "CityFlow",
     "subtitle": "Global Real Estate Simulation"
@@ -382,6 +382,22 @@
     "minimumOffer": "Minimum offer",
     "yourOfferAmount": "Your offer amount",
     "sendOffer": "Send Offer",
+    "offersTitle": "Offers",
+    "noOffers": "No offers yet. When another player makes an offer, it will appear here.",
+    "offerAccepted": "Offer accepted",
+    "offerRejected": "Offer rejected",
+    "offerCreated": "Offered",
+    "offerExpires": "Expires",
+    "offerPending": "Pending",
+    "offerExpired": "Expired",
+    "offerStatus_accepted": "Accepted",
+    "offerStatus_rejected": "Rejected",
+    "offerStatus_countered": "Countered",
+    "offerStatus_expired": "Expired",
+    "acceptOffer": "Accept",
+    "rejectOffer": "Reject",
+    "yourOfferStatus": "Your offer",
+    "counterOffer": "Counter offer",
     "sending": "Sending...",
     "offerSent": "Offer sent successfully!",
     "chartMonth": "Month:",
@@ -444,6 +460,7 @@
     "currentRent": "Current Rent",
     "previousMonth": "Previous Month",
     "monthlyIncrease": "Monthly Increase",
+    "monthlyChange": "Monthly Change",
     "rentPotentialTitle": "Rent Potential",
     "estimatedPotential": "Estimated Rent Potential",
     "maximum": "Maximum",
@@ -903,6 +920,10 @@
     "tour": {
       "progress": "{{current}}/{{total}}",
       "waitingAction": "Waiting for you to complete this action...",
+      "noCheapProperty": "No affordable properties right now",
+      "noCheapPropertyHint": "There are no properties priced at or under $100,000 available right now. You can browse the marketplace, wait for new inventory, or refresh to check again.",
+      "browseProperties": "Browse Properties",
+      "refreshInventory": "Refresh",
       "buttons": {
         "getStarted": "Get Started",
         "next": "Next",
@@ -2729,6 +2750,7 @@
     "noMissions": "No missions found",
     "loading": "Loading missions...",
     "claimReward": "Claim Reward",
+    "collect": "Collect",
     "claimed": "Claimed",
     "chain": "Chain",
     "chainLabel": "Mission Chain",

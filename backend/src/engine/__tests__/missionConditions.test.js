@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+﻿import { describe, it, expect, beforeEach } from 'vitest';
 import MissionProgress from '../../models/MissionProgress.js';
 import User from '../../models/User.js';
 import Property from '../../models/Property.js';
@@ -9,7 +9,9 @@ import RealEstateCompany from '../../models/RealEstateCompany.js';
 import District from '../../models/District.js';
 import ConstructionProject from '../../models/ConstructionProject.js';
 import MarketReport from '../../models/MarketReport.js';
+import UserVisit from '../../models/UserVisit.js';
 import { createTestUser, createTestCity } from '../../test/helpers.js';
+import { recordVisit } from '../../utils/visitTracking.js';
 import {
   initializeMissionsForUser,
   updateMissionProgress,
@@ -807,5 +809,203 @@ describe('Daily Login Presence', () => {
 
     const mp = await getMissionProgress(user._id, 'daily_login');
     expect(mp.periodKey).not.toBe('daily:2000-01-01');
+  });
+});
+
+describe('property_sale_profit (sell at profit)', () => {
+  let user, city;
+
+  beforeEach(async () => {
+    await MissionProgress.deleteMany({});
+    await User.deleteMany({});
+    await Property.deleteMany({});
+    await Transaction.deleteMany({});
+    await District.deleteMany({});
+    await UserVisit.deleteMany({});
+    user = await createTestUser({ balance: 10000000 });
+    city = await createTestCity();
+  });
+
+  it("counts a profitable sale using the seller's OWN acquisition basis", async () => {
+    const prop = await makeProperty({ cityId: city._id, ownerId: user._id, lastPurchasePrice: 100000 });
+    // Seller bought for 100k (their acquisition transaction).
+    await makeTransaction({ buyerId: user._id, sellerId: null, propertyId: prop._id, type: 'buy', price: 100000 });
+    // Sold at 120k -> profit.
+    await makeTransaction({
+      sellerId: user._id,
+      buyerId: (await createTestUser())._id,
+      propertyId: prop._id,
+      type: 'sell',
+      price: 120000,
+    });
+
+    const value = await evaluateCondition(user._id, null, { type: 'property_sale_profit', target: 5 }, {});
+    expect(value).toBe(1);
+  });
+
+  it('sale at cost or loss is not profitable', async () => {
+    const prop = await makeProperty({ cityId: city._id, ownerId: user._id, lastPurchasePrice: 100000 });
+    await makeTransaction({ buyerId: user._id, propertyId: prop._id, type: 'buy', price: 100000 });
+
+    await makeTransaction({ sellerId: user._id, propertyId: prop._id, type: 'sell', price: 100000 });
+    let value = await evaluateCondition(user._id, null, { type: 'property_sale_profit', target: 5 }, {});
+    expect(value).toBe(0);
+
+    await makeTransaction({ sellerId: user._id, propertyId: prop._id, type: 'sell', price: 80000 });
+    value = await evaluateCondition(user._id, null, { type: 'property_sale_profit', target: 5 }, {});
+    expect(value).toBe(0);
+  });
+
+  it("resold properties use the seller's own cost, not the property's latest purchase price", async () => {
+    const prop = await makeProperty({ cityId: city._id, ownerId: user._id });
+    // User bought at 100k, sold at 120k (profit), then the new owner bought at 80k
+    // (lastPurchasePrice becomes 80k). The old seller's sale must STILL count.
+    const buyerA = (await createTestUser())._id;
+    await makeTransaction({
+      buyerId: user._id,
+      propertyId: prop._id,
+      type: 'buy',
+      price: 100000,
+      createdAt: new Date(Date.now() - 10 * 60000),
+    });
+    await makeTransaction({
+      sellerId: user._id,
+      buyerId: buyerA,
+      propertyId: prop._id,
+      type: 'sell',
+      price: 120000,
+      createdAt: new Date(Date.now() - 9 * 60000),
+    });
+    await Property.updateOne({ _id: prop._id }, { lastPurchasePrice: 80000 });
+
+    const value = await evaluateCondition(user._id, null, { type: 'property_sale_profit', target: 5 }, {});
+    expect(value).toBe(1);
+  });
+
+  it('counts offer-accepted sales (sellerId buy transactions without a sibling sell)', async () => {
+    const prop = await makeProperty({ cityId: city._id, ownerId: user._id, lastPurchasePrice: 100000 });
+    await makeTransaction({ buyerId: user._id, propertyId: prop._id, type: 'buy', price: 100000 });
+    // Offer accepted: only a 'buy' transaction is written (no sibling 'sell').
+    await makeTransaction({
+      sellerId: user._id,
+      buyerId: (await createTestUser())._id,
+      propertyId: prop._id,
+      type: 'buy',
+      price: 130000,
+    });
+
+    const value = await evaluateCondition(user._id, null, { type: 'property_sale_profit', target: 5 }, {});
+    expect(value).toBe(1);
+  });
+
+  it('marketplace sales are not double-counted (sell + sibling buy pair)', async () => {
+    const prop = await makeProperty({ cityId: city._id, ownerId: user._id, lastPurchasePrice: 100000 });
+    await makeTransaction({ buyerId: user._id, propertyId: prop._id, type: 'buy', price: 100000 });
+    // Marketplace sale writes BOTH sides.
+    const buyerA = (await createTestUser())._id;
+    const now = new Date();
+    await makeTransaction({
+      sellerId: user._id,
+      buyerId: buyerA,
+      propertyId: prop._id,
+      type: 'sell',
+      price: 150000,
+      createdAt: now,
+    });
+    await makeTransaction({
+      buyerId: buyerA,
+      sellerId: user._id,
+      propertyId: prop._id,
+      type: 'buy',
+      price: 150000,
+      createdAt: new Date(now.getTime() + 100),
+    });
+
+    const value = await evaluateCondition(user._id, null, { type: 'property_sale_profit', target: 5 }, {});
+    expect(value).toBe(1);
+  });
+
+  it('five separate profitable sales reach the target; the same transaction never counts twice', async () => {
+    for (let i = 0; i < 5; i += 1) {
+      const prop = await makeProperty({ cityId: city._id, ownerId: user._id, lastPurchasePrice: 100000 });
+      await makeTransaction({
+        buyerId: user._id,
+        propertyId: prop._id,
+        type: 'buy',
+        price: 100000,
+        createdAt: new Date(Date.now() - (10 - i) * 60000),
+      });
+      await makeTransaction({
+        sellerId: user._id,
+        propertyId: prop._id,
+        type: 'sell',
+        price: 120000,
+        createdAt: new Date(Date.now() - (9 - i) * 60000),
+      });
+    }
+    const value = await evaluateCondition(user._id, null, { type: 'property_sale_profit', target: 5 }, {});
+    expect(value).toBe(5);
+  });
+});
+
+describe('district_visits (Visit 5 districts)', () => {
+  let user, city, district, secondDistrict;
+
+  beforeEach(async () => {
+    await MissionProgress.deleteMany({});
+    await User.deleteMany({});
+    await Property.deleteMany({});
+    await Transaction.deleteMany({});
+    await District.deleteMany({});
+    await UserVisit.deleteMany({});
+    user = await createTestUser({ balance: 10000000 });
+    city = await createTestCity();
+    district = await District.create({
+      cityId: city._id,
+      name: 'Test District',
+      tier: 'premium',
+      influence: [],
+    });
+    secondDistrict = await District.create({
+      cityId: city._id,
+      name: 'Second District',
+      tier: 'growing',
+      influence: [],
+    });
+  });
+
+  it('counts only unique districts visited (repeat visits do not double-count)', async () => {
+    await recordVisit(user._id, 'district', district._id);
+    await recordVisit(user._id, 'district', district._id);
+    await recordVisit(user._id, 'district', secondDistrict._id);
+
+    const value = await evaluateCondition(user._id, null, { type: 'district_visits', target: 5 }, {});
+    expect(value).toBe(2);
+  });
+
+  it('owning a property in a district does NOT count as visiting it', async () => {
+    await makeProperty({ cityId: city._id, ownerId: user._id, districtId: district._id });
+
+    const value = await evaluateCondition(user._id, null, { type: 'district_visits', target: 5 }, {});
+    expect(value).toBe(0);
+  });
+
+  it('five unique visited districts complete the mission and persist across reloads', async () => {
+    const extra = [];
+    for (let i = 0; i < 3; i += 1) {
+      extra.push(await District.create({ cityId: city._id, name: `Extra ${i}`, tier: 'growing', influence: [] }));
+    }
+    for (const d of [district, secondDistrict, ...extra]) {
+      await recordVisit(user._id, 'district', d._id);
+    }
+
+    const value = await evaluateCondition(user._id, null, { type: 'district_visits', target: 5 }, {});
+    expect(value).toBe(5);
+
+    // Persistence: records survive "logout/login" — they are DB rows, not
+    // client state; a fresh evaluation sees the same count.
+    const visits = await UserVisit.countDocuments({ userId: user._id, targetType: 'district' });
+    expect(visits).toBe(5);
+    expect(await UserVisit.distinct('targetId', { userId: user._id, targetType: 'district' })).toHaveLength(5);
   });
 });

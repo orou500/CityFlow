@@ -176,7 +176,7 @@ export const ACHIEVEMENT_DEFINITIONS = [
   },
   {
     id: 'debt_free',
-    name: 'Debt Free',
+    name: 'Debt Free King',
     description: 'Pay off all loans',
     category: 'banking',
     points: 50,
@@ -350,6 +350,62 @@ export const ACHIEVEMENT_DEFINITIONS = [
     condition: { type: 'stock_portfolio_value', target: 1000000 },
     rewardBadge: 'stock_mogul',
     hidden: true,
+  },
+
+  // ─── WEALTH / GEOGRAPHY / INTELLIGENCE TITLES ─────
+  // Mirrors of the corresponding title missions so the Career page shows
+  // them as proper achievements with progress (not just mission rewards).
+  {
+    id: 'high_roller_ach',
+    name: 'High Roller',
+    description: 'Reach $100,000 monthly income',
+    category: 'wealth',
+    points: 60,
+    icon: '💵',
+    condition: { type: 'monthly_income', target: 100000 },
+    rewardTitle: 'High Roller',
+  },
+  {
+    id: 'global_investor_ach',
+    name: 'Global Investor',
+    description: 'Own properties in 5 different cities',
+    category: 'districts',
+    points: 60,
+    icon: '🌍',
+    condition: { type: 'unique_cities', target: 5 },
+    rewardTitle: 'Global Investor',
+    rewardBadge: 'global_investor',
+  },
+  {
+    id: 'globetrotter_ach',
+    name: 'Globetrotter',
+    description: 'Own properties in 6 different countries',
+    category: 'districts',
+    points: 70,
+    icon: '🧭',
+    condition: { type: 'countries_owned', target: 6 },
+    rewardTitle: 'Globetrotter',
+  },
+  {
+    id: 'prophet_ach',
+    name: 'Prophet',
+    description: 'Reach 90% forecast accuracy on a report',
+    category: 'intelligence',
+    points: 60,
+    icon: '🔮',
+    condition: { type: 'forecast_accuracy', target: 90 },
+    rewardTitle: 'Prophet',
+    rewardBadge: 'prophet',
+  },
+  {
+    id: 'ipo_founder_ach',
+    name: 'IPO Founder',
+    description: 'Take your company public through an IPO',
+    category: 'companies',
+    points: 60,
+    icon: '🏛️',
+    condition: { type: 'company_ipo_completed', target: 1 },
+    rewardTitle: 'IPO Founder',
   },
 ];
 

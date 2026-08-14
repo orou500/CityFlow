@@ -65,7 +65,7 @@ const router = Router();
 router.use(authenticate);
 
 const COMPANY_CREATION_FEE = 5_000_000;
-const MIN_FOUNDER_LEVEL = 15;
+const MIN_FOUNDER_LEVEL = 12;
 const MIN_FOUNDER_NET_WORTH = 5_000_000;
 const MIN_FOUNDER_PORTFOLIO = 3_000_000;
 const MIN_FOUNDER_ACCOUNT_AGE_DAYS = 28;

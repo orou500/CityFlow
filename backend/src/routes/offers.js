@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import PropertyOffer from '../models/PropertyOffer.js';
 import Property from '../models/Property.js';
 import User from '../models/User.js';
@@ -15,7 +15,7 @@ const router = Router();
 
 router.use(authenticate);
 
-async function notify(userId, type, title, message, relatedId) {
+async function notify(userId, type, title, message, relatedId, propertyId) {
   await enqueueNotification({
     userId,
     type,
@@ -23,8 +23,13 @@ async function notify(userId, type, title, message, relatedId) {
     message,
     eventKey: `offer:${relatedId}:${type}:${userId}`,
     relatedId,
-    route: '/marketplace',
-    entityType: 'marketplace',
+    // Offers always deep-link to the property's Offers section so both the
+    // seller (review/accept/reject) and the buyer (status) land on the
+    // relevant entity with the section open.
+    route: `/property/${propertyId}?section=offers`,
+    tab: 'offers',
+    entityType: 'property',
+    entityId: propertyId,
   });
 }
 
@@ -43,7 +48,7 @@ router.post('/create', async (req, res) => {
     }
 
     if (!property.ownerId) {
-      return res.status(400).json({ error: 'Cannot make offers on bank properties — use Buy instead' });
+      return res.status(400).json({ error: 'Cannot make offers on bank properties â€” use Buy instead' });
     }
 
     const minOffer = Math.round(property.currentPrice * MIN_OFFER_PERCENTAGE);
@@ -76,6 +81,7 @@ router.post('/create', async (req, res) => {
       'New Property Offer',
       `Player ${req.user.username} offered $${amount.toLocaleString()} for ${property.name}`,
       offer._id,
+      property._id,
     );
 
     trackEvent(EVENTS.OFFER_CREATED, { userId: req.user._id, propertyId, amount });
@@ -161,6 +167,7 @@ router.post('/accept/:id', async (req, res) => {
       'Offer Accepted',
       `Your offer of $${price.toLocaleString()} for ${property.name} was accepted!`,
       offer._id,
+      property._id,
     );
 
     res.json({ offer, transaction: t, balance: seller.balance });
@@ -189,6 +196,7 @@ router.post('/reject/:id', async (req, res) => {
       'Offer Rejected',
       `Your offer of $${(offer.counterOffer || offer.offerAmount).toLocaleString()} for ${offer.propertyId?.name || 'a property'} was rejected`,
       offer._id,
+      offer.propertyId?._id,
     );
 
     res.json(offer);
@@ -238,6 +246,7 @@ router.post('/counter/:id', async (req, res) => {
       'Counter Offer Received',
       `Seller countered with $${counterAmount.toLocaleString()} for ${offer.propertyId?.name || 'a property'}`,
       offer._id,
+      offer.propertyId?._id,
     );
 
     res.json(offer);
@@ -316,6 +325,7 @@ router.post('/accept-counter/:id', async (req, res) => {
       'Counter Offer Accepted',
       `Buyer accepted your counter offer of $${price.toLocaleString()} for ${property.name}`,
       offer._id,
+      property._id,
     );
 
     res.json({ offer, transaction: t, balance: buyer.balance });
@@ -339,6 +349,18 @@ router.get('/sent', async (req, res) => {
 router.get('/received', async (req, res) => {
   try {
     const offers = await PropertyOffer.find({ sellerId: req.user._id })
+      .populate('propertyId', 'name currentPrice')
+      .populate('buyerId', 'username')
+      .sort({ createdAt: -1 });
+    res.json(offers);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/property/:propertyId', async (req, res) => {
+  try {
+    const offers = await PropertyOffer.find({ propertyId: req.params.propertyId, sellerId: req.user._id })
       .populate('propertyId', 'name currentPrice')
       .populate('buyerId', 'username')
       .sort({ createdAt: -1 });

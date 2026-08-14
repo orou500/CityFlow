@@ -102,7 +102,24 @@ describe('Real Estate Companies', () => {
         .send({ name: `LowLevel_${Date.now()}`, hqCityId: testCityId });
 
       expect(res.status).toBe(400);
-      expect(res.body.error).toMatch(/Level 15/);
+      expect(res.body.error).toMatch(/Level 12/);
+    });
+
+    it('rejects company creation at level 11, accepts at level 12+ (authoritative requirement)', async () => {
+      const eleven = await createFounder({ level: 11 });
+      const rejected = await request(app)
+        .post('/real-estate-companies')
+        .set(authHeader(eleven.token))
+        .send({ name: `Level11_${Date.now()}`, hqCityId: testCityId });
+      expect(rejected.status).toBe(400);
+      expect(rejected.body.error).toContain('Level 12');
+
+      const twelve = await createFounder({ level: 12 });
+      const accepted = await request(app)
+        .post('/real-estate-companies')
+        .set(authHeader(twelve.token))
+        .send({ name: `Level12_${Date.now()}`, hqCityId: testCityId });
+      expect(accepted.status).toBe(201);
     });
 
     it('rejects duplicate company names', async () => {

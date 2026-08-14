@@ -137,7 +137,7 @@ function MissionCard({ mission, onClaim, t }) {
                 onClick={() => onClaim(mission.missionId)}
                 className="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white text-xs font-medium rounded-lg transition-colors"
               >
-                {t('missions.claimReward')}
+                {t('missions.collect')}
               </button>
             )}
             {isClaimed && (

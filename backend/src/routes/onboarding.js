@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import User from '../models/User.js';
+import Property from '../models/Property.js';
 import { authenticate } from '../middleware/auth.js';
 import { ONBOARDING_UNLOCKS } from '../config/onboarding.js';
 import { backfillOnboarding, completeOnboardingStep, getPendingOnboarding } from '../utils/onboarding.js';
@@ -8,6 +9,11 @@ import { advanceInformationalStep, getTourState, skipOnboarding } from '../utils
 const router = Router();
 
 router.use(authenticate);
+
+// The buy_property tour step directs players to a property priced at or
+// below this cap. Before directing, the server verifies such inventory
+// actually exists so onboarding never strands a player with nothing to buy.
+export const CHEAP_PROPERTY_CAP = 100000;
 
 router.get('/status', async (req, res) => {
   try {
@@ -73,6 +79,45 @@ router.get('/tour/status', async (req, res) => {
     const state = await getTourState(req.user._id);
     if (!state) return res.status(404).json({ error: 'User not found' });
     res.json({ success: true, ...state });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * Read-only inventory check for the buy_property tour step: is there a
+ * property priced <= CHEAP_PROPERTY_CAP that the player can actually buy?
+ * Bank properties (ownerId null, forSale) or player-listed properties that
+ * are not under construction. Never creates properties and never bypasses
+ * purchase rules — it only tells the UI whether to offer the fallback.
+ */
+router.get('/tour/buy-property-availability', async (req, res) => {
+  try {
+    const eligible = await Property.find({
+      forSale: true,
+      currentPrice: { $gt: 0, $lte: CHEAP_PROPERTY_CAP },
+      // No in-progress construction/improvement (empty subdoc has no id).
+      'activeImprovement.improvementId': null,
+      $or: [{ ownerId: null }, { ownerId: { $ne: req.user._id } }],
+    })
+      .sort({ currentPrice: 1 })
+      .limit(5)
+      .select('name currentPrice type cityId forSale')
+      .lean();
+
+    res.json({
+      success: true,
+      eligible: eligible.length > 0,
+      count: eligible.length,
+      marketUrl: '/marketplace',
+      examples: eligible.map((p) => ({
+        id: p._id,
+        name: p.name,
+        currentPrice: p.currentPrice,
+        type: p.type,
+        cityId: p.cityId,
+      })),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

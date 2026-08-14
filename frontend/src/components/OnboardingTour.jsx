@@ -35,6 +35,7 @@ export default function OnboardingTour() {
   const [confirmSkip, setConfirmSkip] = useState(false);
   const [minimized, setMinimized] = useState(false);
   const [actionError, setActionError] = useState(null);
+  const [buyAvailability, setBuyAvailability] = useState(null);
   const isRtl = i18n.language === 'he';
 
   const loadStatus = useCallback(async () => {
@@ -48,6 +49,18 @@ export default function OnboardingTour() {
     }
   }, []);
 
+  // The buy_property step must not send a player to an empty market: check
+  // whether inventory priced at or under $100k actually exists, and offer a
+  // fallback (browse / continue / wait / refresh) when it does not.
+  const checkBuyAvailability = useCallback(async () => {
+    try {
+      const data = await api('/onboarding/tour/buy-property-availability');
+      setBuyAvailability(data);
+    } catch {
+      setBuyAvailability(null);
+    }
+  }, []);
+
   useEffect(() => {
     if (!user) {
       setState(null);
@@ -57,6 +70,14 @@ export default function OnboardingTour() {
     setActionError(null);
     loadStatus();
   }, [user, user?.level, loadStatus]);
+
+  useEffect(() => {
+    if (state?.currentStep === 'buy_property') {
+      checkBuyAvailability();
+    } else {
+      setBuyAvailability(null);
+    }
+  }, [state?.currentStep, checkBuyAvailability]);
 
   // While an event-gated step is current, poll so the tour advances the
   // moment the real action happens server-side.
@@ -236,6 +257,31 @@ export default function OnboardingTour() {
           <div className="flex items-center justify-center gap-2 mb-4 text-xs font-medium text-orange-600 dark:text-orange-400">
             <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
             <span>{t('onboarding.tour.waitingAction')}</span>
+          </div>
+        )}
+
+        {isEventStep && step.id === 'buy_property' && buyAvailability && !buyAvailability.eligible && (
+          <div className="mb-4 rounded-lg border border-amber-400/40 bg-amber-50 dark:bg-amber-900/20 p-3 text-sm">
+            <p className="font-medium text-amber-700 dark:text-amber-300 mb-1">
+              {t('onboarding.tour.noCheapProperty')}
+            </p>
+            <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
+              {t('onboarding.tour.noCheapPropertyHint')}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                onClick={() => navigate('/marketplace')}
+                className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-white text-xs rounded transition-colors"
+              >
+                {t('onboarding.tour.browseProperties')}
+              </button>
+              <button
+                onClick={() => checkBuyAvailability()}
+                className="px-3 py-1.5 border border-amber-400 text-amber-700 dark:text-amber-300 text-xs rounded transition-colors"
+              >
+                {t('onboarding.tour.refreshInventory')}
+              </button>
+            </div>
           </div>
         )}
 

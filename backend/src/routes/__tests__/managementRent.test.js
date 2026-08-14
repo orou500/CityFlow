@@ -259,4 +259,26 @@ describe('Management rent caps (grandfathering)', () => {
     expect(get.body.maintenanceCost).toBe(0);
     expect(get.body.occupancy).toBe(100);
   });
+
+  it('reports monthly increase from the engine-written baseline values (positive, negative, zero)', async () => {
+    // Positive: baseline grew this month.
+    await Property.findByIdAndUpdate(property._id, { rent: 5000, previousMonthRent: 4681 });
+    let get = await request(app).get(`/management/${property._id}`).set(authHeader(token));
+    expect(get.body.rent).toBe(5000);
+    expect(get.body.monthlyIncrease).toBe(319);
+    expect(get.body.monthlyIncreasePct).toBeCloseTo(6.81, 1);
+
+    // Negative: market decline (e.g. quality drop / slowdown) — must be
+    // reported accurately, never masked or flipped.
+    await Property.findByIdAndUpdate(property._id, { rent: 4356, previousMonthRent: 4681 });
+    get = await request(app).get(`/management/${property._id}`).set(authHeader(token));
+    expect(get.body.monthlyIncrease).toBe(-325);
+    expect(get.body.monthlyIncreasePct).toBeCloseTo(-6.94, 1);
+
+    // Zero: converged at potential.
+    await Property.findByIdAndUpdate(property._id, { rent: 5000, previousMonthRent: 5000 });
+    get = await request(app).get(`/management/${property._id}`).set(authHeader(token));
+    expect(get.body.monthlyIncrease).toBe(0);
+    expect(get.body.monthlyIncreasePct).toBe(0);
+  });
 });

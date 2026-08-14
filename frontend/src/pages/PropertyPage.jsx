@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useGameStore } from '../store/useGameStore';
 import { useAuthStore } from '../store/useAuthStore';
@@ -233,10 +233,11 @@ const propertyTypes = {
 
 export default function PropertyPage() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, fetchMe } = useAuthStore();
-  const { fetchUserData, createOffer } = useGameStore();
+  const { fetchUserData, createOffer, acceptOffer, rejectOffer, fetchSentOffers } = useGameStore();
   const {
     myCompanies,
     fetchMyCompanies,
@@ -252,6 +253,10 @@ export default function PropertyPage() {
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [offerAmount, setOfferAmount] = useState('');
   const [offerLoading, setOfferLoading] = useState(false);
+  const [propertyOffers, setPropertyOffers] = useState([]);
+  const [offersLoading, setOffersLoading] = useState(false);
+  const [offerActionMsg, setOfferActionMsg] = useState(null);
+  const [myOffer, setMyOffer] = useState(null);
   const [unitsPage, setUnitsPage] = useState(0);
   const [gradeData, setGradeData] = useState(null);
   const [showGradeModal, setShowGradeModal] = useState(false);
@@ -281,6 +286,22 @@ export default function PropertyPage() {
       const isDirectOwner = prop?.ownerId?._id === user?._id;
       const isCompanyProp = !!prop?.companyId;
       const shouldLoadManagement = isDirectOwner || isCompanyProp;
+      if (isDirectOwner) {
+        try {
+          const offersRes = await api(`/offers/property/${id}`);
+          setPropertyOffers(offersRes);
+        } catch {
+          setPropertyOffers([]);
+        }
+      } else {
+        try {
+          const sent = await fetchSentOffers();
+          const mine = (sent || []).find((o) => o.propertyId?._id?.toString() === id);
+          setMyOffer(mine || null);
+        } catch {
+          setMyOffer(null);
+        }
+      }
       if (shouldLoadManagement) {
         try {
           const improvementRes = await api(`/development/improvements/status/${id}`);
@@ -310,6 +331,24 @@ export default function PropertyPage() {
     }
     setLoading(false);
   };
+
+  // Deep-link support: /property/:id?section=offers (offer notifications)
+  // scrolls to and highlights the Offers section after the page loads.
+  useEffect(() => {
+    if (loading || !data) return;
+    if (searchParams.get('section') === 'offers') {
+      const el = document.getElementById('offers-section');
+      if (el) {
+        const t = setTimeout(() => {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          el.classList.add('ring-2', 'ring-blue-400', 'rounded-lg');
+          setTimeout(() => el.classList.remove('ring-2', 'ring-blue-400'), 2500);
+        }, 250);
+        return () => clearTimeout(t);
+      }
+    }
+    return undefined;
+  }, [loading, data, searchParams]);
 
   useEffect(() => {
     if (id) {
@@ -434,6 +473,30 @@ export default function PropertyPage() {
       setActionMsg({ type: 'error', text: translateError(err, t) });
     }
     setOfferLoading(false);
+  };
+
+  const handleAcceptOffer = async (offerId) => {
+    setOfferActionMsg(null);
+    try {
+      await acceptOffer(offerId);
+      setOfferActionMsg({ type: 'success', text: t('propertyDetail.offerAccepted') });
+      await load();
+      await fetchMe();
+      await fetchUserData();
+    } catch (err) {
+      setOfferActionMsg({ type: 'error', text: translateError(err, t) });
+    }
+  };
+
+  const handleRejectOffer = async (offerId) => {
+    setOfferActionMsg(null);
+    try {
+      await rejectOffer(offerId);
+      setOfferActionMsg({ type: 'success', text: t('propertyDetail.offerRejected') });
+      await load();
+    } catch (err) {
+      setOfferActionMsg({ type: 'error', text: translateError(err, t) });
+    }
   };
 
   const handleGradeUpgrade = async () => {
@@ -909,7 +972,9 @@ export default function PropertyPage() {
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-gray-500 dark:text-gray-400">
-                        {t('propertyManagement.monthlyIncrease')}
+                        {managementData.monthlyIncrease > 0
+                          ? t('propertyManagement.monthlyIncrease')
+                          : t('propertyManagement.monthlyChange')}
                       </span>
                       <span
                         className={`font-bold ${managementData.monthlyIncrease >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}
@@ -964,6 +1029,69 @@ export default function PropertyPage() {
               </div>
 
               <RentInfoPanel data={managementData} />
+
+              {isDirectOwner && (
+                <div id="offers-section" className="bg-gray-50 dark:bg-gray-800 p-4 rounded mb-4 scroll-mt-20">
+                  <p className="text-sm font-semibold mb-1">{t('propertyDetail.offersTitle')}</p>
+                  {offerActionMsg && (
+                    <p
+                      className={`text-xs mb-2 ${offerActionMsg.type === 'success' ? 'text-blue-500' : 'text-red-500'}`}
+                    >
+                      {offerActionMsg.text}
+                    </p>
+                  )}
+                  {propertyOffers.length === 0 ? (
+                    <p className="text-xs text-gray-400 dark:text-gray-500">{t('propertyDetail.noOffers')}</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {propertyOffers.map((offer) => {
+                        const expired = offer.expiresAt && new Date(offer.expiresAt).getTime() < Date.now();
+                        const statusKey =
+                          offer.status === 'pending'
+                            ? expired
+                              ? 'propertyDetail.offerExpired'
+                              : 'propertyDetail.offerPending'
+                            : `propertyDetail.offerStatus_${offer.status}`;
+                        return (
+                          <div
+                            key={offer._id}
+                            className="flex flex-col sm:flex-row sm:items-center gap-2 justify-between border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2"
+                          >
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                {formatMoney(offer.offerAmount)}
+                                <span className="text-xs text-gray-400 font-normal"> — {offer.buyerId?.username}</span>
+                              </p>
+                              <p className="text-xs text-gray-400">
+                                {t('propertyDetail.offerCreated')}: {new Date(offer.createdAt).toLocaleString()}
+                                {offer.expiresAt &&
+                                  ` · ${t('propertyDetail.offerExpires')}: ${new Date(offer.expiresAt).toLocaleString()}`}
+                              </p>
+                              <p className="text-xs text-gray-500">{t(statusKey)}</p>
+                            </div>
+                            {offer.status === 'pending' && !expired && (
+                              <div className="flex gap-2 shrink-0">
+                                <button
+                                  onClick={() => handleAcceptOffer(offer._id)}
+                                  className="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white text-xs rounded transition-colors"
+                                >
+                                  {t('propertyDetail.acceptOffer')}
+                                </button>
+                                <button
+                                  onClick={() => handleRejectOffer(offer._id)}
+                                  className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white text-xs rounded transition-colors"
+                                >
+                                  {t('propertyDetail.rejectOffer')}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded">
@@ -1292,12 +1420,22 @@ export default function PropertyPage() {
                 </button>
               )}
               {canOffer && (
-                <button
-                  onClick={() => setShowOfferModal(true)}
-                  className="w-full bg-orange-500 hover:bg-orange-400 text-gray-900 dark:text-white text-sm py-2 rounded transition-colors"
-                >
-                  {t('propertyDetail.makeOffer')}
-                </button>
+                <>
+                  <button
+                    onClick={() => setShowOfferModal(true)}
+                    className="w-full bg-orange-500 hover:bg-orange-400 text-gray-900 dark:text-white text-sm py-2 rounded transition-colors"
+                  >
+                    {t('propertyDetail.makeOffer')}
+                  </button>
+                  {myOffer && (
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 text-center">
+                      {t('propertyDetail.yourOfferStatus')}: {t(`propertyDetail.offerStatus_${myOffer.status}`)}
+                      {myOffer.counterOffer
+                        ? ` — ${t('propertyDetail.counterOffer')}: ${formatMoney(myOffer.counterOffer)}`
+                        : ''}
+                    </p>
+                  )}
+                </>
               )}
               {user && hasManageAccess && (
                 <button

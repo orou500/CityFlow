@@ -123,9 +123,12 @@ export default function NotificationsPage() {
       await fetchUnreadCount();
     }
 
-    // Priority 1: notification has route metadata from backend
+    // Priority 1: notification has route metadata from backend (may already
+    // carry query params, e.g. /property/:id?section=offers — merge the tab
+    // without corrupting the query string).
     if (notification.route) {
-      const tabParam = notification.tab ? `?tab=${notification.tab}` : '';
+      const sep = notification.route.includes('?') ? '&' : '?';
+      const tabParam = notification.tab ? `${sep}tab=${notification.tab}` : '';
       navigate(`${notification.route}${tabParam}`);
       return;
     }
@@ -142,7 +145,19 @@ export default function NotificationsPage() {
       return;
     }
 
-    // Priority 4: use TYPE_CONFIG fallback
+    // Priority 4: offer notifications carry the property entity — deep-link
+    // to the property's Offers section instead of the marketplace.
+    if (
+      ['property_offer', 'offer_accepted', 'offer_rejected', 'offer_countered', 'offer_expired'].includes(
+        notification.type,
+      ) &&
+      notification.entityId
+    ) {
+      navigate(`/property/${notification.entityId}?section=offers`);
+      return;
+    }
+
+    // Priority 5: use TYPE_CONFIG fallback
     const cfg = TYPE_CONFIG[notification.type];
     if (cfg?.route) {
       const tabParam = cfg.tab || notification.tab ? `?tab=${cfg.tab || notification.tab}` : '';

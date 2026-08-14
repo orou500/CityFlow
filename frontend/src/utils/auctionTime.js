@@ -12,7 +12,7 @@ export function getAuctionRemainingMonths(auction = {}) {
   const startTick = toNum(auction.startTick);
   const endTick = toNum(auction.endTick);
   if (status === 'upcoming') {
-    return Math.max(0, startTick - currentTick);
+    return Math.max(0, Math.round(startTick - currentTick));
   }
-  return Math.max(0, endTick - currentTick);
+  return Math.max(0, Math.round(endTick - currentTick));
 }

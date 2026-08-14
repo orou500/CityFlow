@@ -1,5 +1,6 @@
 import User from '../models/User.js';
 import Property from '../models/Property.js';
+import mongoose from 'mongoose';
 import District from '../models/District.js';
 import Auction from '../models/Auction.js';
 import RealEstateCompany from '../models/RealEstateCompany.js';
@@ -119,6 +120,22 @@ async function evaluateAchievementCondition(user, condition) {
     case 'forecast_accuracy_95': {
       const best = await MarketReport.findOne({ userId }).sort({ forecastAccuracy: -1 }).lean();
       return best && best.forecastAccuracy >= 95 ? 1 : 0;
+    }
+    case 'forecast_accuracy': {
+      const best = await MarketReport.findOne({ userId }).sort({ forecastAccuracy: -1 }).lean();
+      return best?.forecastAccuracy || 0;
+    }
+    case 'monthly_income': {
+      const properties = await Property.find({ ownerId: userId }).lean();
+      return properties.reduce((sum, p) => sum + (p.rent || 0), 0);
+    }
+    case 'countries_owned': {
+      const cityIds = await Property.distinct('cityId', { ownerId: userId });
+      if (cityIds.length === 0) return 0;
+      return await mongoose
+        .model('City')
+        .distinct('country', { _id: { $in: cityIds } })
+        .then((c) => c.length);
     }
     case 'prestige_level':
       return userData.prestigeLevel || 0;
