@@ -19,11 +19,18 @@ const RealEstateCompany = (
 // Fully self-contained except for the RealEstateCompany model (relative import
 // resolves from cwd in stdin mode, and the model lives in src/models).
 //   Get-Content backend\scripts\recoverCompanyState.js -Raw | kubectl exec -i -n cityflow deploy/cityflow-backend -- node --input-type=module - --name="Horizon Builders" [--apply]
-// Args: [--name="Horizon Builders"] [--file=<backup.json.gz>] [--backup-dir=<dir>] [--apply]
+// Args: [--name="Horizon Builders"] [--file=<backup.json.gz>] [--backup-dir=<dir>]
+//       [--founder-shares=<N>] [--founder-role=<role>] [--demote-role=<role>] [--apply]
+// When no backup contains the company (e.g. it was founded after the last backup),
+// the founder's pre-leave values must be provided explicitly with --founder-shares
+// (and optionally --founder-role / --demote-role) — derived from audited evidence.
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/cityflow';
 const nameArg = process.argv.find((a) => a.startsWith('--name='))?.split('=')[1] || 'Horizon Builders';
 const fileArg = process.argv.find((a) => a.startsWith('--file='))?.split('=')[1] || null;
+const founderSharesArg = process.argv.find((a) => a.startsWith('--founder-shares='))?.split('=')[1] || null;
+const founderRoleArg = process.argv.find((a) => a.startsWith('--founder-role='))?.split('=')[1] || null;
+const demoteRoleArg = process.argv.find((a) => a.startsWith('--demote-role='))?.split('=')[1] || null;
 const applyMode = process.argv.includes('--apply');
 
 const sid = (v) => (v && typeof v.toString === 'function' ? v.toString() : null);
@@ -130,34 +137,72 @@ async function main() {
       } catch {
         /* ignore */
       }
-      await mongoose.disconnect();
-      process.exit(1);
+      if (founderSharesArg === null) {
+        console.log(
+          'ABORT: the pre-leave backup is required unless --founder-shares=<N> (and optionally --founder-role / --demote-role) are provided from audited evidence.',
+        );
+        await mongoose.disconnect();
+        process.exit(1);
+      }
     }
   }
 
-  const backupMeta = pre.meta ? `${pre.meta.filename} (createdAt: ${pre.meta.createdAt})` : pre.filepath;
-  console.log(`\nUsing pre-leave backup: ${backupMeta}`);
+  if (pre) {
+    const backupMeta = pre.meta ? `${pre.meta.filename} (createdAt: ${pre.meta.createdAt})` : pre.filepath;
+    console.log(
+      pre.preLeave
+        ? `\nUsing pre-leave backup: ${backupMeta}`
+        : `\nNote: ${backupMeta} contains the company but is NOT a pre-leave state (founder not CEO in it).`,
+    );
+  }
 
   // ---- Compute the plan -----------------------------------------------------
-  const founderId = pre.doc.founderId || live.founderId;
+  const founderId = live.founderId;
   const founderStr = sid(founderId);
-  const preFounder = (pre.doc.members || []).find((m) => sid(m.userId) === founderStr);
-  if (!preFounder) {
-    console.log(
-      `ABORT: founder (${founderStr}) is not a member in the pre-leave backup — cannot derive original shares.`,
-    );
+
+  // Source of truth: the pre-leave backup when one is found, otherwise explicit
+  // --founder-shares/--founder-role/--demote-role args. A backup that contains
+  // the company but is NOT pre-leave (founder not CEO in it — e.g. a fresh
+  // safety backup taken after the leave) must never be used as evidence.
+  let X;
+  let founderRole = 'ceo';
+  let preFounder = null;
+  if (pre?.preLeave) {
+    preFounder = (pre.doc.members || []).find((m) => sid(m.userId) === founderStr);
+    if (!preFounder) {
+      console.log(
+        `ABORT: founder (${founderStr}) is not a member in the pre-leave backup — cannot derive original shares.`,
+      );
+      await mongoose.disconnect();
+      process.exit(1);
+    }
+    X = preFounder.shares;
+    founderRole = preFounder.role;
+  } else if (founderSharesArg !== null) {
+    X = Number(founderSharesArg);
+    if (!Number.isInteger(X) || X < 1) {
+      console.log(`ABORT: invalid --founder-shares value "${founderSharesArg}".`);
+      await mongoose.disconnect();
+      process.exit(1);
+    }
+    if (founderRoleArg) founderRole = founderRoleArg;
+    if (pre) {
+      console.log(
+        `WARNING: newest backup containing the company (${pre.meta?.filename || pre.filepath}) is NOT pre-leave (founder not CEO in it). Using explicit --founder-shares=${X} / --founder-role=${founderRole} / --demote-role=${demoteRoleArg || 'director'}.`,
+      );
+    }
+  } else {
+    console.log('ABORT: no pre-leave backup found and --founder-shares=<N> was not provided. Refusing to guess.');
     await mongoose.disconnect();
     process.exit(1);
   }
-  const X = preFounder.shares;
-  const founderRole = preFounder.role;
 
   const liveMembers = (live.members || []).map((m) => ({ ...m, userId: sid(m.userId) }));
   const liveFounder = liveMembers.find((m) => m.userId === founderStr);
   const otherMembersSum = liveMembers.filter((m) => m.userId !== founderStr).reduce((s, m) => s + (m.shares || 0), 0);
   const newTreasury = (live.shares?.totalShares ?? 0) - (otherMembersSum + X);
   const demotionTargets = liveMembers.filter((m) => m.role === 'ceo' && m.userId !== founderStr);
-  const founderIdChanged = pre.doc.founderId && sid(pre.doc.founderId) !== sid(live.founderId);
+  const founderIdChanged = founderStr !== sid(live.founderId);
 
   if (!liveFounder && liveMembers.length >= (live.maxMembers || 10)) {
     console.log(`ABORT: company is at maxMembers (${live.maxMembers}) and the founder must be added as a new member.`);
@@ -177,15 +222,16 @@ async function main() {
   console.log('  2) demote non-founder CEO(s) to their pre-leave role:');
   if (demotionTargets.length) {
     for (const m of demotionTargets) {
-      const targetRole = (pre.doc.members || []).find((mm) => sid(mm.userId) === m.userId)?.role || 'director';
+      const targetRole =
+        (pre?.preLeave ? (pre.doc.members || []).find((mm) => sid(mm.userId) === m.userId)?.role : null) ||
+        demoteRoleArg ||
+        'director';
       console.log(`     - ${m.userId}: 'ceo' -> '${targetRole}'`);
     }
   } else {
     console.log('     (none)');
   }
-  console.log(
-    `  3) founderId: ${founderIdChanged ? `${sid(live.founderId)} -> ${sid(pre.doc.founderId)}` : 'unchanged'}`,
-  );
+  console.log(`  3) founderId: ${founderIdChanged ? `${sid(live.founderId)} -> ${founderStr}` : 'unchanged'}`);
   console.log(`  4) treasuryShares: ${live.shares?.treasuryShares} -> ${newTreasury}`);
   const userBefore = await db.collection('users').findOne({ _id: founderId });
   console.log(
@@ -209,9 +255,6 @@ async function main() {
     await mongoose.disconnect();
     process.exit(1);
   }
-  if (sid(company.founderId) !== founderStr && pre.doc.founderId) {
-    company.founderId = pre.doc.founderId;
-  }
   const founderMember = company.members.find((m) => sid(m.userId) === founderStr);
   if (founderMember) {
     founderMember.role = founderRole;
@@ -221,7 +264,10 @@ async function main() {
   }
   for (const m of company.members) {
     if (m.role === 'ceo' && sid(m.userId) !== founderStr) {
-      const targetRole = (pre.doc.members || []).find((mm) => sid(mm.userId) === sid(m.userId))?.role || 'director';
+      const targetRole =
+        (pre?.preLeave ? (pre.doc.members || []).find((mm) => sid(mm.userId) === sid(m.userId))?.role : null) ||
+        demoteRoleArg ||
+        'director';
       m.role = targetRole;
     }
   }
@@ -244,7 +290,7 @@ async function main() {
   check('founder is a member', !!vFounder);
   check('founder role restored', vFounder?.role === founderRole, `${vFounder?.role}`);
   check('founder shares restored', vFounder?.shares === X, `${vFounder?.shares}`);
-  check('founderId restored', sid(v.founderId) === (sid(pre.doc.founderId) || founderStr));
+  check('founderId restored', sid(v.founderId) === founderStr);
   check(
     'treasuryShares adjusted',
     v.shares?.treasuryShares === newTreasury,
