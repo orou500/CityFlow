@@ -1704,9 +1704,7 @@ describe('Real Estate Companies', () => {
           expect(founderMember.shares, `${label}: founder shares`).toBe(expectedFounderShares);
         }
         const memberSum = fresh.members.reduce((s, m) => s + (m.shares || 0), 0);
-        expect(memberSum + fresh.shares.treasuryShares, `${label}: share accounting`).toBe(
-          fresh.shares.totalShares,
-        );
+        expect(memberSum + fresh.shares.treasuryShares, `${label}: share accounting`).toBe(fresh.shares.totalShares);
         return fresh;
       };
 
@@ -1721,9 +1719,7 @@ describe('Real Estate Companies', () => {
       await assertState('after transfer', directorId, 'director', 700);
 
       // Founder leaves -> founderId stays, shares return to treasury
-      await request(app)
-        .post(`/real-estate-companies/${company._id}/leave`)
-        .set(authHeader(founder.token));
+      await request(app).post(`/real-estate-companies/${company._id}/leave`).set(authHeader(founder.token));
       await assertState('after founder leave', directorId, null, 0);
 
       // Founder rejoins via application -> recruit with fresh shares, no privileges
@@ -1732,9 +1728,7 @@ describe('Real Estate Companies', () => {
         .set(authHeader(founder.token))
         .send({ message: 'rejoin' });
       let fresh = await RealEstateCompany.findById(company._id);
-      const application = fresh.applications.find(
-        (a) => a.userId?.toString() === founderId && a.status === 'pending',
-      );
+      const application = fresh.applications.find((a) => a.userId?.toString() === founderId && a.status === 'pending');
       expect(application).toBeTruthy();
       await request(app)
         .post(`/real-estate-companies/${company._id}/applications/${application._id}/approve`)
