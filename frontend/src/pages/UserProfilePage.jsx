@@ -873,8 +873,13 @@ export default function UserProfilePage() {
                   grade_upgrade: { label: t('profile.gradeUpgrade'), color: 'text-purple-600 dark:text-purple-400' },
                   improvement: { label: t('profile.improvement'), color: 'text-purple-600 dark:text-purple-400' },
                   development: { label: t('profile.development'), color: 'text-blue-600 dark:text-blue-400' },
+                  season_reward: { label: t('profile.seasonReward'), color: 'text-green-600 dark:text-green-400' },
+                  sizops_welcome: { label: t('profile.sizopsWelcome'), color: 'text-green-600 dark:text-green-400' },
                 };
-                const info = typeMap[tx.type] || { label: tx.type, color: 'text-gray-500' };
+                const info = typeMap[tx.type] || {
+                  label: t(`transaction.type.${tx.type}`) || tx.type,
+                  color: 'text-gray-500 dark:text-gray-400',
+                };
                 return (
                   <div
                     key={tx._id}

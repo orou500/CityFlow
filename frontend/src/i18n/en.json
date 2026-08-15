@@ -1166,7 +1166,8 @@
       "development": "DEVELOP",
       "period_bonus": "PERIOD BONUS",
       "login": "LOGIN",
-      "season_reward": "SEASON REWARD"
+      "season_reward": "SEASON REWARD",
+      "sizops_welcome": "SIZOPS WELCOME BONUS"
     }
   },
   "landing": {
@@ -1303,6 +1304,8 @@
     "gradeUpgrade": "Grade Upgrade",
     "improvement": "Improvement",
     "development": "Development",
+    "seasonReward": "Season Reward",
+    "sizopsWelcome": "SizOps Welcome",
     "seasonHistory": "Season History",
     "viewLeaderboard": "View Full Leaderboard",
     "seasonRank": "Rank",

@@ -24,6 +24,8 @@ const TRANSACTION_TYPES = [
   'development',
   'period_bonus',
   'login',
+  'season_reward',
+  'sizops_welcome',
 ];
 
 describe('Transaction type translations', () => {

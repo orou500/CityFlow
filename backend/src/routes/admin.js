@@ -270,6 +270,7 @@ const TX_ACTION_LABEL = {
   development: 'Development',
   period_bonus: 'Period bonus',
   season_reward: 'Season leaderboard reward',
+  sizops_welcome: 'SizOps welcome bonus',
   login: 'Logged in',
 };
 

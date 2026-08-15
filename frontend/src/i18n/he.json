@@ -1157,7 +1157,8 @@
       "development": "פיתוח",
       "period_bonus": "בונוס תקופה",
       "login": "כניסה",
-      "season_reward": "פרס עונתי"
+      "season_reward": "פרס עונתי",
+      "sizops_welcome": "בונוס כניסה של SizOps"
     }
   },
   "landing": {
@@ -1294,6 +1295,8 @@
     "gradeUpgrade": "שדרוג דרגה",
     "improvement": "שיפור",
     "development": "פיתוח",
+    "seasonReward": "פרס עונתי",
+    "sizopsWelcome": "בונוס SizOps",
     "seasonHistory": "היסטוריית עונות",
     "viewLeaderboard": "צפה בטבלה המלאה",
     "seasonRank": "דירוג",
