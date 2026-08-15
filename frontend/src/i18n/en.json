@@ -1629,6 +1629,24 @@
     "hoursAgo": "{{count}}h ago",
     "daysAgo": "{{count}}d ago"
   },
+  "worldReset": {
+    "title": "World Reset",
+    "label": "{{countdown}} remaining",
+    "loading": "Loading…",
+    "zero": "less than a minute",
+    "months_one": "{{count}} month",
+    "months_other": "{{count}} months",
+    "days_one": "{{count}} day",
+    "days_other": "{{count}} days",
+    "hours_one": "{{count}} hour",
+    "hours_other": "{{count}} hours",
+    "minutes_one": "{{count}} minute",
+    "minutes_other": "{{count}} minutes",
+    "join1": "{{p1}}",
+    "join2": "{{p1}}, {{p2}}",
+    "join3": "{{p1}}, {{p2}}, {{p3}}",
+    "join4": "{{p1}}, {{p2}}, {{p3}}, {{p4}}"
+  },
   "seasons": {
     "title": "Season History",
     "activeSeason": "Current Season",

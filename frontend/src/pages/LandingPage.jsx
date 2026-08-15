@@ -7,6 +7,7 @@ import { getApiBaseUrl } from '../utils/capacitor';
 import Footer from '../components/Footer';
 import { formatMoney } from '../utils/format';
 import CompactValue from '../components/CompactValue';
+import WorldResetCountdown from '../components/WorldResetCountdown';
 
 function AnimatedCounter({ target, suffix = '' }) {
   const [value, setValue] = useState(0);
@@ -322,6 +323,13 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* World Reset Countdown */}
+      <section className="py-12 px-4 bg-card transition-colors duration-300">
+        <div className="max-w-3xl mx-auto bg-surface rounded-xl border border-border px-5 py-4">
+          <WorldResetCountdown />
         </div>
       </section>
 

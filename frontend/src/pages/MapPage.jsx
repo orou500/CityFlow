@@ -4,6 +4,7 @@ import { useGameStore } from '../store/useGameStore';
 import WorldMap from '../components/WorldMap';
 import MapLegend from '../components/MapLegend';
 import WorldStatusWidget from '../components/WorldStatusWidget';
+import WorldResetCountdown from '../components/WorldResetCountdown';
 
 export default function MapPage() {
   const { t } = useTranslation();
@@ -17,6 +18,9 @@ export default function MapPage() {
   return (
     <div className="flex-1 p-4 flex flex-col bg-surface">
       <h1 className="text-2xl font-bold mb-4 text-primary">{t('map.title')}</h1>
+      <div className="mb-3 bg-card rounded-lg border border-border px-5 py-3">
+        <WorldResetCountdown />
+      </div>
       <div className="flex-1 min-h-[500px] bg-card rounded-lg overflow-hidden relative border border-border">
         {loading ? (
           <div className="flex items-center justify-center h-full text-muted">{t('common.loading')}</div>

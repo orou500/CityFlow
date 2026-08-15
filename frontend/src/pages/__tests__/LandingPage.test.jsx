@@ -18,6 +18,22 @@ const TRANSLATIONS = vi.hoisted(() => ({
     'worldStatus.minutesAgo': '{{count}}m ago',
     'worldStatus.hoursAgo': '{{count}}h ago',
     'worldStatus.daysAgo': '{{count}}d ago',
+    'worldReset.title': 'World Reset',
+    'worldReset.label': '{{countdown}} remaining',
+    'worldReset.loading': 'Loading…',
+    'worldReset.zero': 'less than a minute',
+    'worldReset.months_one': '{{count}} month',
+    'worldReset.months_other': '{{count}} months',
+    'worldReset.days_one': '{{count}} day',
+    'worldReset.days_other': '{{count}} days',
+    'worldReset.hours_one': '{{count}} hour',
+    'worldReset.hours_other': '{{count}} hours',
+    'worldReset.minutes_one': '{{count}} minute',
+    'worldReset.minutes_other': '{{count}} minutes',
+    'worldReset.join1': '{{p1}}',
+    'worldReset.join2': '{{p1}}, {{p2}}',
+    'worldReset.join3': '{{p1}}, {{p2}}, {{p3}}',
+    'worldReset.join4': '{{p1}}, {{p2}}, {{p3}}, {{p4}}',
   },
   he: {
     'landing.activity.title': 'פעילות עולמית',
@@ -28,16 +44,52 @@ const TRANSLATIONS = vi.hoisted(() => ({
     'worldStatus.minutesAgo': "לפני {{count}} דק'",
     'worldStatus.hoursAgo': "לפני {{count}} שע'",
     'worldStatus.daysAgo': 'לפני {{count}} ימים',
+    'worldReset.title': 'איפוס העולם',
+    'worldReset.label': 'נותרו {{countdown}}',
+    'worldReset.loading': 'טוען…',
+    'worldReset.zero': 'פחות מדקה',
+    'worldReset.months_one': 'חודש אחד',
+    'worldReset.months_two': 'חודשיים',
+    'worldReset.months_other': '{{count}} חודשים',
+    'worldReset.days_one': 'יום אחד',
+    'worldReset.days_two': 'יומיים',
+    'worldReset.days_other': '{{count}} ימים',
+    'worldReset.hours_one': 'שעה אחת',
+    'worldReset.hours_two': 'שעתיים',
+    'worldReset.hours_other': '{{count}} שעות',
+    'worldReset.minutes_one': 'דקה אחת',
+    'worldReset.minutes_two': 'שתי דקות',
+    'worldReset.minutes_other': '{{count}} דקות',
+    'worldReset.join1': '{{p1}}',
+    'worldReset.join2': '{{p1}} ו-{{p2}}',
+    'worldReset.join3': '{{p1}}, {{p2}} ו-{{p3}}',
+    'worldReset.join4': '{{p1}}, {{p2}}, {{p3}} ו-{{p4}}',
   },
 }));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => {
-    const dict = TRANSLATIONS[languageState.language] || TRANSLATIONS.en;
+    const lang = languageState.language;
+    const dict = TRANSLATIONS[lang] || TRANSLATIONS.en;
     const t = (key, options = {}) => {
+      const interpolate = (template) => template.replace(/\{\{(\w+)\}\}/g, (_, name) => options[name] ?? `{{${name}}}`);
+      if (options.count !== undefined) {
+        const suffix =
+          lang === 'he'
+            ? options.count === 1
+              ? 'one'
+              : options.count === 2
+                ? 'two'
+                : 'other'
+            : options.count === 1
+              ? 'one'
+              : 'other';
+        const plural = dict[`${key}_${suffix}`];
+        if (plural !== undefined) return interpolate(plural);
+      }
       const template = dict[key];
       if (template === undefined) return options.defaultValue ?? key;
-      return template.replace(/\{\{(\w+)\}\}/g, (_, name) => options[name] ?? `{{${name}}}`);
+      return interpolate(template);
     };
     return { t, i18n: languageState };
   },
@@ -85,16 +137,18 @@ function makeTx(overrides = {}) {
 }
 
 async function renderLanding(activity) {
-  global.fetch = vi.fn().mockResolvedValue({
-    json: () =>
-      Promise.resolve({
-        recentActivity: activity,
-        topPlayers: [],
-        playersCount: 0,
-        propertiesCount: 0,
-        citiesCount: 0,
-        transactionsCount: 0,
-      }),
+  global.fetch = vi.fn((url) => {
+    const payload = String(url).includes('/world/status')
+      ? { nextResetAt: new Date(Date.now() + 35 * 24 * 60 * 60 * 1000 + 30 * 1000).toISOString(), seasonTicks: 720 }
+      : {
+          recentActivity: activity,
+          topPlayers: [],
+          playersCount: 0,
+          propertiesCount: 0,
+          citiesCount: 0,
+          transactionsCount: 0,
+        };
+    return Promise.resolve({ ok: true, json: () => Promise.resolve(payload) });
   });
   const utils = render(
     <MemoryRouter>
@@ -205,5 +259,24 @@ describe('LandingPage Global Activity feed', () => {
     const section = item.closest('section');
     expect(section.className).not.toContain('overflow-hidden');
     expect(section.className).not.toContain('overflow-x-hidden');
+  });
+
+  it('shows the World Reset countdown on the landing page in English', async () => {
+    await renderLanding([makeTx()]);
+
+    expect(screen.getByText('World Reset')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('1 month, 5 days remaining')).toBeInTheDocument());
+  });
+
+  it('shows the World Reset countdown on the landing page in Hebrew (RTL)', async () => {
+    languageState.language = 'he';
+    const { container } = await renderLanding([makeTx()]);
+
+    expect(screen.getByText('איפוס העולם')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('נותרו חודש אחד ו-5 ימים')).toBeInTheDocument());
+
+    const section = screen.getByText('איפוס העולם').closest('section');
+    expect(section.className).not.toContain('overflow-hidden');
+    expect(section.className).not.toContain('overflow-x');
   });
 });

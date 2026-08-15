@@ -1620,6 +1620,28 @@
     "hoursAgo": "לפני {{count}} שע'",
     "daysAgo": "לפני {{count}} ימים"
   },
+  "worldReset": {
+    "title": "איפוס העולם",
+    "label": "נותרו {{countdown}}",
+    "loading": "טוען…",
+    "zero": "פחות מדקה",
+    "months_one": "חודש אחד",
+    "months_two": "חודשיים",
+    "months_other": "{{count}} חודשים",
+    "days_one": "יום אחד",
+    "days_two": "יומיים",
+    "days_other": "{{count}} ימים",
+    "hours_one": "שעה אחת",
+    "hours_two": "שעתיים",
+    "hours_other": "{{count}} שעות",
+    "minutes_one": "דקה אחת",
+    "minutes_two": "שתי דקות",
+    "minutes_other": "{{count}} דקות",
+    "join1": "{{p1}}",
+    "join2": "{{p1}} ו-{{p2}}",
+    "join3": "{{p1}}, {{p2}} ו-{{p3}}",
+    "join4": "{{p1}}, {{p2}}, {{p3}} ו-{{p4}}"
+  },
   "seasons": {
     "title": "היסטוריית עונות",
     "activeSeason": "עונה נוכחית",
