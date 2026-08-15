@@ -95,11 +95,61 @@ export async function advanceOnboarding(userId, event) {
   if (!user) return null;
   if (user.onboardingV2.status !== 'active') return user.onboardingV2;
 
+  // If the player already proved this step's action through real gameplay
+  // state (e.g. bought a property before the step became current), advance
+  // immediately instead of waiting for a duplicate event.
+  const beforeStep = user.onboardingV2.currentStep;
+  await autoAdvanceSatisfiedEventStep(user);
+  if (user.onboardingV2.status !== 'active' || user.onboardingV2.currentStep !== beforeStep) {
+    return user.onboardingV2;
+  }
+
   const current = user.onboardingV2.currentStep;
   const isInformational = !isEventGatedStep(current);
   const matchesEvent = stepMatchesEvent(current, event);
   if (!isInformational && !matchesEvent) return user.onboardingV2;
 
+  await completeCurrentStep(user);
+  return user.onboardingV2;
+}
+
+/**
+ * Event-gated steps whose objective is already proven by the player's real
+ * state (owned property, collected rent, upgrades, claimed missions) are
+ * completed automatically so onboarding never dead-ends or forces a repeat.
+ * Only the CURRENT step is evaluated; informational steps are untouched.
+ */
+export async function autoAdvanceSatisfiedEventStep(user) {
+  if (user.onboardingV2.status !== 'active') return user;
+  const current = user.onboardingV2.currentStep;
+  if (!isEventGatedStep(current)) return user;
+
+  const satisfied = await isEventStepSatisfiedByUserState(user, current);
+  if (!satisfied) return user;
+
+  await completeCurrentStep(user);
+  return user;
+}
+
+async function isEventStepSatisfiedByUserState(user, stepId) {
+  switch (stepId) {
+    case 'buy_property':
+      return (user.ownedProperties || []).length > 0;
+    case 'collect_rent':
+      return !!user.lastRentCollectedAt || (user.lifetimeStats?.totalRentCollected || 0) > 0;
+    case 'upgrade_property':
+      return (user.lifetimeStats?.totalUpgrades || 0) > 0;
+    case 'missions': {
+      const claimed = await MissionProgress.countDocuments({ userId: user._id, status: 'claimed' });
+      return claimed > 0;
+    }
+    default:
+      return false;
+  }
+}
+
+async function completeCurrentStep(user) {
+  const current = user.onboardingV2.currentStep;
   const completedSteps = [...new Set([...(user.onboardingV2.completedSteps || []), current])];
   const currentIndex = ONBOARDING_STEPS.findIndex((s) => s.id === current);
   const nextStep = ONBOARDING_STEPS[currentIndex + 1] || null;
@@ -111,23 +161,22 @@ export async function advanceOnboarding(userId, event) {
     user.onboardingV2.completedAt = new Date();
     await user.save();
     await enqueueNotification({
-      userId,
+      userId: user._id,
       type: 'system',
       title: 'Onboarding Complete',
       message: 'You now know the basics of CityFlow. Build your real estate empire!',
-      eventKey: TOUR_NOTIFICATION_EVENT_KEY(userId),
+      eventKey: TOUR_NOTIFICATION_EVENT_KEY(user._id),
       route: '/dashboard',
       entityType: 'onboarding',
-      entityId: userId,
+      entityId: user._id,
       global: false,
     });
-    return user.onboardingV2;
+    return;
   }
 
   user.onboardingV2.currentStep = nextStep.id;
   user.onboardingV2.completedSteps = completedSteps;
   await user.save();
-  return user.onboardingV2;
 }
 
 /**
@@ -163,6 +212,11 @@ export async function skipOnboarding(userId) {
 export async function getTourState(userId) {
   const user = await initializeTour(userId);
   if (!user) return null;
+
+  // The frontend polls this endpoint while an event step is current. If the
+  // player's real state already proves the step (e.g. they bought a property
+  // elsewhere), advance server-side so the poll surfaces the next step.
+  await autoAdvanceSatisfiedEventStep(user);
 
   const completedSteps = user.onboardingV2.completedSteps || [];
   const currentIndex = Math.max(

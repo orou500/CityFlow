@@ -249,4 +249,51 @@ describe('Guided onboarding tour', () => {
     expect(res.body.completedSteps).toEqual(['welcome', 'dashboard', 'cities', 'buy_property', 'property_page']);
     expect(res.body.currentStep).toBe('collect_rent');
   });
+
+  it('auto-advances buy_property when the player already owns a property before the step', async () => {
+    const { user, token } = await makeUser('prebuyer');
+    await walkToStep(token, 'buy_property');
+    expect((await tourStatus(token)).body.currentStep).toBe('buy_property');
+
+    // Player buys a property (real state), then only *polls* — no event replay.
+    const fresh = await User.findById(user._id);
+    fresh.ownedProperties = [new mongoose.Types.ObjectId()];
+    await fresh.save();
+
+    const res = await tourStatus(token);
+    expect(res.body.currentStep).toBe('property_page');
+    expect(res.body.completedSteps).toContain('buy_property');
+  });
+
+  it('auto-advances the missions step when a reward was already claimed', async () => {
+    const { user, token } = await makeUser('preclaimer');
+    await walkToStep(token, 'buy_property');
+    await advanceOnboarding(user._id, 'property_buy');
+    await request(app).post('/onboarding/tour/advance').set(authHeader(token)); // property_page → collect_rent
+    await advanceOnboarding(user._id, 'rent_collect');
+    await advanceOnboarding(user._id, 'property_upgrade');
+    expect((await tourStatus(token)).body.currentStep).toBe('missions');
+
+    // A reward was already claimed elsewhere — poll must advance, not re-require.
+    await MissionProgress.create({ userId: user._id, missionId: 'first_property', status: 'claimed', target: 1 });
+
+    const res = await tourStatus(token);
+    expect(res.body.currentStep).toBe('marketplace');
+    expect(res.body.completedSteps).toContain('missions');
+  });
+
+  it('completion alone still does not auto-advance the missions step (only claimed does)', async () => {
+    const { user, token } = await makeUser('nearclaimer');
+    await walkToStep(token, 'buy_property');
+    await advanceOnboarding(user._id, 'property_buy');
+    await request(app).post('/onboarding/tour/advance').set(authHeader(token));
+    await advanceOnboarding(user._id, 'rent_collect');
+    await advanceOnboarding(user._id, 'property_upgrade');
+
+    await MissionProgress.create({ userId: user._id, missionId: 'first_property', status: 'completed', target: 1 });
+
+    const res = await tourStatus(token);
+    expect(res.body.currentStep).toBe('missions');
+    expect(res.body.completedSteps).not.toContain('missions');
+  });
 });

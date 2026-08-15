@@ -40,6 +40,36 @@ describe('achievement audit (definitions exist, conditions resolvable)', () => {
     }
   });
 
+  it('every achievement has a non-empty icon so the UI never falls back to the wrong icon', () => {
+    for (const a of ACHIEVEMENT_DEFINITIONS) {
+      expect(typeof a.icon, `${a.id} icon`).toBe('string');
+      expect(a.icon.trim(), `${a.id} icon must not be blank`).not.toBe('');
+      // A single unpaired surrogate would render as a broken glyph (e.g. a
+      // raw escape written as JSX text instead of a JS string).
+      expect(a.icon, `${a.id} icon must be a valid emoji sequence`).not.toMatch(/^\\u[0-9a-fA-F]{4}$/);
+    }
+  });
+
+  it('the 11 title-mirror achievements keep their distinct icons', () => {
+    const iconById = Object.fromEntries(ACHIEVEMENT_DEFINITIONS.map((a) => [a.id, a.icon]));
+    const expects = {
+      tycoon_ach: '🏆',
+      auction_100: '🏆',
+      ipo_founder_ach: '🏛️',
+      globetrotter_ach: '🧭',
+      global_investor_ach: '🌍',
+      high_roller_ach: '💵',
+      market_guru_ach: '💹',
+      debt_free: '✅',
+      world_traveler_ach: '✈️',
+      district_power_ach: '⚡',
+      prophet_ach: '🔮',
+    };
+    for (const [id, icon] of Object.entries(expects)) {
+      expect(iconById[id], `${id} icon`).toBe(icon);
+    }
+  });
+
   it('Debt Free King keeps the stable id debt_free (no duplicate unlocks)', () => {
     expect(getAchievementById('debt_free').name).toBe('Debt Free King');
     expect(ACHIEVEMENT_DEFINITIONS.filter((a) => a.name === 'Debt Free King')).toHaveLength(1);
