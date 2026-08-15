@@ -1,11 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  formatSignedMoney,
-  formatSignedPercent,
-  formatMoney,
-  formatDiff,
-  formatCompact,
-} from '../format';
+import { formatSignedMoney, formatSignedPercent, formatMoney, formatDiff, formatCompact } from '../format';
 
 const MINUS = '\u2212';
 

@@ -1268,7 +1268,9 @@ export default function CompanyDetailPage() {
               <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-300 mb-2">
                 {t('companies.ceoCannotLeave')}
               </h3>
-              <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">{t('companies.ceoCannotLeaveDescription')}</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
+                {t('companies.ceoCannotLeaveDescription')}
+              </p>
               <div className="flex flex-wrap gap-2">
                 {company.members
                   ?.filter((m) => ['director', 'officer', 'member'].includes(m.role))
@@ -1279,8 +1281,7 @@ export default function CompanyDetailPage() {
                       className="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-xs hover:bg-purple-700"
                     >
                       {t('companies.transferLeadershipTo', {
-                        name:
-                          (m.userId && typeof m.userId === 'object' && m.userId.username) || m.username || 'Member',
+                        name: (m.userId && typeof m.userId === 'object' && m.userId.username) || m.username || 'Member',
                       })}
                     </button>
                   ))}

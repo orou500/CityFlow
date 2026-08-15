@@ -230,7 +230,10 @@ export default function CompaniesListPage() {
           <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3 space-y-1.5">
             <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('companies.requirements')}</p>
             <RequirementItem met={(user?.balance || 0) >= CREATION_FEE} text={t('companies.reqFee')} />
-            <RequirementItem met={(user?.level || 0) >= MIN_CREATION_LEVEL} text={t('companies.reqLevel', { min: MIN_CREATION_LEVEL })} />
+            <RequirementItem
+              met={(user?.level || 0) >= MIN_CREATION_LEVEL}
+              text={t('companies.reqLevel', { min: MIN_CREATION_LEVEL })}
+            />
             <RequirementItem met={netWorth >= MIN_NET_WORTH} text={t('companies.reqNetWorth')} />
             <RequirementItem met={portfolioValue >= MIN_PORTFOLIO} text={t('companies.reqPortfolio')} />
             <RequirementItem met={accountAgeDays >= MIN_ACCOUNT_AGE_DAYS} text={t('companies.reqAccountAge')} />

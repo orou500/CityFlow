@@ -64,7 +64,11 @@ beforeEach(() => {
 describe('MissionsPage', () => {
   it('renders the title-reward chip with a real emoji, never the raw escape text', () => {
     missionState.completedMissions = [
-      makeMission({ status: 'completed', progress: 1, definition: { ...makeMission().definition, rewards: { title: 'Tycoon' } } }),
+      makeMission({
+        status: 'completed',
+        progress: 1,
+        definition: { ...makeMission().definition, rewards: { title: 'Tycoon' } },
+      }),
     ];
 
     render(<MissionsPage />);
@@ -77,12 +81,8 @@ describe('MissionsPage', () => {
   });
 
   it('shows the claim button on completed missions and the claimed state on claimed ones', async () => {
-    missionState.completedMissions = [
-      makeMission({ status: 'completed', progress: 1, missionId: 'c1' }),
-    ];
-    missionState.claimedMissions = [
-      makeMission({ status: 'claimed', progress: 1, missionId: 'cl1' }),
-    ];
+    missionState.completedMissions = [makeMission({ status: 'completed', progress: 1, missionId: 'c1' })];
+    missionState.claimedMissions = [makeMission({ status: 'claimed', progress: 1, missionId: 'cl1' })];
 
     render(<MissionsPage />);
 
@@ -96,9 +96,7 @@ describe('MissionsPage', () => {
   });
 
   it('claims the mission when the claim button is pressed', () => {
-    missionState.completedMissions = [
-      makeMission({ status: 'completed', progress: 1, missionId: 'claim-me' }),
-    ];
+    missionState.completedMissions = [makeMission({ status: 'completed', progress: 1, missionId: 'claim-me' })];
 
     render(<MissionsPage />);
 

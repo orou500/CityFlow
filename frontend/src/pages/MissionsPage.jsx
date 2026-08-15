@@ -124,14 +124,18 @@ function MissionCard({ mission, onClaim, t }) {
           <div className="flex flex-wrap items-center justify-between gap-2 mt-3">
             <div className="flex flex-wrap items-center gap-2 text-xs text-secondary">
               {def.rewards.xp && (
-                <span>⭐ {def.rewards.xp.toLocaleString()} {t('missions.xp')}</span>
+                <span>
+                  ⭐ {def.rewards.xp.toLocaleString()} {t('missions.xp')}
+                </span>
               )}
               {def.rewards.balance && <span>💰 ${def.rewards.balance.toLocaleString()}</span>}
               {def.rewards.badge && (
                 <span className="text-purple-600 dark:text-purple-400">🏅 {t('missions.badge')}</span>
               )}
               {def.rewards.title && (
-                <span className="text-blue-600 dark:text-blue-400">{'\uD83D\uDCDD'} {def.rewards.title}</span>
+                <span className="text-blue-600 dark:text-blue-400">
+                  {'\uD83D\uDCDD'} {def.rewards.title}
+                </span>
               )}
             </div>
             {isClaimable && (
@@ -291,11 +295,17 @@ export default function MissionsPage() {
           <div className="flex items-center gap-2">
             {stats && (
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-secondary">
-                <span>{stats.totalActive} {t('missions.statsActive')}</span>
+                <span>
+                  {stats.totalActive} {t('missions.statsActive')}
+                </span>
                 <span>{'\u00B7'}</span>
-                <span>{stats.totalCompleted} {t('missions.statsReady')}</span>
+                <span>
+                  {stats.totalCompleted} {t('missions.statsReady')}
+                </span>
                 <span>{'\u00B7'}</span>
-                <span>{stats.totalClaimed} {t('missions.statsClaimed')}</span>
+                <span>
+                  {stats.totalClaimed} {t('missions.statsClaimed')}
+                </span>
               </div>
             )}
           </div>
