@@ -70,10 +70,10 @@ const MIN_FOUNDER_NET_WORTH = 5_000_000;
 const MIN_FOUNDER_PORTFOLIO = 3_000_000;
 const MIN_FOUNDER_ACCOUNT_AGE_DAYS = 28;
 const MAX_MEMBERS_BASE = 10;
-const IPO_FEE = 100_000_000;
-const MIN_IPO_LEVEL = 15;
+const IPO_FEE = 30_000_000;
+const MIN_IPO_LEVEL = 10;
 const MIN_IPO_MEMBERS = 5;
-const MIN_IPO_NET_WORTH = 100_000_000;
+const MIN_IPO_NET_WORTH = 30_000_000;
 const IPO_MIN_PROPERTIES = 10;
 const IPO_MAX_DEBT_RATIO = 0.5;
 const LOAN_REQUEST_VOTE_THRESHOLD = 0.5;
@@ -409,6 +409,14 @@ router.get('/:id', async (req, res) => {
           pendingInvitations: pendingInvites.length,
           hasPendingApplication,
           levelBenefits,
+          ipoRequirements: {
+            fee: IPO_FEE,
+            minLevel: MIN_IPO_LEVEL,
+            minMembers: MIN_IPO_MEMBERS,
+            minNetWorth: MIN_IPO_NET_WORTH,
+            minProperties: IPO_MIN_PROPERTIES,
+            maxDebtRatio: IPO_MAX_DEBT_RATIO,
+          },
         };
       },
       cacheTTL.standard,
@@ -450,7 +458,7 @@ router.put('/:id', async (req, res) => {
 
 router.post('/:id/invite', async (req, res) => {
   try {
-    const { userId } = req.body;
+    const { username, userId } = req.body;
     const company = await RealEstateCompany.findById(req.params.id);
     if (!company) return res.status(404).json({ error: 'Company not found' });
 
@@ -463,26 +471,49 @@ router.post('/:id/invite', async (req, res) => {
       return res.status(400).json({ error: `Company is full. Maximum ${company.maxMembers} members.` });
     }
 
-    const targetUser = await User.findById(userId);
-    if (!targetUser) return res.status(404).json({ error: 'User not found' });
+    // Resolve the target player by username (case-insensitive). A raw userId is
+    // only accepted as a fallback for legacy clients; the UI must send a username.
+    let targetUser = null;
+    if (typeof username === 'string' && username.trim()) {
+      targetUser = await User.findOne({ normalizedUsername: username.trim().toLowerCase() });
+      if (!targetUser) {
+        return res.status(404).json({ error: `Player "${username.trim()}" not found` });
+      }
+    } else if (userId) {
+      targetUser = await User.findById(userId);
+      if (!targetUser) return res.status(404).json({ error: 'User not found' });
+    } else {
+      return res.status(400).json({ error: 'A username is required' });
+    }
+
+    if (targetUser._id.toString() === req.user._id.toString()) {
+      return res.status(400).json({ error: 'You cannot invite yourself' });
+    }
+
+    const alreadyMember = company.members.some((m) => m.userId?.toString() === targetUser._id.toString());
+    if (alreadyMember) {
+      return res.status(400).json({ error: 'This player is already a member of the company' });
+    }
+
     if (targetUser.companyId) {
       return res.status(400).json({ error: 'This player is already in a company' });
     }
 
-    const existingInvite = company.invitations.find((i) => i.userId?.toString() === userId && i.status === 'pending');
+    const targetId = targetUser._id.toString();
+    const existingInvite = company.invitations.find((i) => i.userId?.toString() === targetId && i.status === 'pending');
     if (existingInvite) {
       return res.status(400).json({ error: 'Invitation already pending' });
     }
 
-    company.invitations.push({ userId, invitedBy: req.user._id, status: 'pending' });
+    company.invitations.push({ userId: targetUser._id, invitedBy: req.user._id, status: 'pending' });
     await company.save();
 
     await enqueueNotification({
-      userId,
+      userId: targetUser._id,
       type: 'system',
       title: 'Company Invitation',
       message: `You have been invited to join "${company.name}"`,
-      eventKey: `company:${company._id}:invite:${userId}`,
+      eventKey: `company:${company._id}:invite:${targetUser._id}`,
       route: `/real-estate-companies/${company._id}`,
       entityType: 'company',
       entityId: company._id,
@@ -495,7 +526,7 @@ router.post('/:id/invite', async (req, res) => {
       company._id,
       req.user._id,
       'member_invited',
-      { targetUserId: userId, targetUsername: targetUser.username },
+      { targetUserId: targetUser._id, targetUsername: targetUser.username },
       gameState.tickNumber,
     );
 
@@ -547,7 +578,13 @@ router.post('/:id/invite/:invitationId/accept', async (req, res) => {
     await user.save();
 
     const gameState = await getGameState();
-    await addAuditLog(company._id, req.user._id, 'member_joined', { username: user.username }, gameState.tickNumber);
+    await addAuditLog(
+      company._id,
+      req.user._id,
+      'member_joined',
+      { username: user.username, shares: newMemberShares },
+      gameState.tickNumber,
+    );
 
     await enqueueNotification({
       userId: company.founderId,
@@ -754,6 +791,99 @@ router.post('/:id/invite/:invitationId/decline', async (req, res) => {
   }
 });
 
+router.post('/:id/leadership/transfer', async (req, res) => {
+  try {
+    const { targetUserId } = req.body;
+    if (!targetUserId) {
+      return res.status(400).json({ error: 'A target member is required to transfer leadership' });
+    }
+
+    const company = await RealEstateCompany.findById(req.params.id);
+    if (!company) return res.status(404).json({ error: 'Company not found' });
+
+    const caller = getMember(company, req.user._id);
+    if (!caller || caller.role !== 'ceo') {
+      return res.status(403).json({ error: 'Only the CEO can transfer leadership' });
+    }
+
+    const target = getMember(company, targetUserId);
+    if (!target) return res.status(404).json({ error: 'Target member not found' });
+    if (target.userId?.toString() === req.user._id.toString()) {
+      return res.status(400).json({ error: 'You are already the CEO of this company' });
+    }
+    if (target.role === 'recruit') {
+      return res
+        .status(400)
+        .json({ error: 'Leadership can only be transferred to a director, officer, or full member (not a recruit)' });
+    }
+
+    const targetOldRole = target.role;
+
+    // Enforce the single-CEO invariant: exactly one CEO must always exist.
+    // The caller (current CEO) becomes director, and any other legacy CEO is
+    // also demoted to director so the company can never end up with two CEOs.
+    // founderId is never touched — the Founder is a permanent ownership identity.
+    const demotedCeos = [];
+    for (const m of company.members) {
+      if (m.userId?.toString() === target.userId?.toString()) {
+        m.role = 'ceo';
+      } else if (m.role === 'ceo') {
+        m.role = 'director';
+        demotedCeos.push(m.userId);
+      }
+    }
+    await company.save();
+
+    const gameState = await getGameState();
+    await addAuditLog(
+      company._id,
+      req.user._id,
+      'leadership_transferred',
+      {
+        fromUserId: req.user._id,
+        toUserId: target.userId,
+        fromRole: 'ceo',
+        toRole: 'director',
+        targetOldRole,
+        demotedCeos: demotedCeos.map((id) => (id && typeof id.toString === 'function' ? id.toString() : id)),
+      },
+      gameState.tickNumber,
+    );
+
+    await enqueueNotification({
+      userId: target.userId,
+      type: 'system',
+      title: 'Leadership Transferred',
+      message: `You are now the CEO of "${company.name}"`,
+      eventKey: `company:${company._id}:leadership:${target.userId}`,
+      route: `/real-estate-companies/${company._id}`,
+      tab: 'members',
+      entityType: 'company',
+      entityId: company._id,
+      relatedId: company._id,
+      global: false,
+    });
+
+    await invalidateCompany(company._id);
+    emitToCompany(company._id, SOCKET_EVENTS.COMPANY_MEMBER_PROMOTED, {
+      companyId: company._id,
+      userId: target.userId,
+      newRole: 'ceo',
+      oldRole: targetOldRole,
+    });
+    emitToCompany(company._id, SOCKET_EVENTS.COMPANY_MEMBER_DEMOTED, {
+      companyId: company._id,
+      userId: req.user._id,
+      newRole: 'director',
+      oldRole: 'ceo',
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/:id/leave', async (req, res) => {
   try {
     const company = await RealEstateCompany.findById(req.params.id);
@@ -762,26 +892,20 @@ router.post('/:id/leave', async (req, res) => {
     const member = getMember(company, req.user._id);
     if (!member) return res.status(400).json({ error: 'You are not a member of this company' });
 
-    if (member.role === 'ceo' && company.members.filter((m) => m.role !== 'ceo').length === 0) {
-      return res.status(400).json({ error: 'CEO cannot leave a company with no other members. Disband instead.' });
+    if (member.role === 'ceo') {
+      const hasOtherMembers = company.members.some((m) => m.userId?.toString() !== req.user._id.toString());
+      if (!hasOtherMembers) {
+        return res.status(400).json({ error: 'CEO cannot leave a company with no other members. Disband instead.' });
+      }
+      return res.status(400).json({
+        error:
+          'The CEO cannot leave without transferring leadership first. Transfer leadership to another member and try again.',
+      });
     }
 
     // Return departing member's shares to treasury
-    company.shares.treasuryShares = (company.shares.treasuryShares || 0) + member.shares;
-
-    if (member.role === 'ceo') {
-      const nextDirector = company.members.find(
-        (m) => m.role === 'director' && m.userId?.toString() !== req.user._id.toString(),
-      );
-      if (nextDirector) {
-        nextDirector.role = 'ceo';
-      } else {
-        const nextMember = company.members.find((m) => m.userId?.toString() !== req.user._id.toString());
-        if (nextMember) {
-          nextMember.role = 'ceo';
-        }
-      }
-    }
+    const leftShares = member.shares || 0;
+    company.shares.treasuryShares = (company.shares.treasuryShares || 0) + leftShares;
 
     company.members = company.members.filter((m) => m.userId?.toString() !== req.user._id.toString());
     await company.save();
@@ -795,7 +919,13 @@ router.post('/:id/leave', async (req, res) => {
       company._id,
       req.user._id,
       'member_left',
-      { username: user.username, role: member.role },
+      {
+        username: user.username,
+        role: member.role,
+        shares: leftShares,
+        treasuryShares: company.shares.treasuryShares,
+        isFounder: member.userId?.toString() === company.founderId?.toString(),
+      },
       gameState.tickNumber,
     );
 
@@ -849,7 +979,12 @@ router.delete('/:id/members/:userId', async (req, res) => {
       company._id,
       req.user._id,
       'member_removed',
-      { targetUserId: req.params.userId, targetUsername: user?.username },
+      {
+        targetUserId: req.params.userId,
+        targetUsername: user?.username,
+        shares: targetMember.shares || 0,
+        treasuryShares: company.shares.treasuryShares,
+      },
       gameState.tickNumber,
     );
 
@@ -1603,7 +1738,7 @@ router.post('/:id/applications/:appId/approve', async (req, res) => {
       company._id,
       req.user._id,
       'application_approved',
-      { username: applicant.username },
+      { username: applicant.username, shares: newMemberShares },
       gameState.tickNumber,
     );
 
@@ -1713,9 +1848,8 @@ router.post('/:id/loan-requests', async (req, res) => {
     if (!company) return res.status(404).json({ error: 'Company not found' });
 
     const isAdmin = req.user.role === 'admin';
-    const isFounder = company.founderId?.toString() === req.user._id.toString();
     const member = getMember(company, req.user._id);
-    if (!isAdmin && !isFounder && (!member || !hasPermission(member, 'initiate_investments'))) {
+    if (!isAdmin && (!member || !hasPermission(member, 'initiate_investments'))) {
       return res.status(403).json({ error: 'Only CEO or Directors can request loans' });
     }
 
@@ -1820,10 +1954,8 @@ router.get('/:id/loan-requests', async (req, res) => {
     if (!company) return res.status(404).json({ error: 'Company not found' });
 
     const isAdmin = req.user.role === 'admin';
-    const isFounder = company.founderId?.toString() === req.user._id.toString();
     const member = getMember(company, req.user._id);
-    if (!isAdmin && !isFounder && !member)
-      return res.status(403).json({ error: 'You are not a member of this company' });
+    if (!isAdmin && !member) return res.status(403).json({ error: 'You are not a member of this company' });
 
     res.json(company.loanRequests);
   } catch (err) {
@@ -2057,9 +2189,8 @@ router.get('/:id/loan-options', async (req, res) => {
     if (!company) return res.status(404).json({ error: 'Company not found' });
 
     const isAdmin = req.user.role === 'admin';
-    const isFounder = company.founderId?.toString() === req.user._id.toString();
     const caller = getMember(company, req.user._id);
-    if (!isAdmin && !isFounder && (!caller || caller.role !== 'ceo')) {
+    if (!isAdmin && (!caller || caller.role !== 'ceo')) {
       return res.status(403).json({ error: 'Only the CEO can view company loan options' });
     }
 
@@ -2088,9 +2219,8 @@ router.post('/:id/direct-loan', async (req, res) => {
     if (!company) return res.status(404).json({ error: 'Company not found' });
 
     const isAdmin = req.user.role === 'admin';
-    const isFounder = company.founderId?.toString() === req.user._id.toString();
     const caller = getMember(company, req.user._id);
-    if (!isAdmin && !isFounder && (!caller || caller.role !== 'ceo')) {
+    if (!isAdmin && (!caller || caller.role !== 'ceo')) {
       return res.status(403).json({ error: 'Only the CEO can take direct loans' });
     }
 
@@ -2194,9 +2324,8 @@ router.post('/:id/property-purchase-requests', async (req, res) => {
     if (!company) return res.status(404).json({ error: 'Company not found' });
 
     const isAdmin = req.user.role === 'admin';
-    const isFounder = company.founderId?.toString() === req.user._id.toString();
     const member = getMember(company, req.user._id);
-    if (!isAdmin && !isFounder && (!member || member.role !== 'ceo')) {
+    if (!isAdmin && (!member || member.role !== 'ceo')) {
       return res.status(403).json({ error: 'Only the CEO can propose property purchases' });
     }
 

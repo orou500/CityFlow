@@ -3,10 +3,12 @@ import request from 'supertest';
 import { createApp } from '../../test/createApp.js';
 import { createAuthenticatedUser, createTestProperty, createTestCity, authHeader } from '../../test/helpers.js';
 import RealEstateCompany from '../../models/RealEstateCompany.js';
+import CompanyAuditLog from '../../models/CompanyAuditLog.js';
 import GameState from '../../models/GameState.js';
 import Property from '../../models/Property.js';
 import Notification from '../../models/Notification.js';
 import ConstructionProject from '../../models/ConstructionProject.js';
+import User from '../../models/User.js';
 import { xpRequiredForLevel } from '../../config/companyProgression.js';
 
 const app = createApp();
@@ -1049,21 +1051,47 @@ describe('Real Estate Companies', () => {
       expect(res.body.error).toContain('IPO costs');
     });
 
-    it('rejects IPO when company level too low', async () => {
+    it('rejects IPO when company level below 10', async () => {
       const founder = await createFounder({ balance: 200_000_000, level: 30 });
       const { company, token } = await createTestCompany(founder);
-      company.level = 10;
+      company.level = 9;
       await company.save();
 
       const res = await request(app).post(`/real-estate-companies/${company._id}/ipo`).set(authHeader(token)).send({});
       expect(res.status).toBe(400);
-      expect(res.body.error).toContain('Level 15');
+      expect(res.body.error).toContain('Level 10');
+    });
+
+    it('accepts IPO at exactly company level 10 (authoritative requirement)', async () => {
+      const founder = await createFounder({ balance: 1_000_000_000, level: 30 });
+      const { company, token } = await createTestCompany(founder);
+      company.level = 10;
+      company.treasury.balance = 600_000_000;
+      company.stats = { totalRentalIncome: 50_000_000, propertiesOwned: 10 };
+      await company.save();
+
+      for (let i = 0; i < 9; i++) {
+        const member = await createAuthenticatedUser();
+        await addMemberToCompany(company._id, token, { user: member.user, token: member.token });
+      }
+      for (let i = 0; i < 10; i++) {
+        await createTestProperty({
+          ownerId: founder.user._id,
+          companyId: company._id,
+          currentPrice: 30_000_000,
+          basePrice: 30_000_000,
+        });
+      }
+
+      const res = await request(app).post(`/real-estate-companies/${company._id}/ipo`).set(authHeader(token)).send({});
+      expect(res.status).toBe(200);
+      expect(res.body.ipo.listed).toBe(true);
     });
 
     it('rejects IPO when not enough members', async () => {
       const founder = await createFounder({ balance: 200_000_000, level: 30 });
       const { company, token } = await createTestCompany(founder);
-      company.level = 15;
+      company.level = 10;
       await company.save();
 
       const res = await request(app).post(`/real-estate-companies/${company._id}/ipo`).set(authHeader(token)).send({});
@@ -1095,6 +1123,641 @@ describe('Real Estate Companies', () => {
       const res = await request(app).post(`/real-estate-companies/${company._id}/ipo`).set(authHeader(token)).send({});
       expect(res.status).toBe(400);
       expect(res.body.error).toContain('10 properties');
+    });
+
+    // ─── IPO requirement thresholds (fee $30M, level 10, 5 members, $30M net worth) ───
+
+    async function seedIpoReadyCompany({ level, treasury, propertyPrices, memberCount }) {
+      const founder = await createFounder({ balance: 1_000_000_000, level: 30 });
+      const { company, token } = await createTestCompany(founder);
+      company.level = level;
+      company.treasury.balance = treasury;
+      await company.save();
+      for (let i = 0; i < memberCount - 1; i++) {
+        const member = await createAuthenticatedUser();
+        await addMemberToCompany(company._id, token, { user: member.user, token: member.token });
+      }
+      for (const price of propertyPrices) {
+        await createTestProperty({
+          ownerId: founder.user._id,
+          companyId: company._id,
+          currentPrice: price,
+          basePrice: price,
+        });
+      }
+      return { company, token, founder };
+    }
+
+    const TEN_MILLION_PROPS = Array.from({ length: 10 }, () => 5_000_000);
+
+    it('rejects IPO at Level 9 even with $30M+ net worth', async () => {
+      const { company, token } = await seedIpoReadyCompany({
+        level: 9,
+        treasury: 40_000_000,
+        propertyPrices: TEN_MILLION_PROPS,
+        memberCount: 5,
+      });
+      const res = await request(app).post(`/real-estate-companies/${company._id}/ipo`).set(authHeader(token)).send({});
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('Level 10');
+    });
+
+    it('rejects IPO at Level 10 when total worth is under $30M', async () => {
+      const { company, token } = await seedIpoReadyCompany({
+        level: 10,
+        treasury: 20_000_000,
+        propertyPrices: Array.from({ length: 10 }, () => 990_000),
+        memberCount: 5,
+      });
+      const res = await request(app).post(`/real-estate-companies/${company._id}/ipo`).set(authHeader(token)).send({});
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('$30,000,000');
+    });
+
+    it('accepts IPO at exactly Level 10 with $30M worth and charges exactly $30M', async () => {
+      const { company, token } = await seedIpoReadyCompany({
+        level: 10,
+        treasury: 30_000_000,
+        propertyPrices: TEN_MILLION_PROPS,
+        memberCount: 5,
+      });
+      const res = await request(app).post(`/real-estate-companies/${company._id}/ipo`).set(authHeader(token)).send({});
+      expect(res.status).toBe(200);
+      expect(res.body.ipo.listed).toBe(true);
+      const refreshed = await RealEstateCompany.findById(company._id);
+      expect(refreshed.treasury.balance).toBe(0);
+      expect(refreshed.ipo.listFee).toBe(30_000_000);
+    });
+
+    it('accepts IPO at Level 10 with $50M net worth', async () => {
+      const { company, token } = await seedIpoReadyCompany({
+        level: 10,
+        treasury: 50_000_000,
+        propertyPrices: TEN_MILLION_PROPS,
+        memberCount: 5,
+      });
+      const res = await request(app).post(`/real-estate-companies/${company._id}/ipo`).set(authHeader(token)).send({});
+      expect(res.status).toBe(200);
+      expect(res.body.ipo.listed).toBe(true);
+    });
+
+    it('accepts IPO at Level 10 with $100M net worth', async () => {
+      const { company, token } = await seedIpoReadyCompany({
+        level: 10,
+        treasury: 100_000_000,
+        propertyPrices: TEN_MILLION_PROPS,
+        memberCount: 5,
+      });
+      const res = await request(app).post(`/real-estate-companies/${company._id}/ipo`).set(authHeader(token)).send({});
+      expect(res.status).toBe(200);
+      expect(res.body.ipo.listed).toBe(true);
+    });
+
+    it('accepts IPO with exactly 5 members (threshold)', async () => {
+      const { company, token } = await seedIpoReadyCompany({
+        level: 10,
+        treasury: 100_000_000,
+        propertyPrices: TEN_MILLION_PROPS,
+        memberCount: 5,
+      });
+      const res = await request(app).post(`/real-estate-companies/${company._id}/ipo`).set(authHeader(token)).send({});
+      expect(res.status).toBe(200);
+      expect(res.body.ipo.listed).toBe(true);
+    });
+
+    it('rejects IPO with fewer than 5 members', async () => {
+      const { company, token } = await seedIpoReadyCompany({
+        level: 10,
+        treasury: 100_000_000,
+        propertyPrices: TEN_MILLION_PROPS,
+        memberCount: 4,
+      });
+      const res = await request(app).post(`/real-estate-companies/${company._id}/ipo`).set(authHeader(token)).send({});
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('5 members');
+    });
+
+    it('exposes ipoRequirements from GET /:id (backend authoritative)', async () => {
+      const { company, token } = await seedIpoReadyCompany({
+        level: 10,
+        treasury: 100_000_000,
+        propertyPrices: TEN_MILLION_PROPS,
+        memberCount: 5,
+      });
+      const res = await request(app).get(`/real-estate-companies/${company._id}`).set(authHeader(token)).send({});
+      expect(res.status).toBe(200);
+      expect(res.body.ipoRequirements).toMatchObject({
+        fee: 30_000_000,
+        minLevel: 10,
+        minMembers: 5,
+        minNetWorth: 30_000_000,
+        minProperties: 10,
+      });
+    });
+  });
+
+  describe('POST /real-estate-companies/:id/invite (by username)', () => {
+    it('invites a player by username (case-insensitive) and sends a notification', async () => {
+      const founder = await createFounder();
+      const { company, token } = await createTestCompany(founder);
+      const target = await createAuthenticatedUser({ username: 'BobTheBuilder' });
+
+      const res = await request(app)
+        .post(`/real-estate-companies/${company._id}/invite`)
+        .set(authHeader(token))
+        .send({ username: 'bobthebuilder' });
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+
+      const refreshed = await RealEstateCompany.findById(company._id);
+      const invite = refreshed.invitations.find((i) => i.userId?.toString() === target.user._id.toString());
+      expect(invite).toBeTruthy();
+      expect(invite.status).toBe('pending');
+      expect(invite.invitedBy.toString()).toBe(founder.user._id.toString());
+
+      const storedUser = await User.findById(target.user._id);
+      expect(storedUser.normalizedUsername).toBe('bobthebuilder');
+
+      const notif = await Notification.findOne({
+        userId: target.user._id,
+        eventKey: `company:${company._id}:invite:${target.user._id}`,
+      });
+      expect(notif).toBeTruthy();
+    });
+
+    it('rejects an unknown username with 404', async () => {
+      const founder = await createFounder();
+      const { company, token } = await createTestCompany(founder);
+
+      const res = await request(app)
+        .post(`/real-estate-companies/${company._id}/invite`)
+        .set(authHeader(token))
+        .send({ username: 'ghost_player_123' });
+      expect(res.status).toBe(404);
+      expect(res.body.error).toContain('ghost_player_123');
+    });
+
+    it('rejects a missing username with 400', async () => {
+      const founder = await createFounder();
+      const { company, token } = await createTestCompany(founder);
+
+      const res = await request(app)
+        .post(`/real-estate-companies/${company._id}/invite`)
+        .set(authHeader(token))
+        .send({});
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('username is required');
+    });
+
+    it('rejects inviting yourself', async () => {
+      const founder = await createFounder();
+      const { company, token } = await createTestCompany(founder);
+
+      const res = await request(app)
+        .post(`/real-estate-companies/${company._id}/invite`)
+        .set(authHeader(token))
+        .send({ username: founder.user.username });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('cannot invite yourself');
+    });
+
+    it('rejects inviting an existing member', async () => {
+      const founder = await createFounder();
+      const { company, token } = await createTestCompany(founder);
+      const member = await createAuthenticatedUser();
+      await addMemberToCompany(company._id, token, { user: member.user, token: member.token });
+
+      const res = await request(app)
+        .post(`/real-estate-companies/${company._id}/invite`)
+        .set(authHeader(token))
+        .send({ username: member.user.username });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('already a member');
+    });
+
+    it('rejects a duplicate pending invitation', async () => {
+      const founder = await createFounder();
+      const { company, token } = await createTestCompany(founder);
+      const target = await createAuthenticatedUser();
+
+      const first = await request(app)
+        .post(`/real-estate-companies/${company._id}/invite`)
+        .set(authHeader(token))
+        .send({ username: target.user.username });
+      expect(first.status).toBe(200);
+
+      const second = await request(app)
+        .post(`/real-estate-companies/${company._id}/invite`)
+        .set(authHeader(token))
+        .send({ username: target.user.username });
+      expect(second.status).toBe(400);
+      expect(second.body.error).toContain('already pending');
+    });
+
+    it('rejects inviting a player who is already in another company', async () => {
+      const founder = await createFounder();
+      const { company, token } = await createTestCompany(founder);
+      const otherFounder = await createFounder();
+      const { company: otherCompany, token: otherToken } = await createTestCompany(otherFounder);
+      const target = await createAuthenticatedUser();
+      await addMemberToCompany(otherCompany._id, otherToken, { user: target.user, token: target.token });
+
+      const res = await request(app)
+        .post(`/real-estate-companies/${company._id}/invite`)
+        .set(authHeader(token))
+        .send({ username: target.user.username });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('already in a company');
+    });
+
+    it('rejects invites from a member without invite_members permission', async () => {
+      const founder = await createFounder();
+      const { company, token } = await createTestCompany(founder);
+      const recruit = await createAuthenticatedUser();
+      await addMemberToCompany(company._id, token, { user: recruit.user, token: recruit.token });
+
+      const target = await createAuthenticatedUser();
+      const res = await request(app)
+        .post(`/real-estate-companies/${company._id}/invite`)
+        .set(authHeader(recruit.token))
+        .send({ username: target.user.username });
+      expect(res.status).toBe(403);
+      expect(res.body.error).toContain('permission to invite');
+    });
+
+    it('still accepts a legacy userId payload (backward compatibility)', async () => {
+      const founder = await createFounder();
+      const { company, token } = await createTestCompany(founder);
+      const target = await createAuthenticatedUser();
+
+      const res = await request(app)
+        .post(`/real-estate-companies/${company._id}/invite`)
+        .set(authHeader(token))
+        .send({ userId: target.user._id.toString() });
+      expect(res.status).toBe(200);
+
+      const refreshed = await RealEstateCompany.findById(company._id);
+      const invite = refreshed.invitations.find((i) => i.userId?.toString() === target.user._id.toString());
+      expect(invite).toBeTruthy();
+    });
+  });
+
+  describe('Leave & leadership transfer', () => {
+    async function setupCompanyWithDirector() {
+      const founder = await createFounder();
+      const { company } = await createTestCompany(founder);
+      const directorData = await createAuthenticatedUser({ balance: 5_000_000, level: 10 });
+      await addMemberToCompany(company._id, founder.token, directorData);
+      const directorId = directorData.user._id.toString();
+      const promoteRes = await request(app)
+        .put(`/real-estate-companies/${company._id}/members/${directorId}/role`)
+        .set(authHeader(founder.token))
+        .send({ role: 'director' });
+      expect(promoteRes.status).toBe(200);
+      return { founder, company, director: directorData, directorId };
+    }
+
+    it('blocks the CEO from leaving without transferring leadership first', async () => {
+      const { founder, company } = await setupCompanyWithDirector();
+
+      const res = await request(app).post(`/real-estate-companies/${company._id}/leave`).set(authHeader(founder.token));
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/transfer leadership/i);
+
+      const fresh = await RealEstateCompany.findById(company._id);
+      expect(fresh.members.find((m) => m.userId?.toString() === founder.user._id.toString()).role).toBe('ceo');
+      const updatedUser = await User.findById(founder.user._id);
+      expect(updatedUser.companyId?.toString()).toBe(company._id.toString());
+    });
+
+    it('tells a solo CEO to disband instead of leaving', async () => {
+      const founder = await createFounder();
+      const { company } = await createTestCompany(founder);
+
+      const res = await request(app).post(`/real-estate-companies/${company._id}/leave`).set(authHeader(founder.token));
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/disband/i);
+    });
+
+    it('validates leadership transfer requests', async () => {
+      const { founder, company, director, directorId } = await setupCompanyWithDirector();
+
+      let res = await request(app)
+        .post(`/real-estate-companies/${company._id}/leadership/transfer`)
+        .set(authHeader(founder.token))
+        .send({});
+      expect(res.status).toBe(400);
+
+      res = await request(app)
+        .post(`/real-estate-companies/${company._id}/leadership/transfer`)
+        .set(authHeader(director.token))
+        .send({ targetUserId: founder.user._id.toString() });
+      expect(res.status).toBe(403);
+
+      res = await request(app)
+        .post(`/real-estate-companies/${company._id}/leadership/transfer`)
+        .set(authHeader(founder.token))
+        .send({ targetUserId: founder.user._id.toString() });
+      expect(res.status).toBe(400);
+
+      res = await request(app)
+        .post(`/real-estate-companies/${company._id}/leadership/transfer`)
+        .set(authHeader(founder.token))
+        .send({ targetUserId: '000000000000000000000000' });
+      expect(res.status).toBe(404);
+
+      const recruitData = await createAuthenticatedUser({ balance: 1_000_000, level: 10 });
+      await addMemberToCompany(company._id, founder.token, recruitData);
+      res = await request(app)
+        .post(`/real-estate-companies/${company._id}/leadership/transfer`)
+        .set(authHeader(founder.token))
+        .send({ targetUserId: recruitData.user._id.toString() });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/recruit/i);
+
+      const fresh = await RealEstateCompany.findById(company._id);
+      expect(fresh.members.find((m) => m.userId?.toString() === founder.user._id.toString()).role).toBe('ceo');
+      expect(fresh.members.find((m) => m.userId?.toString() === directorId).role).toBe('director');
+    });
+
+    it('lets the CEO transfer leadership, then leave; shares return to the treasury', async () => {
+      const { founder, company, directorId } = await setupCompanyWithDirector();
+
+      const transferRes = await request(app)
+        .post(`/real-estate-companies/${company._id}/leadership/transfer`)
+        .set(authHeader(founder.token))
+        .send({ targetUserId: directorId });
+      expect(transferRes.status).toBe(200);
+
+      let fresh = await RealEstateCompany.findById(company._id);
+      expect(fresh.members.find((m) => m.userId?.toString() === directorId).role).toBe('ceo');
+      expect(fresh.members.find((m) => m.userId?.toString() === founder.user._id.toString()).role).toBe('director');
+
+      const audit = await CompanyAuditLog.findOne({ companyId: company._id, action: 'leadership_transferred' });
+      expect(audit).toBeTruthy();
+      expect(audit.details.toUserId?.toString()).toBe(directorId);
+      expect(audit.details.fromUserId?.toString()).toBe(founder.user._id.toString());
+
+      const leaveRes = await request(app)
+        .post(`/real-estate-companies/${company._id}/leave`)
+        .set(authHeader(founder.token));
+      expect(leaveRes.status).toBe(200);
+
+      fresh = await RealEstateCompany.findById(company._id);
+      expect(fresh.members.find((m) => m.userId?.toString() === founder.user._id.toString())).toBeUndefined();
+      expect(fresh.members.find((m) => m.userId?.toString() === directorId).role).toBe('ceo');
+      // founder had 700 shares; they move to treasury (250 + 700 = 950), never silently lost
+      expect(fresh.shares.treasuryShares).toBe(950);
+
+      const leftAudit = await CompanyAuditLog.findOne({ companyId: company._id, action: 'member_left' });
+      expect(leftAudit.details.shares).toBe(700);
+      expect(leftAudit.details.treasuryShares).toBe(950);
+
+      const updatedUser = await User.findById(founder.user._id);
+      expect(updatedUser.companyId).toBeNull();
+    });
+
+    it('returns a regular member shares to the treasury and records them in the audit log', async () => {
+      const { company, director } = await setupCompanyWithDirector();
+
+      const leaveRes = await request(app)
+        .post(`/real-estate-companies/${company._id}/leave`)
+        .set(authHeader(director.token));
+      expect(leaveRes.status).toBe(200);
+
+      const fresh = await RealEstateCompany.findById(company._id);
+      expect(fresh.shares.treasuryShares).toBe(300);
+      const audit = await CompanyAuditLog.findOne({ companyId: company._id, action: 'member_left' });
+      expect(audit.details.shares).toBe(50);
+      expect(audit.details.treasuryShares).toBe(300);
+      expect(audit.details.role).toBe('director');
+    });
+
+    it('former CEO who left cannot use any management endpoint (all historical bypass sites)', async () => {
+      const { founder, company, directorId } = await setupCompanyWithDirector();
+
+      await request(app)
+        .post(`/real-estate-companies/${company._id}/leadership/transfer`)
+        .set(authHeader(founder.token))
+        .send({ targetUserId: directorId });
+      const leaveRes = await request(app)
+        .post(`/real-estate-companies/${company._id}/leave`)
+        .set(authHeader(founder.token));
+      expect(leaveRes.status).toBe(200);
+
+      const cases = [
+        ['post', `/real-estate-companies/${company._id}/loan-requests`, { amount: 100_000, loanType: 'standard' }],
+        ['get', `/real-estate-companies/${company._id}/loan-requests`],
+        ['get', `/real-estate-companies/${company._id}/loan-options`],
+        [
+          'post',
+          `/real-estate-companies/${company._id}/direct-loan`,
+          { productType: 'startup', amount: 100_000, durationMonths: 12 },
+        ],
+        ['post', `/real-estate-companies/${company._id}/property-purchase-requests`, {}],
+      ];
+      for (const [method, url, body] of cases) {
+        const res = await request(app)
+          [method](url)
+          .set(authHeader(founder.token))
+          .send(body || {});
+        expect(res.status).toBe(403);
+      }
+    });
+
+    it('a former regular member cannot manage, and a stale companyId grants nothing', async () => {
+      const { company, director } = await setupCompanyWithDirector();
+
+      const leaveRes = await request(app)
+        .post(`/real-estate-companies/${company._id}/leave`)
+        .set(authHeader(director.token));
+      expect(leaveRes.status).toBe(200);
+
+      let res = await request(app)
+        .get(`/real-estate-companies/${company._id}/loan-requests`)
+        .set(authHeader(director.token));
+      expect(res.status).toBe(403);
+
+      // simulate stale client state: the user record still points at the company
+      await User.findByIdAndUpdate(director.user._id, { companyId: company._id });
+      res = await request(app)
+        .get(`/real-estate-companies/${company._id}/loan-requests`)
+        .set(authHeader(director.token));
+      expect(res.status).toBe(403);
+    });
+
+    it('former CEO who left and rejoins becomes a recruit with fresh shares, never CEO', async () => {
+      const { founder, company, director, directorId } = await setupCompanyWithDirector();
+
+      await request(app)
+        .post(`/real-estate-companies/${company._id}/leadership/transfer`)
+        .set(authHeader(founder.token))
+        .send({ targetUserId: directorId });
+      const leaveRes = await request(app)
+        .post(`/real-estate-companies/${company._id}/leave`)
+        .set(authHeader(founder.token));
+      expect(leaveRes.status).toBe(200);
+
+      const applyRes = await request(app)
+        .post(`/real-estate-companies/${company._id}/apply`)
+        .set(authHeader(founder.token))
+        .send({ message: 'Please let me rejoin' });
+      expect(applyRes.status).toBe(201);
+
+      let fresh = await RealEstateCompany.findById(company._id);
+      const application = fresh.applications.find(
+        (a) => a.userId?.toString() === founder.user._id.toString() && a.status === 'pending',
+      );
+      expect(application).toBeTruthy();
+
+      const approveRes = await request(app)
+        .post(`/real-estate-companies/${company._id}/applications/${application._id}/approve`)
+        .set(authHeader(director.token));
+      expect(approveRes.status).toBe(200);
+
+      fresh = await RealEstateCompany.findById(company._id);
+      const rejoined = fresh.members.find((m) => m.userId?.toString() === founder.user._id.toString());
+      expect(rejoined.role).toBe('recruit');
+      expect(rejoined.shares).toBe(50);
+      expect(fresh.shares.treasuryShares).toBe(900);
+      expect(fresh.members.find((m) => m.userId?.toString() === directorId).role).toBe('ceo');
+    });
+  });
+
+  describe('Founder & ownership invariants', () => {
+    async function setupFounderWithDirector() {
+      const founder = await createFounder();
+      const { company } = await createTestCompany(founder);
+      const directorData = await createAuthenticatedUser({ balance: 5_000_000, level: 10 });
+      await addMemberToCompany(company._id, founder.token, directorData);
+      const directorId = directorData.user._id.toString();
+      const promoteRes = await request(app)
+        .put(`/real-estate-companies/${company._id}/members/${directorId}/role`)
+        .set(authHeader(founder.token))
+        .send({ role: 'director' });
+      expect(promoteRes.status).toBe(200);
+      return { founder, company, director: directorData, directorId };
+    }
+
+    it('never leaves a company with two CEOs, and repairs legacy double-CEO data on transfer', async () => {
+      const { founder, company, directorId } = await setupFounderWithDirector();
+
+      // A normal transfer produces exactly one CEO
+      await request(app)
+        .post(`/real-estate-companies/${company._id}/leadership/transfer`)
+        .set(authHeader(founder.token))
+        .send({ targetUserId: directorId });
+      let fresh = await RealEstateCompany.findById(company._id);
+      expect(fresh.members.filter((m) => m.role === 'ceo')).toHaveLength(1);
+
+      // Fabricate legacy data with two CEOs directly in the DB
+      fresh = await RealEstateCompany.findById(company._id);
+      fresh.members.find((m) => m.userId?.toString() === founder.user._id.toString()).role = 'ceo';
+      await fresh.save();
+      fresh = await RealEstateCompany.findById(company._id);
+      expect(fresh.members.filter((m) => m.role === 'ceo')).toHaveLength(2);
+
+      // Add a third member, promote them to an eligible role, then the founder transfers leadership to them
+      const thirdData = await createAuthenticatedUser({ balance: 2_000_000, level: 10 });
+      await addMemberToCompany(company._id, founder.token, thirdData);
+      const thirdId = thirdData.user._id.toString();
+      await request(app)
+        .put(`/real-estate-companies/${company._id}/members/${thirdId}/role`)
+        .set(authHeader(founder.token))
+        .send({ role: 'member' });
+      await request(app)
+        .post(`/real-estate-companies/${company._id}/leadership/transfer`)
+        .set(authHeader(founder.token))
+        .send({ targetUserId: thirdId });
+
+      fresh = await RealEstateCompany.findById(company._id);
+      const ceos = fresh.members.filter((m) => m.role === 'ceo');
+      expect(ceos).toHaveLength(1);
+      expect(ceos[0].userId.toString()).toBe(thirdId);
+      expect(fresh.members.find((m) => m.userId?.toString() === founder.user._id.toString()).role).toBe('director');
+      expect(fresh.members.find((m) => m.userId?.toString() === directorId).role).toBe('director');
+
+      const audits = await CompanyAuditLog.find({ companyId: company._id, action: 'leadership_transferred' }).sort({
+        createdAt: 1,
+      });
+      expect(audits.length).toBe(2);
+      expect(audits[audits.length - 1].details.demotedCeos).toContain(directorId);
+    });
+
+    it('keeps founderId, the single CEO, and share accounting consistent across transfer/leave/rejoin/restore', async () => {
+      const { founder, company, director, directorId } = await setupFounderWithDirector();
+      const founderId = founder.user._id.toString();
+
+      const assertState = async (label, expectedCeoId, expectedFounderRole, expectedFounderShares) => {
+        const fresh = await RealEstateCompany.findById(company._id);
+        expect(fresh.founderId.toString(), `${label}: founderId`).toBe(founderId);
+        const ceos = fresh.members.filter((m) => m.role === 'ceo');
+        expect(ceos.length, `${label}: exactly one CEO`).toBe(1);
+        expect(ceos[0].userId.toString(), `${label}: CEO identity`).toBe(expectedCeoId);
+        const founderMember = fresh.members.find((m) => m.userId?.toString() === founderId);
+        if (expectedFounderRole === null) {
+          expect(founderMember, `${label}: founder is not a member`).toBeUndefined();
+        } else {
+          expect(founderMember.role, `${label}: founder role`).toBe(expectedFounderRole);
+          expect(founderMember.shares, `${label}: founder shares`).toBe(expectedFounderShares);
+        }
+        const memberSum = fresh.members.reduce((s, m) => s + (m.shares || 0), 0);
+        expect(memberSum + fresh.shares.treasuryShares, `${label}: share accounting`).toBe(
+          fresh.shares.totalShares,
+        );
+        return fresh;
+      };
+
+      // Initial state: founder is CEO with the original share block
+      await assertState('creation', founderId, 'ceo', 700);
+
+      // Transfer to the director -> founder becomes director, founderId unchanged
+      await request(app)
+        .post(`/real-estate-companies/${company._id}/leadership/transfer`)
+        .set(authHeader(founder.token))
+        .send({ targetUserId: directorId });
+      await assertState('after transfer', directorId, 'director', 700);
+
+      // Founder leaves -> founderId stays, shares return to treasury
+      await request(app)
+        .post(`/real-estate-companies/${company._id}/leave`)
+        .set(authHeader(founder.token));
+      await assertState('after founder leave', directorId, null, 0);
+
+      // Founder rejoins via application -> recruit with fresh shares, no privileges
+      await request(app)
+        .post(`/real-estate-companies/${company._id}/apply`)
+        .set(authHeader(founder.token))
+        .send({ message: 'rejoin' });
+      let fresh = await RealEstateCompany.findById(company._id);
+      const application = fresh.applications.find(
+        (a) => a.userId?.toString() === founderId && a.status === 'pending',
+      );
+      expect(application).toBeTruthy();
+      await request(app)
+        .post(`/real-estate-companies/${company._id}/applications/${application._id}/approve`)
+        .set(authHeader(director.token));
+      await assertState('after rejoin', directorId, 'recruit', 50);
+
+      // Rejoining grants no Founder privileges until the company state explicitly restores them
+      const blocked = await request(app)
+        .post(`/real-estate-companies/${company._id}/loan-requests`)
+        .set(authHeader(founder.token))
+        .send({ amount: 100_000, loanType: 'standard' });
+      expect(blocked.status).toBe(403);
+
+      // Explicit restore by the CEO: promote the founder to director, then transfer leadership back
+      await request(app)
+        .put(`/real-estate-companies/${company._id}/members/${founderId}/role`)
+        .set(authHeader(director.token))
+        .send({ role: 'director' });
+      await request(app)
+        .post(`/real-estate-companies/${company._id}/leadership/transfer`)
+        .set(authHeader(director.token))
+        .send({ targetUserId: founderId });
+      await assertState('after explicit restore', founderId, 'ceo', 50);
     });
   });
 });

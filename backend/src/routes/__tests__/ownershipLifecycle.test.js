@@ -123,7 +123,7 @@ describe('Ownership Lifecycle', () => {
 
   // â”€â”€â”€ 4. CEO LEAVES / SUCCESSION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-  it('transfers CEO role correctly on CEO leave, shares go to treasury', async () => {
+  it('blocks CEO leave without a transfer; transferring leadership first then leaving works', async () => {
     const founder = await createFounder();
     const company = await createCompany(founder, hqCityId);
     const member1 = await addMember(company._id, founder.token);
@@ -133,9 +133,40 @@ describe('Ownership Lifecycle', () => {
     const founderShares = before.members.find((m) => m.userId.toString() === founder.user._id.toString())?.shares || 0;
     const treasuryBefore = before.shares.treasuryShares;
 
-    await request(app).post(`/real-estate-companies/${company._id}/leave`).set(authHeader(founder.token)).send({});
+    // CEO cannot leave without transferring leadership first
+    const blocked = await request(app)
+      .post(`/real-estate-companies/${company._id}/leave`)
+      .set(authHeader(founder.token))
+      .send({});
+    expect(blocked.status).toBe(400);
+    expect(blocked.body.error).toMatch(/transfer leadership/i);
 
-    const after = await RealEstateCompany.findById(company._id);
+    let after = await RealEstateCompany.findById(company._id);
+    expect(after.members.find((m) => m.role === 'ceo').userId.toString()).toBe(founder.user._id.toString());
+    expect(after.shares.treasuryShares).toBe(treasuryBefore);
+
+    // Promote the first member so they are eligible to receive leadership
+    const member1Id = member1.user._id.toString();
+    const promoteRes = await request(app)
+      .put(`/real-estate-companies/${company._id}/members/${member1Id}/role`)
+      .set(authHeader(founder.token))
+      .send({ role: 'director' });
+    expect(promoteRes.status).toBe(200);
+
+    // Transfer leadership to member1, then the founder can leave
+    const transferRes = await request(app)
+      .post(`/real-estate-companies/${company._id}/leadership/transfer`)
+      .set(authHeader(founder.token))
+      .send({ targetUserId: member1Id });
+    expect(transferRes.status).toBe(200);
+
+    const leaveRes = await request(app)
+      .post(`/real-estate-companies/${company._id}/leave`)
+      .set(authHeader(founder.token))
+      .send({});
+    expect(leaveRes.status).toBe(200);
+
+    after = await RealEstateCompany.findById(company._id);
     const newCeo = after.members.find((m) => m.role === 'ceo');
     expect(newCeo).toBeDefined();
     expect(newCeo.userId.toString()).toBe(member1.user._id.toString());

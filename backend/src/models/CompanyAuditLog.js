@@ -15,6 +15,7 @@ const companyAuditLogSchema = new mongoose.Schema(
         'invitation_accepted',
         'invitation_declined',
         'role_changed',
+        'leadership_transferred',
         'treasury_deposit',
         'treasury_withdrawal',
         'property_purchased',
