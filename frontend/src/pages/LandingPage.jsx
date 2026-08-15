@@ -132,7 +132,7 @@ export default function LandingPage() {
   const [leaderboard, setLeaderboard] = useState([]);
   const [activity, setActivity] = useState([]);
   const [worldAge, setWorldAge] = useState(null);
-  const isRtl = i18n.language === 'he';
+  const isRtl = i18n.language?.toLowerCase().startsWith('he');
 
   useEffect(() => {
     if (!loading && user) {
@@ -156,11 +156,33 @@ export default function LandingPage() {
       .catch(() => {});
   }, []);
 
+  // Bidi isolation for mixed-content interpolation: usernames, property and
+  // company names get first-strong isolation (\u2068 = FSI), amounts get
+  // left-to-right isolation (\u2066 = LRI). These invisible marks prevent the
+  // browser's bidi algorithm from reversing/reordering Latin text, numbers and
+  // currency inside a Hebrew (RTL) sentence — a no-op in English/LTR.
+  const isolateAuto = (value) => `\u2068${value}\u2069`;
+  const isolateLtr = (value) => `\u2066${value}\u2069`;
+
+  function formatActivityTime(createdAt, translate, locale) {
+    if (!createdAt) return '';
+    const date = new Date(createdAt);
+    if (Number.isNaN(date.getTime())) return '';
+    const minutes = Math.floor((Date.now() - date.getTime()) / 60000);
+    const hours = Math.floor((Date.now() - date.getTime()) / 3600000);
+    const days = Math.floor((Date.now() - date.getTime()) / 86400000);
+    if (minutes < 1) return translate('worldStatus.justNow');
+    if (minutes < 60) return translate('worldStatus.minutesAgo', { count: minutes });
+    if (hours < 24) return translate('worldStatus.hoursAgo', { count: hours });
+    if (days < 7) return translate('worldStatus.daysAgo', { count: days });
+    return date.toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
   function formatActivity(tx) {
-    const buyer = tx.buyerId?.displayName || tx.buyerId?.username || 'Someone';
-    const seller = tx.sellerId?.displayName || tx.sellerId?.username || 'Someone';
-    const property = tx.propertyId?.name || 'a property';
-    const amount = formatMoney(tx.price);
+    const buyer = isolateAuto(tx.buyerId?.displayName || tx.buyerId?.username || 'Someone');
+    const seller = isolateAuto(tx.sellerId?.displayName || tx.sellerId?.username || 'Someone');
+    const property = isolateAuto(tx.propertyId?.name || 'a property');
+    const amount = isolateLtr(formatMoney(tx.price));
 
     switch (tx.type) {
       case 'buy':
@@ -188,11 +210,14 @@ export default function LandingPage() {
       case 'auction_won':
         return t('landing.activity.auctionWon', { buyer, property, amount });
       case 'mission_completed':
-        return t('landing.activity.missionCompleted', { buyer, mission: tx.missionName || 'a mission' });
+        return t('landing.activity.missionCompleted', {
+          buyer,
+          mission: isolateAuto(tx.missionName || 'a mission'),
+        });
       case 'company_event':
         return t('landing.activity.companyAction', {
           buyer,
-          company: tx.company?.name || 'a company',
+          company: isolateAuto(tx.company?.name || 'a company'),
           action: t(`landing.activity.companyActions.${tx.companyAction}`, { defaultValue: tx.companyAction }),
         });
       default:
@@ -340,9 +365,16 @@ export default function LandingPage() {
             <SectionHeading title={t('landing.activity.title')} description={t('landing.activity.description')} />
             <div className="space-y-3">
               {activity.map((tx) => (
-                <div key={tx._id} className="bg-card rounded-lg px-5 py-3 border border-border text-sm">
-                  <span className="text-primary">{formatActivity(tx)}</span>
-                  <span className="text-muted text-xs ml-2">{new Date(tx.createdAt).toLocaleDateString()}</span>
+                <div
+                  key={tx._id}
+                  className="bg-card rounded-lg px-5 py-3 border border-border text-sm flex flex-wrap sm:flex-nowrap items-baseline justify-between gap-x-4 gap-y-1"
+                >
+                  <span className="text-primary min-w-0 flex-1 break-words [overflow-wrap:anywhere]">
+                    {formatActivity(tx)}
+                  </span>
+                  <span className="text-muted text-xs shrink-0 whitespace-nowrap">
+                    {formatActivityTime(tx.createdAt, t, i18n.language)}
+                  </span>
                 </div>
               ))}
             </div>
