@@ -6,6 +6,7 @@ import { formatCount, formatMoneyExact } from '../utils/format';
 import CompactValue from '../components/CompactValue';
 import { getAvatarUrl } from '../utils/capacitor';
 import useNativeAvatarUrl from '../hooks/useNativeAvatarUrl';
+import useIsMobile from '../hooks/useIsMobile';
 
 const CATEGORIES = ['netWorth', 'properties', 'passiveIncome', 'dealVolume', 'cityInfluence'];
 const PAGE_SIZE = 20;
@@ -31,22 +32,23 @@ function RankBadge({ rank }) {
   if (rank === 2) return <span className="text-lg">{'\uD83E\uDD48'}</span>;
   if (rank === 3) return <span className="text-lg">{'\uD83E\uDD49'}</span>;
   return (
-    <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-800 text-sm font-semibold text-secondary">
+    <span className="inline-flex items-center justify-center min-w-7 h-7 max-w-12 px-1.5 rounded-full bg-gray-100 dark:bg-gray-800 text-xs font-semibold text-secondary whitespace-nowrap truncate">
       {rank}
     </span>
   );
 }
 
 function MovementIndicator({ change }) {
-  if (!change || change === 0) return <span className="text-xs text-muted">{'\u25AC'}</span>;
+  const base = 'inline-block max-w-14 overflow-hidden text-ellipsis whitespace-nowrap align-top';
+  if (!change || change === 0) return <span className={`text-xs text-muted ${base}`}>{'\u25AC'}</span>;
   if (change > 0)
     return (
-      <span className="text-xs text-green-600 dark:text-green-400 font-medium">
+      <span className={`text-xs text-green-600 dark:text-green-400 font-medium ${base}`}>
         {'\u25B2'} +{change}
       </span>
     );
   return (
-    <span className="text-xs text-red-500 dark:text-red-400 font-medium">
+    <span className={`text-xs text-red-500 dark:text-red-400 font-medium ${base}`}>
       {'\u25BC'} {change}
     </span>
   );
@@ -58,10 +60,10 @@ function PlayerAvatar({ avatar, username, size = 'md' }) {
   const cls = size === 'lg' ? 'w-10 h-10 text-base' : 'w-7 h-7 text-[10px]';
 
   if (avatarUrl) {
-    return <img src={avatarUrl} alt="" className={`${cls} rounded-full object-cover`} />;
+    return <img src={avatarUrl} alt="" className={`${cls} rounded-full object-cover shrink-0`} />;
   }
   return (
-    <div className={`${cls} rounded-full bg-blue-600 text-white flex items-center justify-center font-medium`}>
+    <div className={`${cls} rounded-full bg-blue-600 text-white flex items-center justify-center font-medium shrink-0`}>
       {initial}
     </div>
   );
@@ -71,7 +73,7 @@ function PlayerRow({ entry, onClick, formatValue, isCurrentUser }) {
   return (
     <button
       onClick={() => onClick(entry.userId)}
-      className={`w-full flex items-center gap-2.5 px-3 py-2.5 sm:py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 active:bg-gray-100 dark:active:bg-gray-800 transition-colors border-b border-border last:border-b-0 ${isCurrentUser ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}
+      className={`w-full min-w-0 flex items-center gap-2.5 px-3 py-2.5 sm:py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 active:bg-gray-100 dark:active:bg-gray-800 transition-colors border-b border-border last:border-b-0 ${isCurrentUser ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}
     >
       <div className="w-7 sm:w-8 flex justify-center shrink-0">
         <RankBadge rank={entry.rank} />
@@ -79,21 +81,107 @@ function PlayerRow({ entry, onClick, formatValue, isCurrentUser }) {
 
       <PlayerAvatar avatar={entry.avatar} username={entry.username} />
 
-      <div className="flex-1 text-left min-w-0">
+      <div className="flex-1 text-start min-w-0">
         <div className="text-sm font-medium text-primary truncate">{entry.displayName || entry.username}</div>
         <div className="text-[11px] text-muted truncate sm:hidden">
           {CATEGORY_FORMATTERS[entry._cat]?.(entry.value)}
         </div>
       </div>
 
-      <div className="text-right shrink-0 hidden sm:block">
+      <div className="text-end shrink-0 hidden sm:block min-w-0">
         <div className="text-sm font-semibold text-primary">{formatValue(entry.value)}</div>
       </div>
 
-      <div className="w-9 text-right shrink-0">
+      <div className="min-w-9 text-end shrink-0">
         <MovementIndicator change={entry.rankChange} />
       </div>
     </button>
+  );
+}
+
+function Podium({ topThree, activeCategory, isMobile }) {
+  const formatter = CATEGORY_FORMATTERS[activeCategory];
+  const nameOf = (e) => e.displayName || e.username;
+
+  if (isMobile) {
+    const [first, second, third] = topThree;
+    const medalCard = (entry, medal) => (
+      <div className="flex flex-col items-center flex-1 min-w-0 rounded-lg bg-gray-50 dark:bg-gray-800/50 px-2 py-2.5">
+        <PlayerAvatar avatar={entry.avatar} username={entry.username} size="lg" />
+        <div className="mt-1.5 w-full text-center min-w-0">
+          <div className="text-[11px] font-medium text-primary truncate">{nameOf(entry)}</div>
+          <div className="text-xs font-bold text-secondary mt-0.5 truncate">{formatter(entry.value)}</div>
+        </div>
+        <div className="mt-0.5 text-sm">{medal}</div>
+      </div>
+    );
+
+    return (
+      <div className="px-3 py-3 border-b border-border bg-gradient-to-b from-gray-50/50 to-transparent dark:from-gray-800/20">
+        <div className="flex flex-col gap-3 min-w-0">
+          {first && (
+            <div className="flex items-center justify-center gap-3 min-w-0 rounded-lg bg-gray-50 dark:bg-gray-800/50 px-3 py-2.5">
+              <span className="text-2xl shrink-0">{'\uD83E\uDD47'}</span>
+              <div className="min-w-0 text-start">
+                <div className="text-sm font-semibold text-primary truncate">{nameOf(first)}</div>
+                <div className="text-xs font-bold text-green-600 dark:text-green-400 truncate">
+                  {formatter(first.value)}
+                </div>
+              </div>
+            </div>
+          )}
+          {(second || third) && (
+            <div className="flex items-stretch gap-2.5 min-w-0">
+              {second && medalCard(second, '\uD83E\uDD48')}
+              {third && medalCard(third, '\uD83E\uDD49')}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-3 py-3 border-b border-border bg-gradient-to-b from-gray-50/50 to-transparent dark:from-gray-800/20">
+      <div className="flex items-end justify-center gap-4 sm:gap-8">
+        {topThree.length >= 2 && (
+          <div className="flex flex-col items-center flex-1 min-w-0 max-w-[110px]">
+            <PlayerAvatar avatar={topThree[1].avatar} username={topThree[1].username} size="lg" />
+            <div className="mt-1.5 text-center w-full min-w-0">
+              <div className="text-[11px] font-medium text-primary truncate">{nameOf(topThree[1])}</div>
+              <div className="text-xs sm:text-sm font-bold text-secondary mt-0.5 truncate">
+                {formatter(topThree[1].value)}
+              </div>
+            </div>
+            <div className="mt-0.5 text-sm">{'\uD83E\uDD48'}</div>
+          </div>
+        )}
+        {topThree.length >= 1 && (
+          <div className="flex flex-col items-center flex-1 min-w-0 max-w-[110px]">
+            <div className="mb-0.5 text-base">{'\uD83E\uDD47'}</div>
+            <PlayerAvatar avatar={topThree[0].avatar} username={topThree[0].username} size="lg" />
+            <div className="mt-1.5 text-center w-full min-w-0">
+              <div className="text-[11px] font-medium text-primary truncate">{nameOf(topThree[0])}</div>
+              <div className="text-xs sm:text-sm font-bold text-green-600 dark:text-green-400 mt-0.5 truncate">
+                {formatter(topThree[0].value)}
+              </div>
+            </div>
+          </div>
+        )}
+        {topThree.length >= 3 && (
+          <div className="flex flex-col items-center flex-1 min-w-0 max-w-[110px]">
+            <PlayerAvatar avatar={topThree[2].avatar} username={topThree[2].username} size="lg" />
+            <div className="mt-1.5 text-center w-full min-w-0">
+              <div className="text-[11px] font-medium text-primary truncate">{nameOf(topThree[2])}</div>
+              <div className="text-xs sm:text-sm font-bold text-secondary mt-0.5 truncate">
+                {formatter(topThree[2].value)}
+              </div>
+            </div>
+            <div className="mt-0.5 text-sm">{'\uD83E\uDD49'}</div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -149,21 +237,23 @@ function PlayerProfile({ profile, onClose }) {
           </div>
 
           <div className="space-y-1.5">
-            {Object.entries(profile.ranks).map(([cat, data]) => (
+            {Object.entries(profile.ranks || {}).map(([cat, data]) => (
               <div
                 key={cat}
-                className="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-800/50"
+                className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-800/50"
               >
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">{CATEGORY_ICONS[cat]}</span>
-                  <span className="text-sm text-secondary">{CATEGORY_LABELS[cat]}</span>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-sm shrink-0">{CATEGORY_ICONS[cat]}</span>
+                  <span className="text-sm text-secondary truncate">{CATEGORY_LABELS[cat]}</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   {data.rank ? (
                     <>
                       <span className="text-sm font-semibold text-primary">#{data.rank}</span>
                       <span className="text-xs text-muted">{'\u00B7'}</span>
-                      <span className="text-sm text-secondary">{CATEGORY_FORMATTERS[cat](data.value)}</span>
+                      <span className="text-sm text-secondary max-w-24 truncate">
+                        {CATEGORY_FORMATTERS[cat](data.value)}
+                      </span>
                     </>
                   ) : (
                     <span className="text-xs text-muted">{'\u2014'}</span>
@@ -196,7 +286,34 @@ function PlayerProfile({ profile, onClose }) {
 
 function Pagination({ page, totalPages, onPageChange }) {
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   if (totalPages <= 1) return null;
+
+  if (isMobile) {
+    return (
+      <div className="flex items-center justify-center gap-3 py-3 px-3">
+        <button
+          onClick={() => onPageChange(page - 1)}
+          disabled={page <= 1}
+          aria-label={t('leaderboard.prevPage')}
+          className="w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium text-secondary hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          {'\u2190'}
+        </button>
+        <span className="text-xs text-secondary whitespace-nowrap tabular-nums">
+          {page} / {totalPages}
+        </span>
+        <button
+          onClick={() => onPageChange(page + 1)}
+          disabled={page >= totalPages}
+          aria-label={t('leaderboard.nextPage')}
+          className="w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium text-secondary hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          {'\u2192'}
+        </button>
+      </div>
+    );
+  }
 
   const pages = [];
   const start = Math.max(1, page - 2);
@@ -204,10 +321,11 @@ function Pagination({ page, totalPages, onPageChange }) {
   for (let i = start; i <= end; i++) pages.push(i);
 
   return (
-    <div className="flex items-center justify-center gap-1 py-3 px-3">
+    <div className="flex flex-wrap items-center justify-center gap-1 py-3 px-3">
       <button
         onClick={() => onPageChange(page - 1)}
         disabled={page <= 1}
+        aria-label={t('leaderboard.prevPage')}
         className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-secondary hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
       >
         {'\u2190'}
@@ -216,7 +334,7 @@ function Pagination({ page, totalPages, onPageChange }) {
         <>
           <button
             onClick={() => onPageChange(1)}
-            className="w-8 h-8 rounded-lg text-xs font-medium text-secondary hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className="min-w-8 h-8 px-1 rounded-lg text-xs font-medium text-secondary hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
             1
           </button>
@@ -227,7 +345,7 @@ function Pagination({ page, totalPages, onPageChange }) {
         <button
           key={p}
           onClick={() => onPageChange(p)}
-          className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${
+          className={`min-w-8 h-8 px-1 rounded-lg text-xs font-medium transition-colors ${
             p === page ? 'bg-blue-600 text-white' : 'text-secondary hover:bg-gray-100 dark:hover:bg-gray-800'
           }`}
         >
@@ -239,7 +357,7 @@ function Pagination({ page, totalPages, onPageChange }) {
           {end < totalPages - 1 && <span className="text-xs text-muted px-1">{'\u2026'}</span>}
           <button
             onClick={() => onPageChange(totalPages)}
-            className="w-8 h-8 rounded-lg text-xs font-medium text-secondary hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className="min-w-8 h-8 px-1 rounded-lg text-xs font-medium text-secondary hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
             {totalPages}
           </button>
@@ -248,6 +366,7 @@ function Pagination({ page, totalPages, onPageChange }) {
       <button
         onClick={() => onPageChange(page + 1)}
         disabled={page >= totalPages}
+        aria-label={t('leaderboard.nextPage')}
         className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-secondary hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
       >
         {'\u2192'}
@@ -259,10 +378,12 @@ function Pagination({ page, totalPages, onPageChange }) {
 export default function LeaderboardPage() {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
+  const isMobile = useIsMobile();
   const {
     rankings,
     myRanks,
     loading,
+    error,
     total,
     rewards,
     seasonNumber,
@@ -309,6 +430,11 @@ export default function LeaderboardPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleRetry = () => {
+    loadPage(activeCategory, page);
+    if (user) fetchMyRank();
+  };
+
   const handlePlayerClick = async (userId) => {
     await fetchPlayerProfile(userId);
     setShowProfile(true);
@@ -330,29 +456,34 @@ export default function LeaderboardPage() {
   const myReward = getRewardForRank(myNetWorthRank);
 
   return (
-    <div className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+    <div className="max-w-4xl mx-auto w-full min-w-0 px-3 sm:px-4 py-4 sm:py-6">
       <div className="mb-4 sm:mb-5">
         <h1 className="text-xl sm:text-2xl font-bold text-primary">{t('leaderboard.title')}</h1>
         <p className="text-xs sm:text-sm text-secondary mt-1">{t('leaderboard.subtitle')}</p>
       </div>
 
       {seasonNumber != null && (
-        <div className="bg-card border border-border rounded-xl p-3 sm:p-4 mb-4 sm:mb-5">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="text-xs sm:text-sm font-semibold text-primary">
+        <div className="bg-card border border-border rounded-xl p-3 sm:p-4 mb-4 sm:mb-5 min-w-0">
+          <div className="flex items-center justify-between gap-2 min-w-0">
+            <h2 className="text-xs sm:text-sm font-semibold text-primary shrink-0">
               {t('leaderboard.season', { number: seasonNumber })}
             </h2>
-            <span className="text-[11px] sm:text-xs text-muted shrink-0">{t('leaderboard.rewards.endOfSeason')}</span>
+            <span className="text-[11px] sm:text-xs text-muted min-w-0 truncate text-end">
+              {t('leaderboard.rewards.endOfSeason')}
+            </span>
           </div>
 
           {rewards?.length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 sm:gap-2 mt-3">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 sm:gap-2 mt-3 min-w-0">
               {rewards.map((tier, i) => (
-                <div key={i} className="rounded-lg bg-gray-50 dark:bg-gray-800/50 px-2 py-1.5 sm:py-2 text-center">
+                <div
+                  key={i}
+                  className="rounded-lg bg-gray-50 dark:bg-gray-800/50 px-2 py-1.5 sm:py-2 text-center min-w-0"
+                >
                   <div className="text-[10px] sm:text-[11px] text-muted truncate">
                     {tier.rank ? `#${tier.rank}` : `#${tier.minRank}\u2013#${tier.maxRank}`}
                   </div>
-                  <div className="text-xs sm:text-sm font-bold text-yellow-600 dark:text-yellow-400">
+                  <div className="text-xs sm:text-sm font-bold text-yellow-600 dark:text-yellow-400 truncate min-w-0">
                     {formatMoneyExact(tier.reward)}
                   </div>
                 </div>
@@ -369,11 +500,11 @@ export default function LeaderboardPage() {
       )}
 
       {user && myRanks && (
-        <div className="bg-card border border-border rounded-xl p-3 sm:p-4 mb-4 sm:mb-5">
+        <div className="bg-card border border-border rounded-xl p-3 sm:p-4 mb-4 sm:mb-5 min-w-0">
           <h2 className="text-xs sm:text-sm font-medium text-secondary mb-2">{t('leaderboard.yourRank')}</h2>
           <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
             {CATEGORIES.map((cat) => {
-              const data = myRanks[cat];
+              const data = myRanks[cat] || {};
               return (
                 <button
                   key={cat}
@@ -385,7 +516,7 @@ export default function LeaderboardPage() {
                   }`}
                 >
                   <span className="text-base">{CATEGORY_ICONS[cat]}</span>
-                  <div className="text-left">
+                  <div className="text-start">
                     <div className="text-[10px] sm:text-xs text-muted leading-tight">{CATEGORY_LABELS[cat]}</div>
                     <div className="text-xs sm:text-sm font-bold text-primary leading-tight">
                       {data.rank ? `#${data.rank}` : '\u2014'}
@@ -398,7 +529,7 @@ export default function LeaderboardPage() {
         </div>
       )}
 
-      <div className="flex gap-1.5 overflow-x-auto pb-2 mb-3 sm:mb-4 -mx-3 px-3 sm:mx-0 sm:px-0 scrollbar-hide">
+      <div className="flex gap-1.5 overflow-x-auto pb-2 mb-3 sm:mb-4 -mx-3 px-3 sm:mx-0 sm:px-0 scrollbar-hide min-w-0">
         {CATEGORIES.map((cat) => (
           <button
             key={cat}
@@ -415,68 +546,33 @@ export default function LeaderboardPage() {
         ))}
       </div>
 
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
+      <div className="bg-card border border-border rounded-xl overflow-hidden min-w-0">
         {loading ? (
           <div className="p-8 text-center text-muted">{t('common.loading')}</div>
+        ) : error && rankings.length === 0 ? (
+          <div className="p-8 text-center" role="alert">
+            <div className="text-muted mb-3">{t('leaderboard.errorLoad')}</div>
+            <button
+              onClick={handleRetry}
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-500 transition-colors"
+            >
+              {t('leaderboard.retry')}
+            </button>
+          </div>
         ) : rankings.length === 0 ? (
           <div className="p-8 text-center text-muted">{t('leaderboard.noRankings')}</div>
         ) : (
           <div>
             <div className="hidden sm:flex px-4 py-2 border-b border-border items-center text-xs text-muted">
               <div className="w-8 text-center">#</div>
-              <div className="w-7 ml-2" />
-              <div className="flex-1 ml-2">{t('leaderboard.player')}</div>
-              <div className="text-right mr-2">{CATEGORY_LABELS[activeCategory]}</div>
-              <div className="w-9 text-right">{t('leaderboard.change')}</div>
+              <div className="w-7 ms-2" />
+              <div className="flex-1 ms-2">{t('leaderboard.player')}</div>
+              <div className="text-end me-2">{CATEGORY_LABELS[activeCategory]}</div>
+              <div className="w-9 text-end">{t('leaderboard.change')}</div>
             </div>
 
             {isFirstPage && topThree.length > 0 && (
-              <div className="px-3 py-3 border-b border-border bg-gradient-to-b from-gray-50/50 to-transparent dark:from-gray-800/20">
-                <div className="flex items-end justify-center gap-4 sm:gap-8">
-                  {topThree.length >= 2 && (
-                    <div className="flex flex-col items-center flex-1 min-w-0 max-w-[110px]">
-                      <PlayerAvatar avatar={topThree[1].avatar} username={topThree[1].username} size="lg" />
-                      <div className="mt-1.5 text-center w-full">
-                        <div className="text-[11px] font-medium text-primary truncate">
-                          {topThree[1].displayName || topThree[1].username}
-                        </div>
-                        <div className="text-xs sm:text-sm font-bold text-secondary mt-0.5">
-                          {CATEGORY_FORMATTERS[activeCategory](topThree[1].value)}
-                        </div>
-                      </div>
-                      <div className="mt-0.5 text-sm">{'\uD83E\uDD48'}</div>
-                    </div>
-                  )}
-                  {topThree.length >= 1 && (
-                    <div className="flex flex-col items-center flex-1 min-w-0 max-w-[110px]">
-                      <div className="mb-0.5 text-base">{'\uD83E\uDD47'}</div>
-                      <PlayerAvatar avatar={topThree[0].avatar} username={topThree[0].username} size="lg" />
-                      <div className="mt-1.5 text-center w-full">
-                        <div className="text-[11px] font-medium text-primary truncate">
-                          {topThree[0].displayName || topThree[0].username}
-                        </div>
-                        <div className="text-xs sm:text-sm font-bold text-green-600 dark:text-green-400 mt-0.5">
-                          {CATEGORY_FORMATTERS[activeCategory](topThree[0].value)}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  {topThree.length >= 3 && (
-                    <div className="flex flex-col items-center flex-1 min-w-0 max-w-[110px]">
-                      <PlayerAvatar avatar={topThree[2].avatar} username={topThree[2].username} size="lg" />
-                      <div className="mt-1.5 text-center w-full">
-                        <div className="text-[11px] font-medium text-primary truncate">
-                          {topThree[2].displayName || topThree[2].username}
-                        </div>
-                        <div className="text-xs sm:text-sm font-bold text-secondary mt-0.5">
-                          {CATEGORY_FORMATTERS[activeCategory](topThree[2].value)}
-                        </div>
-                      </div>
-                      <div className="mt-0.5 text-sm">{'\uD83E\uDD49'}</div>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <Podium topThree={topThree} activeCategory={activeCategory} isMobile={isMobile} />
             )}
 
             {listRows.map((entry) => (

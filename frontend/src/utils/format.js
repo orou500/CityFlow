@@ -42,6 +42,35 @@ export function formatDiffExact(value, prefix = '+') {
   return `${sign}$${Math.abs(num).toLocaleString('en-US')}`;
 }
 
+const MINUS_SIGN = '\u2212'; // U+2212 MINUS SIGN, not an ASCII hyphen
+
+function signFor(value) {
+  if (value < 0) return MINUS_SIGN;
+  if (value > 0) return '+';
+  return '';
+}
+
+/**
+ * Signed money, e.g. `+$325` / `−$325` / `$0`. Uses the Unicode minus sign
+ * and omits the sign for zero.
+ */
+export function formatSignedMoney(value, { exact = false } = {}) {
+  const num = Math.round(Number(value) || 0);
+  const sign = signFor(num);
+  const body = exact ? Math.abs(num).toLocaleString('en-US') : formatCompact(Math.abs(num));
+  return `${sign}$${body}`;
+}
+
+/**
+ * Signed percentage, e.g. `+6.94%` / `−6.94%` / `0%`. The value is already a
+ * percentage number (not a 0-1 fraction), so it is never multiplied by 100.
+ */
+export function formatSignedPercent(value, { decimals = 2 } = {}) {
+  const num = Number(value) || 0;
+  const sign = signFor(num);
+  return `${sign}${Math.abs(num).toFixed(decimals)}%`;
+}
+
 export function formatPrice(value) {
   const num = Number(value) || 0;
   if (Math.abs(num) < 1000) return `$${num.toFixed(2)}`;

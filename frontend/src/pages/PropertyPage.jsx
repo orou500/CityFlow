@@ -5,11 +5,12 @@ import { useGameStore } from '../store/useGameStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { useCompanyStore } from '../store/useCompanyStore';
 import { translateError } from '../i18n/errors';
-import { formatMoney, formatMoneyExact, formatCompact } from '../utils/format';
+import { formatMoney, formatMoneyExact, formatCompact, formatSignedMoney, formatSignedPercent } from '../utils/format';
 import CompactValue from '../components/CompactValue';
 import RiskDashboard from '../components/RiskDashboard';
 import PropertyImage from '../components/PropertyImage';
 import RentInfoPanel from '../components/RentInfoPanel';
+import ConfirmDialog from '../components/ConfirmDialog';
 import { getApiBaseUrl } from '../utils/capacitor';
 
 const API = getApiBaseUrl();
@@ -275,6 +276,8 @@ export default function PropertyPage() {
   const [devModalData, setDevModalData] = useState(null);
   const [devLoading, setDevLoading] = useState(false);
   const [currentPeriod, setCurrentPeriod] = useState(null);
+  const [sellConfirmOpen, setSellConfirmOpen] = useState(false);
+  const [sellLoading, setSellLoading] = useState(false);
   const UNITS_PER_PAGE = 5;
 
   const load = async () => {
@@ -445,6 +448,8 @@ export default function PropertyPage() {
   };
 
   const handleSell = async () => {
+    if (sellLoading) return;
+    setSellLoading(true);
     try {
       const res = await api('/properties/sell', {
         method: 'POST',
@@ -452,11 +457,15 @@ export default function PropertyPage() {
       });
       const price = res.property?.currentPrice || 0;
       setActionMsg({ type: 'success', text: t('errors.propertySold', { price: formatMoney(price) }) });
+      setSellConfirmOpen(false);
       load();
       fetchMe();
       fetchUserData();
     } catch (err) {
       setActionMsg({ type: 'error', text: translateError(err, t) });
+      setSellConfirmOpen(false);
+    } finally {
+      setSellLoading(false);
     }
   };
 
@@ -910,7 +919,7 @@ export default function PropertyPage() {
                         {t('propertyManagement.occupancyAdjustment', { occupancy: managementData.occupancy })}
                       </span>
                       <span className="font-semibold text-red-500">
-                        &minus;{formatMoney(managementData.potentialRentIncome - managementData.rentIncome)}
+                        {formatSignedMoney(-(managementData.potentialRentIncome - managementData.rentIncome))}
                         <span className="text-xs text-gray-400 font-normal"> {t('propertyManagement.perMonth')}</span>
                       </span>
                     </div>
@@ -924,7 +933,7 @@ export default function PropertyPage() {
                       })}
                     </span>
                     <span className="font-semibold text-red-500">
-                      &minus;{formatMoney(managementData.maintenanceCost)}
+                      {formatSignedMoney(-managementData.maintenanceCost)}
                       <span className="text-xs text-gray-400 font-normal"> {t('propertyManagement.perMonth')}</span>
                     </span>
                   </div>
@@ -932,7 +941,7 @@ export default function PropertyPage() {
                     <div className="flex justify-between items-center">
                       <span className="text-gray-500 dark:text-gray-400">{t('propertyManagement.otherExpenses')}</span>
                       <span className="font-semibold text-red-500">
-                        &minus;{formatMoney(managementData.operatingExpenses)}
+                        {formatSignedMoney(-managementData.operatingExpenses)}
                         <span className="text-xs text-gray-400 font-normal"> {t('propertyManagement.perMonth')}</span>
                       </span>
                     </div>
@@ -979,13 +988,11 @@ export default function PropertyPage() {
                       <span
                         className={`font-bold ${managementData.monthlyIncrease >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}
                       >
-                        {managementData.monthlyIncrease >= 0 ? '+' : '&minus;'}
-                        {formatMoney(Math.abs(managementData.monthlyIncrease))}
+                        {formatSignedMoney(managementData.monthlyIncrease)}
                         {managementData.monthlyIncreasePct !== 0 && (
                           <span className="text-xs font-normal">
                             {' '}
-                            ({managementData.monthlyIncreasePct >= 0 ? '+' : '&minus;'}
-                            {Math.abs(managementData.monthlyIncreasePct)}%)
+                            ({formatSignedPercent(managementData.monthlyIncreasePct)})
                           </span>
                         )}
                       </span>
@@ -1439,7 +1446,7 @@ export default function PropertyPage() {
               )}
               {user && hasManageAccess && (
                 <button
-                  onClick={handleSell}
+                  onClick={() => setSellConfirmOpen(true)}
                   className="w-full bg-yellow-600 hover:bg-yellow-500 text-gray-900 dark:text-white text-sm py-2 rounded transition-colors break-words"
                 >
                   {t('propertyDetail.sellProperty')} — {formatMoney(property.currentPrice)}
@@ -1848,6 +1855,17 @@ export default function PropertyPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={sellConfirmOpen}
+        title={t('propertyDetail.sellProperty')}
+        message={t('common.confirmSellMessage')}
+        confirmLabel={t('common.confirmSellAction')}
+        cancelLabel={t('common.cancel')}
+        onConfirm={handleSell}
+        onCancel={() => setSellConfirmOpen(false)}
+        loading={sellLoading}
+      />
     </div>
   );
 }

@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useCompanyStore } from '../store/useCompanyStore';
 import { useAuthStore } from '../store/useAuthStore';
-import { formatMoney } from '../utils/format';
+import { formatMoney, formatMoneyExact } from '../utils/format';
 import PropertyImage from '../components/PropertyImage';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const TABS = [
   'overview',
@@ -17,6 +18,17 @@ const TABS = [
   'investments',
   'audit',
 ];
+
+// Fallback IPO requirements used only when the backend response does not yet
+// carry `ipoRequirements` (the backend is authoritative for IPO eligibility).
+const FALLBACK_IPO_REQUIREMENTS = {
+  fee: 30_000_000,
+  minLevel: 10,
+  minMembers: 5,
+  minNetWorth: 30_000_000,
+  minProperties: 10,
+  maxDebtRatio: 0.5,
+};
 
 function normalizeId(id) {
   if (!id) return '';
@@ -172,6 +184,7 @@ export default function CompanyDetailPage() {
     inviteMember,
     removeMember,
     changeRole,
+    transferLeadership,
     leaveCompany,
     repayCompanyLoan,
     sellCompanyProperty,
@@ -209,7 +222,7 @@ export default function CompanyDetailPage() {
   const [tab, setTab] = useState(searchParams.get('tab') || 'overview');
   const [depositAmount, setDepositAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [inviteUserId, setInviteUserId] = useState('');
+  const [inviteUsername, setInviteUsername] = useState('');
   const [inviteError, setInviteError] = useState('');
   const [repayAmounts, setRepayAmounts] = useState({});
   const [applications, setApplications] = useState([]);
@@ -246,6 +259,12 @@ export default function CompanyDetailPage() {
   const [auditLimit] = useState(30);
   const [transactionsPage, setTransactionsPage] = useState(1);
   const [transactionsLimit] = useState(10);
+  const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
+  const [leaveLoading, setLeaveLoading] = useState(false);
+  const [transferTarget, setTransferTarget] = useState(null);
+  const [transferLoading, setTransferLoading] = useState(false);
+  const [sellConfirmPropertyId, setSellConfirmPropertyId] = useState(null);
+  const [sellLoading, setSellLoading] = useState(false);
 
   const handleSetTab = (t2) => {
     setTab(t2);
@@ -258,6 +277,53 @@ export default function CompanyDetailPage() {
       }
       return next;
     });
+  };
+
+  const handleConfirmLeave = async () => {
+    if (leaveLoading) return;
+    setLeaveLoading(true);
+    try {
+      await leaveCompany(id);
+      navigate('/real-estate-companies');
+    } catch {
+      setLeaveLoading(false);
+      setLeaveConfirmOpen(false);
+    }
+  };
+
+  const handleConfirmTransfer = async () => {
+    if (transferLoading || !transferTarget) return;
+    setTransferLoading(true);
+    try {
+      await transferLeadership(id, transferTarget);
+      setTransferTarget(null);
+    } catch {
+      setTransferTarget(null);
+    } finally {
+      setTransferLoading(false);
+    }
+  };
+
+  const transferTargetMember = transferTarget
+    ? company.members?.find((m) => (m.userId?._id || m.userId)?.toString() === transferTarget?.toString())
+    : null;
+  const transferTargetName = transferTargetMember
+    ? (typeof transferTargetMember.userId === 'object' && transferTargetMember.userId?.username) ||
+      transferTargetMember.username ||
+      ''
+    : '';
+
+  const handleConfirmSell = async () => {
+    if (sellLoading || !sellConfirmPropertyId) return;
+    setSellLoading(true);
+    try {
+      await sellCompanyProperty(id, sellConfirmPropertyId);
+      setSellConfirmPropertyId(null);
+    } catch {
+      setSellConfirmPropertyId(null);
+    } finally {
+      setSellLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -332,14 +398,9 @@ export default function CompanyDetailPage() {
   const memberRole =
     company.memberRole || company.members?.find((m) => normalizeId(m.userId) === normalizeId(user?._id))?.role || null;
   const isAdmin = user?.role === 'admin';
-  const isFounder =
-    company.founderId &&
-    user?._id &&
-    (typeof company.founderId === 'object' ? company.founderId._id : company.founderId)?.toString() ===
-      user._id.toString();
-  const isCEO = memberRole === 'ceo' || isFounder;
-  const isDirector = memberRole === 'director' || isCEO || isAdmin || isFounder;
-  const isOfficer = memberRole === 'officer' || isDirector || isAdmin || isFounder;
+  const isCEO = memberRole === 'ceo';
+  const isDirector = memberRole === 'director' || isCEO || isAdmin;
+  const isOfficer = memberRole === 'officer' || isDirector || isAdmin;
   const myMember = company.members?.find((m) => {
     const uid = m.userId?._id || m.userId;
     return uid?.toString() === user?._id?.toString();
@@ -366,11 +427,11 @@ export default function CompanyDetailPage() {
   };
 
   const handleInvite = async () => {
-    if (!inviteUserId.trim()) return;
+    if (!inviteUsername.trim()) return;
     setInviteError('');
     try {
-      await inviteMember(id, inviteUserId.trim());
-      setInviteUserId('');
+      await inviteMember(id, inviteUsername.trim());
+      setInviteUsername('');
     } catch (err) {
       setInviteError(err.message);
     }
@@ -526,8 +587,10 @@ export default function CompanyDetailPage() {
     setIpoLoading(false);
   };
 
+  const ipoRequirements = company?.ipoRequirements || FALLBACK_IPO_REQUIREMENTS;
+
   return (
-    <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6 overflow-hidden">
+    <div className="w-full min-w-0 max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <Link
@@ -549,10 +612,7 @@ export default function CompanyDetailPage() {
         </div>
         {isMember && (
           <button
-            onClick={() => {
-              leaveCompany(id);
-              navigate('/real-estate-companies');
-            }}
+            onClick={() => setLeaveConfirmOpen(true)}
             className="px-3 py-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50"
           >
             {t('companies.leaveCompany')}
@@ -991,7 +1051,8 @@ export default function CompanyDetailPage() {
                   <div className="min-w-0">
                     <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('companies.goPublic')}</h3>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
-                      {t('companies.ipoFee')}: $100,000,000 · {t('companies.ipoRequirements')}
+                      {t('companies.ipoFee')}: {formatMoneyExact(ipoRequirements.fee)} ·{' '}
+                      {t('companies.ipoRequirements', { min: ipoRequirements.minLevel })}
                     </p>
                   </div>
                   <button
@@ -1076,20 +1137,31 @@ export default function CompanyDetailPage() {
               {(company.members?.length || 0) >= company.maxMembers ? (
                 <p className="text-sm text-red-600 dark:text-red-400">{t('companies.maxMembersReached')}</p>
               ) : (
-                <div className="flex gap-2">
-                  <input
-                    value={inviteUserId}
-                    onChange={(e) => setInviteUserId(e.target.value)}
-                    placeholder={t('companies.userIdPlaceholder')}
-                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                  />
+                <form
+                  className="flex flex-col sm:flex-row gap-2 sm:items-center"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleInvite();
+                  }}
+                >
+                  <label className="flex flex-1 flex-col min-w-0">
+                    <span className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                      {t('companies.usernameLabel')}
+                    </span>
+                    <input
+                      value={inviteUsername}
+                      onChange={(e) => setInviteUsername(e.target.value)}
+                      placeholder={t('companies.usernamePlaceholder')}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm min-w-0"
+                    />
+                  </label>
                   <button
-                    onClick={handleInvite}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 self-start sm:self-auto"
                   >
                     {t('companies.invite')}
                   </button>
-                </div>
+                </form>
               )}
               {inviteError && <p className="text-sm text-red-600 dark:text-red-400 mt-2">{inviteError}</p>}
             </div>
@@ -1171,6 +1243,14 @@ export default function CompanyDetailPage() {
                           {t('companies.demote')}
                         </button>
                       )}
+                      {['director', 'officer', 'member'].includes(member.role) && (
+                        <button
+                          onClick={() => setTransferTarget(uid)}
+                          className="text-xs text-purple-600 dark:text-purple-400 hover:underline"
+                        >
+                          {t('companies.transferLeadership')}
+                        </button>
+                      )}
                       <button
                         onClick={() => removeMember(id, uid)}
                         className="text-xs text-red-600 dark:text-red-400 hover:underline"
@@ -1183,6 +1263,30 @@ export default function CompanyDetailPage() {
               );
             })}
           </div>
+          {isMember && isCEO && (
+            <div className="bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-700/40 rounded-lg p-3 sm:p-4">
+              <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-300 mb-2">
+                {t('companies.ceoCannotLeave')}
+              </h3>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">{t('companies.ceoCannotLeaveDescription')}</p>
+              <div className="flex flex-wrap gap-2">
+                {company.members
+                  ?.filter((m) => ['director', 'officer', 'member'].includes(m.role))
+                  .map((m) => (
+                    <button
+                      key={m._id}
+                      onClick={() => setTransferTarget(m.userId?._id || m.userId)}
+                      className="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-xs hover:bg-purple-700"
+                    >
+                      {t('companies.transferLeadershipTo', {
+                        name:
+                          (m.userId && typeof m.userId === 'object' && m.userId.username) || m.username || 'Member',
+                      })}
+                    </button>
+                  ))}
+              </div>
+            </div>
+          )}
           {isMember && !isCEO && (
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4">
               <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
@@ -1190,10 +1294,7 @@ export default function CompanyDetailPage() {
               </h3>
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">{t('companies.leaveCompanyDescription')}</p>
               <button
-                onClick={() => {
-                  leaveCompany(id);
-                  navigate('/real-estate-companies');
-                }}
+                onClick={() => setLeaveConfirmOpen(true)}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700"
               >
                 {t('companies.leaveCompany')}
@@ -1592,7 +1693,7 @@ export default function CompanyDetailPage() {
                         <span className="text-sm font-medium text-gray-900 dark:text-white block truncate">
                           {prop.name}
                         </span>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
                           {prop.type} · {prop.cityId?.name || 'Unknown'} · {t('properties.rent')}:{' '}
                           {formatMoney(prop.rent || 0)} · {t('properties.occupancy')}: {prop.occupancy || 0}%
                         </div>
@@ -1629,7 +1730,7 @@ export default function CompanyDetailPage() {
                     )}
                     {isDirector && (
                       <button
-                        onClick={() => sellCompanyProperty(id, prop._id)}
+                        onClick={() => setSellConfirmPropertyId(prop._id)}
                         className="px-3 py-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50"
                       >
                         {t('companies.sellProperty')}
@@ -2297,11 +2398,11 @@ export default function CompanyDetailPage() {
                   className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <span className="text-sm text-gray-900 dark:text-white">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-sm text-gray-900 dark:text-white truncate min-w-0">
                         {typeof log.userId === 'object' && log.userId?.username ? log.userId.username : 'System'}
                       </span>
-                      <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
+                      <span className="text-sm text-gray-500 dark:text-gray-400 shrink-0">
                         {t(
                           `companies.audit${log.action
                             .split('_')
@@ -2349,6 +2450,40 @@ export default function CompanyDetailPage() {
           )}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!transferTarget}
+        title={t('companies.confirmTransferTitle')}
+        message={t('companies.confirmTransferMessage', {
+          name: transferTargetName || t('common.member'),
+        })}
+        confirmLabel={t('companies.transferLeadership')}
+        cancelLabel={t('common.cancel')}
+        onConfirm={handleConfirmTransfer}
+        onCancel={() => setTransferTarget(null)}
+        loading={transferLoading}
+        destructive={false}
+      />
+      <ConfirmDialog
+        open={leaveConfirmOpen}
+        title={t('companies.leaveCompany')}
+        message={t('common.confirmLeaveMessage')}
+        confirmLabel={t('common.confirmLeaveAction')}
+        cancelLabel={t('common.cancel')}
+        onConfirm={handleConfirmLeave}
+        onCancel={() => setLeaveConfirmOpen(false)}
+        loading={leaveLoading}
+      />
+      <ConfirmDialog
+        open={!!sellConfirmPropertyId}
+        title={t('companies.sellProperty')}
+        message={t('common.confirmSellMessage')}
+        confirmLabel={t('common.confirmSellAction')}
+        cancelLabel={t('common.cancel')}
+        onConfirm={handleConfirmSell}
+        onCancel={() => setSellConfirmPropertyId(null)}
+        loading={sellLoading}
+      />
     </div>
   );
 }

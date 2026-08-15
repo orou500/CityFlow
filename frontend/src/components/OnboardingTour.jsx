@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
 import { getApiBaseUrl } from '../utils/capacitor';
+import { formatPrice } from '../utils/format';
 
 const API = getApiBaseUrl();
 
@@ -280,6 +281,30 @@ export default function OnboardingTour() {
                 className="px-3 py-1.5 border border-amber-400 text-amber-700 dark:text-amber-300 text-xs rounded transition-colors"
               >
                 {t('onboarding.tour.refreshInventory')}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {isEventStep && step.id === 'buy_property' && buyAvailability?.eligible && buyAvailability.examples?.[0] && (
+          <div className="mb-4 rounded-lg border border-green-400/40 bg-green-50 dark:bg-green-900/20 p-3 text-sm">
+            <p className="font-medium text-green-700 dark:text-green-300 mb-1">
+              {t('onboarding.tour.recommendedProperty')}
+            </p>
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-xs font-medium text-green-800 dark:text-green-200 truncate">
+                  {buyAvailability.examples[0].name}
+                </div>
+                <div className="text-xs text-green-700 dark:text-green-400">
+                  {formatPrice(buyAvailability.examples[0].currentPrice)}
+                </div>
+              </div>
+              <button
+                onClick={() => navigate(`/property/${buyAvailability.examples[0].id}`)}
+                className="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white text-xs rounded transition-colors shrink-0"
+              >
+                {t('onboarding.tour.viewProperty')}
               </button>
             </div>
           </div>

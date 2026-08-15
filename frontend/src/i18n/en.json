@@ -251,6 +251,11 @@
     "success": "Success",
     "confirm": "Confirm",
     "cancel": "Cancel",
+    "member": "Member",
+    "confirmLeaveMessage": "Are you sure you want to leave the company?",
+    "confirmLeaveAction": "Yes, Leave Company",
+    "confirmSellMessage": "Are you sure you want to sell this property?",
+    "confirmSellAction": "Yes, Sell Property",
     "close": "Close",
     "save": "Save",
     "search": "Search",
@@ -921,7 +926,9 @@
       "progress": "{{current}}/{{total}}",
       "waitingAction": "Waiting for you to complete this action...",
       "noCheapProperty": "No affordable properties right now",
-      "noCheapPropertyHint": "There are no properties priced at or under $100,000 available right now. You can browse the marketplace, wait for new inventory, or refresh to check again.",
+      "noCheapPropertyHint": "There are no properties priced at or under $100,000 right now. Don't worry — buying any property completes this step. Browse the marketplace, wait for new inventory, or refresh to check again.",
+      "recommendedProperty": "Recommended affordable property",
+      "viewProperty": "View property",
       "browseProperties": "Browse Properties",
       "refreshInventory": "Refresh",
       "buttons": {
@@ -952,7 +959,7 @@
         },
         "buy_property": {
           "title": "Buy Your First Property",
-          "description": "Head to the marketplace and buy a property. This step completes when you actually own one."
+          "description": "Head to the marketplace and buy a property (an affordable option priced at $100,000 or less is recommended when available). This step completes when you actually own one."
         },
         "property_page": {
           "title": "Understand Your Property",
@@ -968,7 +975,7 @@
         },
         "missions": {
           "title": "Complete Missions",
-          "description": "Missions give you goals and rewards between rent cycles. This step completes when you collect your first mission reward."
+          "description": "Missions give you goals and rewards between rent cycles. Complete one, then press \"Claim\" (Collect) on the Missions page to receive the reward. This step completes only when you claim your first reward."
         },
         "marketplace": {
           "title": "The Marketplace",
@@ -1073,7 +1080,7 @@
       "ipo": {
         "title": "Public Companies (IPO)",
         "description": "Take your company public and trade its shares.",
-        "step1": "Reach level 15 with a strong company to launch an IPO",
+        "step1": "Reach level 10 with a strong company to launch an IPO",
         "step2": "Trade shares on the stock market and pay dividends to shareholders"
       }
     },
@@ -1905,6 +1912,8 @@
     "title": "Leaderboards",
     "subtitle": "See how you rank against other players",
     "noRankings": "No rankings available yet. Rankings update every game month.",
+    "errorLoad": "Could not load the leaderboard",
+    "retry": "Retry",
     "player": "Player",
     "change": "Change",
     "showing": "Showing {{count}} of {{total}} players",
@@ -2006,7 +2015,8 @@
     "tabInvestments": "Investments",
     "tabAudit": "Audit Log",
     "inviteMember": "Invite Member",
-    "userIdPlaceholder": "User ID",
+    "usernameLabel": "Username",
+    "usernamePlaceholder": "Enter the player's username",
     "invite": "Invite",
     "roleCeo": "CEO",
     "roleDirector": "Director",
@@ -2016,6 +2026,12 @@
     "promote": "Promote",
     "demote": "Demote",
     "remove": "Remove",
+    "transferLeadership": "Transfer Leadership",
+    "transferLeadershipTo": "Transfer leadership to {{name}}",
+    "ceoCannotLeave": "CEO cannot leave",
+    "ceoCannotLeaveDescription": "The CEO must transfer leadership to another director, officer, or full member before leaving. This prevents control of the company from being silently abandoned.",
+    "confirmTransferTitle": "Transfer Leadership",
+    "confirmTransferMessage": "Transfer the CEO role to {{name}}? You will become a director and cannot leave until leadership is transferred.",
     "deposit": "Capital Contribution",
     "contribute": "Contribute",
     "withdraw": "Withdraw",
@@ -2192,7 +2208,7 @@
     "ticker": "Ticker",
     "sharePrice": "Share Price",
     "ipoFee": "IPO Fee",
-    "ipoRequirements": "Requires Level 15, 5+ members, $100M+ net worth, 10+ properties, ≤50% debt ratio",
+    "ipoRequirements": "Requires Level {{min}}, 5+ members, $30M+ net worth, 10+ properties, ≤50% debt ratio",
     "initiateIPO": "Initiate IPO",
     "applyToJoin": "Apply to Join",
     "applyDescription": "Submit an application to join this company",
@@ -2752,6 +2768,10 @@
     "claimReward": "Claim Reward",
     "collect": "Collect",
     "claimed": "Claimed",
+    "xp": "XP",
+    "statsActive": "active",
+    "statsReady": "ready",
+    "statsClaimed": "claimed",
     "chain": "Chain",
     "chainLabel": "Mission Chain",
     "progressByCategory": "Progress by Category",

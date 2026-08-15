@@ -127,11 +127,11 @@ export const useCompanyStore = create((set, get) => ({
     }
   },
 
-  async inviteMember(companyId, userId) {
+  async inviteMember(companyId, username) {
     try {
       await api(`/real-estate-companies/${companyId}/invite`, {
         method: 'POST',
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify({ username }),
       });
     } catch (err) {
       set({ error: err.message });
@@ -184,6 +184,19 @@ export const useCompanyStore = create((set, get) => ({
       await api(`/real-estate-companies/${companyId}/members/${userId}/role`, {
         method: 'PUT',
         body: JSON.stringify({ role }),
+      });
+      await get().fetchCompany(companyId);
+    } catch (err) {
+      set({ error: err.message });
+      throw err;
+    }
+  },
+
+  async transferLeadership(companyId, targetUserId) {
+    try {
+      await api(`/real-estate-companies/${companyId}/leadership/transfer`, {
+        method: 'POST',
+        body: JSON.stringify({ targetUserId }),
       });
       await get().fetchCompany(companyId);
     } catch (err) {

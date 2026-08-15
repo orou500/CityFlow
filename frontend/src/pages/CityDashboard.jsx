@@ -7,6 +7,7 @@ import { translateError } from '../i18n/errors';
 import { formatMoney, formatCompact } from '../utils/format';
 import CompactValue from '../components/CompactValue';
 import PropertyImage from '../components/PropertyImage';
+import ConfirmDialog from '../components/ConfirmDialog';
 import { getApiBaseUrl } from '../utils/capacitor';
 
 const API = getApiBaseUrl();
@@ -49,6 +50,8 @@ export default function CityDashboard() {
   const [propPage, setPropPage] = useState(1);
   const [historyData, setHistoryData] = useState([]);
   const [cityDistricts, setCityDistricts] = useState([]);
+  const [sellConfirmId, setSellConfirmId] = useState(null);
+  const [sellLoading, setSellLoading] = useState(false);
   const PROPS_PER_PAGE = 21;
 
   useEffect(() => {
@@ -90,12 +93,18 @@ export default function CityDashboard() {
   };
 
   const handleSell = async (propertyId) => {
+    if (sellLoading) return;
+    setSellLoading(true);
     try {
       await sellProperty(propertyId);
+      setSellConfirmId(null);
       setActionMsg({ type: 'success', text: t('errors.propertyListed') });
       if (id) fetchCity(id);
     } catch (err) {
+      setSellConfirmId(null);
       setActionMsg({ type: 'error', text: translateError(err, t) });
+    } finally {
+      setSellLoading(false);
     }
   };
 
@@ -448,7 +457,7 @@ export default function CityDashboard() {
                           <span className="text-xs bg-blue-900 text-blue-300 px-2 py-1 rounded">{t('city.owned')}</span>
                           {!p.forSale && (
                             <button
-                              onClick={() => handleSell(p._id)}
+                              onClick={() => setSellConfirmId(p._id)}
                               className="text-xs bg-yellow-600 hover:bg-yellow-500 text-gray-900 dark:text-white px-2 py-1 rounded transition-colors"
                             >
                               {t('city.sell')}
@@ -490,6 +499,17 @@ export default function CityDashboard() {
           </>
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!sellConfirmId}
+        title={t('city.sell')}
+        message={t('common.confirmSellMessage')}
+        confirmLabel={t('common.confirmSellAction')}
+        cancelLabel={t('common.cancel')}
+        onConfirm={() => handleSell(sellConfirmId)}
+        onCancel={() => setSellConfirmId(null)}
+        loading={sellLoading}
+      />
     </div>
   );
 }

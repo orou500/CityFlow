@@ -81,13 +81,6 @@ body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   direction: ltr;
-  /* Mobile safety: never allow accidental page-level horizontal scroll
-     (overflow containers that scroll intentionally keep overflow-x-auto). */
-  overflow-x: clip;
-}
-
-html {
-  overflow-x: clip;
 }
 
 body[dir='rtl'] {
