@@ -155,50 +155,6 @@ function FeaturedCard({ auction, onClick }) {
   );
 }
 
-function AnalyticsPanel({ stats }) {
-  const { t } = useTranslation();
-  if (!stats) return null;
-
-  return (
-    <div className="mb-6 bg-card border border-border rounded-lg p-4">
-      <h2 className="text-lg font-bold text-primary mb-3 flex items-center gap-2">
-        <span>📊</span> {t('auctions.analytics')}
-      </h2>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label={t('auctions.totalAuctions')} value={stats.totalAuctions || 0} />
-        <StatCard label={t('auctions.totalVolume')} value={formatMoney(stats.totalVolume || 0)} />
-        <StatCard label={t('auctions.averageSalePrice')} value={formatMoney(stats.averageSalePrice || 0)} />
-        <StatCard label={t('auctions.averageBidsPerAuction')} value={(stats.averageBidsPerAuction || 0).toFixed(1)} />
-      </div>
-      {stats.highestAuctionEver?.propertyName && (
-        <div className="mt-3 text-sm text-muted">
-          🏆 {t('auctions.highestAuctionEver')}:{' '}
-          <span className="text-yellow-400">{stats.highestAuctionEver.propertyName}</span> —{' '}
-          {formatMoney(stats.highestAuctionEver.winningBid)}
-        </div>
-      )}
-      <div className="mt-2 flex flex-wrap gap-4 text-xs text-muted">
-        {stats.mostActiveCity && (
-          <span>
-            📍 {t('auctions.mostActiveCity')}: {stats.mostActiveCity}
-          </span>
-        )}
-        {stats.mostActiveDistrict && (
-          <span>
-            🏘️ {t('auctions.mostActiveDistrict')}: {stats.mostActiveDistrict}
-          </span>
-        )}
-        {stats.mostSuccessfulSeller?.username && (
-          <span>
-            👑 {t('auctions.mostSuccessfulSeller')}: {stats.mostSuccessfulSeller.username} (
-            {formatMoney(stats.mostSuccessfulSeller.volume)})
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
-
 function MyStatsPanel({ stats }) {
   const { t } = useTranslation();
   if (!stats) return null;
@@ -1133,7 +1089,6 @@ export default function AuctionDashboardPage() {
   const [showSellModal, setShowSellModal] = useState(false);
   const [filterType, setFilterType] = useState('all');
   const [featured, setFeatured] = useState([]);
-  const [analytics, setAnalytics] = useState(null);
   const [myStats, setMyStats] = useState(null);
   const [watchedIds, setWatchedIds] = useState(new Set());
 
@@ -1191,9 +1146,6 @@ export default function AuctionDashboardPage() {
     api('/auctions/featured')
       .then((res) => setFeatured(res.auctions || []))
       .catch(() => {});
-    api('/auctions/analytics')
-      .then((res) => setAnalytics(res))
-      .catch(() => {});
   }, []);
 
   useSocketEvent(
@@ -1228,9 +1180,6 @@ export default function AuctionDashboardPage() {
       loadAuctions(activeTab, page);
       api('/auctions/featured')
         .then((res) => setFeatured(res.auctions || []))
-        .catch(() => {});
-      api('/auctions/analytics')
-        .then((res) => setAnalytics(res))
         .catch(() => {});
       if (user) {
         api('/auctions/my/analytics')
@@ -1348,7 +1297,6 @@ export default function AuctionDashboardPage() {
 
       <FeaturedSection auctions={featured} onSelect={setSelectedAuction} />
       {user && <MyStatsPanel stats={myStats} />}
-      <AnalyticsPanel stats={analytics} />
 
       <div className="flex flex-wrap gap-1 mb-4 bg-card rounded-lg p-1">
         {tabs.map((tab) => (
