@@ -24,6 +24,7 @@ import { enqueueNotification } from '../utils/notificationQueue.js';
 import { cacheGet, cacheSet, cacheDel } from '../utils/cache.js';
 import { cacheKeys } from '../utils/cacheKeys.js';
 import { computeAuctionRemaining } from '../utils/auctionTime.js';
+import { getTickNumber } from '../models/GameState.js';
 import { reserveAuctionFunds, releaseAuctionFunds, setAuctionReservation } from '../utils/auctionMoney.js';
 import { getCityPropertyLimit, getCityOwnershipStats } from '../utils/ownershipLimits.js';
 
@@ -104,7 +105,7 @@ function handleValidationErrors(req, res, next) {
 
 router.get('/featured', async (req, res) => {
   try {
-    const currentTick = global.currentTick || 0;
+    const currentTick = await getTickNumber();
 
     const cached = await cacheGet(cacheKeys.auctionFeatured());
     if (cached) return res.json({ success: true, auctions: cached });
@@ -194,7 +195,7 @@ router.get(
         offset = 0,
         sellerId,
       } = req.query;
-      const currentTick = global.currentTick || 0;
+      const currentTick = await getTickNumber();
 
       const filter = {};
       if (status !== 'all') filter.status = status;
@@ -217,27 +218,6 @@ router.get(
       if (propertyType) {
         pipeline.push({ $match: { 'property.type': propertyType } });
       }
-
-      pipeline.push({
-        $addFields: {
-          currentTick,
-          remainingMonths: {
-            $switch: {
-              branches: [
-                {
-                  case: { $eq: ['$status', 'upcoming'] },
-                  then: { $max: [0, { $subtract: ['$startTick', currentTick] }] },
-                },
-                {
-                  case: { $eq: ['$status', 'active'] },
-                  then: { $max: [0, { $subtract: ['$endTick', currentTick] }] },
-                },
-              ],
-              default: 0,
-            },
-          },
-        },
-      });
 
       const sortField =
         sort === 'endTick'
@@ -278,9 +258,6 @@ router.get(
           winnerId: 1,
           winningBid: 1,
           createdAt: 1,
-          currentTick: 1,
-          remainingMonths: 1,
-          ticksRemaining: '$remainingMonths',
           'property._id': 1,
           'property.name': 1,
           'property.type': 1,
@@ -290,7 +267,10 @@ router.get(
         },
       });
 
-      const auctions = await Auction.aggregate(pipeline);
+      const auctions = (await Auction.aggregate(pipeline)).map((a) => ({
+        ...a,
+        ...computeAuctionRemaining(a, currentTick),
+      }));
 
       return res.json({
         success: true,
@@ -325,7 +305,7 @@ router.get(
         return res.status(404).json({ success: false, error: 'Auction not found' });
       }
 
-      const currentTick = global.currentTick || 0;
+      const currentTick = await getTickNumber();
       const auctionObj = auction.toJSON();
       Object.assign(auctionObj, computeAuctionRemaining(auction, currentTick));
 
@@ -422,7 +402,7 @@ router.post(
       user.balance -= listingFee;
       await user.save();
 
-      const currentTick = global.currentTick || 0;
+      const currentTick = await getTickNumber();
       const ticks = AUCTION_CONFIG.durations[duration] || AUCTION_CONFIG.durations.medium;
       const startingBid = customStartingBid || Math.floor(property.currentPrice * 0.7);
       const bidIncrement = Math.max(1000, Math.floor(startingBid * (AUCTION_CONFIG.minBidIncrementPercent / 100)));
@@ -465,9 +445,7 @@ router.post(
           propertyId: auction.propertyId,
           auctionType: auction.auctionType,
           startingBid: auction.startingBid,
-          status: auction.status,
-          startTick: auction.startTick,
-          endTick: auction.endTick,
+          ...computeAuctionRemaining(auction, currentTick),
         },
         listingFee,
         balance: user.balance,
@@ -737,7 +715,7 @@ router.post(
       const { id } = req.params;
       const amount = Number(req.body.amount);
       const userId = req.user._id;
-      const currentTick = global.currentTick || 0;
+      const currentTick = await getTickNumber();
 
       // ── City ownership limit — checked before any money moves ──────
       const auctionRef = await Auction.findById(id).select('propertyId sellerId status endTick currentBidderId');
@@ -812,7 +790,7 @@ router.post(
         type: 'watched',
         userId,
         username: req.user.username,
-        tick: global.currentTick || 0,
+        tick: await getTickNumber(),
       });
       await auction.save();
       await cacheDel(cacheKeys.auctionWatchlist(userId.toString()));
@@ -881,7 +859,7 @@ router.post(
         return res.status(400).json({ success: false, error: 'Auction is not active' });
       }
 
-      const currentTick = global.currentTick || 0;
+      const currentTick = await getTickNumber();
       if (auction.endTick <= currentTick) {
         console.warn(
           `[COMPANY-BID] Rejected — auction ${id} endTick ${auction.endTick} <= currentTick ${currentTick}, status=${auction.status}`,
@@ -1007,7 +985,7 @@ router.post(
 
         const auction = await Auction.findById(bidReq.auctionId);
         if (auction && auction.status === 'active') {
-          const currentTick = global.currentTick || 0;
+          const currentTick = await getTickNumber();
           const minBid = auction.currentBid > 0 ? auction.currentBid + auction.bidIncrement : auction.startingBid;
 
           if (bidReq.amount >= minBid && company.treasury.balance >= bidReq.amount) {
@@ -1165,7 +1143,7 @@ router.get(
     try {
       const userId = req.user._id;
       const { limit = 20, offset = 0 } = req.query;
-      const currentTick = global.currentTick || 0;
+      const currentTick = await getTickNumber();
 
       const auctions = await Auction.find({
         'bids.bidderId': userId,
@@ -1252,7 +1230,7 @@ router.get('/my/analytics', authenticate, async (req, res) => {
 router.get('/my/watchlist', authenticate, async (req, res) => {
   try {
     const userId = req.user._id;
-    const currentTick = global.currentTick || 0;
+    const currentTick = await getTickNumber();
 
     const cacheKey = cacheKeys.auctionWatchlist(userId.toString());
     const cached = await cacheGet(cacheKey);

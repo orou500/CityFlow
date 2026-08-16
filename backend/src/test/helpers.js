@@ -2,8 +2,19 @@ import User from '../models/User.js';
 import Property from '../models/Property.js';
 import City from '../models/City.js';
 import Transaction from '../models/Transaction.js';
+import GameState from '../models/GameState.js';
+import { cacheDel } from '../utils/cache.js';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/index.js';
+
+// The authoritative tick source is MongoDB (GameState), not process memory.
+// Tests must set the DB tick so every replica-consistent code path (routes,
+// engine) sees the same value. The tick cache is invalidated the same way
+// incrementTick() does in production.
+export async function setTestTick(n) {
+  await GameState.findOneAndUpdate({ key: 'global' }, { tickNumber: n, lastTickAt: new Date() }, { upsert: true });
+  await cacheDel('cf:tick:state');
+}
 
 export function generateToken(userId) {
   return jwt.sign({ userId }, config.jwtSecret, { expiresIn: '7d' });

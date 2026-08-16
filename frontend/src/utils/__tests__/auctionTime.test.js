@@ -27,4 +27,30 @@ describe('auction remaining time (never elapsed, never negative)', () => {
   it('rounds to whole months (floor at zero)', () => {
     expect(getAuctionRemainingMonths({ status: 'active', endTick: 100, currentTick: 60.4 })).toBe(40);
   });
+
+  it('returns null when currentTick is missing (never computes against 0)', () => {
+    // The original intermittent bug: a payload without a tick made the client
+    // compute the whole auction length (endTick - 0) instead of the countdown.
+    expect(getAuctionRemainingMonths({ status: 'active', endTick: 100 })).toBeNull();
+    expect(getAuctionRemainingMonths({ status: 'upcoming', startTick: 100 })).toBeNull();
+    expect(getAuctionRemainingMonths({})).toBeNull();
+  });
+
+  it('prefers the server remainingMonths even when currentTick is missing', () => {
+    expect(getAuctionRemainingMonths({ status: 'active', remainingMonths: 3 })).toBe(3);
+  });
+
+  it('resolves an upcoming auction at/past its start boundary as active', () => {
+    expect(getAuctionRemainingMonths({ status: 'upcoming', startTick: 100, endTick: 113, currentTick: 100 })).toBe(13);
+    expect(getAuctionRemainingMonths({ status: 'upcoming', startTick: 100, endTick: 113, currentTick: 105 })).toBe(8);
+  });
+
+  it('keeps an upcoming auction with a future startTick as upcoming', () => {
+    expect(getAuctionRemainingMonths({ status: 'upcoming', startTick: 105, endTick: 113, currentTick: 100 })).toBe(5);
+  });
+
+  it('handles extended auctions via the endTick', () => {
+    expect(getAuctionRemainingMonths({ status: 'active', endTick: 120, currentTick: 113 })).toBe(7);
+    expect(getAuctionRemainingMonths({ status: 'active', endTick: 120, currentTick: 115 })).toBe(5);
+  });
 });

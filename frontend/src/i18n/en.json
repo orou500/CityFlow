@@ -2663,6 +2663,7 @@
       "cancelled": "Cancelled"
     },
     "finalizing": "Finalizing...",
+    "timeUnknown": "Time unavailable",
     "propertyTypes": {
       "apartment": "Apartment",
       "house": "House",

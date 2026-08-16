@@ -2,9 +2,10 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
 import Auction from '../../models/Auction.js';
 import { createApp } from '../../test/createApp.js';
-import { createAuthenticatedUser, createTestProperty } from '../../test/helpers.js';
+import { createAuthenticatedUser, createTestProperty, setTestTick } from '../../test/helpers.js';
 import { processAuctions } from '../../engine/auctionProcessing.js';
 import { AUCTION_CONFIG } from '../../config/auctions.js';
+import { cacheDelPattern } from '../../utils/cache.js';
 
 const app = createApp();
 
@@ -28,12 +29,14 @@ describe('Auction countdown API', () => {
   let property;
 
   beforeEach(async () => {
-    global.currentTick = 100;
+    // The authoritative tick lives in MongoDB — the same source every replica reads.
+    await setTestTick(100);
     property = await createTestProperty({ basePrice: 100000 });
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     delete global.currentTick;
+    await cacheDelPattern('cf:auction*');
   });
 
   it('returns remainingMonths based on startTick for upcoming auctions', async () => {
@@ -107,18 +110,125 @@ describe('Auction countdown API', () => {
     expect(item.ticksRemaining).toBe(13);
     expect(user._id.toString()).toBeTruthy();
   });
+
+  it('ignores a stale process-local global.currentTick (multi-replica regression)', async () => {
+    // The original intermittent bug: the idle replica kept its boot-time
+    // global.currentTick while the database advanced. Every auction endpoint
+    // must compute from MongoDB (getTickNumber), never from process memory.
+    const auction = await Auction.create(
+      makeAuction(property._id, { status: 'active', startTick: 90, endTick: 108, originalEndTick: 108 }),
+    );
+    global.currentTick = 999; // stale idle-replica memory — must be ignored
+
+    const listRes = await request(app).get('/auctions?status=active');
+    const item = listRes.body.auctions.find((a) => a._id === auction._id.toString());
+    expect(item.currentTick).toBe(100);
+    expect(item.remainingMonths).toBe(8);
+
+    const detailRes = await request(app).get(`/auctions/${auction._id}`);
+    expect(detailRes.body.auction.currentTick).toBe(100);
+    expect(detailRes.body.auction.remainingMonths).toBe(8);
+    expect(detailRes.body.auction.remainingMonths).not.toBe(108 - 999);
+  });
+
+  it('updates every endpoint immediately when the tick advances (tick transition)', async () => {
+    const auction = await Auction.create(
+      makeAuction(property._id, { status: 'upcoming', startTick: 105, endTick: 113, originalEndTick: 113 }),
+    );
+
+    let listRes = await request(app).get('/auctions?status=upcoming');
+    let item = listRes.body.auctions.find((a) => a._id === auction._id.toString());
+    expect(item.remainingMonths).toBe(5);
+
+    await setTestTick(101); // the DB advanced (simulates incrementTick)
+    listRes = await request(app).get('/auctions?status=upcoming');
+    item = listRes.body.auctions.find((a) => a._id === auction._id.toString());
+    expect(item.currentTick).toBe(101);
+    expect(item.remainingMonths).toBe(4);
+
+    const detailRes = await request(app).get(`/auctions/${auction._id}`);
+    expect(detailRes.body.auction.remainingMonths).toBe(4);
+  });
+
+  it('reports an upcoming auction exactly at its start boundary as active (start boundary)', async () => {
+    const auction = await Auction.create(
+      makeAuction(property._id, { status: 'upcoming', startTick: 100, endTick: 113, originalEndTick: 113 }),
+    );
+
+    const res = await request(app).get(`/auctions/${auction._id}`);
+    expect(res.body.auction.status).toBe('active');
+    expect(res.body.auction.remainingMonths).toBe(13);
+  });
+
+  it('reports an active auction exactly at its end boundary as ending with 0 (end boundary)', async () => {
+    const auction = await Auction.create(
+      makeAuction(property._id, { status: 'active', startTick: 90, endTick: 100, originalEndTick: 100 }),
+    );
+
+    const res = await request(app).get(`/auctions/${auction._id}`);
+    expect(res.body.auction.status).toBe('ending');
+    expect(res.body.auction.remainingMonths).toBe(0);
+  });
+
+  it('keeps list, detail and featured consistent after an anti-sniping extension', async () => {
+    const { token } = await createAuthenticatedUser({ balance: 1000000 });
+    const auction = await Auction.create(
+      makeAuction(property._id, {
+        status: 'active',
+        startTick: 90,
+        endTick: 101,
+        originalEndTick: 101,
+        currentBid: 0,
+      }),
+    );
+
+    // ticksRemaining = 101 - 100 = 1 <= antiSnipingThresholdTicks -> extends
+    const bidRes = await request(app)
+      .post(`/auctions/${auction._id}/bid`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ amount: 2000 });
+
+    expect(bidRes.status).toBe(200);
+    const expectedEndTick = 101 + AUCTION_CONFIG.antiSnipingTicks;
+    expect(bidRes.body.auction.endTick).toBe(expectedEndTick);
+    expect(bidRes.body.auction.remainingMonths).toBe(expectedEndTick - 100);
+
+    const detailRes = await request(app).get(`/auctions/${auction._id}`);
+    expect(detailRes.body.auction.endTick).toBe(expectedEndTick);
+    expect(detailRes.body.auction.remainingMonths).toBe(expectedEndTick - 100);
+
+    const listRes = await request(app).get('/auctions?status=active');
+    const listItem = listRes.body.auctions.find((a) => a._id === auction._id.toString());
+    expect(listItem.endTick).toBe(expectedEndTick);
+    expect(listItem.remainingMonths).toBe(expectedEndTick - 100);
+  });
+
+  it('recomputes cached featured responses after a tick (cache-after-tick regression)', async () => {
+    await Auction.create(
+      makeAuction(property._id, { status: 'active', startTick: 90, endTick: 108, originalEndTick: 108 }),
+    );
+
+    const first = await request(app).get('/auctions/featured');
+    const firstItem = first.body.auctions.find((a) => a.endTick === 108);
+    expect(firstItem.remainingMonths).toBe(8);
+
+    // Tick advances and the tick's cache invalidation runs (tick.js does cacheDelPattern('cf:auction*')).
+    await setTestTick(101);
+    await cacheDelPattern('cf:auction*');
+
+    const second = await request(app).get('/auctions/featured');
+    const secondItem = second.body.auctions.find((a) => a.endTick === 108);
+    expect(secondItem.currentTick).toBe(101);
+    expect(secondItem.remainingMonths).toBe(7);
+  });
 });
 
 describe('Auction lifecycle through processAuctions', () => {
   let property;
 
   beforeEach(async () => {
-    global.currentTick = 100;
+    await setTestTick(100);
     property = await createTestProperty({ basePrice: 100000 });
-  });
-
-  afterEach(() => {
-    delete global.currentTick;
   });
 
   it('transitions active -> ending -> ended exactly once and never sticks at 0', async () => {
@@ -126,22 +236,22 @@ describe('Auction lifecycle through processAuctions', () => {
       makeAuction(property._id, { status: 'active', startTick: 90, endTick: 100, originalEndTick: 100 }),
     );
 
-    global.currentTick = 100;
+    await setTestTick(100);
     await processAuctions();
     let updated = await Auction.findById(auction._id);
     expect(updated.status).toBe('ending');
 
-    global.currentTick = 101;
+    await setTestTick(101);
     await processAuctions();
     updated = await Auction.findById(auction._id);
     expect(updated.status).toBe('ending');
 
-    global.currentTick = 102;
+    await setTestTick(102);
     await processAuctions();
     updated = await Auction.findById(auction._id);
     expect(updated.status).toBe('ended');
 
-    global.currentTick = 103;
+    await setTestTick(103);
     await processAuctions();
     updated = await Auction.findById(auction._id);
     expect(updated.status).toBe('ended');
@@ -156,7 +266,7 @@ describe('Auction lifecycle through processAuctions', () => {
       makeAuction(property._id, { status: 'upcoming', startTick: 100, endTick: 120, originalEndTick: 120 }),
     );
 
-    global.currentTick = 100;
+    await setTestTick(100);
     await processAuctions();
 
     const updated = await Auction.findById(auction._id);

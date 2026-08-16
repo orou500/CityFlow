@@ -52,4 +52,56 @@ describe('computeAuctionRemaining', () => {
     const result = computeAuctionRemaining({ status: 'active', startTick: 0, endTick: 0 }, 0);
     expect(result.remainingMonths).toBe(0);
   });
+
+  it('resolves an upcoming auction exactly at its start boundary as active', () => {
+    const result = computeAuctionRemaining({ ...base, status: 'upcoming' }, 105);
+    expect(result.status).toBe('active');
+    expect(result.remainingMonths).toBe(8); // endTick 113 - currentTick 105
+  });
+
+  it('resolves an active auction exactly at its end boundary as ending (0 remaining)', () => {
+    const result = computeAuctionRemaining({ ...base, status: 'active' }, 113);
+    expect(result.status).toBe('ending');
+    expect(result.remainingMonths).toBe(0);
+  });
+
+  it('resolves an active auction past its end boundary as ending (never negative)', () => {
+    const result = computeAuctionRemaining({ ...base, status: 'active' }, 120);
+    expect(result.status).toBe('ending');
+    expect(result.remainingMonths).toBe(0);
+  });
+
+  it('keeps an upcoming auction with a future startTick as upcoming', () => {
+    const result = computeAuctionRemaining({ ...base, status: 'upcoming' }, 100);
+    expect(result.status).toBe('upcoming');
+    expect(result.remainingMonths).toBe(5);
+  });
+
+  it('handles extended auctions (endTick moved out by anti-sniping)', () => {
+    const extended = { startTick: 105, endTick: 120, originalEndTick: 113, status: 'active' };
+    const result = computeAuctionRemaining(extended, 115);
+    expect(result.remainingMonths).toBe(5);
+    const stillActive = computeAuctionRemaining(extended, 113);
+    expect(stillActive.status).toBe('active');
+    expect(stillActive.remainingMonths).toBe(7);
+  });
+
+  it('handles newly created auctions (upcoming, starts next tick)', () => {
+    const created = { startTick: 101, endTick: 109, status: 'upcoming' };
+    const result = computeAuctionRemaining(created, 100);
+    expect(result.status).toBe('upcoming');
+    expect(result.remainingMonths).toBe(1);
+  });
+
+  it('produces the full consistent snapshot in every response', () => {
+    const result = computeAuctionRemaining({ ...base, status: 'active' }, 110);
+    expect(result).toEqual({
+      currentTick: 110,
+      startTick: 105,
+      endTick: 113,
+      status: 'active',
+      remainingMonths: 3,
+      ticksRemaining: 3,
+    });
+  });
 });

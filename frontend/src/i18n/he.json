@@ -2657,6 +2657,7 @@
       "cancelled": "בוטל"
     },
     "finalizing": "מסיים מכרז...",
+    "timeUnknown": "הזמן אינו זמין",
     "propertyTypes": {
       "apartment": "דירה",
       "house": "בית",

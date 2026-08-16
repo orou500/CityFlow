@@ -1,7 +1,7 @@
 ﻿import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../../test/createApp.js';
-import { createAuthenticatedUser, createTestCity, authHeader } from '../../test/helpers.js';
+import { createAuthenticatedUser, createTestCity, authHeader, setTestTick } from '../../test/helpers.js';
 import User from '../../models/User.js';
 import Property from '../../models/Property.js';
 import City from '../../models/City.js';
@@ -50,7 +50,7 @@ async function makeAuction({ city, endTick = 50 } = {}) {
 }
 
 beforeEach(async () => {
-  global.currentTick = 10;
+  await setTestTick(10);
   await User.deleteMany({});
   await Property.deleteMany({});
   await City.deleteMany({});
@@ -126,7 +126,7 @@ describe('GET /auctions/my/analytics', () => {
     const auction = await makeAuction({ city, endTick: 15 });
     await request(app).post(`/auctions/${auction._id}/bid`).set(authHeader(token)).send({ amount: 40000 });
 
-    global.currentTick = 16;
+    await setTestTick(16);
     const { processAuctions } = await import('../../engine/auctionProcessing.js');
     await processAuctions();
 

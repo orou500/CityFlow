@@ -1,7 +1,7 @@
 ﻿import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../../test/createApp.js';
-import { createAuthenticatedUser, createTestCity, authHeader } from '../../test/helpers.js';
+import { createAuthenticatedUser, createTestCity, authHeader, setTestTick } from '../../test/helpers.js';
 import User from '../../models/User.js';
 import Property from '../../models/Property.js';
 import City from '../../models/City.js';
@@ -48,7 +48,7 @@ async function makeAuction({ city, sellerId = null, sellerType = 'bank', status 
 }
 
 beforeEach(async () => {
-  global.currentTick = 10;
+  await setTestTick(10);
   await User.deleteMany({});
   await Property.deleteMany({});
   await City.deleteMany({});
@@ -215,7 +215,7 @@ describe('Auction bid money reservation', () => {
 
     await request(app).post(`/auctions/${auction._id}/bid`).set(authHeader(token)).send({ amount: 40000 });
 
-    global.currentTick = 16;
+    await setTestTick(16);
     await processAuctions();
 
     const updated = await User.findById(user._id);
@@ -241,7 +241,7 @@ describe('Auction bid money reservation', () => {
     // Simulate the winner spending their balance elsewhere
     await User.updateOne({ _id: user._id }, { $set: { balance: 500 } });
 
-    global.currentTick = 16;
+    await setTestTick(16);
     await processAuctions();
 
     const updated = await User.findById(user._id);
@@ -260,7 +260,7 @@ describe('Auction bid money reservation', () => {
     await request(app).post(`/auctions/${auction._id}/bid`).set(authHeader(token)).send({ amount: 40000 });
 
     await Auction.updateOne({ _id: auction._id }, { $set: { status: 'ending', endingStartedAt: 0 } });
-    global.currentTick = 30;
+    await setTestTick(30);
     await processAuctions();
 
     const updated = await User.findById(user._id);

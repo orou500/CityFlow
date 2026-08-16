@@ -11,6 +11,7 @@ import { cacheDel } from '../utils/cache.js';
 import { cacheKeys } from '../utils/cacheKeys.js';
 import { triggerMissionProgress } from '../utils/missionTrigger.js';
 import { releaseAuctionReservations } from '../utils/auctionMoney.js';
+import { getTickNumber } from '../models/GameState.js';
 
 export function emitAuctionBid(auctionId, data) {
   emitToAll(`auction:bid`, { auctionId, ...data });
@@ -39,7 +40,7 @@ function pickRarity() {
 }
 
 export async function processAuctions() {
-  const currentTick = global.currentTick || 0;
+  const currentTick = await getTickNumber();
   let activated = 0;
   let ending = 0;
   let completed = 0;
@@ -107,7 +108,7 @@ export async function processAuctions() {
 export async function resolveStuckAuction(auctionId) {
   const auction = await Auction.findById(auctionId);
   if (!auction) return null;
-  const currentTick = global.currentTick || 0;
+  const currentTick = await getTickNumber();
   if (auction.status === 'active' && auction.endTick <= currentTick) {
     auction.status = 'ending';
     auction.endingStartedAt = currentTick;
@@ -118,7 +119,7 @@ export async function resolveStuckAuction(auctionId) {
 }
 
 async function settleAuction(auction) {
-  const currentTick = global.currentTick || 0;
+  const currentTick = await getTickNumber();
 
   const property = await Property.findById(auction.propertyId);
   if (!property) {
@@ -352,7 +353,7 @@ async function updateReputation(userId, action, amount) {
 }
 
 export async function generateBankAuctions() {
-  const currentTick = global.currentTick || 0;
+  const currentTick = await getTickNumber();
   const generated = [];
   const config = AUCTION_CONFIG.generation;
 
@@ -448,7 +449,7 @@ export async function generateBankAuctions() {
 }
 
 export async function processAntiSniping(auction) {
-  const currentTick = global.currentTick || 0;
+  const currentTick = await getTickNumber();
   const ticksRemaining = auction.endTick - currentTick;
 
   if (ticksRemaining <= AUCTION_CONFIG.antiSnipingThresholdTicks) {
