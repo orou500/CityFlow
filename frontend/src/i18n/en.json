@@ -2631,7 +2631,6 @@
     "unknownProperty": "Unknown Property",
     "unknownBidder": "Unknown Bidder",
     "you": "You",
-    "system": "System",
     "optional": "Optional",
     "defaultAuto": "Default: 70% of market value",
     "myAnalytics": "My Auction Stats",
@@ -2772,7 +2771,8 @@
       "medium": "4 Months",
       "long": "8 Months",
       "extended": "16 Months"
-    }
+    },
+    "actorUnavailable": "Bidder unavailable"
   },
   "missions": {
     "title": "Missions & Challenges",

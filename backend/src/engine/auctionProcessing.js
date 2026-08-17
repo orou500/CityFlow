@@ -39,6 +39,21 @@ function pickRarity() {
   return 'rare';
 }
 
+/**
+ * Atomically claims an expired auction for settlement: transitions it from
+ * `active` to `ending` exactly once. In a multi-replica deployment only the
+ * instance that wins this claim may settle the auction, so the same auction
+ * can never be settled twice (double funds transfer, duplicate won activity,
+ * duplicate notifications).
+ */
+async function claimAuctionForSettlement(auctionId, currentTick) {
+  return Auction.findOneAndUpdate(
+    { _id: auctionId, status: 'active' },
+    { $set: { status: 'ending', endingStartedAt: currentTick } },
+    { new: true },
+  );
+}
+
 export async function processAuctions() {
   const currentTick = await getTickNumber();
   let activated = 0;
@@ -61,16 +76,16 @@ export async function processAuctions() {
   });
 
   for (const auction of expiredAuctions) {
+    // Only the instance that wins the atomic claim settles this auction.
+    const claimed = await claimAuctionForSettlement(auction._id, currentTick);
+    if (!claimed) continue;
     try {
-      auction.status = 'ending';
-      auction.endingStartedAt = currentTick;
-      await settleAuction(auction);
+      await settleAuction(claimed);
       ending++;
     } catch (err) {
       console.error(`[AUCTION-TICK ${currentTick}] ✗ Failed to settle auction ${auction._id}:`, err.message);
-      auction.status = 'cancelled';
-      await auction.save().catch(() => {});
-      await releaseAuctionReservations(auction._id);
+      await Auction.updateOne({ _id: claimed._id }, { $set: { status: 'cancelled' } });
+      await releaseAuctionReservations(claimed._id);
     }
   }
 
@@ -110,16 +125,23 @@ export async function resolveStuckAuction(auctionId) {
   if (!auction) return null;
   const currentTick = await getTickNumber();
   if (auction.status === 'active' && auction.endTick <= currentTick) {
-    auction.status = 'ending';
-    auction.endingStartedAt = currentTick;
-    await settleAuction(auction);
+    // Same atomic claim as the tick path: a concurrent tick or bid request
+    // that already settled this auction makes this a no-op.
+    const claimed = await claimAuctionForSettlement(auctionId, currentTick);
+    if (!claimed) return auction;
+    await settleAuction(claimed);
     console.log(`[AUCTIONS] Resolved stuck auction ${auctionId} → ending at tick ${currentTick}`);
+    return claimed;
   }
   return auction;
 }
 
 async function settleAuction(auction) {
   const currentTick = await getTickNumber();
+
+  // Idempotency guard: settlement may only run on an auction this instance
+  // claimed (status 'active' -> 'ending'). Never settle twice.
+  if (!auction || auction.status !== 'ending') return;
 
   const property = await Property.findById(auction.propertyId);
   if (!property) {
@@ -131,22 +153,77 @@ async function settleAuction(auction) {
 
   const reserveMet = auction.auctionType === 'reserve' ? auction.currentBid >= auction.reservePrice : true;
 
-  if (auction.currentBidderId && auction.currentBid > 0 && reserveMet) {
-    auction.winnerId = auction.currentBidderId;
+  // ── Winner selection: only from valid persisted bids ──────────────────────
+  // The winner must be the bidder of the highest valid bid in `auction.bids`.
+  // currentBidderId is the authoritative tracked leader, but we defensively
+  // reconcile it against the canonical bid history and NEVER fall back to a
+  // system actor, the auction creator, or any non-bidder identity.
+  const validBids = (auction.bids || []).filter(
+    (b) => b && b.bidderId && mongoose.isValidObjectId(b.bidderId) && Number.isFinite(b.amount) && b.amount > 0,
+  );
+  const highestBid = validBids.reduce((max, b) => (!max || b.amount > max.amount ? b : max), null);
+
+  let winnerId = auction.currentBidderId;
+  if (highestBid) {
+    // If the tracked leader disagrees with the highest persisted bid (corruption
+    // or a race), the persisted bid wins — the winner always corresponds to an
+    // actual bid.
+    if (!winnerId || winnerId.toString() !== highestBid.bidderId.toString()) {
+      winnerId = highestBid.bidderId;
+    }
+  } else if (auction.currentBid > 0) {
+    // A positive currentBid with no valid persisted bid is data corruption:
+    // do not invent a winner.
+    winnerId = null;
+  }
+
+  if (winnerId && auction.currentBid > 0 && reserveMet) {
+    auction.winnerId = winnerId;
     auction.winningBid = auction.currentBid;
     auction.reserveMet = true;
 
+    const winner = await User.findById(winnerId);
+
+    if (!winner) {
+      // Deleted/missing user can never become a winner. Release funds and mark
+      // the auction as having no winner.
+      auction.winnerId = null;
+      auction.winningBid = 0;
+      await auction.save();
+
+      if (auction.sellerId && auction.sellerType === 'player') {
+        await enqueueNotification({
+          userId: auction.sellerId,
+          type: 'system',
+          title: 'Auction Ended - No Winner',
+          message: `Your auction for ${property.name} ended without a valid winning bidder.`,
+          eventKey: `auction:${auction._id}:no_winner:${auction.sellerId}`,
+          route: `/auctions/${auction._id}`,
+          entityType: 'auction',
+          entityId: auction._id,
+          relatedId: auction._id,
+          global: false,
+        });
+      }
+
+      await releaseAuctionReservations(auction._id);
+      await invalidateAuctionCaches(auction);
+      return;
+    }
+
+    // The won activity carries the REAL winner's username so the UI can never
+    // fall back to a "System" label for the winner.
     auction.activity.push({
       type: 'won',
-      userId: auction.currentBidderId,
+      userId: winnerId,
+      username: winner.username,
       amount: auction.currentBid,
       tick: currentTick,
     });
 
     await auction.save();
 
-    const winner = await User.findById(auction.currentBidderId);
-    if (winner && winner.balance >= auction.winningBid) {
+    if (winner.balance >= auction.winningBid) {
       // The reserved funds are converted into the purchase payment
       winner.balance -= auction.winningBid;
       winner.reservedAuctionFunds = Math.max(0, (winner.reservedAuctionFunds || 0) - auction.winningBid);
@@ -188,17 +265,17 @@ async function settleAuction(auction) {
         await updateReputation(auction.sellerId, 'sold', auction.winningBid);
       }
 
-      triggerMissionProgress(auction.currentBidderId, 'auction_won');
+      triggerMissionProgress(winnerId, 'auction_won');
       if (auction.sellerId) {
         triggerMissionProgress(auction.sellerId, 'auction_sold');
       }
 
       await enqueueNotification({
-        userId: auction.currentBidderId,
+        userId: winnerId,
         type: 'system',
         title: 'Auction Won!',
         message: `You won the auction for ${property.name} with a bid of $${auction.winningBid.toLocaleString()}!`,
-        eventKey: `auction:${auction._id}:won:${auction.currentBidderId}`,
+        eventKey: `auction:${auction._id}:won:${winnerId}`,
         relatedId: auction._id,
         route: `/auctions`,
         entityType: 'auction',
@@ -206,7 +283,8 @@ async function settleAuction(auction) {
       });
 
       emitAuctionEnded(auction._id.toString(), {
-        winnerId: auction.currentBidderId.toString(),
+        winnerId: winnerId.toString(),
+        winnerUsername: winner.username,
         winningBid: auction.winningBid,
       });
 
@@ -225,9 +303,7 @@ async function settleAuction(auction) {
         });
       }
 
-      const outbidUserIds = auction.bids
-        .map((b) => b.bidderId.toString())
-        .filter((id) => id !== auction.currentBidderId.toString());
+      const outbidUserIds = auction.bids.map((b) => b.bidderId.toString()).filter((id) => id !== winnerId.toString());
       const uniqueOutbid = [...new Set(outbidUserIds)];
       for (const uid of uniqueOutbid) {
         await enqueueNotification({
@@ -245,10 +321,7 @@ async function settleAuction(auction) {
       }
 
       for (const watcherId of auction.watchers) {
-        if (
-          watcherId.toString() !== auction.currentBidderId.toString() &&
-          !uniqueOutbid.includes(watcherId.toString())
-        ) {
+        if (watcherId.toString() !== winnerId.toString() && !uniqueOutbid.includes(watcherId.toString())) {
           await enqueueNotification({
             userId: watcherId,
             type: 'system',
@@ -306,7 +379,15 @@ async function settleAuction(auction) {
   // no-winner paths). The winner's reservation was converted above.
   await releaseAuctionReservations(auction._id);
 
-  // Invalidate per-user analytics for everyone involved
+  await invalidateAuctionCaches(auction);
+}
+
+/**
+ * Invalidates the Redis auction caches (detail, featured, analytics, and
+ * per-user analytics) after settlement. Kept idempotent — cache keys are
+ * just deleted, so a second settlement attempt cannot resurrect stale data.
+ */
+async function invalidateAuctionCaches(auction) {
   const involvedUserIds = new Set();
   if (auction.winnerId) involvedUserIds.add(auction.winnerId.toString());
   if (auction.currentBidderId) involvedUserIds.add(auction.currentBidderId.toString());

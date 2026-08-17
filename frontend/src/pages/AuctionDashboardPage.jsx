@@ -337,6 +337,18 @@ function ActivityFeed({ activities }) {
     won: '🏆',
   };
 
+  /**
+   * Renders the actor for an activity entry. We NEVER fabricate an identity:
+   * a real player always has a username; a genuine system event (extension,
+   * reserve met, bank creation) has no actor and renders its message only;
+   * anything else is shown as an explicit "unavailable" state — never "System".
+   */
+  const renderActor = (act) => {
+    if (act.username) return <span className="text-secondary">{act.username}</span>;
+    if (act.message) return null;
+    return <span className="text-secondary">{t('auctions.actorUnavailable')}</span>;
+  };
+
   return (
     <div className="bg-gradient-to-br from-gray-100/90 to-gray-200 dark:from-gray-800/90 dark:to-gray-900 rounded-xl p-4 border border-border/40">
       <h3 className="text-sm font-medium text-primary mb-3 flex items-center gap-2">📋 {t('auctions.activityFeed')}</h3>
@@ -345,7 +357,7 @@ function ActivityFeed({ activities }) {
           <div key={i} className="flex items-start gap-2 text-sm">
             <span>{icons[act.type] || '📌'}</span>
             <div className="flex-1 min-w-0">
-              <span className="text-secondary">{act.username || t('auctions.system')}</span>
+              {renderActor(act)}
               {act.amount ? <span className="text-primary ml-1">{formatMoney(act.amount)}</span> : null}
               {act.message && <span className="text-muted ml-1 text-xs">— {act.message}</span>}
             </div>
@@ -499,7 +511,12 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
     useCallback(
       (data) => {
         if (data.auctionId === detail._id) {
-          setDetail((prev) => ({ ...prev, status: 'ended', winnerId: data.winnerId, winningBid: data.winningBid }));
+          setDetail((prev) => ({
+            ...prev,
+            status: 'ended',
+            winnerId: data.winnerId ? { _id: data.winnerId, username: data.winnerUsername || null } : null,
+            winningBid: data.winningBid,
+          }));
         }
       },
       [detail._id],
@@ -702,7 +719,7 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
             <div>
               <span className="text-muted">{t('auctions.winner')}: </span>
               <span className="text-green-400">
-                {detail.winnerId.username} ({formatMoney(detail.winningBid)})
+                {detail.winnerId.username || t('auctions.actorUnavailable')} ({formatMoney(detail.winningBid)})
               </span>
             </div>
           )}

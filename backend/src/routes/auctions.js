@@ -567,6 +567,10 @@ async function tryPlaceBid({ id, amount, userId, currentTick }) {
   const previousBidderId = auction.currentBidderId;
   const wasOutbid = previousBidderId && previousBidderId.toString() !== userId.toString();
   if (wasOutbid) {
+    // The outbid activity carries the previous bidder's real username so the
+    // UI never falls back to a "System" label for a real player.
+    const prevBid = [...auction.bids].reverse().find((b) => b.bidderId?.toString() === previousBidderId.toString());
+
     const outbidRes = await AuctionReservation.findOne({
       userId: previousBidderId,
       auctionId: updated._id,
@@ -591,7 +595,17 @@ async function tryPlaceBid({ id, amount, userId, currentTick }) {
 
     await Auction.updateOne(
       { _id: updated._id },
-      { $push: { activity: { type: 'outbid', userId: previousBidderId, tick: currentTick, createdAt: new Date() } } },
+      {
+        $push: {
+          activity: {
+            type: 'outbid',
+            userId: previousBidderId,
+            username: prevBid?.username,
+            tick: currentTick,
+            createdAt: new Date(),
+          },
+        },
+      },
     );
   }
 

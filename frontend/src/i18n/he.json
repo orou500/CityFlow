@@ -2625,7 +2625,6 @@
     "unknownProperty": "נכס לא ידוע",
     "unknownBidder": "מציע לא ידוע",
     "you": "אתה",
-    "system": "מערכת",
     "optional": "אופציונלי",
     "defaultAuto": "ברירת מחדל: 70% משווי שוק",
     "myAnalytics": "סטטיסטיקות המכרזים שלי",
@@ -2766,7 +2765,8 @@
       "medium": "4 חודשים",
       "long": "8 חודשים",
       "extended": "16 חודשים"
-    }
+    },
+    "actorUnavailable": "משתמש לא זמין"
   },
   "missions": {
     "title": "משימות ואתגרים",
