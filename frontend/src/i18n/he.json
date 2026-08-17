@@ -2353,7 +2353,16 @@
     "economyState": "כלכלה",
     "maturityIn": "בשלות בעוד",
     "finalValue": "ערך סופי",
-    "investmentStatusRejected": "נדחתה"
+    "investmentStatusRejected": "נדחתה",
+    "tabAuctions": "הצעות מכירה פומבית",
+    "auctionBidProposal": "הצעת הצעה במכירה פומבית",
+    "noAuctionProposals": "אין הצעות למכירה פומבית",
+    "yourVote": "ההצבעה שלך",
+    "notVoted": "לא הצבעת",
+    "approveBid": "אשר הצעה",
+    "rejectBid": "דחה הצעה",
+    "auctionBidStatusExpired": "פג תוקף",
+    "auctionBidExpiresIn": "פג תוקף בעוד"
   },
   "propertyRisk": {
     "title": "פרופיל סיכון נכס",

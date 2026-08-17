@@ -122,4 +122,45 @@ describe('NotificationsPage navigation', () => {
       expect(navigateMock).toHaveBeenCalledWith('/auctions/a1');
     });
   });
+
+  it('company auction bid proposal deep-links to tab=auctions with proposalId', async () => {
+    const { useGameStore } = await import('../../store/useGameStore');
+    useGameStore.getState().notifications = [
+      makeNotification({
+        route: '/real-estate-companies/c1',
+        tab: 'auctions',
+        proposalId: 'prop1',
+        auctionId: 'a1',
+        entityType: 'company',
+        entityId: 'c1',
+        read: true,
+      }),
+    ];
+    renderPage();
+    const item = await screen.findByText('M');
+    fireEvent.click(item);
+
+    await waitFor(() => {
+      expect(navigateMock).toHaveBeenCalledWith('/real-estate-companies/c1?tab=auctions&proposalId=prop1');
+    });
+  });
+
+  it('proposal deep-link preserves existing query params on the route', async () => {
+    const { useGameStore } = await import('../../store/useGameStore');
+    useGameStore.getState().notifications = [
+      makeNotification({
+        route: '/real-estate-companies/c1?from=list',
+        tab: 'auctions',
+        proposalId: 'prop2',
+        read: true,
+      }),
+    ];
+    renderPage();
+    const item = await screen.findByText('M');
+    fireEvent.click(item);
+
+    await waitFor(() => {
+      expect(navigateMock).toHaveBeenCalledWith('/real-estate-companies/c1?from=list&tab=auctions&proposalId=prop2');
+    });
+  });
 });

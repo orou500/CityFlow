@@ -2424,6 +2424,28 @@ router.get('/:id/property-purchase-requests', async (req, res) => {
   }
 });
 
+router.get('/:id/auction-bids', async (req, res) => {
+  try {
+    const company = await RealEstateCompany.findById(req.params.id)
+      .populate('auctionBids.requestedBy', 'username avatar')
+      .populate('auctionBids.votes.userId', 'username avatar')
+      .populate({
+        path: 'auctionBids.auctionId',
+        select: 'propertyId currentBid endTick status startingBid bidIncrement',
+        populate: { path: 'propertyId', select: 'name cityId' },
+      });
+
+    if (!company) return res.status(404).json({ error: 'Company not found' });
+
+    const member = getMember(company, req.user._id);
+    if (!member) return res.status(403).json({ error: 'You are not a member of this company' });
+
+    res.json(company.auctionBids || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/:id/property-purchase-requests/:reqId/vote', async (req, res) => {
   try {
     const { vote } = req.body;

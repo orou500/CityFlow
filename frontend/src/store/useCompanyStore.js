@@ -526,6 +526,29 @@ export const useCompanyStore = create((set, get) => ({
     }
   },
 
+  async fetchAuctionProposals(companyId) {
+    try {
+      const data = await api(`/real-estate-companies/${companyId}/auction-bids`);
+      return data;
+    } catch (err) {
+      set({ error: err.message });
+      throw err;
+    }
+  },
+
+  async voteAuctionProposal(auctionId, reqId, vote, companyId) {
+    try {
+      await api(`/auctions/${auctionId}/company-bid/${reqId}/vote`, {
+        method: 'POST',
+        body: JSON.stringify({ vote }),
+      });
+      if (companyId) await get().fetchCompany(companyId);
+    } catch (err) {
+      set({ error: err.message });
+      throw err;
+    }
+  },
+
   async initiateIPO(companyId) {
     try {
       const data = await api(`/real-estate-companies/${companyId}/ipo`, { method: 'POST' });

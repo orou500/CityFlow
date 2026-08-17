@@ -2359,7 +2359,16 @@
     "economyState": "Economy",
     "maturityIn": "Maturity in",
     "finalValue": "Final Value",
-    "investmentStatusRejected": "Rejected"
+    "investmentStatusRejected": "Rejected",
+    "tabAuctions": "Auction Proposals",
+    "auctionBidProposal": "Company Auction Bid Proposal",
+    "noAuctionProposals": "No auction bid proposals",
+    "yourVote": "Your vote",
+    "notVoted": "Not voted",
+    "approveBid": "Approve Bid",
+    "rejectBid": "Reject Bid",
+    "auctionBidStatusExpired": "Expired",
+    "auctionBidExpiresIn": "Expires in"
   },
   "propertyRisk": {
     "title": "Property Risk Profile",

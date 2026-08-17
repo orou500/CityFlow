@@ -33,6 +33,12 @@ const notificationSchema = new mongoose.Schema(
     tab: { type: String },
     entityType: { type: String },
     entityId: { type: mongoose.Schema.Types.ObjectId },
+    // Structured deep-link metadata for proposal/vote notifications: the
+    // canonical identifier of the voting object (e.g. an auction bid
+    // proposal id) and the auction it targets. Never derive navigation from
+    // title/message text.
+    proposalId: { type: mongoose.Schema.Types.ObjectId, default: null },
+    auctionId: { type: mongoose.Schema.Types.ObjectId, default: null },
     read: { type: Boolean, default: false },
     // When the user marked this read — drives read-notification retention.
     // Nullable for legacy notifications that predate the field.

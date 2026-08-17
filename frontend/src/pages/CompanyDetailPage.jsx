@@ -6,6 +6,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { formatMoney, formatMoneyExact } from '../utils/format';
 import PropertyImage from '../components/PropertyImage';
 import ConfirmDialog from '../components/ConfirmDialog';
+import { useCompanySocket, useSocketEvent } from '../hooks/useSocket';
 
 const TABS = [
   'overview',
@@ -16,6 +17,7 @@ const TABS = [
   'loans',
   'contracts',
   'investments',
+  'auctions',
   'audit',
 ];
 
@@ -203,6 +205,8 @@ export default function CompanyDetailPage() {
     createPropertyPurchaseRequest,
     fetchPropertyPurchaseRequests,
     votePropertyPurchaseRequest,
+    fetchAuctionProposals,
+    voteAuctionProposal,
     fetchContracts,
     acceptContract,
     proposeContract,
@@ -243,6 +247,7 @@ export default function CompanyDetailPage() {
   const [applySuccess, setApplySuccess] = useState(false);
   const [applyError, setApplyError] = useState('');
   const [propertyPurchaseRequests, setPropertyPurchaseRequests] = useState([]);
+  const [auctionProposals, setAuctionProposals] = useState([]);
   const [contracts, setContracts] = useState([]);
   const [contractHistory, setContractHistory] = useState([]);
   const [investments, setInvestments] = useState([]);
@@ -351,6 +356,11 @@ export default function CompanyDetailPage() {
         .then(setPropertyPurchaseRequests)
         .catch(() => {});
     }
+    if (tab === 'overview' || tab === 'auctions') {
+      fetchAuctionProposals(id)
+        .then(setAuctionProposals)
+        .catch(() => {});
+    }
     if (tab === 'properties') {
       fetchCompanyProperties(id, propertiesPage);
     }
@@ -385,6 +395,33 @@ export default function CompanyDetailPage() {
         .catch(() => {});
     }
   }, [tab, id, propertiesPage, auditPage, company?.memberRole, user?.role]);
+
+  useCompanySocket(id);
+
+  useSocketEvent('vote:created', () => {
+    if (tab === 'overview' || tab === 'auctions') refreshAuctionProposals();
+  });
+  useSocketEvent('vote:completed', () => {
+    if (tab === 'overview' || tab === 'auctions') refreshAuctionProposals();
+    fetchCompany(id).catch(() => {});
+    fetchCompanyStats(id);
+  });
+  useSocketEvent('vote:expired', () => {
+    if (tab === 'overview' || tab === 'auctions') refreshAuctionProposals();
+  });
+
+  const proposalIdParam = searchParams.get('proposalId');
+
+  useEffect(() => {
+    if (!proposalIdParam) return;
+    const timer = setTimeout(() => {
+      const el = document.getElementById(`auction-proposal-${proposalIdParam}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [proposalIdParam, auctionProposals, tab]);
 
   if (loading || !company) {
     return <div className="max-w-6xl mx-auto px-4 py-8 text-center text-gray-500">{t('common.loading')}</div>;
@@ -575,6 +612,22 @@ export default function CompanyDetailPage() {
     } catch {}
   };
 
+  const refreshAuctionProposals = async () => {
+    try {
+      const reqs = await fetchAuctionProposals(id);
+      setAuctionProposals(reqs);
+    } catch {}
+  };
+
+  const handleVoteAuctionProposal = async (proposal, vote) => {
+    try {
+      const auctionId = proposal.auctionId?._id || proposal.auctionId;
+      await voteAuctionProposal(auctionId, proposal._id, vote, id);
+      await refreshAuctionProposals();
+      fetchCompanyStats(id);
+    } catch {}
+  };
+
   const handleIPO = async () => {
     setIpoLoading(true);
     setIpoError('');
@@ -627,7 +680,9 @@ export default function CompanyDetailPage() {
               ? propertyPurchaseRequests.filter((r) => r.status === 'pending').length
               : t2 === 'loans'
                 ? loanRequests.filter((r) => r.status === 'pending').length
-                : 0;
+                : t2 === 'auctions'
+                  ? auctionProposals.filter((r) => r.status === 'pending').length
+                  : 0;
           return (
             <button
               key={t2}
@@ -2381,6 +2436,169 @@ export default function CompanyDetailPage() {
           {investmentSubTab === 'active' && <InvestmentActiveList investments={investments} t={t} />}
 
           {investmentSubTab === 'history' && <InvestmentHistoryList investments={investments} t={t} />}
+        </div>
+      )}
+
+      {tab === 'auctions' && (
+        <div className="space-y-3">
+          {auctionProposals.length === 0 ? (
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+              <div className="text-3xl mb-2">🏢</div>
+              <p>{t('companies.noAuctionProposals')}</p>
+            </div>
+          ) : (
+            auctionProposals.map((proposal) => {
+              const auctionObj = proposal.auctionId || {};
+              const propertyObj = auctionObj.propertyId || {};
+              const proposer =
+                typeof proposal.requestedBy === 'object' && proposal.requestedBy?.username
+                  ? proposal.requestedBy.username
+                  : proposal.requestedBy?.toString?.() || '';
+              const totalVoters = Math.max(1, (company.members?.length || 1) - 1);
+              const approvalThreshold = Math.ceil(totalVoters / 2);
+              const yesVotes = (proposal.votes || []).filter((v) => v.vote === 'yes').length;
+              const myVote = (proposal.votes || []).find(
+                (v) => normalizeId(v.userId?._id || v.userId) === normalizeId(user?._id),
+              );
+              const requesterId = normalizeId(proposal.requestedBy?._id || proposal.requestedBy);
+              const isProposer = requesterId === normalizeId(user?._id);
+              const canVote = isMember && proposal.status === 'pending' && !myVote && !isProposer;
+
+              const expiryMs = new Date(proposal.createdAt || Date.now()).getTime() + 8 * 6 * 60 * 60 * 1000;
+              const remainingMs = expiryMs - Date.now();
+              const remainingH = Math.max(0, Math.floor(remainingMs / (60 * 60 * 1000)));
+              const remainingM = Math.max(0, Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000)));
+              const isDeepLinked = proposalIdParam && proposal._id?.toString() === proposalIdParam.toString();
+
+              return (
+                <div
+                  key={proposal._id}
+                  id={`auction-proposal-${proposal._id}`}
+                  className={`bg-white dark:bg-gray-800 border rounded-lg p-3 sm:p-4 ${
+                    isDeepLinked
+                      ? 'border-blue-500 ring-2 ring-blue-500/40 shadow-lg'
+                      : 'border-gray-200 dark:border-gray-700'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                          {t('companies.auctionBidProposal')}
+                        </span>
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded ${
+                            proposal.status === 'pending'
+                              ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
+                              : proposal.status === 'approved'
+                                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                                : proposal.status === 'rejected'
+                                  ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                          }`}
+                        >
+                          {proposal.status === 'pending'
+                            ? t('companies.pending')
+                            : proposal.status === 'approved'
+                              ? t('common.approved')
+                              : proposal.status === 'rejected'
+                                ? t('common.rejected')
+                                : t('companies.auctionBidStatusExpired')}
+                        </span>
+                      </div>
+
+                      <div className="mt-1.5 space-y-0.5 text-xs text-gray-500 dark:text-gray-400">
+                        <div className="flex items-center gap-1">
+                          <span className="inline-block w-4 text-center">🏠</span>
+                          <span className="truncate">
+                            {propertyObj.name ||
+                              (auctionObj._id
+                                ? `${t('companies.propertyPurchase')} #${auctionObj._id.toString().slice(-6)}`
+                                : t('companies.unknown'))}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="inline-block w-4 text-center">💰</span>
+                          <span>
+                            {t('auctions.bidAmount')}:{' '}
+                            <span className="font-semibold text-gray-900 dark:text-white">
+                              {formatMoney(proposal.amount || 0)}
+                            </span>
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="inline-block w-4 text-center">👤</span>
+                          <span>
+                            {t('companies.proposedBy')}: {proposer || t('companies.unknown')}
+                            {isProposer && (
+                              <span className="ml-1 text-xs px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded">
+                                {t('companies.proposedByYou')}
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="inline-block w-4 text-center">🗳️</span>
+                          <span>
+                            {t('companies.votes')}: {yesVotes}/{approvalThreshold}
+                          </span>
+                        </div>
+                        {proposal.status === 'pending' && (
+                          <div className="flex items-center gap-1">
+                            <span className="inline-block w-4 text-center">⏳</span>
+                            <span>
+                              {t('companies.auctionBidExpiresIn')}: {remainingH}h {remainingM}m
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-1">
+                          <span className="inline-block w-4 text-center">🗯️</span>
+                          <span>
+                            {t('companies.yourVote')}:{' '}
+                            {myVote ? (
+                              <>
+                                {t('companies.voted')} {t(`companies.${myVote.vote}`)}
+                              </>
+                            ) : (
+                              t('companies.notVoted')
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 shrink-0">
+                      {canVote ? (
+                        <>
+                          <button
+                            onClick={() => handleVoteAuctionProposal(proposal, 'yes')}
+                            className="px-3 py-1.5 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 min-w-[4.5rem]"
+                          >
+                            {t('companies.approveBid')}
+                          </button>
+                          <button
+                            onClick={() => handleVoteAuctionProposal(proposal, 'no')}
+                            className="px-3 py-1.5 text-xs bg-red-600 text-white rounded-lg hover:bg-red-700 min-w-[4.5rem]"
+                          >
+                            {t('companies.rejectBid')}
+                          </button>
+                        </>
+                      ) : myVote || proposal.status !== 'pending' ? (
+                        <Link
+                          to={`/auctions/${auctionObj._id || ''}`}
+                          className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                        >
+                          {t('companies.view')}
+                        </Link>
+                      ) : (
+                        <span className="px-3 py-1.5 text-xs text-gray-500">{t('companies.membersOnly')}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       )}
 

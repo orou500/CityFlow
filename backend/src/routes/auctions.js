@@ -24,9 +24,12 @@ import { enqueueNotification } from '../utils/notificationQueue.js';
 import { cacheGet, cacheSet, cacheDel } from '../utils/cache.js';
 import { cacheKeys } from '../utils/cacheKeys.js';
 import { computeAuctionRemaining } from '../utils/auctionTime.js';
-import { getTickNumber } from '../models/GameState.js';
+import { getTickNumber, getGameState } from '../models/GameState.js';
 import { reserveAuctionFunds, releaseAuctionFunds, setAuctionReservation } from '../utils/auctionMoney.js';
 import { getCityPropertyLimit, getCityOwnershipStats } from '../utils/ownershipLimits.js';
+import { scheduleVoteExpiration } from '../utils/delayedJobs.js';
+import { onCompanyVote, onCompanyVoteCompleted } from '../utils/cacheInvalidation.js';
+import CompanyAuditLog from '../models/CompanyAuditLog.js';
 
 // In-process mutex per user — serializes concurrent bids by the same player
 // so reservation deltas and city-ownership checks can never race.
@@ -903,40 +906,56 @@ router.post(
 
       if (!company.auctionBids) company.auctionBids = [];
 
+      const gameState = await getGameState();
       company.auctionBids.push({
         auctionId: auction._id,
         amount,
         requestedBy: userId,
         status: 'pending',
         votes: [],
+        createdTick: gameState.tickNumber || 0,
         createdAt: new Date(),
       });
 
       await company.save();
+      const proposal = company.auctionBids[company.auctionBids.length - 1];
+      scheduleVoteExpiration(company._id, 'auctionBid', proposal._id, 8);
 
       const totalVoters = company.members.length - 1;
-      const directors = company.members.filter((m) => m.role === 'ceo' || m.role === 'director');
-      for (const d of directors) {
-        if (d.userId.toString() !== userId.toString()) {
+      for (const m of company.members) {
+        if (m.userId?.toString() !== userId.toString()) {
           await enqueueNotification({
-            userId: d.userId,
+            userId: m.userId,
             type: 'system',
             title: 'Company Auction Bid Proposal',
             message: `${req.user.username} proposes bidding $${amount.toLocaleString()} on an auction. Vote now.`,
-            eventKey: `auction:${auction._id}:company_bid_vote:${d.userId}`,
+            eventKey: `auction:${auction._id}:company_bid_vote:${m.userId}`,
             route: `/real-estate-companies/${company._id}`,
-            tab: 'overview',
+            tab: 'auctions',
             entityType: 'company',
             entityId: company._id,
             relatedId: company._id,
+            proposalId: proposal._id,
+            auctionId: auction._id,
             global: false,
           });
         }
       }
 
+      await CompanyAuditLog.create({
+        companyId: company._id,
+        userId,
+        action: 'auction_bid_requested',
+        details: { auctionId: auction._id, amount },
+        tick: gameState.tickNumber,
+      });
+
+      await onCompanyVote(company._id);
+
       return res.status(201).json({
         success: true,
         message: 'Bid proposal created. Awaiting company vote.',
+        proposalId: proposal._id,
         totalVoters,
         approvalThreshold: Math.ceil(totalVoters / 2),
       });
@@ -957,11 +976,14 @@ router.post(
   ],
   async (req, res) => {
     try {
-      const { id, reqId } = req.params;
+      const { reqId } = req.params;
       const { vote } = req.body;
       const userId = req.user._id;
 
-      const company = await RealEstateCompany.findById(id);
+      // The URL is nested under /auctions/:id — `id` is the auction id, not
+      // the company id. The proposal is the canonical object; find the
+      // company that owns it so the lookup never depends on a mis-sent id.
+      const company = await RealEstateCompany.findOne({ 'auctionBids._id': reqId });
       if (!company) {
         return res.status(404).json({ success: false, error: 'Company not found' });
       }
@@ -974,6 +996,10 @@ router.post(
       const bidReq = company.auctionBids?.id(reqId);
       if (!bidReq) {
         return res.status(404).json({ success: false, error: 'Bid proposal not found' });
+      }
+
+      if (bidReq.status === 'expired') {
+        return res.status(400).json({ success: false, error: 'Bid proposal has expired' });
       }
 
       if (bidReq.status !== 'pending') {
@@ -990,6 +1016,16 @@ router.post(
       }
 
       bidReq.votes.push({ userId, vote, votedAt: new Date() });
+      company.stats.totalVotes = (company.stats.totalVotes || 0) + 1;
+
+      const gameState = await getGameState();
+      await CompanyAuditLog.create({
+        companyId: company._id,
+        userId,
+        action: 'auction_bid_vote_cast',
+        details: { vote, auctionBidId: bidReq._id, auctionId: bidReq.auctionId },
+        tick: gameState.tickNumber,
+      });
 
       const totalVoters = company.members.length - 1;
       const votesInFavor = bidReq.votes.filter((v) => v.vote === 'yes').length;
@@ -1035,6 +1071,9 @@ router.post(
               performedBy: userId,
             });
 
+            bidReq.executedBy = userId;
+            bidReq.executedAt = new Date();
+
             await Promise.all([auction.save(), company.save()]);
 
             if (previousBidderId && previousBidderId.toString() !== userId.toString()) {
@@ -1071,6 +1110,14 @@ router.post(
       }
 
       if (bidReq.status === 'approved' || bidReq.status === 'rejected') {
+        await CompanyAuditLog.create({
+          companyId: company._id,
+          userId,
+          action: bidReq.status === 'approved' ? 'auction_bid_approved' : 'auction_bid_rejected',
+          details: { auctionBidId: bidReq._id, auctionId: bidReq.auctionId, amount: bidReq.amount },
+          tick: gameState.tickNumber,
+        });
+
         await enqueueNotification({
           userId: bidReq.requestedBy,
           type: 'system',
@@ -1081,15 +1128,18 @@ router.post(
               : `Your company auction bid proposal for $${bidReq.amount.toLocaleString()} was rejected.`,
           eventKey: `auction:${bidReq.auctionId}:company_bid:${bidReq._id}:${bidReq.status}:${bidReq.requestedBy}`,
           route: `/real-estate-companies/${company._id}`,
-          tab: 'overview',
+          tab: 'auctions',
           entityType: 'company',
           entityId: company._id,
           relatedId: company._id,
+          proposalId: bidReq._id,
+          auctionId: bidReq.auctionId,
           global: false,
         });
       }
 
       await company.save();
+      await onCompanyVoteCompleted(company._id);
 
       return res.json({
         success: true,
@@ -1097,6 +1147,12 @@ router.post(
         status: bidReq.status,
         votesInFavor,
         totalVoters,
+        approvalThreshold: Math.ceil(totalVoters / 2),
+        proposal: {
+          _id: bidReq._id,
+          status: bidReq.status,
+          votes: bidReq.votes,
+        },
       });
     } catch (error) {
       return res.status(500).json({ success: false, error: error.message });

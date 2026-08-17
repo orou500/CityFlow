@@ -164,6 +164,35 @@ async function handleVoteExpiration(data) {
         companyId,
       });
     }
+  } else if (proposalType === 'auctionBid') {
+    const request = company.auctionBids.id(proposalId);
+    if (request && request.status === 'pending') {
+      request.status = 'expired';
+      await company.save();
+
+      for (const member of company.members) {
+        await enqueueNotification({
+          userId: member.userId,
+          type: 'system',
+          title: 'Auction Bid Proposal Expired',
+          message: `Auction bid proposal for $${request.amount?.toLocaleString() || 'N/A'} has expired without resolution.`,
+          eventKey: `company:${companyId}:auctionBid:${proposalId}:expired:${member.userId}`,
+          route: `/real-estate-companies/${companyId}`,
+          tab: 'auctions',
+          entityType: 'company',
+          entityId: companyId,
+          relatedId: companyId,
+          proposalId,
+          global: false,
+        });
+      }
+
+      emitToCompany(companyId, SOCKET_EVENTS.VOTE_EXPIRED, {
+        proposalType,
+        proposalId,
+        companyId,
+      });
+    }
   } else if (proposalType === 'contract') {
     const contract = await CityContract.findById(proposalId);
     if (contract && contract.proposal?.status === 'pending') {

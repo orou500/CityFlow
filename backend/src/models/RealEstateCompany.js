@@ -108,6 +108,30 @@ const propertyPurchaseRequestSchema = new mongoose.Schema(
   { timestamps: true, _id: true },
 );
 
+const auctionBidRequestSchema = new mongoose.Schema(
+  {
+    auctionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Auction', required: true },
+    requestedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    amount: { type: Number, required: true },
+    status: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected', 'executed', 'expired'],
+      default: 'pending',
+    },
+    votes: [
+      {
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        vote: { type: String, enum: ['yes', 'no'] },
+        votedAt: { type: Date, default: Date.now },
+      },
+    ],
+    createdTick: { type: Number, default: 0 },
+    executedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    executedAt: { type: Date },
+  },
+  { timestamps: true, _id: true },
+);
+
 const developmentRequestSchema = new mongoose.Schema(
   {
     requestedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -165,6 +189,7 @@ const realEstateCompanySchema = new mongoose.Schema(
     loanRequests: [loanRequestSchema],
     propertyPurchaseRequests: [propertyPurchaseRequestSchema],
     developmentRequests: [developmentRequestSchema],
+    auctionBids: [auctionBidRequestSchema],
     milestones: [milestoneProgressSchema],
     shares: {
       totalShares: { type: Number, default: 1000 },
@@ -229,6 +254,7 @@ const realEstateCompanySchema = new mongoose.Schema(
 
 realEstateCompanySchema.index({ founderId: 1 });
 realEstateCompanySchema.index({ 'members.userId': 1 });
+realEstateCompanySchema.index({ 'auctionBids._id': 1 });
 realEstateCompanySchema.index({ hqCityId: 1 });
 realEstateCompanySchema.index({ reputation: -1 });
 realEstateCompanySchema.index({ 'stats.netWorth': -1 });
@@ -401,6 +427,28 @@ realEstateCompanySchema.set('toJSON', {
                 projectName: dr.constructionProjectId.projectName,
               }
             : dr.constructionProjectId?.toString?.() || dr.constructionProjectId,
+      }));
+    }
+    if (ret.auctionBids) {
+      ret.auctionBids = ret.auctionBids.map((ab) => ({
+        ...ab,
+        _id: ab._id?.toString(),
+        requestedBy:
+          ab.requestedBy && typeof ab.requestedBy === 'object' && ab.requestedBy._id
+            ? { _id: ab.requestedBy._id.toString(), username: ab.requestedBy.username }
+            : ab.requestedBy?.toString?.() || ab.requestedBy,
+        auctionId:
+          ab.auctionId && typeof ab.auctionId === 'object' && ab.auctionId._id
+            ? ab.auctionId
+            : ab.auctionId?.toString?.() || ab.auctionId,
+        votes: (ab.votes || []).map((v) => ({
+          ...v,
+          userId:
+            v.userId && typeof v.userId === 'object' && v.userId._id
+              ? { _id: v.userId._id.toString(), username: v.userId.username }
+              : v.userId?.toString?.() || v.userId,
+        })),
+        executedBy: ab.executedBy?.toString?.() || ab.executedBy,
       }));
     }
     if (ret.milestones) {

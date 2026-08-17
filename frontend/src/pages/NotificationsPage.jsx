@@ -124,12 +124,14 @@ export default function NotificationsPage() {
     }
 
     // Priority 1: notification has route metadata from backend (may already
-    // carry query params, e.g. /property/:id?section=offers — merge the tab
-    // without corrupting the query string).
+    // carry query params, e.g. /property/:id?section=offers). Merge tab and
+    // proposal deep-link params through URLSearchParams so existing query
+    // strings are preserved and never produce malformed URLs.
     if (notification.route) {
-      const sep = notification.route.includes('?') ? '&' : '?';
-      const tabParam = notification.tab ? `${sep}tab=${notification.tab}` : '';
-      navigate(`${notification.route}${tabParam}`);
+      const url = new URL(notification.route, window.location.origin);
+      if (notification.tab) url.searchParams.set('tab', notification.tab);
+      if (notification.proposalId) url.searchParams.set('proposalId', notification.proposalId);
+      navigate(`${url.pathname}${url.search}`);
       return;
     }
 

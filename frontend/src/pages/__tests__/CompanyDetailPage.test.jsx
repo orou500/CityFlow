@@ -47,6 +47,8 @@ const companyState = vi.hoisted(() => ({
   createPropertyPurchaseRequest: vi.fn(),
   fetchPropertyPurchaseRequests: vi.fn().mockResolvedValue([]),
   votePropertyPurchaseRequest: vi.fn(),
+  fetchAuctionProposals: vi.fn().mockResolvedValue([]),
+  voteAuctionProposal: vi.fn().mockResolvedValue(),
   fetchContracts: vi.fn().mockResolvedValue([]),
   acceptContract: vi.fn(),
   proposeContract: vi.fn(),
@@ -264,5 +266,70 @@ describe('CompanyDetailPage — Sell company property confirmation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'companies.sellProperty' }));
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument());
     expect(screen.getByRole('dialog')).toHaveAttribute('dir', 'rtl');
+  });
+});
+
+describe('CompanyDetailPage — Auction Proposals tab & deep-link', () => {
+  beforeEach(() => {
+    companyState.selectedCompany = makeCompany({ memberRole: 'member' });
+    companyState.fetchAuctionProposals.mockResolvedValue([
+      {
+        _id: 'ab1',
+        status: 'pending',
+        amount: 2000,
+        requestedBy: { _id: 'user2', username: 'other' },
+        auctionId: { _id: 'a1', propertyId: { _id: 'p1', name: 'Heritage Building' } },
+        votes: [],
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+  });
+
+  it('renders the Auction Proposals tab with the proposal card and vote buttons', async () => {
+    renderPage('/real-estate-companies/c1?tab=auctions');
+
+    expect(await screen.findByText('companies.auctionBidProposal')).toBeInTheDocument();
+    expect(screen.getByText('Heritage Building')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'companies.approveBid' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'companies.rejectBid' })).toBeInTheDocument();
+  });
+
+  it('shows the proposer cannot vote (own proposal hides vote buttons)', async () => {
+    companyState.fetchAuctionProposals.mockResolvedValue([
+      {
+        _id: 'ab2',
+        status: 'pending',
+        amount: 1500,
+        requestedBy: { _id: 'user1', username: 'me' },
+        auctionId: { _id: 'a2', propertyId: { _id: 'p2', name: 'Skyline' } },
+        votes: [],
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+    renderPage('/real-estate-companies/c1?tab=auctions');
+
+    expect(await screen.findByText('Skyline')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'companies.approveBid' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'companies.rejectBid' })).not.toBeInTheDocument();
+  });
+
+  it('deep-link with proposalId renders the highlighted proposal', async () => {
+    renderPage('/real-estate-companies/c1?tab=auctions&proposalId=ab1');
+
+    expect(await screen.findByText('companies.auctionBidProposal')).toBeInTheDocument();
+    const card = document.getElementById('auction-proposal-ab1');
+    expect(card).not.toBeNull();
+    expect(card.className).toContain('ring-blue-500');
+  });
+
+  it('clicking Approve Bid calls voteAuctionProposal with (auctionId, proposalId, vote, companyId)', async () => {
+    companyState.voteAuctionProposal.mockResolvedValue();
+    renderPage('/real-estate-companies/c1?tab=auctions');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'companies.approveBid' }));
+
+    await waitFor(() => {
+      expect(companyState.voteAuctionProposal).toHaveBeenCalledWith('a1', 'ab1', 'yes', 'c1');
+    });
   });
 });
