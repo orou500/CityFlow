@@ -863,7 +863,7 @@ function CompanyBidModal({ auctionId, minBid, onClose, onSubmit }) {
   useEffect(() => {
     api('/real-estate-companies/my')
       .then((res) => {
-        setCompanies(res.companies || []);
+        setCompanies(Array.isArray(res) ? res : res?.companies || []);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));

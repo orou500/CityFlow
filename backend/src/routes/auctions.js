@@ -860,7 +860,7 @@ router.post(
         return res.status(403).json({ success: false, error: 'Not a company member' });
       }
 
-      if (!hasPermission(member.role, 'initiate_investments')) {
+      if (!hasPermission(member, 'initiate_investments')) {
         return res.status(403).json({ success: false, error: 'Insufficient permissions' });
       }
 
