@@ -34,6 +34,15 @@ export const AUCTION_CONFIG = {
     rarityBonus: { uncommon: 0, rare: 15, legendary: 30 },
     endingSoonBonus: 20,
   },
+  companyBid: {
+    // Maximum company voting period (wall-clock) for an auction-bid proposal.
+    votingDurationMs: 6 * 60 * 60 * 1000,
+    // A proposal stuck in `resolving` for longer than this is considered
+    // abandoned by a crashed worker and becomes eligible for safe recovery.
+    resolutionStaleMs: 10 * 60 * 1000,
+    // How often the scheduler scans for stale resolutions.
+    recoveryIntervalMs: 60 * 1000,
+  },
   cacheTTL: {
     featured: 30,
     analytics: 60,

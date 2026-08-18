@@ -42,6 +42,7 @@ const companyAuditLogSchema = new mongoose.Schema(
         'auction_bid_approved',
         'auction_bid_rejected',
         'auction_bid_expired',
+        'auction_bid_proposal_recovered',
         'investment_created',
         'investment_proposed',
         'investment_vote_cast',

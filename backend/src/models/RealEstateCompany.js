@@ -115,7 +115,7 @@ const auctionBidRequestSchema = new mongoose.Schema(
     amount: { type: Number, required: true },
     status: {
       type: String,
-      enum: ['pending', 'approved', 'rejected', 'executed', 'expired'],
+      enum: ['pending', 'resolving', 'approved', 'rejected', 'executed', 'expired'],
       default: 'pending',
     },
     votes: [
@@ -125,9 +125,26 @@ const auctionBidRequestSchema = new mongoose.Schema(
         votedAt: { type: Date, default: Date.now },
       },
     ],
+    // Backend-computed voting deadline: MIN(createdAt + 6h, auctionEndsAt).
+    // Never supplied by the client. The frontend only ever displays it.
+    votingEndsAt: { type: Date },
     createdTick: { type: Number, default: 0 },
     executedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     executedAt: { type: Date },
+    // Final tally after resolution (missing votes count as YES).
+    resolution: {
+      yes: { type: Number, default: 0 },
+      no: { type: Number, default: 0 },
+      missingAsYes: { type: Number, default: 0 },
+      threshold: { type: Number, default: 0 },
+      resolvedAt: { type: Date },
+    },
+    resolvedAt: { type: Date },
+    // When the atomic pending -> resolving claim was taken. Used by the stale
+    // recovery job to detect workers that crashed mid-resolution.
+    resolvingAt: { type: Date },
+    // Explicit reason for non-standard resolution (e.g. stale recovery).
+    resolutionReason: { type: String },
   },
   { timestamps: true, _id: true },
 );
@@ -255,6 +272,7 @@ const realEstateCompanySchema = new mongoose.Schema(
 realEstateCompanySchema.index({ founderId: 1 });
 realEstateCompanySchema.index({ 'members.userId': 1 });
 realEstateCompanySchema.index({ 'auctionBids._id': 1 });
+realEstateCompanySchema.index({ 'auctionBids.status': 1, 'auctionBids.resolvingAt': 1 });
 realEstateCompanySchema.index({ hqCityId: 1 });
 realEstateCompanySchema.index({ reputation: -1 });
 realEstateCompanySchema.index({ 'stats.netWorth': -1 });

@@ -8,6 +8,8 @@ import { processNotificationQueue } from '../utils/notificationQueue.js';
 import { runNotificationRetention } from './notificationRetention.js';
 import { reconcilePendingDonations } from '../routes/donations.js';
 import { processSizopsDisconnectOutbox } from '../services/sizopsDisconnectOutbox.js';
+import { recoverStaleAuctionBidProposals } from './auctionBidProposals.js';
+import { AUCTION_CONFIG } from '../config/auctions.js';
 
 const ownerId = crypto.randomUUID();
 
@@ -92,6 +94,19 @@ export function startScheduler() {
       await reconcilePendingDonations();
     } catch (err) {
       console.error('[SCHEDULER] Donation reconciliation failed:', err.message);
+    }
+  });
+
+  // Recover auction-bid proposals stuck in `resolving` by a crashed worker.
+  const recoveryMinutes = Math.max(1, Math.round(AUCTION_CONFIG.companyBid.recoveryIntervalMs / 60000));
+  cron.schedule(recoveryMinutes === 1 ? '* * * * *' : `*/${recoveryMinutes} * * * *`, async () => {
+    try {
+      const recovered = await recoverStaleAuctionBidProposals();
+      if (recovered.length > 0) {
+        console.log(`[SCHEDULER] Recovered ${recovered.length} stale auction-bid proposal(s)`);
+      }
+    } catch (err) {
+      console.error('[SCHEDULER] Auction-bid stale recovery failed:', err.message);
     }
   });
 

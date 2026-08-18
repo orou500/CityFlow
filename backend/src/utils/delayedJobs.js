@@ -23,6 +23,36 @@ export async function scheduleVoteExpiration(companyId, proposalType, proposalId
   );
 }
 
+/**
+ * Schedule auction-bid proposal resolution at an exact wall-clock deadline.
+ *
+ * The company voting deadline for auction bids is a wall-clock timestamp
+ * (votingEndsAt = MIN(createdAt + 6h, auctionEndsAt)) which may be shorter
+ * than one 6-hour tick, so the tick-based scheduleVoteExpiration is not
+ * precise enough. The job triggers the atomic resolution that applies the
+ * "no vote = YES" rule and executes the bid if approved.
+ */
+export async function scheduleAuctionBidResolution(companyId, proposalId, votingEndsAt) {
+  if (!isRedisConnected()) return null;
+  const delayMs = new Date(votingEndsAt).getTime() - Date.now();
+  if (delayMs <= 0) return null;
+  return addJob(
+    QUEUE_NAMES.NOTIFICATIONS,
+    'vote:expire',
+    {
+      companyId: companyId.toString(),
+      proposalType: 'auctionBid',
+      proposalId: proposalId.toString(),
+      expiresAt: new Date(votingEndsAt).toISOString(),
+    },
+    {
+      delay: delayMs,
+      jobId: `vote:auctionBid:${proposalId}`,
+      removeOnComplete: 50,
+    },
+  );
+}
+
 export async function scheduleContractCompletion(contractId, companyId, durationTicks, startTick) {
   if (!isRedisConnected()) return null;
   const delayMs = durationTicks * TICK_DURATION_MS;

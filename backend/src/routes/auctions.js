@@ -27,8 +27,9 @@ import { computeAuctionRemaining } from '../utils/auctionTime.js';
 import { getTickNumber, getGameState } from '../models/GameState.js';
 import { reserveAuctionFunds, releaseAuctionFunds, setAuctionReservation } from '../utils/auctionMoney.js';
 import { getCityPropertyLimit, getCityOwnershipStats } from '../utils/ownershipLimits.js';
-import { scheduleVoteExpiration } from '../utils/delayedJobs.js';
-import { onCompanyVote, onCompanyVoteCompleted } from '../utils/cacheInvalidation.js';
+import { scheduleAuctionBidResolution } from '../utils/delayedJobs.js';
+import { onCompanyVote } from '../utils/cacheInvalidation.js';
+import { calculateAuctionBidVotingEndsAt, resolveAuctionBidProposal } from '../engine/auctionBidProposals.js';
 import CompanyAuditLog from '../models/CompanyAuditLog.js';
 
 // In-process mutex per user — serializes concurrent bids by the same player
@@ -907,19 +908,24 @@ router.post(
       if (!company.auctionBids) company.auctionBids = [];
 
       const gameState = await getGameState();
+      // Backend-computed voting deadline: MIN(now + 6h, auctionEndsAt).
+      // Never supplied by the client. Guarantees voting cannot outlive the
+      // auction (votingEndsAt <= auctionEndsAt always).
+      const votingEndsAt = calculateAuctionBidVotingEndsAt(auction, gameState);
       company.auctionBids.push({
         auctionId: auction._id,
         amount,
         requestedBy: userId,
         status: 'pending',
         votes: [],
+        votingEndsAt,
         createdTick: gameState.tickNumber || 0,
         createdAt: new Date(),
       });
 
       await company.save();
       const proposal = company.auctionBids[company.auctionBids.length - 1];
-      scheduleVoteExpiration(company._id, 'auctionBid', proposal._id, 8);
+      scheduleAuctionBidResolution(company._id, proposal._id, votingEndsAt);
 
       const totalVoters = company.members.length - 1;
       for (const m of company.members) {
@@ -946,7 +952,7 @@ router.post(
         companyId: company._id,
         userId,
         action: 'auction_bid_requested',
-        details: { auctionId: auction._id, amount },
+        details: { auctionId: auction._id, amount, votingEndsAt },
         tick: gameState.tickNumber,
       });
 
@@ -956,6 +962,7 @@ router.post(
         success: true,
         message: 'Bid proposal created. Awaiting company vote.',
         proposalId: proposal._id,
+        votingEndsAt,
         totalVoters,
         approvalThreshold: Math.ceil(totalVoters / 2),
       });
@@ -1006,6 +1013,22 @@ router.post(
         return res.status(400).json({ success: false, error: 'Bid proposal is not pending' });
       }
 
+      // Backend-computed voting deadline — never trust the client. Votes after
+      // it are rejected (the deadline job resolves the proposal atomically).
+      if (bidReq.votingEndsAt && new Date(bidReq.votingEndsAt).getTime() <= Date.now()) {
+        return res.status(400).json({ success: false, error: 'Voting has ended' });
+      }
+
+      // Voting must NEVER continue after the auction itself ends.
+      const auction = await Auction.findById(bidReq.auctionId);
+      if (!auction) {
+        return res.status(404).json({ success: false, error: 'Auction not found' });
+      }
+      const currentTick = await getTickNumber();
+      if (auction.endTick <= currentTick) {
+        return res.status(400).json({ success: false, error: 'Auction has ended' });
+      }
+
       if (bidReq.requestedBy.toString() === userId.toString()) {
         return res.status(400).json({ success: false, error: 'Cannot vote on your own proposal' });
       }
@@ -1027,130 +1050,36 @@ router.post(
         tick: gameState.tickNumber,
       });
 
-      const totalVoters = company.members.length - 1;
-      const votesInFavor = bidReq.votes.filter((v) => v.vote === 'yes').length;
-
-      if (votesInFavor >= Math.ceil(totalVoters / 2)) {
-        bidReq.status = 'approved';
-
-        const auction = await Auction.findById(bidReq.auctionId);
-        if (auction && auction.status === 'active') {
-          const currentTick = await getTickNumber();
-          const minBid = auction.currentBid > 0 ? auction.currentBid + auction.bidIncrement : auction.startingBid;
-
-          if (bidReq.amount >= minBid && company.treasury.balance >= bidReq.amount) {
-            const previousBidderId = auction.currentBidderId;
-
-            auction.bids.push({
-              bidderId: userId,
-              amount: bidReq.amount,
-              tick: currentTick,
-              username: `${company.name} (Company)`,
-            });
-            auction.currentBid = bidReq.amount;
-            auction.currentBidderId = userId;
-            auction.totalBids += 1;
-            auction.companyId = company._id;
-
-            const uniqueAfter = new Set(auction.bids.map((b) => b.bidderId.toString()));
-            auction.uniqueBidders = uniqueAfter.size;
-
-            auction.activity.push({
-              type: 'bid',
-              userId,
-              username: `${company.name} (Company)`,
-              amount: bidReq.amount,
-              tick: currentTick,
-            });
-
-            company.treasury.balance -= bidReq.amount;
-            company.treasury.transactions.push({
-              type: 'withdrawal',
-              amount: bidReq.amount,
-              description: `Auction bid on property`,
-              performedBy: userId,
-            });
-
-            bidReq.executedBy = userId;
-            bidReq.executedAt = new Date();
-
-            await Promise.all([auction.save(), company.save()]);
-
-            if (previousBidderId && previousBidderId.toString() !== userId.toString()) {
-              await enqueueNotification({
-                userId: previousBidderId,
-                type: 'system',
-                title: 'Outbid by Company',
-                message: `${company.name} bid $${bidReq.amount.toLocaleString()} on an auction`,
-                eventKey: `auction:${auction._id}:outbid:${previousBidderId}`,
-                route: `/auctions/${auction._id}`,
-                entityType: 'auction',
-                entityId: auction._id,
-                relatedId: auction._id,
-                global: false,
-              });
-            }
-
-            const timing = computeAuctionRemaining(auction, currentTick);
-
-            emitAuctionBid(auction._id.toString(), {
-              currentBid: bidReq.amount,
-              currentBidderId: userId.toString(),
-              currentBidderUsername: `${company.name} (Company)`,
-              totalBids: auction.totalBids,
-              uniqueBidders: auction.uniqueBidders,
-              endTick: auction.endTick,
-              currentTick: timing.currentTick,
-              remainingMonths: timing.remainingMonths,
-            });
-          }
-        }
-      } else if (totalVoters - bidReq.votes.length === 0) {
-        bidReq.status = 'rejected';
-      }
-
-      if (bidReq.status === 'approved' || bidReq.status === 'rejected') {
-        await CompanyAuditLog.create({
-          companyId: company._id,
-          userId,
-          action: bidReq.status === 'approved' ? 'auction_bid_approved' : 'auction_bid_rejected',
-          details: { auctionBidId: bidReq._id, auctionId: bidReq.auctionId, amount: bidReq.amount },
-          tick: gameState.tickNumber,
-        });
-
-        await enqueueNotification({
-          userId: bidReq.requestedBy,
-          type: 'system',
-          title: bidReq.status === 'approved' ? 'Company Bid Approved' : 'Company Bid Rejected',
-          message:
-            bidReq.status === 'approved'
-              ? `Your company auction bid proposal for $${bidReq.amount.toLocaleString()} was approved and executed.`
-              : `Your company auction bid proposal for $${bidReq.amount.toLocaleString()} was rejected.`,
-          eventKey: `auction:${bidReq.auctionId}:company_bid:${bidReq._id}:${bidReq.status}:${bidReq.requestedBy}`,
-          route: `/real-estate-companies/${company._id}`,
-          tab: 'auctions',
-          entityType: 'company',
-          entityId: company._id,
-          relatedId: company._id,
-          proposalId: bidReq._id,
-          auctionId: bidReq.auctionId,
-          global: false,
-        });
-      }
-
+      // Persist the vote before any resolution so the atomic claim in
+      // resolveAuctionBidProposal reads a consistent document.
       await company.save();
-      await onCompanyVoteCompleted(company._id);
+
+      const totalVoters = company.members.filter((m) => m.userId?.toString() !== bidReq.requestedBy?.toString()).length;
+      const votesInFavor = bidReq.votes.filter((v) => v.vote === 'yes').length;
+      const threshold = Math.ceil(totalVoters / 2);
+      const allVoted = bidReq.votes.length >= totalVoters;
+
+      let resolution = null;
+      // Resolve immediately when the outcome is already decided by explicit
+      // votes (threshold reached, or every eligible voter has voted). The
+      // atomic resolver claims the proposal so no other worker can resolve it.
+      if (votesInFavor >= threshold || allVoted) {
+        resolution = await resolveAuctionBidProposal(company._id, bidReq._id, { applyMissingAsYes: false });
+      }
+
+      const status = resolution?.claimed ? resolution.status : 'pending';
 
       return res.json({
         success: true,
         vote,
-        status: bidReq.status,
+        status,
         votesInFavor,
         totalVoters,
-        approvalThreshold: Math.ceil(totalVoters / 2),
+        approvalThreshold: threshold,
+        resolution,
         proposal: {
           _id: bidReq._id,
-          status: bidReq.status,
+          status,
           votes: bidReq.votes,
         },
       });

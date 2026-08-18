@@ -248,6 +248,9 @@ export default function CompanyDetailPage() {
   const [applyError, setApplyError] = useState('');
   const [propertyPurchaseRequests, setPropertyPurchaseRequests] = useState([]);
   const [auctionProposals, setAuctionProposals] = useState([]);
+  // Live clock so the company voting countdown (votingEndsAt) ticks without
+  // a page refresh.
+  const [now, setNow] = useState(Date.now());
   const [contracts, setContracts] = useState([]);
   const [contractHistory, setContractHistory] = useState([]);
   const [investments, setInvestments] = useState([]);
@@ -397,6 +400,11 @@ export default function CompanyDetailPage() {
   }, [tab, id, propertiesPage, auditPage, company?.memberRole, user?.role]);
 
   useCompanySocket(id);
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   useSocketEvent('vote:created', () => {
     if (tab === 'overview' || tab === 'auctions') refreshAuctionProposals();
@@ -2454,8 +2462,6 @@ export default function CompanyDetailPage() {
                 typeof proposal.requestedBy === 'object' && proposal.requestedBy?.username
                   ? proposal.requestedBy.username
                   : proposal.requestedBy?.toString?.() || '';
-              const totalVoters = Math.max(1, (company.members?.length || 1) - 1);
-              const approvalThreshold = Math.ceil(totalVoters / 2);
               const yesVotes = (proposal.votes || []).filter((v) => v.vote === 'yes').length;
               const myVote = (proposal.votes || []).find(
                 (v) => normalizeId(v.userId?._id || v.userId) === normalizeId(user?._id),
@@ -2464,10 +2470,13 @@ export default function CompanyDetailPage() {
               const isProposer = requesterId === normalizeId(user?._id);
               const canVote = isMember && proposal.status === 'pending' && !myVote && !isProposer;
 
-              const expiryMs = new Date(proposal.createdAt || Date.now()).getTime() + 8 * 6 * 60 * 60 * 1000;
-              const remainingMs = expiryMs - Date.now();
+              // Backend-authoritative voting deadline (votingEndsAt), never the
+              // auction's total remaining duration.
+              const votingEndsAt = proposal.votingEndsAt ? new Date(proposal.votingEndsAt).getTime() : null;
+              const remainingMs = votingEndsAt ? votingEndsAt - now : 0;
               const remainingH = Math.max(0, Math.floor(remainingMs / (60 * 60 * 1000)));
               const remainingM = Math.max(0, Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000)));
+              const noVotes = (proposal.votes || []).filter((v) => v.vote === 'no').length;
               const isDeepLinked = proposalIdParam && proposal._id?.toString() === proposalIdParam.toString();
 
               return (
@@ -2488,18 +2497,18 @@ export default function CompanyDetailPage() {
                         </span>
                         <span
                           className={`text-xs px-2 py-0.5 rounded ${
-                            proposal.status === 'pending'
+                            proposal.status === 'pending' || proposal.status === 'resolving'
                               ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
-                              : proposal.status === 'approved'
+                              : proposal.status === 'approved' || proposal.status === 'executed'
                                 ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
                                 : proposal.status === 'rejected'
                                   ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
                                   : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                           }`}
                         >
-                          {proposal.status === 'pending'
+                          {proposal.status === 'pending' || proposal.status === 'resolving'
                             ? t('companies.pending')
-                            : proposal.status === 'approved'
+                            : proposal.status === 'approved' || proposal.status === 'executed'
                               ? t('common.approved')
                               : proposal.status === 'rejected'
                                 ? t('common.rejected')
@@ -2539,15 +2548,27 @@ export default function CompanyDetailPage() {
                         </div>
                         <div className="flex items-center gap-1">
                           <span className="inline-block w-4 text-center">🗳️</span>
-                          <span>
-                            {t('companies.votes')}: {yesVotes}/{approvalThreshold}
+                          <span className="whitespace-nowrap">
+                            {t('companies.yes')}: {yesVotes}
+                            <span className="mx-1 text-gray-400">·</span>
+                            {t('companies.no')}: {noVotes}
                           </span>
                         </div>
-                        {proposal.status === 'pending' && (
+                        {proposal.status === 'pending' && votingEndsAt && (
                           <div className="flex items-center gap-1">
                             <span className="inline-block w-4 text-center">⏳</span>
-                            <span>
+                            <span className="whitespace-nowrap">
                               {t('companies.auctionBidExpiresIn')}: {remainingH}h {remainingM}m
+                            </span>
+                          </div>
+                        )}
+                        {proposal.status === 'approved' && proposal.resolution && (
+                          <div className="flex items-center gap-1">
+                            <span className="inline-block w-4 text-center">✅</span>
+                            <span className="whitespace-nowrap">
+                              {t('companies.yes')}: {proposal.resolution.yes}
+                              <span className="mx-1 text-gray-400">·</span>
+                              {t('companies.no')}: {proposal.resolution.no}
                             </span>
                           </div>
                         )}

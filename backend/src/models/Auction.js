@@ -6,6 +6,10 @@ const bidSchema = new mongoose.Schema(
     amount: { type: Number, required: true },
     tick: { type: Number, required: true },
     username: { type: String },
+    // For company bids, the id of the auction-bid proposal that produced this
+    // entry. Lets the stale-recovery job detect that a bid was already placed
+    // by a crashed worker and never execute it a second time.
+    auctionBidProposalId: { type: mongoose.Schema.Types.ObjectId, default: null },
   },
   { _id: false, timestamps: { createdAt: true, updatedAt: false } },
 );

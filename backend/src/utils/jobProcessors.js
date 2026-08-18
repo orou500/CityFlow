@@ -8,6 +8,7 @@ import { getGameState } from '../models/GameState.js';
 import { emitToCompany } from '../socket/index.js';
 import { SOCKET_EVENTS } from '../socket/events.js';
 import { enqueueNotification } from './notificationQueue.js';
+import { resolveAuctionBidProposal } from '../engine/auctionBidProposals.js';
 
 let worker = null;
 
@@ -165,32 +166,18 @@ async function handleVoteExpiration(data) {
       });
     }
   } else if (proposalType === 'auctionBid') {
-    const request = company.auctionBids.id(proposalId);
-    if (request && request.status === 'pending') {
-      request.status = 'expired';
-      await company.save();
-
-      for (const member of company.members) {
-        await enqueueNotification({
-          userId: member.userId,
-          type: 'system',
-          title: 'Auction Bid Proposal Expired',
-          message: `Auction bid proposal for $${request.amount?.toLocaleString() || 'N/A'} has expired without resolution.`,
-          eventKey: `company:${companyId}:auctionBid:${proposalId}:expired:${member.userId}`,
-          route: `/real-estate-companies/${companyId}`,
-          tab: 'auctions',
-          entityType: 'company',
-          entityId: companyId,
-          relatedId: companyId,
-          proposalId,
-          global: false,
-        });
-      }
-
-      emitToCompany(companyId, SOCKET_EVENTS.VOTE_EXPIRED, {
+    // Atomic resolution at the voting deadline: missing votes become YES and,
+    // if approved, the company auction bid is executed exactly once (the
+    // atomic claim in resolveAuctionBidProposal prevents double resolution
+    // across multiple backend instances).
+    const resolution = await resolveAuctionBidProposal(companyId, proposalId, { applyMissingAsYes: true });
+    if (resolution.claimed) {
+      emitToCompany(companyId, SOCKET_EVENTS.VOTE_COMPLETED, {
         proposalType,
         proposalId,
         companyId,
+        status: resolution.status,
+        outcome: resolution.outcome,
       });
     }
   } else if (proposalType === 'contract') {
