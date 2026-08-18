@@ -184,10 +184,15 @@ export default function LandingPage() {
     const seller = isolateAuto(tx.sellerId?.displayName || tx.sellerId?.username || 'Someone');
     const property = isolateAuto(tx.propertyId?.name || 'a property');
     const amount = isolateLtr(formatMoney(tx.price));
+    const company = isolateAuto(tx.company?.name || 'a company');
 
     switch (tx.type) {
       case 'buy':
         return t('landing.activity.buy', { buyer, property, amount });
+      case 'company_funds_contributed':
+        return t('landing.activity.companyFundsContributed', { buyer, company, amount });
+      case 'company_property_purchase':
+        return t('landing.activity.companyPropertyPurchase', { company, property, amount });
       case 'sell':
         return t('landing.activity.sell', { seller, property, amount });
       case 'construction':
@@ -236,9 +241,10 @@ export default function LandingPage() {
         <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
           <img src="/images/logo-big.png" alt="CityFlow" className="h-20 md:h-30 lg:h-48 mx-auto mb-6" />
           <h1 className="text-4xl md:text-6xl font-bold text-primary mb-6 leading-tight">{t('landing.hero.title')}</h1>
-          <p className="text-lg md:text-xl text-secondary mb-8 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-lg md:text-xl text-secondary mb-3 max-w-2xl mx-auto leading-relaxed">
             {t('landing.hero.subtitle')}
           </p>
+          <p className="text-sm tracking-wide text-muted mb-8">{t('landing.branding.bySizOps')}</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               to="/login"

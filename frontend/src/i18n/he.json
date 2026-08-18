@@ -1241,6 +1241,8 @@
       "loanRepay": "{{buyer}} החזיר הלוואה של {{amount}}",
       "seasonReward": "{{buyer}} קיבל {{amount}} כפרס עונתי",
       "auctionWon": "{{buyer}} ניצח במכרז על {{property}} ב-{{amount}}",
+      "companyFundsContributed": "{{buyer}} העביר {{amount}} ל־{{company}}",
+      "companyPropertyPurchase": "{{company}} רכש את {{property}} ב-{{amount}}",
       "missionCompleted": "{{buyer}} השלים את המשימה \"{{mission}}\"",
       "companyAction": "{{buyer}} {{action}} {{company}}",
       "companyActions": {
@@ -1251,6 +1253,10 @@
         "employees_hired": "גייס עובדים ב"
       },
       "default": "{{property}} עבר עסקה ב-{{amount}}"
+    },
+    "branding": {
+      "bySizOps": "מאת SizOps",
+      "sizOps": "CityFlow הוא משחק של <brand>SizOps</brand>"
     },
     "cta": {
       "title": "מוכן לבנות את האימפריה שלך?",

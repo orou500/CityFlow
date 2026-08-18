@@ -14,6 +14,12 @@ const TRANSLATIONS = vi.hoisted(() => ({
     'landing.activity.description': 'Recent activity across the CityFlow universe.',
     'landing.activity.buy': '{{buyer}} bought {{property}} for {{amount}}',
     'landing.activity.rent': '{{buyer}} collected {{amount}} in rent',
+    'landing.activity.companyFundsContributed': '{{buyer}} contributed {{amount}} to {{company}}',
+    'landing.activity.companyPropertyPurchase': '{{company}} acquired {{property}} for {{amount}}',
+    'landing.branding.bySizOps': 'By SizOps',
+    'landing.branding.sizOps': 'CityFlow is a game by <brand>SizOps</brand>',
+    'contributors.title': 'Contributors',
+    supporters: 'Supporters',
     'worldStatus.justNow': 'Just now',
     'worldStatus.minutesAgo': '{{count}}m ago',
     'worldStatus.hoursAgo': '{{count}}h ago',
@@ -40,6 +46,12 @@ const TRANSLATIONS = vi.hoisted(() => ({
     'landing.activity.description': 'פעילות אחרונה ברחבי יקום CityFlow.',
     'landing.activity.buy': '{{buyer}} קנה את {{property}} ב-{{amount}}',
     'landing.activity.rent': '{{buyer}} גבה {{amount}} משכירות',
+    'landing.activity.companyFundsContributed': '{{buyer}} העביר {{amount}} ל־{{company}}',
+    'landing.activity.companyPropertyPurchase': '{{company}} רכש את {{property}} ב-{{amount}}',
+    'landing.branding.bySizOps': 'מאת SizOps',
+    'landing.branding.sizOps': 'CityFlow הוא משחק של <brand>SizOps</brand>',
+    'contributors.title': 'תורמים',
+    supporters: 'תומכים',
     'worldStatus.justNow': 'הרגע',
     'worldStatus.minutesAgo': "לפני {{count}} דק'",
     'worldStatus.hoursAgo': "לפני {{count}} שע'",
@@ -92,6 +104,21 @@ vi.mock('react-i18next', () => ({
       return interpolate(template);
     };
     return { t, i18n: languageState };
+  },
+  Trans: ({ i18nKey, components }) => {
+    const lang = languageState.language;
+    const dict = TRANSLATIONS[lang] || TRANSLATIONS.en;
+    const template = dict[i18nKey] || i18nKey;
+    const before = template.split('<brand>')[0] || '';
+    const after = template.split('</brand>')[1] || '';
+    const brand = components?.brand ?? 'SizOps';
+    return (
+      <span>
+        {before}
+        {brand}
+        {after}
+      </span>
+    );
   },
 }));
 
@@ -278,5 +305,70 @@ describe('LandingPage Global Activity feed', () => {
     const section = screen.getByText('איפוס העולם').closest('section');
     expect(section.className).not.toContain('overflow-hidden');
     expect(section.className).not.toContain('overflow-x');
+  });
+
+  it('renders a company funds contribution as "contributed to company" (EN), not a property purchase', async () => {
+    await renderLanding([
+      makeTx({
+        type: 'company_funds_contributed',
+        price: 200_000,
+        company: { name: 'Skyline Holdings' },
+        propertyId: null,
+      }),
+    ]);
+
+    const sentence = screen.getByText((_, el) => clean(el.textContent).includes('orou500 contributed'), {
+      selector: 'span',
+    });
+    expect(clean(sentence.textContent)).toBe('orou500 contributed $200K to Skyline Holdings');
+    // Must NOT look like a property purchase.
+    expect(screen.queryByText(/bought/i)).toBeNull();
+  });
+
+  it('renders a company funds contribution in Hebrew (RTL)', async () => {
+    languageState.language = 'he';
+    await renderLanding([
+      makeTx({
+        type: 'company_funds_contributed',
+        price: 200_000,
+        company: { name: 'Skyline Holdings' },
+        propertyId: null,
+      }),
+    ]);
+
+    const sentence = screen.getByText((_, el) => clean(el.textContent).includes('העביר'), {
+      selector: 'span',
+    });
+    expect(clean(sentence.textContent)).toBe('orou500 העביר $200K ל־Skyline Holdings');
+  });
+
+  it('renders a company property purchase separately (EN)', async () => {
+    await renderLanding([
+      makeTx({
+        type: 'company_property_purchase',
+        price: 200_000,
+        company: { name: 'Skyline Holdings' },
+        propertyId: { name: 'Downtown Tower' },
+        buyerId: null,
+      }),
+    ]);
+
+    const sentence = screen.getByText((_, el) => clean(el.textContent).includes('Skyline Holdings acquired'), {
+      selector: 'span',
+    });
+    expect(clean(sentence.textContent)).toBe('Skyline Holdings acquired Downtown Tower for $200K');
+  });
+
+  it('shows the By SizOps badge in the hero (EN)', async () => {
+    await renderLanding([makeTx()]);
+
+    expect(screen.getByText('By SizOps')).toBeInTheDocument();
+  });
+
+  it('shows the By SizOps badge in Hebrew (RTL)', async () => {
+    languageState.language = 'he';
+    await renderLanding([makeTx()]);
+
+    expect(screen.getByText('מאת SizOps')).toBeInTheDocument();
   });
 });

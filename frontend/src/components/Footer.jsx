@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
+import { useTranslation, Trans } from 'react-i18next';
 
 export default function Footer() {
   const { t } = useTranslation();
@@ -29,6 +29,23 @@ export default function Footer() {
           </Link>
         </div>
         <div className="text-muted text-xs">&copy; {new Date().getFullYear()} CityFlow. All rights reserved.</div>
+      </div>
+      <div className="max-w-5xl mx-auto mt-3 text-center text-xs text-muted">
+        <Trans
+          i18nKey="landing.branding.sizOps"
+          components={{
+            brand: (
+              <a
+                href="https://sizops.co.il"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 dark:text-blue-400 font-medium hover:underline"
+              >
+                SizOps
+              </a>
+            ),
+          }}
+        />
       </div>
     </footer>
   );

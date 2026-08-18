@@ -66,7 +66,7 @@ router.get('/', async (req, res) => {
         // ── Global Activity: real players only ────────────────────────
         // Meaningful transaction types, non-zero amounts, at least one real
         // player actor (bank/system transfers have no buyerId/sellerId).
-        const [playerTxs, auctionWins, missionCompletions, companyEvents] = await Promise.all([
+        const [playerTxs, companyPurchases, auctionWins, missionCompletions, companyEvents] = await Promise.all([
           Transaction.find({
             type: { $in: PLAYER_ACTIVITY_TYPES },
             price: { $gt: 0 },
@@ -77,6 +77,19 @@ router.get('/', async (req, res) => {
             .populate('propertyId', 'name cityId')
             .populate('buyerId', 'username displayName')
             .populate('sellerId', 'username displayName')
+            .populate('companyId', 'name')
+            .lean(),
+          // Company property purchases (no personal buyer/seller) are their own
+          // activity type — never attributed to a player.
+          Transaction.find({
+            type: 'buy',
+            companyId: { $ne: null },
+            propertyId: { $ne: null },
+          })
+            .sort({ createdAt: -1 })
+            .limit(4)
+            .populate('propertyId', 'name cityId')
+            .populate('companyId', 'name')
             .lean(),
           Auction.find({ status: 'ended', winnerId: { $ne: null }, winningBid: { $gt: 0 } })
             .sort({ updatedAt: -1 })
@@ -100,13 +113,35 @@ router.get('/', async (req, res) => {
         const activities = [];
 
         for (const tx of playerTxs) {
+          // Company treasury contributions are recorded in the ledger as a
+          // Transaction with type 'buy' but NO propertyId (the money goes into
+          // the company, not a property). Classify them as
+          // `company_funds_contributed` so they can never render as a property
+          // purchase. Any other buy/sell row without a propertyId and without a
+          // company is not a real property transaction — skip it entirely.
+          const isCompanyContribution = tx.type === 'buy' && tx.companyId && !tx.propertyId;
+          if ((tx.type === 'buy' || tx.type === 'sell') && !tx.propertyId && !tx.companyId) {
+            continue;
+          }
           activities.push({
             _id: tx._id,
-            type: tx.type,
+            type: isCompanyContribution ? 'company_funds_contributed' : tx.type,
             createdAt: tx.createdAt,
             price: tx.price,
             buyerId: tx.buyerId,
             sellerId: tx.sellerId,
+            propertyId: tx.propertyId,
+            ...(isCompanyContribution ? { company: tx.companyId } : {}),
+          });
+        }
+
+        for (const tx of companyPurchases) {
+          activities.push({
+            _id: tx._id,
+            type: 'company_property_purchase',
+            createdAt: tx.createdAt,
+            price: tx.price,
+            company: tx.companyId,
             propertyId: tx.propertyId,
           });
         }

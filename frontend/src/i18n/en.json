@@ -1250,6 +1250,8 @@
       "loanRepay": "{{buyer}} repaid a loan of {{amount}}",
       "seasonReward": "{{buyer}} received {{amount}} as a season reward",
       "auctionWon": "{{buyer}} won an auction for {{property}} at {{amount}}",
+      "companyFundsContributed": "{{buyer}} contributed {{amount}} to {{company}}",
+      "companyPropertyPurchase": "{{company}} acquired {{property}} for {{amount}}",
       "missionCompleted": "{{buyer}} completed the mission \"{{mission}}\"",
       "companyAction": "{{buyer}} {{action}} {{company}}",
       "companyActions": {
@@ -1260,6 +1262,10 @@
         "employees_hired": "hired employees at"
       },
       "default": "{{property}} was transacted for {{amount}}"
+    },
+    "branding": {
+      "bySizOps": "By SizOps",
+      "sizOps": "CityFlow is a game by <brand>SizOps</brand>"
     },
     "cta": {
       "title": "Ready To Build Your Empire?",
