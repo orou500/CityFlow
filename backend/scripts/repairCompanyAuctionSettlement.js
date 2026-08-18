@@ -48,6 +48,11 @@ const COMPANY_ID = '6a7f99e106b0fe92fc7ba722'; // Horizon Builders
 const USER_ID = '6a7590c7c28436a1fbc3875d'; // eviatar2015
 const EXPECTED_AMOUNT = 1404146;
 const CORRECTIVE_ACTION = 'auction_settlement_refund';
+// Stable, unique-per-auction marker for the corrective audit record. Carried
+// ONLY by corrective records, so a sparse unique index on it is a DB-level
+// guard: at most one corrective audit can ever exist per auction, and existing
+// audit logs (which never have dedupeKey) are unaffected.
+const DEDUPE_KEY = `${CORRECTIVE_ACTION}:${AUCTION_ID}`;
 
 const URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/cityflow';
 
@@ -60,8 +65,13 @@ async function connect() {
   db = mongoose.connection.db;
   // Best-effort DB-level guard: at most one corrective audit per auction.
   try {
+    await db.collection('companyauditlogs').dropIndex('uniq_auction_settlement_refund').catch(() => {});
+  } catch {
+    // ignore
+  }
+  try {
     await db.collection('companyauditlogs').createIndex(
-      { action: 1, 'details.auctionId': 1 },
+      { dedupeKey: 1 },
       { unique: true, sparse: true, name: 'uniq_auction_settlement_refund' },
     );
   } catch (err) {
@@ -90,10 +100,7 @@ async function getBidder() {
 }
 
 async function getExistingCorrectiveAudit() {
-  return db.collection('companyauditlogs').findOne({
-    action: CORRECTIVE_ACTION,
-    'details.auctionId': await oid(AUCTION_ID),
-  });
+  return db.collection('companyauditlogs').findOne({ dedupeKey: DEDUPE_KEY });
 }
 
 /**
@@ -188,7 +195,7 @@ async function finalConfirmation(v) {
     companyName: v.info.companyName,
     refundAmount: EXPECTED_AMOUNT,
     currentTreasuryBalance: v.info.companyTreasuryBalance,
-    currentBidderId: bid.bidderId,
+    currentBidderId: bid.bidderId ? bid.bidderId.toString() : null,
     targetBidderId: COMPANY_ID,
     currentWinnerId: v.info.auctionWinnerId,
     propertyOwnerId: v.info.propertyOwnerId,
@@ -273,12 +280,13 @@ async function performRepair({ auction }) {
     },
   );
 
-  // 3. Corrective audit — unique index (action, details.auctionId) guarantees
-  //    exactly one per auction at the DB level.
+  // 3. Corrective audit — unique index on dedupeKey guarantees exactly one per
+  //    auction at the DB level.
   await db.collection('companyauditlogs').insertOne({
     companyId,
     userId: null,
     action: CORRECTIVE_ACTION,
+    dedupeKey: DEDUPE_KEY,
     details: {
       auctionId,
       propertyId,
@@ -299,9 +307,7 @@ async function verify() {
   const bidder = await getBidder();
   const property = auction ? await getProperty(auction) : null;
 
-  const refundCount = await db
-    .collection('companyauditlogs')
-    .countDocuments({ action: CORRECTIVE_ACTION, 'details.auctionId': await oid(AUCTION_ID) });
+  const refundCount = await db.collection('companyauditlogs').countDocuments({ dedupeKey: DEDUPE_KEY });
 
   const refundTxns = (company?.treasury?.transactions || []).filter(
     (t) => t.type === 'refund' && t.amount === EXPECTED_AMOUNT && t.description && t.description.includes(AUCTION_ID),
@@ -310,9 +316,9 @@ async function verify() {
   const bid = (auction?.bids || [])[0];
   const results = {
     correctiveAuditPresent: refundCount === 1,
-    duplicateRefund: refundCount > 1,
+    noDuplicateRefund: refundCount <= 1,
     refundTreasuryTransactionPresent: refundTxns.length === 1,
-    duplicateRefundTxn: refundTxns.length > 1,
+    noDuplicateRefundTxn: refundTxns.length <= 1,
     auctionCancelled: auction?.status === 'cancelled',
     noEviatarWinner:
       !auction?.winnerId ||
