@@ -3,6 +3,8 @@ import Auction from '../models/Auction.js';
 import AuctionReputation from '../models/AuctionReputation.js';
 import Property from '../models/Property.js';
 import User from '../models/User.js';
+import RealEstateCompany from '../models/RealEstateCompany.js';
+import CompanyAuditLog from '../models/CompanyAuditLog.js';
 import { AUCTION_CONFIG, AUCTION_PROPERTY_POOL, RARITY_WEIGHTS } from '../config/auctions.js';
 import { clampMonthlyRent } from '../config/propertyManagement.js';
 import { enqueueNotification } from '../utils/notificationQueue.js';
@@ -181,6 +183,97 @@ async function settleAuction(auction) {
     auction.winnerId = winnerId;
     auction.winningBid = auction.currentBid;
     auction.reserveMet = true;
+
+    // ── Company winner ─────────────────────────────────────────────────────
+    // A company bid must settle as a company win. The bid is attributed to the
+    // company (bidderId === companyId and/or auctionBidProposalId set), and the
+    // company treasury already paid at bid time — never debit a user, never
+    // transfer the property to the voter who merely approved the proposal.
+    const isCompanyWinner =
+      !!auction.companyId &&
+      !!winnerId &&
+      (winnerId.toString() === auction.companyId.toString() || !!highestBid?.auctionBidProposalId);
+
+    if (isCompanyWinner) {
+      const company = await RealEstateCompany.findById(auction.companyId);
+      if (!company) {
+        auction.winnerId = null;
+        auction.winningBid = 0;
+        await auction.save();
+        await releaseAuctionReservations(auction._id);
+        await invalidateAuctionCaches(auction);
+        return;
+      }
+
+      // The winner is ALWAYS the company. For legacy bids the persisted
+      // bidderId may still be a voter (pre-fix), so override with the company.
+      auction.winnerId = auction.companyId;
+      auction.activity.push({
+        type: 'won',
+        userId: auction.companyId,
+        username: company.name,
+        amount: auction.currentBid,
+        tick: currentTick,
+      });
+      await auction.save();
+
+      property.ownerId = null;
+      property.companyId = company._id;
+      property.forSale = false;
+      property.lastPurchasePrice = auction.winningBid;
+      property.lastPurchaseDate = new Date();
+      property.investmentHistory.push({
+        type: 'purchase',
+        amount: auction.winningBid,
+        tick: currentTick,
+        description: `Won auction for ${property.name}`,
+      });
+      await property.save();
+
+      company.stats = company.stats || {};
+      company.stats.propertiesOwned = (company.stats.propertiesOwned || 0) + 1;
+      company.reputation = Math.min(100, (company.reputation || 0) + 5);
+      await company.save();
+
+      await CompanyAuditLog.create({
+        companyId: company._id,
+        userId: null,
+        action: 'property_purchased',
+        details: {
+          propertyId: property._id,
+          propertyName: property.name,
+          price: auction.winningBid,
+          source: 'auction',
+        },
+        tick: currentTick,
+      });
+
+      for (const m of company.members) {
+        if (m.userId) {
+          await enqueueNotification({
+            userId: m.userId,
+            type: 'system',
+            title: 'Auction Won by Company',
+            message: `${company.name} won the auction for ${property.name} with a bid of $${auction.winningBid.toLocaleString()}.`,
+            eventKey: `auction:${auction._id}:company_won:${m.userId}`,
+            route: `/auctions/${auction._id}`,
+            entityType: 'auction',
+            entityId: auction._id,
+            relatedId: auction._id,
+            global: false,
+          });
+        }
+      }
+
+      emitAuctionEnded(auction._id.toString(), {
+        winnerId: company._id.toString(),
+        winnerUsername: company.name,
+        winningBid: auction.winningBid,
+      });
+
+      await invalidateAuctionCaches(auction);
+      return;
+    }
 
     const winner = await User.findById(winnerId);
 

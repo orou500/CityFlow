@@ -313,6 +313,27 @@ router.get(
       const auctionObj = auction.toJSON();
       Object.assign(auctionObj, computeAuctionRemaining(auction, currentTick));
 
+      // Company bids are attributed to the company (bidderId === companyId), so
+      // a plain User populate resolves to null. Surface the company name for the
+      // current bidder / winner so company bids never display as a person.
+      const hasCompanyBid = (auction.bids || []).some(
+        (b) => b.auctionBidProposalId || (b.username && b.username.includes('(Company)')),
+      );
+      if (auction.companyId && hasCompanyBid) {
+        const company = await RealEstateCompany.findById(auction.companyId).select('name');
+        if (company) {
+          if (auctionObj.currentBidderId == null) {
+            auctionObj.currentBidderId = {
+              _id: auction.companyId.toString(),
+              username: `${company.name} (Company)`,
+            };
+          }
+          if (auctionObj.winnerId == null && (auction.status === 'ended' || auction.status === 'cancelled')) {
+            auctionObj.winnerId = { _id: auction.companyId.toString(), username: company.name };
+          }
+        }
+      }
+
       const property = auctionObj.propertyId;
       if (property && typeof property === 'object') {
         const rent = property.rent || 0;

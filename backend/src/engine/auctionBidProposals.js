@@ -107,7 +107,7 @@ function applyCompanyCharge(company, proposal, bidderId) {
  * authority for status, minimum bid, treasury sufficiency, current bidder and
  * bid amount — this function never overrides auction state.
  */
-export async function executeCompanyAuctionBid(company, proposal, actorUserId) {
+export async function executeCompanyAuctionBid(company, proposal, _actorUserId) {
   const auction = await Auction.findById(proposal.auctionId);
   if (!auction || auction.status !== 'active') {
     return { executed: false, reason: 'auction_not_active' };
@@ -127,7 +127,12 @@ export async function executeCompanyAuctionBid(company, proposal, actorUserId) {
     return { executed: false, reason: 'insufficient_treasury' };
   }
 
-  const bidderId = actorUserId || company._id;
+  // A company auction bid is attributed to the COMPANY, never to the member who
+  // voted/approved the proposal. The voter is only an approver — they must not
+  // become auction.bids[].bidderId / currentBidderId (that would turn a company
+  // bid into a personal bid and corrupt settlement). auctionBidProposalId links
+  // the bid back to the proposal so settlement can tell company bids apart.
+  const bidderId = company._id;
   const previousBidderId = applyAuctionBid(auction, company, proposal, bidderId, currentTick);
   applyCompanyCharge(company, proposal, bidderId);
 
@@ -351,10 +356,9 @@ export async function recoverAuctionBidProposal(companyId, proposalId, now = Dat
     !!auction && (auction.bids || []).some((b) => b.auctionBidProposalId?.toString() === proposalId.toString());
   const treasuryCharged = !!proposal.executedAt;
   const applyMissingAsYes = !proposal.votingEndsAt || new Date(proposal.votingEndsAt).getTime() <= now;
-  const actorUserId =
-    proposal.executedBy ||
-    (proposal.votes.length > 0 ? proposal.votes[proposal.votes.length - 1].userId : proposal.requestedBy);
   const tally = computeAuctionBidTally(company, proposal, applyMissingAsYes);
+  // Company bids are always attributed to the company, never to a voter.
+  const companyBidderId = company._id;
 
   let result;
   try {
@@ -364,14 +368,14 @@ export async function recoverAuctionBidProposal(companyId, proposalId, now = Dat
     } else if (bidExists) {
       // Auction bid exists but the company was never debited — complete the
       // company side exactly once (no new auction bid is pushed).
-      applyCompanyCharge(company, proposal, actorUserId);
+      applyCompanyCharge(company, proposal, companyBidderId);
       result = await finalizeProposal(company, proposal, 'approved', tally, 'recovered_company_side', gameState);
     } else if (treasuryCharged) {
       // Company was debited but the auction bid is missing — complete the
       // auction side exactly once (treasury is not re-charged).
       const currentTick = await getTickNumber();
       if (auction && auction.status === 'active' && auction.endTick > currentTick) {
-        applyAuctionBid(auction, company, proposal, actorUserId, currentTick);
+        applyAuctionBid(auction, company, proposal, companyBidderId, currentTick);
         await auction.save();
         result = await finalizeProposal(company, proposal, 'approved', tally, 'recovered_auction_side', gameState);
       } else {
@@ -380,7 +384,7 @@ export async function recoverAuctionBidProposal(companyId, proposalId, now = Dat
     } else {
       // Never executed — re-run the full resolution (no-vote=YES only applies
       // once the voting deadline has passed).
-      result = await performResolution(company, proposal, { applyMissingAsYes, actorUserId, reason: 'recovered' });
+      result = await performResolution(company, proposal, { applyMissingAsYes, reason: 'recovered' });
     }
 
     await CompanyAuditLog.create({

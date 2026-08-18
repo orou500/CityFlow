@@ -369,13 +369,20 @@ describe('Auction bid proposal — threshold, resolution & accounting', () => {
 
     const updated = await RealEstateCompany.findById(company._id);
     expect(updated.auctionBids[0].status).toBe('approved');
-    expect(updated.auctionBids[0].executedBy.toString()).toBe(voter.user._id.toString());
+    // The bid is attributed to the COMPANY, never to the member who cast the
+    // approving vote.
+    expect(updated.auctionBids[0].executedBy.toString()).toBe(company._id.toString());
 
     // Treasury debited only when the bid executes
     expect(updated.treasury.balance).toBe(beforeBalance - 2000);
 
     const auctionUpdated = await Auction.findById(auction._id);
     expect(auctionUpdated.currentBid).toBe(2000);
+    const companyBid = auctionUpdated.bids.find((b) => b.username === `${company.name} (Company)`);
+    expect(companyBid).toBeDefined();
+    expect(companyBid.bidderId.toString()).toBe(company._id.toString());
+    expect(companyBid.auctionBidProposalId.toString()).toBe(updated.auctionBids[0]._id.toString());
+    expect(auctionUpdated.currentBidderId.toString()).toBe(company._id.toString());
   });
 
   it('rejects when all voters vote no', async () => {
