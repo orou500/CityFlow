@@ -11,6 +11,7 @@ import {
   COMPANY_EVENTS,
 } from '../config/stockMarket.js';
 import { publish, CHANNELS } from '../utils/pubsub.js';
+import { bulkCreateNotifications } from '../utils/notificationQueue.js';
 
 const HOLDINGS_BATCH_SIZE = 500;
 
@@ -473,17 +474,42 @@ export async function distributeDividend(company, type, tickNumber) {
       .limit(HOLDINGS_BATCH_SIZE)
       .lean();
     if (holdings.length === 0) break;
-    const bulkOps = holdings.map((h) => {
+    const bulkOps = [];
+    const notificationItems = [];
+    for (const h of holdings) {
       const amount = Math.round(perShare * h.shares * 100) / 100;
       actualDistributed += amount;
-      return {
+      bulkOps.push({
         updateOne: {
           filter: { _id: h._id },
           update: { $inc: { unclaimedDividends: amount } },
         },
-      };
-    });
+      });
+      if (amount > 0) {
+        // One notification per (user, company, dividend tick) — the DB-level
+        // unique (userId, eventKey) index makes re-runs idempotent, and the
+        // companyId in the key keeps multiple payers in the same tick as
+        // separate notifications. Claiming the dividend later never re-fires.
+        notificationItems.push({
+          userId: h.userId,
+          type: 'dividend',
+          title: `Dividend received from ${company.name}`,
+          message: `You received a $${amount.toLocaleString()} dividend from ${company.name}.`,
+          eventKey: `dividend:${company._id}:${tickNumber}:${h.userId}`,
+          route: `/company/${company._id}`,
+          entityType: 'company',
+          entityId: company._id,
+          relatedId: company._id,
+          amount,
+          companyName: company.name,
+          global: false,
+        });
+      }
+    }
     await StockHolding.bulkWrite(bulkOps);
+    if (notificationItems.length > 0) {
+      await bulkCreateNotifications(notificationItems);
+    }
     holdersPaid += holdings.length;
     skip += HOLDINGS_BATCH_SIZE;
   }

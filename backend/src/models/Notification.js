@@ -22,6 +22,7 @@ const notificationSchema = new mongoose.Schema(
         'mission_chain_unlocked',
         'season_reward',
         'sizops_welcome',
+        'dividend',
       ],
       required: true,
     },
@@ -39,6 +40,10 @@ const notificationSchema = new mongoose.Schema(
     // title/message text.
     proposalId: { type: mongoose.Schema.Types.ObjectId, default: null },
     auctionId: { type: mongoose.Schema.Types.ObjectId, default: null },
+    // Structured metadata for dividend notifications so the frontend can
+    // resolve localized text instead of displaying stored (English) text.
+    amount: { type: Number, default: null },
+    companyName: { type: String, default: null },
     read: { type: Boolean, default: false },
     // When the user marked this read — drives read-notification retention.
     // Nullable for legacy notifications that predate the field.

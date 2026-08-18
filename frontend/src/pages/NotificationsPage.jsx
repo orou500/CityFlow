@@ -5,6 +5,7 @@ import { useGameStore } from '../store/useGameStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { useToast } from '../components/Toast';
 import Pagination from '../components/Pagination';
+import { formatMoneyExact } from '../utils/format';
 
 const TYPE_CONFIG = {
   property_offer: { icon: '🤝', color: 'text-blue-500', route: '/marketplace' },
@@ -19,6 +20,7 @@ const TYPE_CONFIG = {
   mission_reward: { icon: '🎁', color: 'text-amber-500', route: '/missions' },
   mission_chain_unlocked: { icon: '🔗', color: 'text-purple-500', route: '/missions' },
   season_reward: { icon: '🏆', color: 'text-yellow-500', route: '/leaderboards' },
+  dividend: { icon: '💵', color: 'text-green-500' },
   system: { icon: '📢', color: 'text-gray-500' },
 };
 
@@ -254,7 +256,13 @@ export default function NotificationsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
-                        <p className="text-sm font-medium text-primary truncate">{n.title}</p>
+                        {n.type === 'dividend' ? (
+                          <p className="text-sm font-medium text-primary truncate">
+                            {t('notifications.dividendReceivedTitle')}
+                          </p>
+                        ) : (
+                          <p className="text-sm font-medium text-primary truncate">{n.title}</p>
+                        )}
                         <span
                           className={`text-[9px] font-bold uppercase tracking-wide text-white px-1.5 py-0.5 rounded ${pcfg.badge}`}
                         >
@@ -265,7 +273,16 @@ export default function NotificationsPage() {
                         {timeAgo(n.createdAt, t)}
                       </span>
                     </div>
-                    <p className="text-xs text-secondary mt-0.5 line-clamp-2">{n.message}</p>
+                    {n.type === 'dividend' ? (
+                      <p className="text-xs text-secondary mt-0.5 line-clamp-2">
+                        {t('notifications.dividendReceived', {
+                          amount: formatMoneyExact(n.amount || 0),
+                          company: n.companyName || '',
+                        })}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-secondary mt-0.5 line-clamp-2">{n.message}</p>
+                    )}
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0 mt-1">
                     {!n.read && <span className={`w-2 h-2 rounded-full ${pcfg.dot}`} />}

@@ -144,6 +144,9 @@ export function getNotificationMeta(eventKey = '', type = 'system') {
   } else if (key.startsWith('offer:')) {
     category = CATEGORY.MARKET;
     priority = key.includes(':expired:') ? PRIORITY.LOW : PRIORITY.MEDIUM;
+  } else if (key.startsWith('dividend:')) {
+    category = CATEGORY.STOCK;
+    priority = PRIORITY.MEDIUM;
   } else if (key.startsWith('property:')) {
     category = CATEGORY.PROPERTY;
     priority = PRIORITY.MEDIUM;

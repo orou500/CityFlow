@@ -155,9 +155,48 @@ function formatAuditDetails(log, t) {
         salary: formatMoney(d.monthlySalary),
         payroll: formatMoney(d.totalPayroll),
       });
+    case 'auction_bid_requested':
+      return t('companies.auditDetailAuctionBidRequested', { amount: formatMoney(d.amount || 0) });
+    case 'auction_bid_vote_cast':
+      return t('companies.auditDetailAuctionBidVoteCast', {
+        vote: d.vote,
+        amount: formatMoney(d.amount || 0),
+      });
+    case 'auction_bid_approved':
+      return t('companies.auditDetailAuctionBidApproved', { amount: formatMoney(d.amount || 0) });
+    case 'auction_bid_rejected':
+      return t('companies.auditDetailAuctionBidRejected', { amount: formatMoney(d.amount || 0) });
+    case 'auction_bid_expired':
+      return t('companies.auditDetailAuctionBidExpired', { amount: formatMoney(d.amount || 0) });
+    case 'auction_bid_proposal_recovered':
+      return t('companies.auditDetailAuctionBidProposalRecovered', { reason: d.reason || '' });
+    case 'leadership_transferred':
+      return t('companies.auditDetailLeadershipTransferred', { user: d.targetUsername || d.newCeo || '' });
+    case 'secondary_offering':
+      return t('companies.auditDetailSecondaryOffering', { amount: formatMoney(d.amount || d.raised || 0) });
     default:
-      return JSON.stringify(d);
+      // Never expose raw JSON payloads in the user-facing audit UI. The
+      // action label still renders via its translation key (with a readable
+      // fallback); only unknown detail payloads are hidden.
+      return null;
   }
+}
+
+// Resolve a company audit action (snake_case, e.g. auction_bid_approved) into
+// its localized label. If a translation key is ever missing (including future
+// actions), fall back to a human-readable title-case version of the action so
+// a raw i18n key can never leak into the UI.
+function auditActionLabel(action, t) {
+  const key = `companies.audit${action
+    .split('_')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join('')}`;
+  return t(key, {
+    defaultValue: action
+      .split('_')
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' '),
+  });
 }
 
 export default function CompanyDetailPage() {
@@ -2643,12 +2682,7 @@ export default function CompanyDetailPage() {
                         {typeof log.userId === 'object' && log.userId?.username ? log.userId.username : 'System'}
                       </span>
                       <span className="text-sm text-gray-500 dark:text-gray-400 shrink-0">
-                        {t(
-                          `companies.audit${log.action
-                            .split('_')
-                            .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-                            .join('')}`,
-                        )}
+                        {auditActionLabel(log.action, t)}
                       </span>
                     </div>
                     <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">

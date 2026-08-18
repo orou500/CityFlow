@@ -7,6 +7,7 @@ import Loan from '../models/Loan.js';
 import { publish, CHANNELS } from '../utils/pubsub.js';
 import { emitToAll } from '../socket/index.js';
 import { SOCKET_EVENTS } from '../socket/events.js';
+import { bulkCreateNotifications } from '../utils/notificationQueue.js';
 
 const DIVIDEND_SHARE_RATIO = 0.3;
 const PROFIT_MARGIN = 0.15;
@@ -144,17 +145,40 @@ export async function processPublicCompanies(tickNumber) {
               hasMore = false;
               break;
             }
-            const bulkOps = holdings.map((h) => {
+            const bulkOps = [];
+            const notificationItems = [];
+            for (const h of holdings) {
               const amount = Math.round(perShare * h.shares * 100) / 100;
               actualDividendDistributed += amount;
-              return {
+              bulkOps.push({
                 updateOne: {
                   filter: { _id: h._id },
                   update: { $inc: { unclaimedDividends: amount } },
                 },
-              };
-            });
+              });
+              if (amount > 0) {
+                // One notification per (user, company, dividend tick); the
+                // unique (userId, eventKey) index dedupes re-runs.
+                notificationItems.push({
+                  userId: h.userId,
+                  type: 'dividend',
+                  title: `Dividend received from ${stockCompany.name}`,
+                  message: `You received a $${amount.toLocaleString()} dividend from ${stockCompany.name}.`,
+                  eventKey: `dividend:${stockCompany._id}:${tickNumber}:${h.userId}`,
+                  route: `/company/${stockCompany._id}`,
+                  entityType: 'company',
+                  entityId: stockCompany._id,
+                  relatedId: stockCompany._id,
+                  amount,
+                  companyName: stockCompany.name,
+                  global: false,
+                });
+              }
+            }
             await StockHolding.bulkWrite(bulkOps);
+            if (notificationItems.length > 0) {
+              await bulkCreateNotifications(notificationItems);
+            }
             dividendEvents.push({
               companyId: stockCompany._id,
               ticker: stockCompany.ticker,
