@@ -129,6 +129,16 @@ export const SUPPORTED_CONDITION_TYPES = [
   'views_this_week',
   'stock_trades_this_week',
   'auction_bids_this_week',
+  // ── MISSION CHAIN CONDITIONS ──────────────────────────
+  'auctions_watched',
+  'auction_competitions',
+  'company_level',
+  'company_auctions_won',
+  'company_properties_in_cities',
+  'stock_positions_held_long',
+  'dividend_with_company_properties',
+  'total_portfolio_value',
+  'staffed_company_properties',
 ];
 
 export async function evaluateCondition(userId, missionId, condition, userData) {
@@ -703,6 +713,84 @@ export async function evaluateCondition(userId, missionId, condition, userData) 
       break;
     }
 
+    // ── MISSION CHAIN CONDITIONS ──────────────────────────
+    case 'auctions_watched': {
+      value = await Auction.countDocuments({ watchers: userId });
+      break;
+    }
+    case 'auction_competitions': {
+      value = await Auction.countDocuments({
+        'bids.bidderId': userId,
+        uniqueBidders: { $gte: 2 },
+      });
+      break;
+    }
+    case 'company_level': {
+      const userCompany = await RealEstateCompany.findOne({ 'members.userId': userId }).select('level').lean();
+      value = userCompany?.level || 0;
+      break;
+    }
+    case 'company_auctions_won': {
+      const userCompany = await RealEstateCompany.findOne({ 'members.userId': userId }).select('_id').lean();
+      value = userCompany
+        ? await Auction.countDocuments({ companyId: userCompany._id, winnerId: userId, status: 'ended' })
+        : 0;
+      break;
+    }
+    case 'company_properties_in_cities': {
+      const userCompany = await RealEstateCompany.findOne({ 'members.userId': userId }).select('_id').lean();
+      if (!userCompany) {
+        value = 0;
+        break;
+      }
+      const cityIds = await Property.find({ companyId: userCompany._id }).distinct('cityId');
+      value = cityIds.filter(Boolean).length;
+      break;
+    }
+    case 'stock_positions_held_long': {
+      const currentTick = global.currentTick || 0;
+      const holdings = await StockHolding.find({ userId, shares: { $gt: 0 } }).lean();
+      let held = 0;
+      for (const h of holdings) {
+        if (h.createdAt) {
+          const acquiredTick = Math.floor(new Date(h.createdAt).getTime() / (6 * 3600 * 1000));
+          if (currentTick - acquiredTick >= 120) held++;
+        }
+      }
+      value = held;
+      break;
+    }
+    case 'dividend_with_company_properties': {
+      const userCompany = await RealEstateCompany.findOne({ 'members.userId': userId }).select('_id').lean();
+      if (!userCompany) {
+        value = 0;
+        break;
+      }
+      const [divCount, propCount] = await Promise.all([
+        StockTransaction.countDocuments({ userId, type: 'dividend', price: { $gt: 0 } }),
+        Property.countDocuments({ companyId: userCompany._id }),
+      ]);
+      value = divCount > 0 && propCount >= 3 ? 1 : 0;
+      break;
+    }
+    case 'total_portfolio_value': {
+      const properties = await Property.find({ ownerId: userId }).select('currentPrice').lean();
+      value = properties.reduce((sum, p) => sum + (p.currentPrice || 0), 0);
+      break;
+    }
+    case 'staffed_company_properties': {
+      const userCompany = await RealEstateCompany.findOne({ 'members.userId': userId }).select('_id').lean();
+      if (!userCompany) {
+        value = 0;
+        break;
+      }
+      value = await Property.countDocuments({
+        companyId: userCompany._id,
+        occupancy: 100,
+      });
+      break;
+    }
+
     default:
       value = 0;
   }
@@ -733,6 +821,10 @@ export async function initializeMissionsForUser(userId) {
       if (!prereq || prereq.status === 'active') {
         continue;
       }
+    }
+
+    if (def.unlockLevel && (user.level || 1) < def.unlockLevel) {
+      continue;
     }
 
     const periodKey = getPeriodKey(def.type);
@@ -895,6 +987,33 @@ export async function claimMissionReward(userId, missionId) {
     console.error('[ONBOARDING] mission claim advance error:', err.message),
   );
 
+  // Check if this completes the entire chain
+  if (def.chainId) {
+    const chainMissions = MISSION_DEFINITIONS.filter((m) => m.chainId === def.chainId).sort(
+      (a, b) => (a.chainOrder || 0) - (b.chainOrder || 0),
+    );
+    const lastInChain = chainMissions[chainMissions.length - 1];
+    if (lastInChain && lastInChain.id === missionId) {
+      const allClaimed = chainMissions.every(async (cm) => {
+        const mp = await MissionProgress.findOne({ userId, missionId: cm.id, status: 'claimed' });
+        return !!mp;
+      });
+      if (allClaimed) {
+        await enqueueNotification({
+          userId,
+          type: 'mission_complete',
+          title: 'Mission Chain Completed!',
+          message: `You completed the "${def.chainId.replace(/_/g, ' ')}" chain! Amazing work!`,
+          eventKey: `mission_chain:${def.chainId}:completed:${userId}`,
+          route: '/missions',
+          tab: 'claimed',
+          entityType: 'mission',
+          priority: 'high',
+        });
+      }
+    }
+  }
+
   await initializeMissionsForUser(userId);
 
   return { rewards: def.rewards, missionId };
@@ -994,6 +1113,53 @@ export async function getMissionDashboard(userId) {
     (m) => m.definition.type === 'permanent' || m.definition.type === 'seasonal' || m.definition.type === 'event',
   );
 
+  // Build chain summaries
+  const progressMap = new Map(progresses.map((p) => [p.missionId, p]));
+  const chainMap = new Map();
+  for (const def of MISSION_DEFINITIONS) {
+    if (!def.chainId || def.hidden) continue;
+    if (!chainMap.has(def.chainId)) {
+      chainMap.set(def.chainId, []);
+    }
+    chainMap.get(def.chainId).push(def);
+  }
+
+  const chains = [];
+  for (const [chainId, chainDefs] of chainMap) {
+    const sorted = chainDefs.sort((a, b) => (a.chainOrder || 0) - (b.chainOrder || 0));
+    const steps = sorted.map((def) => {
+      const mp = progressMap.get(def.id);
+      return {
+        missionId: def.id,
+        name: def.name,
+        description: def.description,
+        icon: def.icon,
+        rewards: def.rewards,
+        status: mp?.status || 'locked',
+        progress: mp?.progress || 0,
+        target: def.condition.target,
+        completedAt: mp?.completedAt || null,
+        claimedAt: mp?.claimedAt || null,
+      };
+    });
+
+    const claimedCount = steps.filter((s) => s.status === 'claimed').length;
+    const completedCount = steps.filter((s) => s.status === 'completed' || s.status === 'claimed').length;
+    const activeStep = steps.find((s) => s.status === 'active');
+    const currentStepIndex = activeStep ? steps.indexOf(activeStep) : claimedCount;
+
+    chains.push({
+      chainId,
+      name: chainDefs[0]?.name?.split(' — ')[0] || chainId,
+      icon: chainDefs[0]?.icon || '🔗',
+      steps,
+      totalSteps: steps.length,
+      completedSteps: completedCount,
+      currentStep: currentStepIndex,
+      status: claimedCount === steps.length ? 'completed' : activeStep ? 'active' : 'locked',
+    });
+  }
+
   return {
     active,
     completed,
@@ -1001,6 +1167,7 @@ export async function getMissionDashboard(userId) {
     dailyActive,
     weeklyActive,
     permanentActive,
+    chains,
     stats: {
       totalActive: active.length,
       totalCompleted: completed.length,

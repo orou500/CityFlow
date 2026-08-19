@@ -160,6 +160,74 @@ router.get('/chain/:chainId', authenticate, async (req, res) => {
   }
 });
 
+router.get('/chains', authenticate, async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const chainMap = new Map();
+    for (const def of MISSION_DEFINITIONS) {
+      if (!def.chainId || def.hidden) continue;
+      if (!chainMap.has(def.chainId)) {
+        chainMap.set(def.chainId, []);
+      }
+      chainMap.get(def.chainId).push(def);
+    }
+
+    const allChainMissionIds = MISSION_DEFINITIONS.filter((m) => m.chainId && !m.hidden).map((m) => m.id);
+    const progresses = await MissionProgress.find({
+      userId,
+      missionId: { $in: allChainMissionIds },
+    }).lean();
+    const progressMap = new Map(progresses.map((p) => [p.missionId, p]));
+
+    const chains = [];
+    for (const [chainId, chainDefs] of chainMap) {
+      const sorted = chainDefs.sort((a, b) => (a.chainOrder || 0) - (b.chainOrder || 0));
+      const firstDef = sorted[0];
+
+      const steps = sorted.map((def) => {
+        const mp = progressMap.get(def.id);
+        return {
+          missionId: def.id,
+          name: def.name,
+          description: def.description,
+          icon: def.icon,
+          rewards: def.rewards,
+          status: mp?.status || 'locked',
+          progress: mp?.progress || 0,
+          target: def.condition.target,
+          completedAt: mp?.completedAt || null,
+          claimedAt: mp?.claimedAt || null,
+        };
+      });
+
+      const claimedCount = steps.filter((s) => s.status === 'claimed').length;
+      const completedCount = steps.filter((s) => s.status === 'completed' || s.status === 'claimed').length;
+      const activeStep = steps.find((s) => s.status === 'active');
+
+      chains.push({
+        chainId,
+        name: firstDef?.name?.split(' — ')[0] || chainId,
+        description: firstDef?.description || '',
+        icon: firstDef?.icon || '🔗',
+        unlockLevel: firstDef?.unlockLevel || 1,
+        steps,
+        totalSteps: steps.length,
+        completedSteps: completedCount,
+        currentStep: activeStep ? steps.indexOf(activeStep) : claimedCount,
+        status: claimedCount === steps.length ? 'completed' : activeStep ? 'active' : 'locked',
+      });
+    }
+
+    chains.sort((a, b) => (a.unlockLevel || 0) - (b.unlockLevel || 0));
+
+    res.json({ success: true, chains });
+  } catch (err) {
+    console.error('[MISSIONS] Error fetching chains:', err);
+    res.status(500).json({ success: false, error: 'Failed to fetch mission chains' });
+  }
+});
+
 router.get('/stats', authenticate, async (req, res) => {
   try {
     const userId = req.user._id;

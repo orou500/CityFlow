@@ -2873,7 +2873,82 @@
     "complete": "משימה הושלמה!",
     "newMission": "משימה חדשה זמינה",
     "chainUnlocked": "שרשרת נפתחה",
-    "rewardAvailable": "פרס זמין"
+    "chainCompleted": "שרשרת הושלמה",
+    "missionChains": "שרשרת משימות",
+    "chainStep": "שלב",
+    "stepLocked": "נעול",
+    "stepActive": "ב_progress",
+    "rewardAvailable": "פרס זמין",
+    "chains": {
+      "chain_property_empire": {
+        "name": "אימפריית נדלן ראשונה",
+        "description": "שליטה בלולאת פיתוח הנדלן",
+        "step1": { "name": "רכישה", "description": "קנה את הנכס הראשון שלך" },
+        "step2": { "name": "שדרוג", "description": "שדרג את אחד הנכסים שלך" },
+        "step3": { "name": "הכנסה", "description": "אסוף שכירות מנכס אחד" },
+        "step4": { "name": "תיק נכסים", "description": "החזק 3 נכסים בו_זמנית" }
+      },
+      "chain_auction_apprentice": {
+        "name": "מתלמד מכרז",
+        "description": "למד איך מכרזים עובדים",
+        "step1": { "name": "צפייה", "description": "צפה במכרז" },
+        "step2": { "name": "הצעה", "description": " הגש הצעת מכרז תקפה" },
+        "step3": { "name": "תחרות", "description": "הגש הצעה במכרז שבו שחקן אחר גם הציע" },
+        "step4": { "name": "זכייה", "description": "זכה במכרז" }
+      },
+      "chain_corporate_founder": {
+        "name": "מייסד חברה",
+        "description": "בנה את חברתך מאפס",
+        "step1": { "name": "יצירה", "description": "צור או הצטרף לחברה לנדלן" },
+        "step2": { "name": "בנייה יחד", "description": "חברתך מחזיקה לפחות 2 נכסים" },
+        "step3": { "name": "תפעול", "description": "הפעל צוות מלא בנכס חברה אחד" },
+        "step4": { "name": "צמיחה", "description": "הגעה לרמת חברה 10" }
+      },
+      "chain_corporate_auction": {
+        "name": "מכרז חברה",
+        "description": "שליטה בהצעות מכרז חברה",
+        "step1": { "name": "הצעה", "description": "הגש הצעת מכרז חברה" },
+        "step2": { "name": "אישור", "description": "קבל אישור הצעת מכרז חברה" },
+        "step3": { "name": "ביצוע", "description": "בצע בהצלחה הצעת מכרז חברה" },
+        "step4": { "name": "רכישה", "description": "זכה במכרז באמצעות חברתך" }
+      },
+      "chain_market_investor": {
+        "name": "משקיע שוק",
+        "description": "למד השקעה בשוק המניות",
+        "step1": { "name": "השקעה", "description": "קנה מניות בחברה" },
+        "step2": { "name": "בניית פוזיציה", "description": "החזק מניות ב-3 חברות שונות" },
+        "step3": { "name": "החזקה", "description": "שמור פוזציית מניה לפחות חודש עולם אחד" },
+        "step4": { "name": "דיבידנד", "description": "קבל דיבידנד" }
+      },
+      "chain_global_explorer": {
+        "name": "חוקר עולמי",
+        "description": "חקור שכונות וערים ברחבי העולם",
+        "step1": { "name": "גילוי", "description": "חקור את השכונה הראשונה שלך" },
+        "step2": { "name": "הרחבה", "description": "גלה 3 שכונות שונות" },
+        "step3": { "name": "גלובלי", "description": "החזק נכסים ב-3 ערים שונות" },
+        "step4": { "name": "מטייל עולמי", "description": "החזק נכסים ב-5 ערים שונות" }
+      },
+      "chain_property_mogul": {
+        "name": "טייקון נדלן",
+        "description": "שליטה מתקדמת בפיתוח נדלן",
+        "step1": { "name": "שדרוג", "description": "השלם 3 שדרוגי נכסים" },
+        "step2": { "name": "תיק פרימיום", "description": "החזק 5 נכסים משודרגים" },
+        "step3": { "name": "יוצר ערך", "description": "הגדל את שווי התיק שלך ב-500,000$ דרך פיתוח" },
+        "step4": { "name": "טייקון", "description": "החזק תיק נכסים בשווי של לפחות 2,000,000$" }
+      },
+      "chain_global_empire": {
+        "name": "אימפריית נדלן גלובלית",
+        "description": "האתגר החוצ-מערכתי הסופי",
+        "step1": { "name": "גיוון", "description": "החזק נדלן ומניות בו_זמנית" },
+        "step2": { "name": "התרחבות חברה", "description": "חברתך מחזיקה נכסים ב-2 ערים שונות" },
+        "step3": { "name": "אימפריית מכרז", "description": "זכה במכרז באמצעות חברתך" },
+        "step4": { "name": "כוח שוק", "description": "קבל דיבידנד בזמן שחברתך מחזיקה לפחות 3 נכסים" },
+        "step5": {
+          "name": "שליטה עולמית",
+          "description": "10+ נכסים, 3+ ערים, חברה עם 5+ נכסים, פוזיציות מניות ב-3+ חברות, זכייה במכרז, ושדרוג אחד"
+        }
+      }
+    }
   },
   "career": {
     "title": "קריירה והישגים",

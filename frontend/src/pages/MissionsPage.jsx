@@ -72,7 +72,6 @@ function MissionCard({ mission, onClaim, t }) {
 
   const isClaimable = mission.status === 'completed';
   const isClaimed = mission.status === 'claimed';
-  const isLocked = mission.status === 'active' && mission.progress === 0;
 
   return (
     <div
@@ -156,49 +155,124 @@ function MissionCard({ mission, onClaim, t }) {
   );
 }
 
-function ChainCard({ missions, t }) {
-  if (!missions || missions.length === 0) return null;
-  const first = missions[0];
-  const def = first?.definition;
+function ChainCard({ chain, onClaim, t }) {
+  if (!chain || !chain.steps || chain.steps.length === 0) return null;
+  const { name, icon, steps, completedSteps, totalSteps, status } = chain;
+  const chainName = t(`missions.chains.${chain.chainId}.name`, name);
+  const percent = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
+  const isCompleted = status === 'completed';
 
   return (
-    <div className="bg-card border border-border rounded-xl p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-lg">{def?.icon || '\uD83D\uDD17'}</span>
-        <span className="font-semibold text-primary text-sm">
-          {t('missions.chainLabel')} — {def?.name}
-        </span>
+    <div
+      className={`bg-card border rounded-xl p-4 transition-all ${
+        isCompleted ? 'border-green-200 dark:border-green-800' : 'border-border hover:shadow-sm'
+      }`}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-xl shrink-0">{icon || '🔗'}</span>
+          <div className="min-w-0">
+            <div className="font-semibold text-primary text-sm truncate">{chainName}</div>
+            <div className="text-[10px] text-muted">
+              {t('missions.chainStep', 'Step')} {completedSteps} / {totalSteps}
+            </div>
+          </div>
+        </div>
+        <span className="text-xs font-medium text-secondary shrink-0">{percent}%</span>
       </div>
-      <div className="space-y-2">
-        {missions.map((m, i) => {
-          const mDef = m.definition;
-          if (!mDef) return null;
-          const statusColor =
-            m.status === 'claimed'
-              ? 'text-green-600 dark:text-green-400'
-              : m.status === 'completed'
-                ? 'text-yellow-600 dark:text-yellow-400'
-                : 'text-muted';
+
+      <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mb-4">
+        <div
+          className={`h-full rounded-full transition-all duration-500 ${isCompleted ? 'bg-green-500' : 'bg-blue-500'}`}
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+
+      <div className="space-y-0">
+        {steps.map((step, i) => {
+          const stepStatus = step.status;
+          const isClaimed = stepStatus === 'claimed';
+          const isCompletedStep = stepStatus === 'completed';
+          const isActive = stepStatus === 'active';
+          const isLocked = stepStatus === 'locked';
+
           return (
-            <div key={m.missionId} className="flex items-center gap-2">
-              <div
-                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                  m.status === 'claimed'
-                    ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
-                    : m.status === 'completed'
-                      ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400'
-                      : 'bg-gray-100 dark:bg-gray-800 text-muted'
-                }`}
-              >
-                {m.status === 'claimed' ? '\u2713' : i + 1}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className={`text-xs ${statusColor}`}>{mDef.name}</div>
-                <div className="text-[10px] text-muted">
-                  {m.progress}/{m.target}
+            <div key={step.missionId}>
+              <div className="flex items-start gap-3 py-2">
+                <div className="flex flex-col items-center shrink-0">
+                  <div
+                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                      isClaimed
+                        ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 border-2 border-green-400 dark:border-green-600'
+                        : isCompletedStep
+                          ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 border-2 border-yellow-400 dark:border-yellow-600'
+                          : isActive
+                            ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-2 border-blue-400 dark:border-blue-600'
+                            : 'bg-gray-100 dark:bg-gray-800 text-muted border-2 border-gray-300 dark:border-gray-600'
+                    }`}
+                  >
+                    {isClaimed ? '✓' : isCompletedStep ? '★' : i + 1}
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0 pt-0.5">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-xs font-medium ${
+                        isClaimed
+                          ? 'text-green-600 dark:text-green-400'
+                          : isCompletedStep
+                            ? 'text-yellow-600 dark:text-yellow-400'
+                            : isActive
+                              ? 'text-blue-600 dark:text-blue-400'
+                              : 'text-muted'
+                      }`}
+                    >
+                      {t(`missions.chains.${chain.chainId}.step${i + 1}.name`, step.name)}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-muted mt-0.5">
+                    {t(`missions.chains.${chain.chainId}.step${i + 1}.description`, step.description)}
+                  </div>
+                  {step.rewards && (
+                    <div className="flex items-center gap-2 mt-1 text-[10px] text-secondary">
+                      {step.rewards.xp && <span>⭐ {step.rewards.xp}</span>}
+                      {step.rewards.balance && <span>💰 ${step.rewards.balance.toLocaleString()}</span>}
+                      {step.rewards.badge && <span className="text-purple-500">🏅</span>}
+                      {step.rewards.title && <span className="text-blue-500">📝</span>}
+                    </div>
+                  )}
+                  {isActive && (
+                    <div className="mt-1.5">
+                      <ProgressBar progress={step.progress} target={step.target} status={step.status} />
+                    </div>
+                  )}
+                </div>
+                <div className="shrink-0 pt-1">
+                  {isClaimed && (
+                    <span className="text-[10px] text-green-600 dark:text-green-400 font-medium">
+                      {t('missions.claimed')}
+                    </span>
+                  )}
+                  {isCompletedStep && (
+                    <button
+                      onClick={() => onClaim(step.missionId)}
+                      className="px-2 py-1 bg-green-600 hover:bg-green-500 text-white text-[10px] font-medium rounded transition-colors"
+                    >
+                      {t('missions.collect')}
+                    </button>
+                  )}
+                  {isLocked && <span className="text-[10px] text-muted">🔒</span>}
                 </div>
               </div>
-              {i < missions.length - 1 && <div className="text-muted text-xs">{'\u2193'}</div>}
+              {i < steps.length - 1 && (
+                <div className="flex items-center ml-[13px] -my-0.5">
+                  <div
+                    className={`w-0.5 h-4 ${
+                      isClaimed ? 'bg-green-400 dark:bg-green-600' : 'bg-gray-300 dark:bg-gray-600'
+                    }`}
+                  />
+                </div>
+              )}
             </div>
           );
         })}
@@ -218,6 +292,7 @@ export default function MissionsPage() {
     claimReward,
     stats,
     fetchStats,
+    chains,
   } = useMissionStore();
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'active');
@@ -277,6 +352,14 @@ export default function MissionsPage() {
 
   const dailyMissions = activeMissions.filter((m) => m.definition?.type === 'daily');
   const weeklyMissions = activeMissions.filter((m) => m.definition?.type === 'weekly');
+
+  const activeChains = useMemo(() => {
+    if (!chains) return [];
+    if (activeTab === 'active') return chains.filter((c) => c.status === 'active' || c.status === 'locked');
+    if (activeTab === 'completed') return [];
+    if (activeTab === 'claimed') return chains.filter((c) => c.status === 'completed');
+    return [];
+  }, [chains, activeTab]);
 
   const handleClaim = async (missionId) => {
     try {
@@ -339,6 +422,17 @@ export default function MissionsPage() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {activeChains.length > 0 && (
+          <div className="mb-6">
+            <h2 className="font-semibold text-primary text-sm mb-3">{t('missions.missionChains', 'Mission Chains')}</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {activeChains.map((chain) => (
+                <ChainCard key={chain.chainId} chain={chain} onClaim={handleClaim} t={t} />
+              ))}
+            </div>
           </div>
         )}
 

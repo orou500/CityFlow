@@ -2879,7 +2879,91 @@
     "complete": "Mission Complete!",
     "newMission": "New Mission Available",
     "chainUnlocked": "Chain Unlocked",
-    "rewardAvailable": "Reward Available"
+    "chainCompleted": "Chain Completed",
+    "missionChains": "Mission Chains",
+    "chainStep": "Step",
+    "stepLocked": "Locked",
+    "stepActive": "In Progress",
+    "rewardAvailable": "Reward Available",
+    "chains": {
+      "chain_property_empire": {
+        "name": "First Property Empire",
+        "description": "Master the property development loop",
+        "step1": { "name": "Acquire", "description": "Purchase your first property" },
+        "step2": { "name": "Improve", "description": "Upgrade one of your properties" },
+        "step3": { "name": "Earn", "description": "Collect rent from one property" },
+        "step4": { "name": "Portfolio", "description": "Own 3 properties simultaneously" }
+      },
+      "chain_auction_apprentice": {
+        "name": "Auction Apprentice",
+        "description": "Learn how auctions work",
+        "step1": { "name": "Watch", "description": "Watch an auction" },
+        "step2": { "name": "Bid", "description": "Place a valid auction bid" },
+        "step3": { "name": "Compete", "description": "Bid in an auction where another player also bid" },
+        "step4": { "name": "Win", "description": "Win an auction" }
+      },
+      "chain_corporate_founder": {
+        "name": "Corporate Founder",
+        "description": "Build your company from the ground up",
+        "step1": { "name": "Create", "description": "Create or join a Real Estate Company" },
+        "step2": { "name": "Build Together", "description": "Have your company own at least 2 properties" },
+        "step3": { "name": "Operate", "description": "Fully staff one company property" },
+        "step4": { "name": "Grow", "description": "Reach Company Level 10" }
+      },
+      "chain_corporate_auction": {
+        "name": "Corporate Auction",
+        "description": "Master company-based auction bidding",
+        "step1": { "name": "Proposal", "description": "Submit a company auction proposal" },
+        "step2": { "name": "Approval", "description": "Get a company auction proposal approved" },
+        "step3": { "name": "Execute", "description": "Successfully execute a company auction bid" },
+        "step4": { "name": "Acquisition", "description": "Win an auction using your company" }
+      },
+      "chain_market_investor": {
+        "name": "Market Investor",
+        "description": "Learn stock market investing",
+        "step1": { "name": "Invest", "description": "Purchase shares in a company" },
+        "step2": { "name": "Build Position", "description": "Own shares in 3 different companies" },
+        "step3": { "name": "Hold", "description": "Maintain a stock position for at least one world month" },
+        "step4": { "name": "Dividend", "description": "Receive a dividend" }
+      },
+      "chain_global_explorer": {
+        "name": "Global Explorer",
+        "description": "Explore districts and cities around the world",
+        "step1": { "name": "Discover", "description": "Explore your first district" },
+        "step2": { "name": "Expand", "description": "Discover 3 different districts" },
+        "step3": { "name": "Global", "description": "Own properties in 3 different cities" },
+        "step4": { "name": "World Traveler", "description": "Own properties in 5 different cities" }
+      },
+      "chain_property_mogul": {
+        "name": "Property Mogul",
+        "description": "Advanced property development mastery",
+        "step1": { "name": "Upgrade", "description": "Complete 3 property upgrades" },
+        "step2": { "name": "Premium Portfolio", "description": "Own 5 upgraded properties" },
+        "step3": {
+          "name": "Value Creator",
+          "description": "Increase your portfolio value by $500,000 through development"
+        },
+        "step4": { "name": "Tycoon", "description": "Own a property portfolio worth at least $2,000,000" }
+      },
+      "chain_global_empire": {
+        "name": "Global Real Estate Empire",
+        "description": "The ultimate cross-system endgame challenge",
+        "step1": { "name": "Diversify", "description": "Own real estate and stocks simultaneously" },
+        "step2": {
+          "name": "Corporate Expansion",
+          "description": "Have your company own properties in 2 different cities"
+        },
+        "step3": { "name": "Auction Empire", "description": "Win an auction using your company" },
+        "step4": {
+          "name": "Market Power",
+          "description": "Receive a dividend while your company owns at least 3 properties"
+        },
+        "step5": {
+          "name": "World Domination",
+          "description": "Own 10+ properties, 3+ cities, company with 5+ properties, stock positions in 3+ companies, auction win, and an upgrade"
+        }
+      }
+    }
   },
   "career": {
     "title": "Career & Achievements",

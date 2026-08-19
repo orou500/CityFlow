@@ -27,6 +27,7 @@ export const useMissionStore = create((set, get) => ({
   categories: [],
   types: [],
   chainData: null,
+  chains: [],
   stats: null,
   loading: false,
   error: null,
@@ -41,6 +42,7 @@ export const useMissionStore = create((set, get) => ({
         completedMissions: data.completed || [],
         claimedMissions: data.claimed || [],
         stats: data.stats || null,
+        chains: data.chains || [],
         loading: false,
       });
       return data;
