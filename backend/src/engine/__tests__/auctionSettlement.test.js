@@ -64,6 +64,54 @@ async function makeSettlingAuction({ city, bids = [], currentBid = 0, currentBid
   });
 }
 
+/**
+ * Creates an active, expiring auction with full control over sellerType,
+ * auctionType, reservePrice, and pre-auction state fields.
+ */
+async function makeLifecycleAuction({
+  city,
+  sellerType = 'bank',
+  sellerId = null,
+  auctionType = 'standard',
+  reservePrice = 0,
+  bids = [],
+  currentBid = 0,
+  currentBidderId = null,
+  endTick = 10,
+} = {}) {
+  const property = await Property.create({
+    cityId: city._id,
+    name: `LifecycleProp_${Date.now()}_${Math.random()}`,
+    type: 'apartment',
+    basePrice: 100000,
+    currentPrice: 100000,
+    forSale: sellerType === 'bank' ? false : true,
+    ownerId: sellerType === 'player' ? sellerId : null,
+  });
+  const auction = await Auction.create({
+    propertyId: property._id,
+    sellerId,
+    sellerType,
+    auctionType,
+    reservePrice,
+    startingBid: 1000,
+    currentBid,
+    currentBidderId,
+    bidIncrement: 100,
+    status: 'active',
+    startTick: 1,
+    endTick,
+    originalEndTick: endTick,
+    totalBids: bids.length,
+    bids,
+    activity: [],
+    watchers: [],
+    previousOwnerId: sellerType === 'player' ? sellerId : null,
+    previousForSale: sellerType === 'player' ? true : false,
+  });
+  return { property, auction };
+}
+
 function bidEntry(user, amount, tick = 9) {
   return { bidderId: user._id, amount, tick, username: user.username };
 }
@@ -340,5 +388,315 @@ describe('Auction settlement integrity', () => {
     const featured = await request(app).get('/auctions/featured');
     expect(featured.status).toBe(200);
     expect(JSON.stringify(featured.body)).not.toContain('"System"');
+  });
+});
+
+describe('Property lifecycle after auction settlement', () => {
+  it('bank auction, no bids -> property deleted', async () => {
+    const city = await createTestCity({ propertyCount: 200 });
+    const { property, auction } = await makeLifecycleAuction({ city, endTick: 10 });
+
+    const propId = property._id;
+    await processAuctions();
+
+    const settled = await Auction.findById(auction._id);
+    expect(settled.winnerId).toBeNull();
+
+    const deleted = await Property.findById(propId);
+    expect(deleted).toBeNull();
+  });
+
+  it('bank reserve auction, bids below reserve -> property deleted', async () => {
+    const city = await createTestCity({ propertyCount: 200 });
+    const { user } = await makeBidder('low_bidder');
+    const { property, auction } = await makeLifecycleAuction({
+      city,
+      auctionType: 'reserve',
+      reservePrice: 50000,
+      currentBid: 30000,
+      currentBidderId: user._id,
+      bids: [bidEntry(user, 30000)],
+      endTick: 10,
+    });
+
+    const propId = property._id;
+    await processAuctions();
+
+    const settled = await Auction.findById(auction._id);
+    expect(settled.winnerId).toBeNull();
+    expect(settled.reserveMet).toBe(false);
+
+    const deleted = await Property.findById(propId);
+    expect(deleted).toBeNull();
+  });
+
+  it('bank auction, reserve met -> property transferred to winner', async () => {
+    const city = await createTestCity({ propertyCount: 200 });
+    const { user } = await makeBidder('reserve_winner');
+    const { property, auction } = await makeLifecycleAuction({
+      city,
+      auctionType: 'reserve',
+      reservePrice: 40000,
+      currentBid: 50000,
+      currentBidderId: user._id,
+      bids: [bidEntry(user, 50000)],
+      endTick: 10,
+    });
+
+    await processAuctions();
+
+    const settled = await Auction.findById(auction._id);
+    expect(settled.winnerId?.toString()).toBe(user._id.toString());
+
+    const prop = await Property.findById(property._id);
+    expect(prop).not.toBeNull();
+    expect(prop.ownerId?.toString()).toBe(user._id.toString());
+  });
+
+  it('player auction, no bids -> property restored to marketplace', async () => {
+    const city = await createTestCity({ propertyCount: 200 });
+    const seller = await makeBidder('player_seller');
+    const { property, auction } = await makeLifecycleAuction({
+      city,
+      sellerType: 'player',
+      sellerId: seller.user._id,
+      endTick: 10,
+    });
+
+    await processAuctions();
+
+    const settled = await Auction.findById(auction._id);
+    expect(settled.winnerId).toBeNull();
+
+    const restored = await Property.findById(property._id);
+    expect(restored).not.toBeNull();
+    expect(restored.forSale).toBe(true);
+    expect(restored.ownerId?.toString()).toBe(seller.user._id.toString());
+  });
+
+  it('player reserve auction, bids below reserve -> property restored', async () => {
+    const city = await createTestCity({ propertyCount: 200 });
+    const seller = await makeBidder('reserve_seller');
+    const lowBidder = await makeBidder('low_reserve_bidder');
+    const { property, auction } = await makeLifecycleAuction({
+      city,
+      sellerType: 'player',
+      sellerId: seller.user._id,
+      auctionType: 'reserve',
+      reservePrice: 80000,
+      currentBid: 50000,
+      currentBidderId: lowBidder.user._id,
+      bids: [bidEntry(lowBidder.user, 50000)],
+      endTick: 10,
+    });
+
+    await processAuctions();
+
+    const settled = await Auction.findById(auction._id);
+    expect(settled.winnerId).toBeNull();
+
+    const restored = await Property.findById(property._id);
+    expect(restored.forSale).toBe(true);
+    expect(restored.ownerId?.toString()).toBe(seller.user._id.toString());
+  });
+
+  it('winner with insufficient funds, bank auction -> property deleted', async () => {
+    const city = await createTestCity({ propertyCount: 200 });
+    const { user } = await makeBidder('broke_winner', 100);
+    const { property, auction } = await makeLifecycleAuction({
+      city,
+      currentBid: 90000,
+      currentBidderId: user._id,
+      bids: [bidEntry(user, 90000)],
+      endTick: 10,
+    });
+
+    const propId = property._id;
+    await processAuctions();
+
+    const settled = await Auction.findById(auction._id);
+    expect(settled.status).toBe('cancelled');
+
+    const deleted = await Property.findById(propId);
+    expect(deleted).toBeNull();
+  });
+
+  it('winner with insufficient funds, player auction -> property restored', async () => {
+    const city = await createTestCity({ propertyCount: 200 });
+    const seller = await makeBidder('broke_seller_winner', 50000);
+    const brokeBidder = await makeBidder('broke_bidder', 100);
+    const { property, auction } = await makeLifecycleAuction({
+      city,
+      sellerType: 'player',
+      sellerId: seller.user._id,
+      currentBid: 90000,
+      currentBidderId: brokeBidder.user._id,
+      bids: [bidEntry(brokeBidder.user, 90000)],
+      endTick: 10,
+    });
+
+    await processAuctions();
+
+    const settled = await Auction.findById(auction._id);
+    expect(settled.status).toBe('cancelled');
+
+    const restored = await Property.findById(property._id);
+    expect(restored.forSale).toBe(true);
+    expect(restored.ownerId?.toString()).toBe(seller.user._id.toString());
+  });
+
+  it('currentBidderId is cleared on no-winner settlement', async () => {
+    const city = await createTestCity({ propertyCount: 200 });
+    const { user } = await makeBidder('stale_bidder');
+    const { property, auction } = await makeLifecycleAuction({
+      city,
+      auctionType: 'reserve',
+      reservePrice: 999999,
+      currentBid: 10000,
+      currentBidderId: user._id,
+      bids: [bidEntry(user, 10000)],
+      endTick: 10,
+    });
+
+    await processAuctions();
+
+    const settled = await Auction.findById(auction._id);
+    expect(settled.currentBidderId).toBeNull();
+    expect(settled.winnerId).toBeNull();
+  });
+
+  it('currentBidderId is cleared on insufficient-funds cancellation', async () => {
+    const city = await createTestCity({ propertyCount: 200 });
+    const { user } = await makeBidder('broke_clear', 50);
+    const { property, auction } = await makeLifecycleAuction({
+      city,
+      currentBid: 80000,
+      currentBidderId: user._id,
+      bids: [bidEntry(user, 80000)],
+      endTick: 10,
+    });
+
+    await processAuctions();
+
+    const settled = await Auction.findById(auction._id);
+    expect(settled.status).toBe('cancelled');
+    expect(settled.currentBidderId).toBeNull();
+  });
+
+  it('previousOwnerId and previousForSale are captured at creation', async () => {
+    const city = await createTestCity({ propertyCount: 200 });
+    const seller = await makeBidder('prev_state_seller');
+    const { property, auction } = await makeLifecycleAuction({
+      city,
+      sellerType: 'player',
+      sellerId: seller.user._id,
+    });
+
+    expect(auction.previousOwnerId?.toString()).toBe(seller.user._id.toString());
+    expect(auction.previousForSale).toBe(true);
+
+    const bankAuction = await makeLifecycleAuction({ city, sellerType: 'bank' });
+    expect(bankAuction.auction.previousOwnerId).toBeNull();
+    expect(bankAuction.auction.previousForSale).toBe(false);
+  });
+
+  it('isWinning uses winnerId for ended auctions (GET /auctions/:id)', async () => {
+    const city = await createTestCity({ propertyCount: 200 });
+    const { user, token } = await makeBidder('api_winner');
+    const { auction } = await makeLifecycleAuction({
+      city,
+      currentBid: 50000,
+      currentBidderId: user._id,
+      bids: [bidEntry(user, 50000)],
+      endTick: 10,
+    });
+
+    await processAuctions();
+
+    const res = await request(app).get(`/auctions/${auction._id}`).set(authHeader(token));
+    expect(res.status).toBe(200);
+    expect(res.body.auction.isWinning).toBe(true);
+    expect(res.body.auction.winnerId._id.toString()).toBe(user._id.toString());
+  });
+
+  it('isWinning is false for ended auctions with no winner', async () => {
+    const city = await createTestCity({ propertyCount: 200 });
+    const { user, token } = await makeBidder('no_winner_bidder');
+    const { auction } = await makeLifecycleAuction({
+      city,
+      auctionType: 'reserve',
+      reservePrice: 999999,
+      currentBid: 10000,
+      currentBidderId: user._id,
+      bids: [bidEntry(user, 10000)],
+      endTick: 10,
+    });
+
+    await processAuctions();
+
+    const settled = await Auction.findById(auction._id);
+    expect(settled.winnerId).toBeNull();
+
+    const res = await request(app).get(`/auctions/${auction._id}`).set(authHeader(token));
+    expect(res.status).toBe(200);
+    expect(res.body.auction.isWinning).toBe(false);
+  });
+
+  it('multiple auctions for the same property do not interfere', async () => {
+    const city = await createTestCity({ propertyCount: 200 });
+    const winner = await makeBidder('multi_winner');
+
+    const { property } = await makeLifecycleAuction({ city, endTick: 20 });
+
+    const auction1 = await Auction.create({
+      propertyId: property._id,
+      sellerId: null,
+      sellerType: 'bank',
+      auctionType: 'standard',
+      startingBid: 1000,
+      currentBid: 0,
+      currentBidderId: null,
+      bidIncrement: 100,
+      status: 'active',
+      startTick: 1,
+      endTick: 10,
+      originalEndTick: 10,
+      totalBids: 0,
+      bids: [],
+      activity: [],
+      watchers: [],
+    });
+
+    const auction2 = await Auction.create({
+      propertyId: property._id,
+      sellerId: null,
+      sellerType: 'bank',
+      auctionType: 'standard',
+      startingBid: 1000,
+      currentBid: 60000,
+      currentBidderId: winner.user._id,
+      bidIncrement: 100,
+      status: 'active',
+      startTick: 11,
+      endTick: 20,
+      originalEndTick: 20,
+      totalBids: 1,
+      bids: [bidEntry(winner.user, 60000)],
+      activity: [],
+      watchers: [],
+    });
+
+    await setTestTick(10);
+    await processAuctions();
+
+    const s1 = await Auction.findById(auction1._id);
+    expect(s1.winnerId).toBeNull();
+
+    const afterFirst = await Property.findById(property._id);
+    expect(afterFirst).toBeNull();
+
+    const s2 = await Auction.findById(auction2._id);
+    expect(s2.status).toBe('active');
+    expect(s2.currentBidderId?.toString()).toBe(winner.user._id.toString());
   });
 });

@@ -176,6 +176,163 @@ describe('Real Estate Companies', () => {
 
       expect(res.status).toBe(403);
     });
+
+    it('rejects deposit with zero amount', async () => {
+      const founder = await createFounder();
+      const { company, token } = await createTestCompany(founder);
+
+      const res = await request(app)
+        .post(`/real-estate-companies/${company._id}/treasury/deposit`)
+        .set(authHeader(token))
+        .send({ amount: 0 });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/invalid/i);
+    });
+
+    it('rejects deposit with negative amount', async () => {
+      const founder = await createFounder();
+      const { company, token } = await createTestCompany(founder);
+
+      const res = await request(app)
+        .post(`/real-estate-companies/${company._id}/treasury/deposit`)
+        .set(authHeader(token))
+        .send({ amount: -5000 });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/invalid/i);
+    });
+
+    it('rejects deposit when player has insufficient balance', async () => {
+      const founder = await createFounder();
+      const { company } = await createTestCompany(founder);
+
+      const member = await createAuthenticatedUser({ balance: 5000, level: 1 });
+      await addMemberToCompany(company._id, founder.token, member);
+
+      const res = await request(app)
+        .post(`/real-estate-companies/${company._id}/treasury/deposit`)
+        .set(authHeader(member.token))
+        .send({ amount: 10_000 });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/insufficient/i);
+
+      const userAfter = await User.findById(member.user._id);
+      expect(userAfter.balance).toBe(5000);
+
+      const companyAfter = await RealEstateCompany.findById(company._id);
+      expect(companyAfter.treasury.balance).toBe(0);
+    });
+
+    it('deducts from player balance and increases treasury atomically', async () => {
+      const founder = await createFounder({ balance: 10_100_000 });
+      const { company, token } = await createTestCompany(founder);
+
+      const balanceBefore = (await User.findById(founder.user._id)).balance;
+      const treasuryBefore = company.treasury.balance;
+
+      const depositAmount = 30_000;
+      const res = await request(app)
+        .post(`/real-estate-companies/${company._id}/treasury/deposit`)
+        .set(authHeader(token))
+        .send({ amount: depositAmount });
+
+      expect(res.status).toBe(200);
+      expect(res.body.treasury.balance).toBe(treasuryBefore + depositAmount);
+
+      const userAfter = await User.findById(founder.user._id);
+      expect(userAfter.balance).toBe(balanceBefore - depositAmount);
+
+      const companyAfter = await RealEstateCompany.findById(company._id);
+      expect(companyAfter.treasury.balance).toBe(treasuryBefore + depositAmount);
+    });
+
+    it('persists balances after deposit (re-read from DB)', async () => {
+      const founder = await createFounder({ balance: 10_200_000 });
+      const { company, token } = await createTestCompany(founder);
+
+      const balanceBefore = (await User.findById(founder.user._id)).balance;
+
+      await request(app)
+        .post(`/real-estate-companies/${company._id}/treasury/deposit`)
+        .set(authHeader(token))
+        .send({ amount: 50_000 });
+
+      const userFresh = await User.findById(founder.user._id);
+      expect(userFresh.balance).toBe(balanceBefore - 50_000);
+
+      const companyFresh = await RealEstateCompany.findById(company._id);
+      expect(companyFresh.treasury.balance).toBe(50_000);
+    });
+
+    it('allows multiple deposits that accumulate correctly', async () => {
+      const founder = await createFounder({ balance: 10_500_000 });
+      const { company, token } = await createTestCompany(founder);
+
+      const balanceBefore = (await User.findById(founder.user._id)).balance;
+
+      await request(app)
+        .post(`/real-estate-companies/${company._id}/treasury/deposit`)
+        .set(authHeader(token))
+        .send({ amount: 100_000 });
+
+      await request(app)
+        .post(`/real-estate-companies/${company._id}/treasury/deposit`)
+        .set(authHeader(token))
+        .send({ amount: 200_000 });
+
+      const userAfter = await User.findById(founder.user._id);
+      expect(userAfter.balance).toBe(balanceBefore - 300_000);
+
+      const companyAfter = await RealEstateCompany.findById(company._id);
+      expect(companyAfter.treasury.balance).toBe(300_000);
+    });
+
+    it('rejects unauthenticated deposit', async () => {
+      const founder = await createFounder();
+      const { company } = await createTestCompany(founder);
+
+      const res = await request(app)
+        .post(`/real-estate-companies/${company._id}/treasury/deposit`)
+        .send({ amount: 10_000 });
+
+      expect(res.status).toBe(401);
+    });
+
+    it('prevents deposit into another company treasury', async () => {
+      const founder = await createFounder();
+      const { company: company1, token: token1 } = await createTestCompany(founder);
+
+      const otherFounder = await createFounder();
+      const { company: company2 } = await createTestCompany(otherFounder);
+
+      const res = await request(app)
+        .post(`/real-estate-companies/${company2._id}/treasury/deposit`)
+        .set(authHeader(token1))
+        .send({ amount: 10_000 });
+
+      expect(res.status).toBe(403);
+
+      const company2After = await RealEstateCompany.findById(company2._id);
+      expect(company2After.treasury.balance).toBe(0);
+    });
+
+    it('member without funds cannot deposit even $1', async () => {
+      const founder = await createFounder();
+      const { company } = await createTestCompany(founder);
+
+      const member = await createAuthenticatedUser({ balance: 0, level: 1 });
+      await addMemberToCompany(company._id, founder.token, member);
+
+      const res = await request(app)
+        .post(`/real-estate-companies/${company._id}/treasury/deposit`)
+        .set(authHeader(member.token))
+        .send({ amount: 1 });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/insufficient/i);
+    });
   });
 
   describe('Applications', () => {

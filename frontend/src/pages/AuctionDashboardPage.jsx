@@ -425,7 +425,13 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
 
   const property = getProperty(detail);
   const isOwner = user && detail.sellerId?._id === user._id;
-  const isWinning = user && detail.currentBidderId?._id === user._id;
+  const isWinning =
+    user &&
+    (detail.winnerId?._id === user._id ||
+      (!detail.winnerId &&
+        detail.currentBidderId?._id === user._id &&
+        detail.status !== 'ended' &&
+        detail.status !== 'cancelled'));
   const availableBalance = Math.max(0, (user?.balance || 0) - (user?.reservedAuctionFunds || 0));
   const minNextBid =
     (detail.currentBid || 0) > 0 ? (detail.currentBid || 0) + (detail.bidIncrement || 0) : detail.startingBid;

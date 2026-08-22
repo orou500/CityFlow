@@ -86,8 +86,10 @@ export async function processAuctions() {
       ending++;
     } catch (err) {
       console.error(`[AUCTION-TICK ${currentTick}] ✗ Failed to settle auction ${auction._id}:`, err.message);
-      await Auction.updateOne({ _id: claimed._id }, { $set: { status: 'cancelled' } });
+      await Auction.updateOne({ _id: claimed._id }, { $set: { status: 'cancelled', currentBidderId: null } });
       await releaseAuctionReservations(claimed._id);
+      const crashedProperty = await Property.findById(claimed.propertyId);
+      await recoverAuctionProperty(claimed, crashedProperty, 'settlement crash');
     }
   }
 
@@ -111,9 +113,14 @@ export async function processAuctions() {
   });
 
   if (stuckEnding.length > 0) {
-    await Auction.updateMany({ _id: { $in: stuckEnding.map((a) => a._id) } }, { $set: { status: 'cancelled' } });
+    await Auction.updateMany(
+      { _id: { $in: stuckEnding.map((a) => a._id) } },
+      { $set: { status: 'cancelled', currentBidderId: null } },
+    );
     for (const auction of stuckEnding) {
       await releaseAuctionReservations(auction._id);
+      const stuckProperty = await Property.findById(auction.propertyId);
+      await recoverAuctionProperty(auction, stuckProperty, 'stuck ending');
     }
   }
 
@@ -136,6 +143,34 @@ export async function resolveStuckAuction(auctionId) {
     return claimed;
   }
   return auction;
+}
+
+/**
+ * Recovers or cleans up the property after an auction ends without a winner
+ * (no bids, reserve not met, insufficient funds for winner, or settlement crash).
+ *
+ *  - Bank properties (created solely for auction) are deleted — they have no
+ *    owner and no purpose outside the auction.
+ *  - Player-listed properties are restored to the marketplace so the seller
+ *    can sell or re-auction them.
+ */
+async function recoverAuctionProperty(auction, property, reason) {
+  if (!property) return;
+
+  if (auction.sellerType === 'bank') {
+    await Property.findByIdAndDelete(property._id);
+    console.log(`[AUCTION-SETTLE] ${reason}: deleted bank property ${property._id} (auction ${auction._id})`);
+  } else if (
+    auction.sellerType === 'player' &&
+    property.ownerId &&
+    property.ownerId.toString() === (auction.sellerId?.toString() || '')
+  ) {
+    property.forSale = true;
+    await property.save();
+    console.log(
+      `[AUCTION-SETTLE] ${reason}: restored player property ${property._id} to marketplace (auction ${auction._id})`,
+    );
+  }
 }
 
 async function settleAuction(auction) {
@@ -445,12 +480,17 @@ async function settleAuction(auction) {
         });
       }
       auction.status = 'cancelled';
+      auction.currentBidderId = null;
       await auction.save();
+      await recoverAuctionProperty(auction, property, 'insufficient funds');
     }
   } else {
     auction.winnerId = null;
     auction.winningBid = 0;
+    auction.currentBidderId = null;
     await auction.save();
+
+    await recoverAuctionProperty(auction, property, 'no winner');
 
     if (auction.sellerId && auction.sellerType === 'player') {
       await enqueueNotification({
@@ -607,6 +647,8 @@ export async function generateBankAuctions() {
       originalEndTick: currentTick + 1 + duration,
       antiSnipingExtension: AUCTION_CONFIG.antiSnipingTicks,
       bidIncrement,
+      previousOwnerId: null,
+      previousForSale: false,
       activity: [
         {
           type: 'created',

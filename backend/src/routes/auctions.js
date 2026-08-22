@@ -354,7 +354,10 @@ router.get(
         const myBids = auction.bids.filter((b) => b.bidderId.toString() === myUserId);
         auctionObj.myBidCount = myBids.length;
         auctionObj.myMaxBid = myBids.length > 0 ? Math.max(...myBids.map((b) => b.amount)) : 0;
-        auctionObj.isWinning = auction.currentBidderId?._id?.toString() === myUserId;
+        auctionObj.isWinning =
+          auction.status === 'ended'
+            ? auction.winnerId?._id?.toString() === myUserId
+            : auction.currentBidderId?._id?.toString() === myUserId;
       }
 
       return res.json({ success: true, auction: auctionObj });
@@ -447,6 +450,8 @@ router.post(
         originalEndTick: currentTick + 1 + ticks,
         antiSnipingExtension: AUCTION_CONFIG.antiSnipingTicks,
         bidIncrement,
+        previousOwnerId: userId,
+        previousForSale: true,
         activity: [
           {
             type: 'created',
@@ -1178,7 +1183,10 @@ router.get(
       const enriched = auctions.map((a) => ({
         ...a,
         ...computeAuctionRemaining(a, currentTick),
-        isWinning: a.currentBidderId?.toString() === userId.toString(),
+        isWinning:
+          a.status === 'ended'
+            ? a.winnerId?.toString() === userId.toString()
+            : a.currentBidderId?.toString() === userId.toString(),
         myMaxBid: Math.max(...a.bids.filter((b) => b.bidderId.toString() === userId.toString()).map((b) => b.amount)),
       }));
 

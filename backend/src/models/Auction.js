@@ -57,6 +57,8 @@ const auctionSchema = new mongoose.Schema(
     winnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     winningBid: { type: Number, default: 0 },
     companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'RealEstateCompany', default: null },
+    previousOwnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    previousForSale: { type: Boolean, default: null },
   },
   { timestamps: true },
 );

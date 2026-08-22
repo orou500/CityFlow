@@ -264,7 +264,11 @@ export default function CompanyDetailPage() {
 
   const [tab, setTab] = useState(searchParams.get('tab') || 'overview');
   const [depositAmount, setDepositAmount] = useState('');
+  const [depositError, setDepositError] = useState('');
+  const [depositLoading, setDepositLoading] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [withdrawError, setWithdrawError] = useState('');
+  const [withdrawLoading, setWithdrawLoading] = useState(false);
   const [inviteUsername, setInviteUsername] = useState('');
   const [inviteError, setInviteError] = useState('');
   const [repayAmounts, setRepayAmounts] = useState({});
@@ -493,21 +497,35 @@ export default function CompanyDetailPage() {
   const handleDeposit = async () => {
     const amt = parseFloat(depositAmount);
     if (!amt || amt <= 0) return;
+    setDepositError('');
+    setDepositLoading(true);
     try {
       await depositTreasury(id, amt);
       setDepositAmount('');
       fetchCompanyStats(id);
-    } catch {}
+      useAuthStore.getState().fetchMe();
+    } catch (err) {
+      setDepositError(err.message || t('common.error'));
+    } finally {
+      setDepositLoading(false);
+    }
   };
 
   const handleWithdraw = async () => {
     const amt = parseFloat(withdrawAmount);
     if (!amt || amt <= 0) return;
+    setWithdrawError('');
+    setWithdrawLoading(true);
     try {
       await withdrawTreasury(id, amt);
       setWithdrawAmount('');
       fetchCompanyStats(id);
-    } catch {}
+      useAuthStore.getState().fetchMe();
+    } catch (err) {
+      setWithdrawError(err.message || t('common.error'));
+    } finally {
+      setWithdrawLoading(false);
+    }
   };
 
   const handleInvite = async () => {
@@ -1546,19 +1564,28 @@ export default function CompanyDetailPage() {
                     <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
                       {t('companies.deposit')}
                     </h3>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                      {t('common.available')}: {formatMoney(user?.balance || 0)}
+                    </div>
+                    {depositError && <div className="text-xs text-red-600 dark:text-red-400 mb-2">{depositError}</div>}
                     <div className="flex gap-2">
                       <input
                         type="number"
                         value={depositAmount}
-                        onChange={(e) => setDepositAmount(e.target.value)}
+                        onChange={(e) => {
+                          setDepositAmount(e.target.value);
+                          setDepositError('');
+                        }}
                         placeholder="$"
-                        className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                        disabled={depositLoading}
+                        className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm disabled:opacity-50"
                       />
                       <button
                         onClick={handleDeposit}
-                        className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700"
+                        disabled={depositLoading || !depositAmount || parseFloat(depositAmount) <= 0}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {t('companies.contribute')}
+                        {depositLoading ? '...' : t('companies.contribute')}
                       </button>
                     </div>
                   </div>
@@ -1567,19 +1594,30 @@ export default function CompanyDetailPage() {
                       <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
                         {t('companies.withdraw')}
                       </h3>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                        {t('companies.treasuryBalance')}: {formatMoney(company.treasury?.balance || 0)}
+                      </div>
+                      {withdrawError && (
+                        <div className="text-xs text-red-600 dark:text-red-400 mb-2">{withdrawError}</div>
+                      )}
                       <div className="flex gap-2">
                         <input
                           type="number"
                           value={withdrawAmount}
-                          onChange={(e) => setWithdrawAmount(e.target.value)}
+                          onChange={(e) => {
+                            setWithdrawAmount(e.target.value);
+                            setWithdrawError('');
+                          }}
                           placeholder="$"
-                          className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                          disabled={withdrawLoading}
+                          className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm disabled:opacity-50"
                         />
                         <button
                           onClick={handleWithdraw}
-                          className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700"
+                          disabled={withdrawLoading || !withdrawAmount || parseFloat(withdrawAmount) <= 0}
+                          className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {t('companies.withdraw')}
+                          {withdrawLoading ? '...' : t('companies.withdraw')}
                         </button>
                       </div>
                     </div>
