@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../../test/createApp.js';
-import { createAuthenticatedUser, authHeader } from '../../test/helpers.js';
+import { createAuthenticatedUser, authHeader, setTestTick } from '../../test/helpers.js';
 import RealEstateCompany from '../../models/RealEstateCompany.js';
 import CompanyInvestment from '../../models/CompanyInvestment.js';
 import InvestmentOpportunity from '../../models/InvestmentOpportunity.js';
@@ -139,6 +139,66 @@ describe('Investment Opportunities', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.investment.proposal.votes.length).toBe(2);
+  });
+
+  it('vote approval success: debits treasury exactly, activates investment with correct ticks', async () => {
+    await setTestTick(5);
+    const { user: founder } = await createFounder();
+    const { user: member, token: memberToken } = await createFounder({
+      username: 'member_approve',
+      email: 'member_approve@test.com',
+    });
+    const company = await createTestCompany(founder, {
+      members: [
+        { userId: founder._id, role: 'ceo', shares: 50 },
+        { userId: member._id, role: 'director', shares: 50 },
+      ],
+      treasury: { balance: 50_000_000, transactions: [] },
+    });
+
+    const investment = await CompanyInvestment.create({
+      companyId: company._id,
+      investmentType: 'government_bond',
+      name: 'Test Bond',
+      principal: 10_000_000,
+      currentValue: 10_000_000,
+      annualReturnRate: 0.03,
+      baseAnnualReturnRate: 0.03,
+      durationTicks: 24,
+      risk: 'low',
+      requiresVote: true,
+      proposal: {
+        proposedBy: founder._id,
+        status: 'pending',
+        votes: [{ userId: founder._id, vote: 'yes' }],
+        proposedTick: 1,
+        expiresAtTick: 9,
+      },
+      startTick: 1,
+      maturityTick: 25,
+      status: 'proposed',
+    });
+
+    const res = await request(app)
+      .post(`/real-estate-companies/${company._id}/investments/${investment._id}/vote`)
+      .set(authHeader(memberToken))
+      .send({ vote: 'yes' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.investment.status).toBe('active');
+    expect(res.body.treasury.balance).toBe(40_000_000);
+
+    const fresh = await CompanyInvestment.findById(investment._id);
+    expect(fresh.status).toBe('active');
+    expect(fresh.proposal.status).toBe('approved');
+    expect(fresh.startTick).toBe(5);
+    expect(fresh.maturityTick).toBe(5 + fresh.durationTicks);
+
+    const companyAfter = await RealEstateCompany.findById(company._id);
+    expect(companyAfter.treasury.balance).toBe(40_000_000);
+    const tx = companyAfter.treasury.transactions.find((t) => t.type === 'investment_withdrawal');
+    expect(tx).toBeTruthy();
+    expect(tx.amount).toBe(10_000_000);
   });
 
   it('auto-approves investment proposals via tick processing', async () => {

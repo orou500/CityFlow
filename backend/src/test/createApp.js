@@ -18,6 +18,7 @@ import seasonRoutes from '../routes/seasons.js';
 import backupRoutes from '../routes/backup.js';
 import discordRoutes from '../routes/discord.js';
 import realEstateCompanyRoutes from '../routes/realEstateCompanies.js';
+import cityContractRoutes from '../routes/cityContracts.js';
 import missionRoutes from '../routes/missions.js';
 import stockRoutes from '../routes/stocks.js';
 import auctionRoutes from '../routes/auctions.js';
@@ -49,6 +50,7 @@ export function createApp() {
   app.use('/admin/backups', backupRoutes);
   app.use('/discord', discordRoutes);
   app.use('/real-estate-companies', realEstateCompanyRoutes);
+  app.use('/city-contracts', cityContractRoutes);
   app.use('/missions', missionRoutes);
   app.use('/stocks', stockRoutes);
   app.use('/auctions', auctionRoutes);

@@ -1084,20 +1084,26 @@ router.post('/:id/treasury/deposit', async (req, res) => {
     await user.save();
 
     const gameState = await getGameState();
-    company.treasury.balance += amount;
-    addTreasuryTransaction(
-      company,
-      {
-        type: 'deposit',
-        amount,
-        userId: req.user._id,
-        description: `${user.username} contributed $${amount.toLocaleString()}`,
-      },
-      gameState.tickNumber,
-    );
+    try {
+      company.treasury.balance += amount;
+      addTreasuryTransaction(
+        company,
+        {
+          type: 'deposit',
+          amount,
+          userId: req.user._id,
+          description: `${user.username} contributed $${amount.toLocaleString()}`,
+        },
+        gameState.tickNumber,
+      );
 
-    company.stats.totalTreasuryDeposits += amount;
-    await company.save();
+      company.stats.totalTreasuryDeposits += amount;
+      await company.save();
+    } catch (companyErr) {
+      user.balance += amount;
+      await user.save();
+      throw companyErr;
+    }
 
     await Transaction.create({
       buyerId: req.user._id,
@@ -1162,8 +1168,15 @@ router.post('/:id/treasury/withdraw', async (req, res) => {
 
     await company.save();
 
-    recipient.balance += amount;
-    await recipient.save();
+    try {
+      recipient.balance += amount;
+      await recipient.save();
+    } catch (recipientErr) {
+      company.treasury.balance += amount;
+      company.treasury.transactions.pop();
+      await company.save();
+      throw recipientErr;
+    }
 
     await Transaction.create({
       sellerId: recipientId,
@@ -1239,14 +1252,17 @@ router.post('/:id/properties/purchase', async (req, res) => {
       });
     }
 
-    if (property.ownerId) {
-      const seller = await User.findById(property.ownerId);
-      if (seller) {
-        seller.balance += price;
-        seller.ownedProperties = seller.ownedProperties.filter((p) => p.toString() !== propertyId);
-        await seller.save();
-      }
-    }
+    const seller = property.ownerId ? await User.findById(property.ownerId) : null;
+
+    const treasurySnapshot = {
+      balance: company.treasury.balance,
+      txCount: company.treasury.transactions.length,
+      propsOwned: company.stats.propertiesOwned,
+      xp: company.xp,
+      level: company.level,
+      reputation: company.reputation,
+    };
+    const sellerSnapshot = seller ? { balance: seller.balance, ownedProperties: [...seller.ownedProperties] } : null;
 
     company.treasury.balance -= price;
     const gameState = await getGameState();
@@ -1265,6 +1281,23 @@ router.post('/:id/properties/purchase', async (req, res) => {
     await grantCompanyXP(company, 'property_purchased', gameState.tickNumber, price);
     await company.save();
 
+    if (seller) {
+      try {
+        seller.balance += price;
+        seller.ownedProperties = seller.ownedProperties.filter((p) => p.toString() !== propertyId);
+        await seller.save();
+      } catch (sellerErr) {
+        company.treasury.balance = treasurySnapshot.balance;
+        company.treasury.transactions.splice(treasurySnapshot.txCount);
+        company.stats.propertiesOwned = treasurySnapshot.propsOwned;
+        company.xp = treasurySnapshot.xp;
+        company.level = treasurySnapshot.level;
+        company.reputation = treasurySnapshot.reputation;
+        await company.save();
+        throw sellerErr;
+      }
+    }
+
     property.ownerId = null;
     property.companyId = company._id;
     property.forSale = false;
@@ -1279,7 +1312,23 @@ router.post('/:id/properties/purchase', async (req, res) => {
       description: `Purchased by ${company.name}`,
     });
 
-    await property.save();
+    try {
+      await property.save();
+    } catch (propErr) {
+      if (seller && sellerSnapshot) {
+        seller.balance = sellerSnapshot.balance;
+        seller.ownedProperties = sellerSnapshot.ownedProperties;
+        await seller.save();
+      }
+      company.treasury.balance = treasurySnapshot.balance;
+      company.treasury.transactions.splice(treasurySnapshot.txCount);
+      company.stats.propertiesOwned = treasurySnapshot.propsOwned;
+      company.xp = treasurySnapshot.xp;
+      company.level = treasurySnapshot.level;
+      company.reputation = treasurySnapshot.reputation;
+      await company.save();
+      throw propErr;
+    }
 
     await Transaction.create({
       propertyId: property._id,
@@ -1324,6 +1373,15 @@ router.post('/:id/properties/:propertyId/sell', async (req, res) => {
 
     const salePrice = property.currentPrice;
 
+    const treasurySnapshot = {
+      balance: company.treasury.balance,
+      txCount: company.treasury.transactions.length,
+      propsOwned: company.stats.propertiesOwned,
+      xp: company.xp,
+      level: company.level,
+      reputation: company.reputation,
+    };
+
     company.treasury.balance += salePrice;
     const saleGameState = await getGameState();
     addTreasuryTransaction(
@@ -1346,7 +1404,18 @@ router.post('/:id/properties/:propertyId/sell', async (req, res) => {
     property.forSale = true;
     property.lastPurchasePrice = salePrice;
     property.lastPurchaseDate = new Date();
-    await property.save();
+    try {
+      await property.save();
+    } catch (propErr) {
+      company.treasury.balance = treasurySnapshot.balance;
+      company.treasury.transactions.splice(treasurySnapshot.txCount);
+      company.stats.propertiesOwned = treasurySnapshot.propsOwned;
+      company.xp = treasurySnapshot.xp;
+      company.level = treasurySnapshot.level;
+      company.reputation = treasurySnapshot.reputation;
+      await company.save();
+      throw propErr;
+    }
 
     await Transaction.create({
       propertyId: property._id,
@@ -1480,7 +1549,22 @@ router.post('/:id/loans/:loanId/repay', async (req, res) => {
     await grantCompanyXP(company, 'loan_repaid', repayGameState.tickNumber, repayAmount);
 
     await company.save();
-    await loan.save();
+
+    try {
+      await loan.save();
+    } catch (loanErr) {
+      company.treasury.balance += repayAmount;
+      company.stats.totalLoanBalance += repayAmount;
+      company.treasury.transactions.pop();
+      loan.remainingBalance += repayAmount;
+      if (loan.active === false && loan.remainingBalance > 0) {
+        loan.active = true;
+        loan.ticksRemaining = loan.durationTicks || 1;
+        company.stats.loansRepaid = Math.max(0, (company.stats.loansRepaid || 0) - 1);
+      }
+      await company.save();
+      throw loanErr;
+    }
 
     const gameState = await getGameState();
     await addAuditLog(
@@ -2505,16 +2589,7 @@ router.post('/:id/property-purchase-requests/:reqId/vote', async (req, res) => {
         return res.status(400).json({ error: 'Insufficient treasury balance' });
       }
 
-      if (property.ownerId) {
-        const seller = await User.findById(property.ownerId);
-        if (seller) {
-          seller.balance += property.currentPrice;
-          seller.ownedProperties = seller.ownedProperties.filter(
-            (p) => p.toString() !== purchaseReq.propertyId.toString(),
-          );
-          await seller.save();
-        }
-      }
+      const seller = property.ownerId ? await User.findById(property.ownerId) : null;
 
       company.treasury.balance -= property.currentPrice;
       addTreasuryTransaction(
@@ -2546,6 +2621,27 @@ router.post('/:id/property-purchase-requests/:reqId/vote', async (req, res) => {
       });
 
       await property.save();
+
+      if (seller) {
+        try {
+          seller.balance += property.currentPrice;
+          seller.ownedProperties = seller.ownedProperties.filter(
+            (p) => p.toString() !== purchaseReq.propertyId.toString(),
+          );
+          await seller.save();
+        } catch (sellerErr) {
+          company.treasury.balance += property.currentPrice;
+          company.stats.propertiesOwned = Math.max(0, company.stats.propertiesOwned - 1);
+          company.treasury.transactions.pop();
+          property.ownerId = seller._id;
+          property.companyId = null;
+          property.forSale = true;
+          property.lastPurchasePrice = property.currentPrice;
+          await property.save();
+          await company.save();
+          throw sellerErr;
+        }
+      }
 
       await Transaction.create({
         propertyId: property._id,
@@ -3258,39 +3354,46 @@ router.post('/:id/investments', authenticate, async (req, res) => {
 
     await company.save();
 
-    const investment = await CompanyInvestment.create({
-      companyId: company._id,
-      investmentOpportunityId: opportunity?._id || null,
-      investmentType: product.type,
-      name: product.name,
-      description: product.description,
-      principal: amount,
-      currentValue: amount,
-      annualReturnRate: product.annualReturnRate,
-      baseAnnualReturnRate: product.baseAnnualReturnRate,
-      durationTicks: product.durationTicks,
-      risk: product.risk,
-      minInvestment: product.minInvestment,
-      economyStateAtStart: product.economyState,
-      globalEconomicIndex: product.globalEconomicIndex,
-      startTick: gameState.tickNumber,
-      maturityTick: gameState.tickNumber + product.durationTicks,
-      status: 'active',
-    });
+    try {
+      const investment = await CompanyInvestment.create({
+        companyId: company._id,
+        investmentOpportunityId: opportunity?._id || null,
+        investmentType: product.type,
+        name: product.name,
+        description: product.description,
+        principal: amount,
+        currentValue: amount,
+        annualReturnRate: product.annualReturnRate,
+        baseAnnualReturnRate: product.baseAnnualReturnRate,
+        durationTicks: product.durationTicks,
+        risk: product.risk,
+        minInvestment: product.minInvestment,
+        economyStateAtStart: product.economyState,
+        globalEconomicIndex: product.globalEconomicIndex,
+        startTick: gameState.tickNumber,
+        maturityTick: gameState.tickNumber + product.durationTicks,
+        status: 'active',
+      });
 
-    await addAuditLog(
-      company._id,
-      req.user._id,
-      'investment_created',
-      { investmentType: product.type, name: product.name, principal: amount, durationTicks: product.durationTicks },
-      gameState.tickNumber,
-    );
+      await addAuditLog(
+        company._id,
+        req.user._id,
+        'investment_created',
+        { investmentType: product.type, name: product.name, principal: amount, durationTicks: product.durationTicks },
+        gameState.tickNumber,
+      );
 
-    await invalidateCompany(company._id);
+      await invalidateCompany(company._id);
 
-    await processPlayerProgress(req.user._id, 'investment_create');
+      await processPlayerProgress(req.user._id, 'investment_create');
 
-    res.json({ investment, treasury: company.treasury });
+      res.json({ investment, treasury: company.treasury });
+    } catch (createErr) {
+      company.treasury.balance += amount;
+      company.treasury.transactions.pop();
+      await company.save();
+      throw createErr;
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -3364,20 +3467,28 @@ router.post('/:id/investments/:invId/vote', authenticate, async (req, res) => {
       );
 
       await company.save();
-      await investment.save();
-      cancelDelayedJob(`vote:investment:${investment._id}`);
-      const { scheduleInvestmentMaturity } = await import('../utils/delayedJobs.js');
-      scheduleInvestmentMaturity(investment._id, company._id, investment.durationTicks);
 
-      await CompanyAuditLog.create({
-        companyId: company._id,
-        userId: req.user._id,
-        action: 'investment_approved',
-        details: { investmentId: investment._id },
-        tick: gameState.tickNumber,
-      });
+      try {
+        await investment.save();
+        cancelDelayedJob(`vote:investment:${investment._id}`);
+        const { scheduleInvestmentMaturity } = await import('../utils/delayedJobs.js');
+        scheduleInvestmentMaturity(investment._id, company._id, investment.durationTicks);
 
-      return res.json({ investment, treasury: company.treasury });
+        await CompanyAuditLog.create({
+          companyId: company._id,
+          userId: req.user._id,
+          action: 'investment_approved',
+          details: { investmentId: investment._id },
+          tick: gameState.tickNumber,
+        });
+
+        return res.json({ investment, treasury: company.treasury });
+      } catch (invErr) {
+        company.treasury.balance += investment.principal;
+        company.treasury.transactions.pop();
+        await company.save();
+        throw invErr;
+      }
     }
 
     await onCompanyVoteCompleted(company._id);
@@ -3483,12 +3594,15 @@ router.post('/:id/ipo', async (req, res) => {
     const marketCap = Math.round(sharePrice * sharesOutstanding);
 
     company.treasury.balance -= IPO_FEE;
-    company.treasury.transactions.push({
-      type: 'development',
-      amount: -IPO_FEE,
-      description: 'IPO listing fee',
-      tick: await getGameState().then((gs) => gs.tickNumber),
-    });
+    addTreasuryTransaction(
+      company,
+      {
+        type: 'development',
+        amount: IPO_FEE,
+        description: 'IPO listing fee',
+      },
+      await getGameState().then((gs) => gs.tickNumber),
+    );
 
     const cities = await City.find().lean();
     if (cities.length === 0) {

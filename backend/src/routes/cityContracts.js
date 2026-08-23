@@ -280,7 +280,14 @@ router.post('/:id/contracts/:contractId/vote', authenticate, async (req, res) =>
         gameState.tickNumber,
       );
       await company.save();
-      await contract.save();
+      try {
+        await contract.save();
+      } catch (contractErr) {
+        company.treasury.balance += contract.cost;
+        company.treasury.transactions.pop();
+        await company.save();
+        throw contractErr;
+      }
       cancelDelayedJob(`vote:contract:${contract._id}`);
       scheduleContractCompletion(contract._id, company._id, contract.durationTicks, gameState.tickNumber);
       await onContractStarted(company._id);

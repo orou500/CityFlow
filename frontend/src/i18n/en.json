@@ -270,7 +270,12 @@
     "next": "Next",
     "showingRange": "{{start}}–{{end}} of {{total}}",
     "more": "more",
-    "showLess": "Show less"
+    "showLess": "Show less",
+    "available": "Your Balance",
+    "na": "N/A",
+    "remaining": "Remaining",
+    "accept": "Accept",
+    "decline": "Decline"
   },
   "property": {
     "apartment": "Apartment",
@@ -2241,6 +2246,7 @@
     "interestRate": "Interest Rate",
     "noLoanProducts": "No loan products available. Grow company net worth and reputation to unlock loans.",
     "loanRequests": "Loan Requests",
+    "loan": "Loan",
     "loanReqStatusPending": "Pending Vote",
     "loanReqStatusApproved": "Approved",
     "loanReqStatusRejected": "Rejected",

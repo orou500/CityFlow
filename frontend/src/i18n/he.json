@@ -270,7 +270,12 @@
     "next": "הבא",
     "showingRange": "{{start}}–{{end}} מתוך {{total}}",
     "more": "עוד",
-    "showLess": "הצג פחות"
+    "showLess": "הצג פחות",
+    "available": "היתרה שלך",
+    "na": "לא זמין",
+    "remaining": "נותר",
+    "accept": "אשר",
+    "decline": "דחה"
   },
   "property": {
     "apartment": "דירה",
@@ -2236,6 +2241,7 @@
     "interestRate": "שער ריבית",
     "noLoanProducts": "אין מוצרי הלוואה זמינים. הגדל את נטו הוורת והמוניטין של החברה כדי לפתוח הלוואות.",
     "loanRequests": "בקשות הלוואה",
+    "loan": "הלוואה",
     "loanReqStatusPending": "ממתין להצבעה",
     "loanReqStatusApproved": "אושר",
     "loanReqStatusRejected": "נדחה",

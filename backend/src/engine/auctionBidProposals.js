@@ -7,6 +7,7 @@ import { emitAuctionBid } from './auctionProcessing.js';
 import { computeAuctionRemaining } from '../utils/auctionTime.js';
 import { getGameState, getTickNumber } from '../models/GameState.js';
 import { AUCTION_CONFIG } from '../config/auctions.js';
+import { addTreasuryTransaction } from './companyProcessing.js';
 
 // The company voting period is at most 6 hours (a hard wall-clock cap). It is
 // NEVER the full remaining duration of the auction — it is only shortened when
@@ -84,14 +85,18 @@ function applyAuctionBid(auction, company, proposal, bidderId, currentTick) {
 }
 
 /** Mutate the company treasury + proposal execution markers (company side). */
-function applyCompanyCharge(company, proposal, bidderId) {
+function applyCompanyCharge(company, proposal, bidderId, tickNumber) {
   company.treasury.balance -= proposal.amount;
-  company.treasury.transactions.push({
-    type: 'withdrawal',
-    amount: proposal.amount,
-    description: 'Auction bid on property',
-    performedBy: bidderId,
-  });
+  addTreasuryTransaction(
+    company,
+    {
+      type: 'withdrawal',
+      amount: proposal.amount,
+      description: 'Auction bid on property',
+      userId: bidderId,
+    },
+    tickNumber,
+  );
   proposal.executedBy = bidderId;
   proposal.executedAt = new Date();
 }
@@ -134,7 +139,7 @@ export async function executeCompanyAuctionBid(company, proposal, _actorUserId) 
   // the bid back to the proposal so settlement can tell company bids apart.
   const bidderId = company._id;
   const previousBidderId = applyAuctionBid(auction, company, proposal, bidderId, currentTick);
-  applyCompanyCharge(company, proposal, bidderId);
+  applyCompanyCharge(company, proposal, bidderId, currentTick);
 
   await Promise.all([auction.save(), company.save()]);
 
@@ -368,7 +373,7 @@ export async function recoverAuctionBidProposal(companyId, proposalId, now = Dat
     } else if (bidExists) {
       // Auction bid exists but the company was never debited — complete the
       // company side exactly once (no new auction bid is pushed).
-      applyCompanyCharge(company, proposal, companyBidderId);
+      applyCompanyCharge(company, proposal, companyBidderId, gameState.tickNumber);
       result = await finalizeProposal(company, proposal, 'approved', tally, 'recovered_company_side', gameState);
     } else if (treasuryCharged) {
       // Company was debited but the auction bid is missing — complete the

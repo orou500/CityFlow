@@ -779,35 +779,43 @@ router.post('/company/start', async (req, res) => {
 
     await company.save();
 
-    const constructionProject = await ConstructionProject.create({
-      companyId: company._id,
-      landId: land._id,
-      cityId: land.cityId._id,
-      projectType: project.id,
-      projectName: project.name,
-      category: project.category,
-      totalCost,
-      investedAmount: totalCost,
-      progress: 0,
-      constructionPeriods: project.constructionPeriods,
-      startPeriod: currentPeriod,
-      completionPeriod: currentPeriod + project.constructionPeriods,
-      status: 'under_construction',
-    });
+    try {
+      const constructionProject = await ConstructionProject.create({
+        ownerId: req.user._id,
+        companyId: company._id,
+        landId: land._id,
+        cityId: land.cityId._id,
+        projectType: project.id,
+        projectName: project.name,
+        category: project.category,
+        totalCost,
+        investedAmount: totalCost,
+        progress: 0,
+        constructionPeriods: project.constructionPeriods,
+        startPeriod: currentPeriod,
+        completionPeriod: currentPeriod + project.constructionPeriods,
+        status: 'under_construction',
+      });
 
-    land.developmentLevel = 1;
-    land.forSale = false;
-    await land.save();
+      land.developmentLevel = 1;
+      land.forSale = false;
+      await land.save();
 
-    await invalidateCompany(company._id);
-    await invalidateProperty(land._id);
+      await invalidateCompany(company._id);
+      await invalidateProperty(land._id);
 
-    await processPlayerProgress(req.user._id, 'company_construction_start');
+      await processPlayerProgress(req.user._id, 'company_construction_start');
 
-    res.status(201).json({
-      project: constructionProject,
-      treasury: company.treasury,
-    });
+      res.status(201).json({
+        project: constructionProject,
+        treasury: company.treasury,
+      });
+    } catch (createErr) {
+      company.treasury.balance += totalCost;
+      company.treasury.transactions.pop();
+      await company.save();
+      throw createErr;
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

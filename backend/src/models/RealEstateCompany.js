@@ -35,6 +35,7 @@ const treasuryTransactionSchema = new mongoose.Schema(
         'investment_withdrawal',
         'development',
         'payroll',
+        'refund',
       ],
       required: true,
     },

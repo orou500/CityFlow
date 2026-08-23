@@ -9,6 +9,7 @@ import Property from '../../models/Property.js';
 import Notification from '../../models/Notification.js';
 import ConstructionProject from '../../models/ConstructionProject.js';
 import User from '../../models/User.js';
+import Loan from '../../models/Loan.js';
 import { xpRequiredForLevel } from '../../config/companyProgression.js';
 
 const app = createApp();
@@ -1909,6 +1910,584 @@ describe('Real Estate Companies', () => {
         .set(authHeader(director.token))
         .send({ targetUserId: founderId });
       await assertState('after explicit restore', founderId, 'ceo', 50);
+    });
+  });
+
+  describe('Regression: refund enum + treasury atomicity', () => {
+    it('accepts "refund" as a valid treasury transaction type', async () => {
+      const founder = await createFounder({ balance: 10_000_000 });
+      const { company } = await createTestCompany(founder);
+
+      company.treasury.balance = 500_000;
+      company.treasury.transactions.push({
+        type: 'refund',
+        amount: 100_000,
+        userId: founder.user._id,
+        description: 'Refund for auction settlement',
+      });
+      await expect(company.save()).resolves.toBeTruthy();
+
+      const fresh = await RealEstateCompany.findById(company._id);
+      const refundTx = fresh.treasury.transactions.find((tx) => tx.type === 'refund');
+      expect(refundTx).toBeTruthy();
+      expect(refundTx.amount).toBe(100_000);
+    });
+
+    it('deposit succeeds on company with existing refund transactions', async () => {
+      const founder = await createFounder({ balance: 20_000_000 });
+      const { company, token } = await createTestCompany(founder);
+
+      company.treasury.balance = 500_000;
+      company.treasury.transactions.push({
+        type: 'refund',
+        amount: 100_000,
+        userId: founder.user._id,
+        description: 'Refund for auction settlement',
+      });
+      await company.save();
+
+      const balanceBefore = (await User.findById(founder.user._id)).balance;
+      const res = await request(app)
+        .post(`/real-estate-companies/${company._id}/treasury/deposit`)
+        .set(authHeader(token))
+        .send({ amount: 200_000 });
+
+      expect(res.status).toBe(200);
+      expect(res.body.treasury.balance).toBe(700_000);
+
+      const userAfter = await User.findById(founder.user._id);
+      expect(userAfter.balance).toBe(balanceBefore - 200_000);
+    });
+
+    it('deposit rolls back user balance if company save fails', async () => {
+      const founder = await createFounder({ balance: 10_000_000 });
+      const { company, token } = await createTestCompany(founder);
+
+      const balanceBefore = (await User.findById(founder.user._id)).balance;
+
+      const originalSave = RealEstateCompany.prototype.save;
+      RealEstateCompany.prototype.save = async function () {
+        throw new Error('Simulated company save failure');
+      };
+
+      const res = await request(app)
+        .post(`/real-estate-companies/${company._id}/treasury/deposit`)
+        .set(authHeader(token))
+        .send({ amount: 50_000 });
+
+      RealEstateCompany.prototype.save = originalSave;
+
+      expect(res.status).toBe(500);
+      const userAfter = await User.findById(founder.user._id);
+      expect(userAfter.balance).toBe(balanceBefore);
+    });
+
+    it('withdraw rolls back company treasury if recipient save fails', async () => {
+      const founder = await createFounder({ balance: 10_000_000 });
+      const { company, token } = await createTestCompany(founder);
+
+      await request(app)
+        .post(`/real-estate-companies/${company._id}/treasury/deposit`)
+        .set(authHeader(token))
+        .send({ amount: 1_000_000 });
+
+      const treasuryBefore = (await RealEstateCompany.findById(company._id)).treasury.balance;
+      const recipient = await createAuthenticatedUser({ balance: 0 });
+      await addMemberToCompany(company._id, token, recipient);
+
+      const originalUserSave = User.prototype.save;
+      User.prototype.save = async function () {
+        throw new Error('Simulated recipient save failure');
+      };
+
+      const res = await request(app)
+        .post(`/real-estate-companies/${company._id}/treasury/withdraw`)
+        .set(authHeader(token))
+        .send({ amount: 100_000, targetUserId: recipient.user._id.toString() });
+
+      User.prototype.save = originalUserSave;
+
+      expect(res.status).toBe(500);
+      const companyAfter = await RealEstateCompany.findById(company._id);
+      expect(companyAfter.treasury.balance).toBe(treasuryBefore);
+    });
+  });
+
+  describe('Regression: company XP progression', () => {
+    it('levels up company when XP exceeds threshold via pre-save hook', async () => {
+      const { xpRequiredForNextLevel } = await import('../../config/companyProgression.js');
+
+      const founder = await createFounder({ balance: 10_000_000 });
+      const { company } = await createTestCompany(founder);
+
+      expect(company.level).toBe(1);
+
+      const xpNeeded = xpRequiredForNextLevel(company.level);
+      company.xp = xpNeeded + 100;
+      await company.save();
+
+      const fresh = await RealEstateCompany.findById(company._id);
+      expect(fresh.level).toBeGreaterThanOrEqual(2);
+      expect(fresh.xp).toBe(xpNeeded + 100);
+    });
+  });
+
+  describe('Regression: treasury schema validation — all transaction types', () => {
+    it('accepts all 15 valid transaction types', async () => {
+      const founder = await createFounder({ balance: 100_000_000 });
+      const { company } = await createTestCompany(founder);
+
+      const validTypes = [
+        'deposit',
+        'withdrawal',
+        'rent_income',
+        'loan_disbursement',
+        'loan_payment',
+        'property_purchase',
+        'property_sale',
+        'construction',
+        'operating_fee',
+        'contract_reward',
+        'investment_return',
+        'investment_withdrawal',
+        'development',
+        'payroll',
+        'refund',
+      ];
+
+      for (const type of validTypes) {
+        company.treasury.transactions.push({
+          type,
+          amount: 1000,
+          description: `Test ${type}`,
+          tick: 100,
+        });
+      }
+
+      await expect(company.save()).resolves.toBeTruthy();
+
+      const fresh = await RealEstateCompany.findById(company._id);
+      const savedTypes = fresh.treasury.transactions.map((tx) => tx.type);
+      for (const type of validTypes) {
+        expect(savedTypes).toContain(type);
+      }
+    });
+
+    it('rejects an invalid transaction type', async () => {
+      const founder = await createFounder({ balance: 100_000_000 });
+      const { company } = await createTestCompany(founder);
+
+      company.treasury.transactions.push({
+        type: 'bogus_type',
+        amount: 1000,
+        description: 'Should fail',
+        tick: 100,
+      });
+
+      await expect(company.save()).rejects.toThrow(/is not a valid enum value/i);
+    });
+  });
+
+  describe('Regression: company with refund history can still operate', () => {
+    it('accepts new deposits and levels up despite having refund transactions', async () => {
+      const { xpRequiredForNextLevel } = await import('../../config/companyProgression.js');
+
+      const founder = await createFounder({ balance: 100_000_000 });
+      const { company, token } = await createTestCompany(founder);
+
+      company.treasury.transactions.push(
+        { type: 'refund', amount: 50_000, description: 'Auction refund', tick: 90 },
+        { type: 'refund', amount: 25_000, description: 'Another refund', tick: 91 },
+      );
+      company.treasury.balance = 75_000;
+      await company.save();
+
+      const depositRes = await request(app)
+        .post(`/real-estate-companies/${company._id}/treasury/deposit`)
+        .set(authHeader(token))
+        .send({ amount: 200_000 });
+
+      expect(depositRes.status).toBe(200);
+      expect(depositRes.body.treasury.balance).toBe(275_000);
+
+      const xpNeeded = xpRequiredForNextLevel(company.level);
+      company.xp = xpNeeded + 500;
+      await company.save();
+
+      const fresh = await RealEstateCompany.findById(company._id);
+      expect(fresh.level).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  describe('Regression: repair script idempotency', () => {
+    it('repair refund guard (DB-level $not/$elemMatch) cannot double-refund', async () => {
+      const founder = await createFounder({ balance: 10_000_000 });
+      const { company } = await createTestCompany(founder);
+
+      company.treasury.balance = 5_000_000;
+      company.treasury.transactions.push({
+        type: 'property_purchase',
+        amount: 1_000_000,
+        description: 'Test purchase',
+        tick: 50,
+      });
+      await company.save();
+
+      const EXPECTED_AMOUNT = 1_404_146;
+      const AUCTION_ID = 'test-auction';
+      const { default: mongoose } = await import('mongoose');
+      const db = mongoose.connection.db;
+
+      const refundFilter = {
+        _id: company._id,
+        'treasury.transactions': {
+          $not: {
+            $elemMatch: {
+              type: 'refund',
+              amount: EXPECTED_AMOUNT,
+              description: { $regex: AUCTION_ID },
+            },
+          },
+        },
+      };
+      const refundOp = () =>
+        db.collection('realestatecompanies').updateOne(refundFilter, {
+          $inc: { 'treasury.balance': EXPECTED_AMOUNT },
+          $push: {
+            'treasury.transactions': {
+              type: 'refund',
+              amount: EXPECTED_AMOUNT,
+              userId: company._id,
+              description: `Refund for cancelled company-auction settlement correction (auction ${AUCTION_ID})`,
+              tick: 100,
+              createdAt: new Date(),
+            },
+          },
+        });
+
+      const first = await refundOp();
+      expect(first.modifiedCount).toBe(1);
+
+      const second = await refundOp();
+      expect(second.modifiedCount).toBe(0);
+
+      const afterFirst = await RealEstateCompany.findById(company._id);
+      expect(afterFirst.treasury.balance).toBe(5_000_000 + EXPECTED_AMOUNT);
+
+      await refundOp();
+
+      const afterSecond = await RealEstateCompany.findById(company._id);
+      expect(afterSecond.treasury.balance).toBe(5_000_000 + EXPECTED_AMOUNT);
+
+      const refundCount = afterSecond.treasury.transactions.filter(
+        (tx) => tx.type === 'refund' && tx.amount === EXPECTED_AMOUNT,
+      ).length;
+      expect(refundCount).toBe(1);
+    });
+  });
+
+  describe('Regression: deposit/withdraw atomicity on DB failure', () => {
+    it('deposit does not steal money if company save throws', async () => {
+      const founder = await createFounder({ balance: 10_000_000 });
+      const { company, token } = await createTestCompany(founder);
+
+      const balanceBefore = (await User.findById(founder.user._id)).balance;
+      const treasuryBefore = (await RealEstateCompany.findById(company._id)).treasury.balance;
+
+      const origSave = RealEstateCompany.prototype.save;
+      RealEstateCompany.prototype.save = async function () {
+        throw new Error('Simulated save failure');
+      };
+
+      try {
+        const res = await request(app)
+          .post(`/real-estate-companies/${company._id}/treasury/deposit`)
+          .set(authHeader(token))
+          .send({ amount: 500_000 });
+
+        expect(res.status).toBe(500);
+
+        const userAfter = await User.findById(founder.user._id);
+        expect(userAfter.balance).toBe(balanceBefore);
+
+        const companyAfter = await RealEstateCompany.findById(company._id);
+        expect(companyAfter.treasury.balance).toBe(treasuryBefore);
+      } finally {
+        RealEstateCompany.prototype.save = origSave;
+      }
+    });
+
+    it('withdrawal does not lose money if recipient save throws', async () => {
+      const founder = await createFounder({ balance: 10_000_000 });
+      const { company, token } = await createTestCompany(founder);
+
+      const member = await createAuthenticatedUser({ balance: 0, level: 1 });
+      await addMemberToCompany(company._id, founder.token, member);
+
+      company.treasury.balance = 5_000_000;
+      await company.save();
+
+      const treasuryBefore = (await RealEstateCompany.findById(company._id)).treasury.balance;
+
+      const origUserSave = User.prototype.save;
+      User.prototype.save = async function () {
+        throw new Error('Simulated user save failure');
+      };
+
+      try {
+        const res = await request(app)
+          .post(`/real-estate-companies/${company._id}/treasury/withdraw`)
+          .set(authHeader(token))
+          .send({ amount: 100_000, targetUserId: member.user._id.toString() });
+
+        expect(res.status).toBe(500);
+
+        const companyAfter = await RealEstateCompany.findById(company._id);
+        expect(companyAfter.treasury.balance).toBe(treasuryBefore);
+
+        const userAfter = await User.findById(member.user._id);
+        expect(userAfter.balance).toBe(0);
+      } finally {
+        User.prototype.save = origUserSave;
+      }
+    });
+  });
+
+  describe('Regression: property purchase atomicity', () => {
+    it('rolls back treasury and user balance if property save fails after company save', async () => {
+      const founder = await createFounder({ balance: 100_000_000 });
+      const { company, token } = await createTestCompany(founder);
+
+      const sellerData = await createAuthenticatedUser({ balance: 0, level: 1 });
+      await addMemberToCompany(company._id, token, sellerData);
+      const prop = await createTestProperty({
+        ownerId: sellerData.user._id,
+        currentPrice: 1_000_000,
+        basePrice: 1_000_000,
+        forSale: true,
+      });
+
+      company.treasury.balance = 10_000_000;
+      await company.save();
+
+      const treasuryBefore = (await RealEstateCompany.findById(company._id)).treasury.balance;
+      const sellerBalanceBefore = (await User.findById(sellerData.user._id)).balance;
+
+      const origPropSave = Property.prototype.save;
+      Property.prototype.save = async function () {
+        throw new Error('Simulated property save failure');
+      };
+
+      try {
+        const res = await request(app)
+          .post(`/real-estate-companies/${company._id}/properties/purchase`)
+          .set(authHeader(token))
+          .send({ propertyId: prop._id });
+
+        expect(res.status).toBe(500);
+
+        const companyAfter = await RealEstateCompany.findById(company._id);
+        expect(companyAfter.treasury.balance).toBe(treasuryBefore);
+
+        const sellerAfter = await User.findById(sellerData.user._id);
+        expect(sellerAfter.balance).toBe(sellerBalanceBefore);
+
+        const propAfter = await Property.findById(prop._id);
+        expect(propAfter.ownerId.toString()).toBe(sellerData.user._id.toString());
+      } finally {
+        Property.prototype.save = origPropSave;
+      }
+    });
+
+    it('rolls back treasury and XP if property save fails during sale', async () => {
+      const founder = await createFounder({ balance: 100_000_000 });
+      const { company, token } = await createTestCompany(founder);
+
+      const prop = await createTestProperty({
+        ownerId: founder.user._id,
+        companyId: company._id,
+        currentPrice: 1_000_000,
+        basePrice: 1_000_000,
+        forSale: false,
+      });
+
+      company.treasury.balance = 10_000_000;
+      company.stats.propertiesOwned = 1;
+      await company.save();
+
+      const treasuryBefore = (await RealEstateCompany.findById(company._id)).treasury.balance;
+      const xpBefore = (await RealEstateCompany.findById(company._id)).xp;
+
+      const origPropSave = Property.prototype.save;
+      Property.prototype.save = async function () {
+        throw new Error('Simulated property save failure');
+      };
+
+      try {
+        const res = await request(app)
+          .post(`/real-estate-companies/${company._id}/properties/${prop._id}/sell`)
+          .set(authHeader(token))
+          .send({});
+
+        expect(res.status).toBe(500);
+
+        const companyAfter = await RealEstateCompany.findById(company._id);
+        expect(companyAfter.treasury.balance).toBe(treasuryBefore);
+        expect(companyAfter.xp).toBe(xpBefore);
+
+        const propAfter = await Property.findById(prop._id);
+        expect(propAfter.companyId.toString()).toBe(company._id.toString());
+      } finally {
+        Property.prototype.save = origPropSave;
+      }
+    });
+  });
+
+  describe('Regression: success-path business rules (unchanged behavior when all saves succeed)', () => {
+    it('direct purchase success: seller paid exactly price, treasury debited, XP, stats and ownership', async () => {
+      const founder = await createFounder({ balance: 100_000_000 });
+      const { company, token } = await createTestCompany(founder);
+
+      const sellerData = await createAuthenticatedUser({ balance: 0, level: 1 });
+      const prop = await createTestProperty({
+        ownerId: sellerData.user._id,
+        currentPrice: 100_000,
+        basePrice: 100_000,
+        forSale: true,
+      });
+
+      company.treasury.balance = 10_000_000;
+      company.stats.propertiesOwned = 0;
+      company.xp = 0;
+      await company.save();
+
+      const res = await request(app)
+        .post(`/real-estate-companies/${company._id}/properties/purchase`)
+        .set(authHeader(token))
+        .send({ propertyId: prop._id });
+
+      expect(res.status).toBe(200);
+
+      const companyAfter = await RealEstateCompany.findById(company._id);
+      expect(companyAfter.treasury.balance).toBe(9_900_000);
+      expect(companyAfter.stats.propertiesOwned).toBe(1);
+      expect(companyAfter.xp).toBe(50);
+      expect(companyAfter.level).toBe(1);
+
+      const sellerAfter = await User.findById(sellerData.user._id);
+      expect(sellerAfter.balance).toBe(100_000);
+      expect(sellerAfter.ownedProperties.some((p) => p.toString() === prop._id.toString())).toBe(false);
+
+      const propAfter = await Property.findById(prop._id);
+      expect(propAfter.ownerId).toBeFalsy();
+      expect(propAfter.companyId.toString()).toBe(company._id.toString());
+      expect(propAfter.forSale).toBe(false);
+
+      const purchaseTx = companyAfter.treasury.transactions.find((tx) => tx.type === 'property_purchase');
+      expect(purchaseTx).toBeTruthy();
+      expect(purchaseTx.amount).toBe(100_000);
+      expect(purchaseTx.userId.toString()).toBe(founder.user._id.toString());
+    });
+
+    it('sale success: proceeds credited to treasury, XP, stats and ownership cleared', async () => {
+      const founder = await createFounder({ balance: 100_000_000 });
+      const { company, token } = await createTestCompany(founder);
+
+      const prop = await createTestProperty({
+        ownerId: null,
+        companyId: company._id,
+        currentPrice: 1_000_000,
+        basePrice: 1_000_000,
+        forSale: false,
+      });
+
+      company.treasury.balance = 10_000_000;
+      company.stats.propertiesOwned = 1;
+      company.xp = 0;
+      await company.save();
+
+      const res = await request(app)
+        .post(`/real-estate-companies/${company._id}/properties/${prop._id}/sell`)
+        .set(authHeader(token))
+        .send({});
+
+      expect(res.status).toBe(200);
+
+      const companyAfter = await RealEstateCompany.findById(company._id);
+      expect(companyAfter.treasury.balance).toBe(11_000_000);
+      expect(companyAfter.stats.propertiesOwned).toBe(0);
+      expect(companyAfter.xp).toBe(300);
+      expect(companyAfter.level).toBe(1);
+
+      const propAfter = await Property.findById(prop._id);
+      expect(propAfter.companyId).toBeFalsy();
+      expect(propAfter.ownerId).toBeFalsy();
+      expect(propAfter.forSale).toBe(true);
+
+      const saleTx = companyAfter.treasury.transactions.find((tx) => tx.type === 'property_sale');
+      expect(saleTx).toBeTruthy();
+      expect(saleTx.amount).toBe(1_000_000);
+      expect(saleTx.userId.toString()).toBe(founder.user._id.toString());
+    });
+
+    it('loan repayment success: partial then full repayment with exact principal/treasury math', async () => {
+      const founder = await createFounder({ balance: 100_000_000 });
+      const { company, token } = await createTestCompany(founder);
+
+      const loan = await Loan.create({
+        userId: founder.user._id,
+        companyId: company._id,
+        type: 'business',
+        principal: 200_000,
+        remainingBalance: 200_000,
+        interestRate: 0.1,
+        durationTicks: 24,
+        ticksRemaining: 24,
+        paymentPerTick: 10_000,
+        active: true,
+      });
+
+      company.treasury.balance = 10_000_000;
+      company.stats.totalLoanBalance = 200_000;
+      company.xp = 0;
+      await company.save();
+
+      const partial = await request(app)
+        .post(`/real-estate-companies/${company._id}/loans/${loan._id}/repay`)
+        .set(authHeader(token))
+        .send({ amount: 100_000 });
+      expect(partial.status).toBe(200);
+
+      let companyAfter = await RealEstateCompany.findById(company._id);
+      let loanAfter = await Loan.findById(loan._id);
+      expect(companyAfter.treasury.balance).toBe(9_900_000);
+      expect(companyAfter.stats.totalLoanBalance).toBe(100_000);
+      expect(companyAfter.xp).toBe(50);
+      expect(loanAfter.remainingBalance).toBe(100_000);
+      expect(loanAfter.active).toBe(true);
+      expect(companyAfter.stats.loansRepaid || 0).toBe(0);
+
+      const full = await request(app)
+        .post(`/real-estate-companies/${company._id}/loans/${loan._id}/repay`)
+        .set(authHeader(token))
+        .send({ amount: 100_000 });
+      expect(full.status).toBe(200);
+
+      companyAfter = await RealEstateCompany.findById(company._id);
+      loanAfter = await Loan.findById(loan._id);
+      expect(companyAfter.treasury.balance).toBe(9_800_000);
+      expect(companyAfter.stats.totalLoanBalance).toBe(0);
+      expect(companyAfter.xp).toBe(100);
+      expect(companyAfter.level).toBe(1);
+      expect(loanAfter.remainingBalance).toBe(0);
+      expect(loanAfter.active).toBe(false);
+      expect(loanAfter.ticksRemaining).toBe(0);
+      expect(companyAfter.stats.loansRepaid).toBe(1);
+
+      const repayTxs = companyAfter.treasury.transactions.filter((tx) => tx.type === 'loan_payment');
+      expect(repayTxs.length).toBe(2);
+      expect(repayTxs[0].amount).toBe(100_000);
+      expect(repayTxs[1].amount).toBe(100_000);
     });
   });
 });
