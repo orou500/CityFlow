@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import mongoose from 'mongoose';
 import City from '../../models/City.js';
 import District from '../../models/District.js';
 import Property from '../../models/Property.js';

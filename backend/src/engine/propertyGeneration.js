@@ -70,8 +70,10 @@ export async function generateProperties() {
       weight: d.demandIndex * (1 + d.growthRate),
     }));
     const totalWeight = districtWeights.reduce((s, dw) => s + dw.weight, 0);
+    let cumulativeWeight = 0;
     for (const dw of districtWeights) {
-      dw.cumulative = (dw.cumulative || 0) + dw.weight / totalWeight;
+      cumulativeWeight += dw.weight / totalWeight;
+      dw.cumulative = cumulativeWeight;
     }
 
     const unsoldCount = await Property.countDocuments({
