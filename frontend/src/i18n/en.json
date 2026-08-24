@@ -526,7 +526,6 @@
     "Only developed properties can be upgraded": "Only developed properties can be upgraded",
     "Invalid upgrade type": "Invalid upgrade type",
     "Not authorized": "Not authorized",
-    "You cannot offer on your own property": "You cannot offer on your own property",
     "landTooSmall": "Land too small. Minimum size required: {{size}} sq ft",
     "insufficientFundsDev": "Insufficient funds. Required: ${{required}}, Balance: ${{balance}}",
     "insufficientFundsSimple": "Insufficient funds. Required: ${{required}}",
@@ -623,7 +622,6 @@
     "reducedRisk": "Reduced Risk",
     "rent": "Rent",
     "condition": "Condition",
-    "units": "Units",
     "propertyImprovements": "Property Improvements",
     "improvementsDescription": "Improve your properties to increase their rating and value. Each improvement takes time to complete and provides permanent bonuses.",
     "noBuildingsForImprovement": "You don't have any developed buildings to improve.",
@@ -670,9 +668,18 @@
       }
     },
     "cat": {
-      "residential": { "label": "Residential", "description": "Build homes and apartments for steady rental income" },
-      "commercial": { "label": "Commercial", "description": "Build offices and retail spaces for higher income" },
-      "hospitality": { "label": "Hospitality", "description": "Build hotels and resorts for tourism-based income" }
+      "residential": {
+        "label": "Residential",
+        "description": "Build homes and apartments for steady rental income"
+      },
+      "commercial": {
+        "label": "Commercial",
+        "description": "Build offices and retail spaces for higher income"
+      },
+      "hospitality": {
+        "label": "Hospitality",
+        "description": "Build hotels and resorts for tourism-based income"
+      }
     },
     "proj": {
       "apartment_building": {
@@ -683,15 +690,30 @@
         "name": "Luxury Apartments",
         "description": "High-end luxury apartment tower with 100 units"
       },
-      "housing_complex": { "name": "Housing Complex", "description": "Large housing complex with 200 units" },
+      "housing_complex": {
+        "name": "Housing Complex",
+        "description": "Large housing complex with 200 units"
+      },
       "office_building": {
         "name": "Office Building",
         "description": "Commercial office building with premium rental space"
       },
-      "shopping_center": { "name": "Shopping Center", "description": "Large shopping center with retail spaces" },
-      "retail_complex": { "name": "Retail Complex", "description": "Small retail complex with storefronts" },
-      "hotel": { "name": "Hotel", "description": "Full-service hotel with 150 rooms" },
-      "resort": { "name": "Resort", "description": "Luxury resort destination" }
+      "shopping_center": {
+        "name": "Shopping Center",
+        "description": "Large shopping center with retail spaces"
+      },
+      "retail_complex": {
+        "name": "Retail Complex",
+        "description": "Small retail complex with storefronts"
+      },
+      "hotel": {
+        "name": "Hotel",
+        "description": "Full-service hotel with 150 rooms"
+      },
+      "resort": {
+        "name": "Resort",
+        "description": "Luxury resort destination"
+      }
     }
   },
   "projectDetail": {
@@ -878,7 +900,7 @@
     "restoreWarning": "This will overwrite the current database. A backup will be created automatically before restore.",
     "logs": "Logs",
     "backupLogs": "Backup Logs",
-    "noLogs": "No logs available",
+    "noLogs": "No activity found",
     "disabled": "Disabled",
     "demographicsTab": "Demographics",
     "economicCondition": "Economic Condition",
@@ -892,7 +914,6 @@
     "deletePermanently": "Delete Permanently",
     "expired": "Expired",
     "lastLogin": "Last Login",
-    "never": "Never",
     "viewLogs": "Logs",
     "totalUsersCount": "Total users: {{total}}",
     "pageOf": "Page {{page}} of {{total}}",
@@ -900,10 +921,8 @@
     "last": "Last",
     "allCategories": "All categories",
     "searchLogs": "Search logs...",
-    "noLogs": "No activity found",
     "totalLogs": "Total events: {{total}}",
     "date": "Date",
-    "category": "Category",
     "event": "Event",
     "amount": "Amount",
     "actor": "Source",
@@ -1330,7 +1349,6 @@
     "loans": "Loans",
     "friendsAdded": "Friends",
     "upgrades": "Upgrades",
-    "construction": "Construction",
     "seasons": "Seasons Played",
     "connectedAccounts": "Connected Accounts",
     "linked": "Linked",
@@ -1957,7 +1975,7 @@
     "season": "Season #{{number}}",
     "rewards": {
       "endOfSeason": "Season rewards are distributed when the season ends",
-      "yourReward": "You are ranked #{{rank}} \u2014 you could earn {{amount}} at season end!"
+      "yourReward": "You are ranked #{{rank}} — you could earn {{amount}} at season end!"
     },
     "categories": {
       "netWorth": "Net Worth",
@@ -2132,7 +2150,7 @@
     "auditIPOListed": "IPO listed",
     "auditPropertyPurchaseRequested": "property purchase proposed",
     "auditPropertyPurchaseVoteCast": "property purchase vote cast",
-    "auditInvestmentCreated": "created an investment",
+    "auditInvestmentCreated": "created an investment in {{name}} for {{principal}}",
     "auditInvestmentProposed": "proposed an investment",
     "auditInvestmentVoteCast": "voted on investment proposal",
     "auditInvestmentApproved": "investment approved",
@@ -2326,10 +2344,7 @@
     "contracts": "Contracts",
     "contractsDescription": "City contracts provide opportunities for companies to earn rewards by completing city projects. Accept a contract to begin.",
     "noContracts": "No contracts available",
-    "contractStatusAvailable": "Available",
     "contractStatusAccepted": "In Progress",
-    "contractStatusCompleted": "Completed",
-    "contractStatusFailed": "Failed",
     "accept": "Accept",
     "reward": "Reward",
     "cost": "Cost",
@@ -2341,14 +2356,12 @@
     "noInvestments": "No investments yet",
     "return": "Annual Return",
     "minInvestment": "Min Investment",
-    "principal": "Principal",
     "currentValue": "Current Value",
     "duration": "Duration",
     "risk": "Risk",
     "investmentStatusActive": "Active",
     "investmentStatusMatured": "Matured",
     "investmentStatusWithdrawn": "Withdrawn",
-    "auditInvestmentCreated": "created an investment in {{name}} for {{principal}}",
     "developmentProjects": "Development Projects",
     "developmentProjectsDescription": "Start construction projects on company-owned land. Requires Level 5+.",
     "startProject": "Start Development Project",
@@ -2895,71 +2908,158 @@
       "chain_property_empire": {
         "name": "First Property Empire",
         "description": "Master the property development loop",
-        "step1": { "name": "Acquire", "description": "Purchase your first property" },
-        "step2": { "name": "Improve", "description": "Upgrade one of your properties" },
-        "step3": { "name": "Earn", "description": "Collect rent from one property" },
-        "step4": { "name": "Portfolio", "description": "Own 3 properties simultaneously" }
+        "step1": {
+          "name": "Acquire",
+          "description": "Purchase your first property"
+        },
+        "step2": {
+          "name": "Improve",
+          "description": "Upgrade one of your properties"
+        },
+        "step3": {
+          "name": "Earn",
+          "description": "Collect rent from one property"
+        },
+        "step4": {
+          "name": "Portfolio",
+          "description": "Own 3 properties simultaneously"
+        }
       },
       "chain_auction_apprentice": {
         "name": "Auction Apprentice",
         "description": "Learn how auctions work",
-        "step1": { "name": "Watch", "description": "Watch an auction" },
-        "step2": { "name": "Bid", "description": "Place a valid auction bid" },
-        "step3": { "name": "Compete", "description": "Bid in an auction where another player also bid" },
-        "step4": { "name": "Win", "description": "Win an auction" }
+        "step1": {
+          "name": "Watch",
+          "description": "Watch an auction"
+        },
+        "step2": {
+          "name": "Bid",
+          "description": "Place a valid auction bid"
+        },
+        "step3": {
+          "name": "Compete",
+          "description": "Bid in an auction where another player also bid"
+        },
+        "step4": {
+          "name": "Win",
+          "description": "Win an auction"
+        }
       },
       "chain_corporate_founder": {
         "name": "Corporate Founder",
         "description": "Build your company from the ground up",
-        "step1": { "name": "Create", "description": "Create or join a Real Estate Company" },
-        "step2": { "name": "Build Together", "description": "Have your company own at least 2 properties" },
-        "step3": { "name": "Operate", "description": "Fully staff one company property" },
-        "step4": { "name": "Grow", "description": "Reach Company Level 10" }
+        "step1": {
+          "name": "Create",
+          "description": "Create or join a Real Estate Company"
+        },
+        "step2": {
+          "name": "Build Together",
+          "description": "Have your company own at least 2 properties"
+        },
+        "step3": {
+          "name": "Operate",
+          "description": "Fully staff one company property"
+        },
+        "step4": {
+          "name": "Grow",
+          "description": "Reach Company Level 10"
+        }
       },
       "chain_corporate_auction": {
         "name": "Corporate Auction",
         "description": "Master company-based auction bidding",
-        "step1": { "name": "Proposal", "description": "Submit a company auction proposal" },
-        "step2": { "name": "Approval", "description": "Get a company auction proposal approved" },
-        "step3": { "name": "Execute", "description": "Successfully execute a company auction bid" },
-        "step4": { "name": "Acquisition", "description": "Win an auction using your company" }
+        "step1": {
+          "name": "Proposal",
+          "description": "Submit a company auction proposal"
+        },
+        "step2": {
+          "name": "Approval",
+          "description": "Get a company auction proposal approved"
+        },
+        "step3": {
+          "name": "Execute",
+          "description": "Successfully execute a company auction bid"
+        },
+        "step4": {
+          "name": "Acquisition",
+          "description": "Win an auction using your company"
+        }
       },
       "chain_market_investor": {
         "name": "Market Investor",
         "description": "Learn stock market investing",
-        "step1": { "name": "Invest", "description": "Purchase shares in a company" },
-        "step2": { "name": "Build Position", "description": "Own shares in 3 different companies" },
-        "step3": { "name": "Hold", "description": "Maintain a stock position for at least one world month" },
-        "step4": { "name": "Dividend", "description": "Receive a dividend" }
+        "step1": {
+          "name": "Invest",
+          "description": "Purchase shares in a company"
+        },
+        "step2": {
+          "name": "Build Position",
+          "description": "Own shares in 3 different companies"
+        },
+        "step3": {
+          "name": "Hold",
+          "description": "Maintain a stock position for at least one world month"
+        },
+        "step4": {
+          "name": "Dividend",
+          "description": "Receive a dividend"
+        }
       },
       "chain_global_explorer": {
         "name": "Global Explorer",
         "description": "Explore districts and cities around the world",
-        "step1": { "name": "Discover", "description": "Explore your first district" },
-        "step2": { "name": "Expand", "description": "Discover 3 different districts" },
-        "step3": { "name": "Global", "description": "Own properties in 3 different cities" },
-        "step4": { "name": "World Traveler", "description": "Own properties in 5 different cities" }
+        "step1": {
+          "name": "Discover",
+          "description": "Explore your first district"
+        },
+        "step2": {
+          "name": "Expand",
+          "description": "Discover 3 different districts"
+        },
+        "step3": {
+          "name": "Global",
+          "description": "Own properties in 3 different cities"
+        },
+        "step4": {
+          "name": "World Traveler",
+          "description": "Own properties in 5 different cities"
+        }
       },
       "chain_property_mogul": {
         "name": "Property Mogul",
         "description": "Advanced property development mastery",
-        "step1": { "name": "Upgrade", "description": "Complete 3 property upgrades" },
-        "step2": { "name": "Premium Portfolio", "description": "Own 5 upgraded properties" },
+        "step1": {
+          "name": "Upgrade",
+          "description": "Complete 3 property upgrades"
+        },
+        "step2": {
+          "name": "Premium Portfolio",
+          "description": "Own 5 upgraded properties"
+        },
         "step3": {
           "name": "Value Creator",
           "description": "Increase your portfolio value by $500,000 through development"
         },
-        "step4": { "name": "Tycoon", "description": "Own a property portfolio worth at least $2,000,000" }
+        "step4": {
+          "name": "Tycoon",
+          "description": "Own a property portfolio worth at least $2,000,000"
+        }
       },
       "chain_global_empire": {
         "name": "Global Real Estate Empire",
         "description": "The ultimate cross-system endgame challenge",
-        "step1": { "name": "Diversify", "description": "Own real estate and stocks simultaneously" },
+        "step1": {
+          "name": "Diversify",
+          "description": "Own real estate and stocks simultaneously"
+        },
         "step2": {
           "name": "Corporate Expansion",
           "description": "Have your company own properties in 2 different cities"
         },
-        "step3": { "name": "Auction Empire", "description": "Win an auction using your company" },
+        "step3": {
+          "name": "Auction Empire",
+          "description": "Win an auction using your company"
+        },
         "step4": {
           "name": "Market Power",
           "description": "Receive a dividend while your company owns at least 3 properties"
@@ -3016,5 +3116,78 @@
       "stocks": "Stocks",
       "prestige": "Prestige"
     }
+  },
+  "cityNames": {
+    "new-york": "New York",
+    "los-angeles": "Los Angeles",
+    "miami": "Miami",
+    "chicago": "Chicago",
+    "san-francisco": "San Francisco",
+    "london": "London",
+    "manchester": "Manchester",
+    "birmingham": "Birmingham",
+    "paris": "Paris",
+    "lyon": "Lyon",
+    "marseille": "Marseille",
+    "berlin": "Berlin",
+    "munich": "Munich",
+    "frankfurt": "Frankfurt",
+    "hamburg": "Hamburg",
+    "dubai": "Dubai",
+    "abu-dhabi": "Abu Dhabi",
+    "tokyo": "Tokyo",
+    "osaka": "Osaka",
+    "kyoto": "Kyoto",
+    "yokohama": "Yokohama",
+    "toronto": "Toronto",
+    "vancouver": "Vancouver",
+    "montreal": "Montreal",
+    "sydney": "Sydney",
+    "melbourne": "Melbourne",
+    "brisbane": "Brisbane",
+    "singapore": "Singapore",
+    "seoul": "Seoul",
+    "busan": "Busan",
+    "madrid": "Madrid",
+    "barcelona": "Barcelona",
+    "rome": "Rome",
+    "milan": "Milan",
+    "amsterdam": "Amsterdam",
+    "rotterdam": "Rotterdam",
+    "zurich": "Zurich",
+    "geneva": "Geneva",
+    "tel-aviv": "Tel Aviv",
+    "jerusalem": "Jerusalem",
+    "haifa": "Haifa",
+    "sao-paulo": "São Paulo",
+    "rio-de-janeiro": "Rio de Janeiro",
+    "mexico-city": "Mexico City",
+    "mumbai": "Mumbai",
+    "delhi": "Delhi",
+    "bangalore": "Bangalore",
+    "hong-kong": "Hong Kong",
+    "istanbul": "Istanbul"
+  },
+  "countryNames": {
+    "usa": "USA",
+    "uk": "UK",
+    "france": "France",
+    "germany": "Germany",
+    "uae": "UAE",
+    "japan": "Japan",
+    "canada": "Canada",
+    "australia": "Australia",
+    "singapore": "Singapore",
+    "south-korea": "South Korea",
+    "spain": "Spain",
+    "italy": "Italy",
+    "netherlands": "Netherlands",
+    "switzerland": "Switzerland",
+    "israel": "Israel",
+    "brazil": "Brazil",
+    "mexico": "Mexico",
+    "india": "India",
+    "china": "China",
+    "turkey": "Turkey"
   }
 }

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import L from 'leaflet';
 import { formatMoney } from '../utils/format';
+import { localizeCityName, localizeCountryName } from '../utils/cityNames';
 
 function getColor(value) {
   if (value >= 1.5) return '#10b981';
@@ -25,7 +26,7 @@ function getEventImpactLabel(event) {
   return 'neutral';
 }
 
-function createCountryIcon(country) {
+function createCountryIcon(country, countryName) {
   const color = getColor(country.avgDemand);
   const { cities } = country;
   return L.divIcon({
@@ -33,7 +34,7 @@ function createCountryIcon(country) {
     html: `
       <div class="country-pin">
         <div class="country-dot" style="background:${color};box-shadow:0 0 0 3px ${color}33,0 0 12px ${color}44"></div>
-        <div class="country-badge">${country.name}</div>
+        <div class="country-badge">${countryName}</div>
         <div class="country-meta">${cities.length} city${cities.length > 1 ? 's' : ''}</div>
       </div>
     `,
@@ -70,7 +71,7 @@ function CountryPopup({ country, events }) {
     <div className="min-w-[240px] max-w-[280px]">
       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-200 dark:border-gray-700">
         <div className="w-3 h-3 rounded-full shrink-0" style={{ background: getColor(country.avgDemand) }} />
-        <h3 className="font-bold text-base text-gray-900 dark:text-white">{country.name}</h3>
+        <h3 className="font-bold text-base text-gray-900 dark:text-white">{localizeCountryName(country.name, t)}</h3>
       </div>
 
       <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs mb-3">
@@ -126,7 +127,7 @@ function CountryPopup({ country, events }) {
               onClick={() => navigate(`/city/${city._id}`)}
               className="w-full flex items-center justify-between px-2 py-1 rounded text-xs hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left"
             >
-              <span className="text-gray-700 dark:text-gray-300">{city.name}</span>
+              <span className="text-gray-700 dark:text-gray-300">{localizeCityName(city.name, t)}</span>
               <span className="text-gray-400 dark:text-gray-500">{formatMoney(city.avgPrice)}</span>
             </button>
           ))}
@@ -159,7 +160,7 @@ function EventPopup({ event, countryName }) {
       <div className="space-y-1.5 text-sm">
         <div className="flex items-center gap-2">
           <span className="text-gray-400 w-5 shrink-0 text-center">🌍</span>
-          <span className="text-gray-700 dark:text-gray-300">{countryName}</span>
+          <span className="text-gray-700 dark:text-gray-300">{localizeCountryName(countryName, t)}</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-gray-400 w-5 shrink-0 text-center">⚡</span>
@@ -302,7 +303,7 @@ export default function WorldMap({ cities, activeEvents = [] }) {
         <Marker
           key={country.name}
           position={[country.center.lat, country.center.lng]}
-          icon={createCountryIcon(country)}
+          icon={createCountryIcon(country, localizeCountryName(country.name, t))}
           zIndexOffset={1000}
         >
           <Popup>

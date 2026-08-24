@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getApiBaseUrl } from '../utils/capacitor';
 import { formatMoney, formatCompact } from '../utils/format';
+import { localizeCityName, localizeCountryName } from '../utils/cityNames';
 import PropertyImage from '../components/PropertyImage';
 
 const TIER_STYLES = {
@@ -79,6 +80,8 @@ export default function DistrictPage() {
   const tierStyle = TIER_STYLES[district.tier] || TIER_STYLES.suburban;
   const cityName = district.cityId?.name || 'Unknown';
   const countryCode = district.cityId?.country || '';
+  const localizedCityName = localizeCityName(cityName, t);
+  const localizedCountryName = localizeCountryName(countryCode, t);
 
   const tabs = [
     { key: 'overview', label: t('districts.overview', 'Overview') },
@@ -97,7 +100,7 @@ export default function DistrictPage() {
           </Link>
           <span>/</span>
           <Link to={`/city/${district.cityId?._id || ''}`} className="hover:text-blue-500">
-            {cityName}
+            {localizedCityName}
           </Link>
           <span>/</span>
           <span className="text-gray-900 dark:text-white">{district.name}</span>
@@ -114,7 +117,7 @@ export default function DistrictPage() {
                 </span>
               </div>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                {cityName}, {countryCode}
+                {localizedCityName}, {localizedCountryName}
               </p>
             </div>
             {district.activeEvents?.length > 0 && (

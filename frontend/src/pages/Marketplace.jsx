@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
 import { translateError } from '../i18n/errors';
 import { formatMoney, formatCompact } from '../utils/format';
+import { localizeCityName, localizeCountryName } from '../utils/cityNames';
 import { getApiBaseUrl } from '../utils/capacitor';
 import PropertyImage from '../components/PropertyImage';
 
@@ -317,7 +318,7 @@ export default function Marketplace() {
               <option value="">{t('marketplace.allCountries')}</option>
               {countries.map((c) => (
                 <option key={c} value={c}>
-                  {c}
+                  {localizeCountryName(c, t)}
                 </option>
               ))}
             </select>
@@ -328,7 +329,7 @@ export default function Marketplace() {
               <option value="">{t('marketplace.allCities')}</option>
               {filteredCities.map((c) => (
                 <option key={c._id} value={c.name}>
-                  {c.name}
+                  {localizeCityName(c.name, t)}
                 </option>
               ))}
             </select>

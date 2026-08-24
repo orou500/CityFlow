@@ -526,7 +526,6 @@
     "Only developed properties can be upgraded": "רק נכסים מפותחים ניתנים לשדרוג",
     "Invalid upgrade type": "סוג שדרוג לא תקין",
     "Not authorized": "לא מורשה",
-    "You cannot offer on your own property": "אינך יכול להציע על הנכס שלך",
     "landTooSmall": "הקרקע קטנה מדי. גודל מינימלי נדרש: {{size}} מ\"ר",
     "insufficientFundsDev": "יתרה לא מספקת. נדרש: ${{required}}, יתרה: ${{balance}}",
     "insufficientFundsSimple": "יתרה לא מספקת. נדרש: ${{required}}",
@@ -623,7 +622,6 @@
     "reducedRisk": "סיכון מופחת",
     "rent": "שכירות",
     "condition": "מצב",
-    "units": "יחידות",
     "propertyImprovements": "שדרוגי נכסים",
     "improvementsDescription": "שדרג את הנכסים שלך כדי להגדיל את הדירוג והשווי שלהם. כל שדרוג לוקח זמן להשלמה ומספק בונוסים קבועים.",
     "noBuildingsForImprovement": "אין לך בניינים מפותחים לשדרוג.",
@@ -670,19 +668,52 @@
       }
     },
     "cat": {
-      "residential": { "label": "מגורים", "description": "בנה בתים ודירות להכנסת שכירות יציבה" },
-      "commercial": { "label": "מסחרי", "description": "בנה משרדים ושטחי מסחר להכנסה גבוהה יותר" },
-      "hospitality": { "label": "אירוח", "description": "בנה מלונות ואתרי נופש להכנסה מתיירות" }
+      "residential": {
+        "label": "מגורים",
+        "description": "בנה בתים ודירות להכנסת שכירות יציבה"
+      },
+      "commercial": {
+        "label": "מסחרי",
+        "description": "בנה משרדים ושטחי מסחר להכנסה גבוהה יותר"
+      },
+      "hospitality": {
+        "label": "אירוח",
+        "description": "בנה מלונות ואתרי נופש להכנסה מתיירות"
+      }
     },
     "proj": {
-      "apartment_building": { "name": "בניין דירות", "description": "בניין דירות סטנדרטי עם 50 יחידות" },
-      "luxury_apartments": { "name": "דירות יוקרה", "description": "מגדל דירות יוקרה עם 100 יחידות" },
-      "housing_complex": { "name": "מתחם מגורים", "description": "מתחם מגורים גדול עם 200 יחידות" },
-      "office_building": { "name": "בניין משרדים", "description": "בניין משרדים מסחרי עם שטחי השכרה פרימיום" },
-      "shopping_center": { "name": "מרכז קניות", "description": "מרכז קניות גדול עם שטחי מסחר" },
-      "retail_complex": { "name": "מתחם קמעונאי", "description": "מתחם קמעונאי קטן עם חזיתות חנויות" },
-      "hotel": { "name": "מלון", "description": "מלון שירות מלא עם 150 חדרים" },
-      "resort": { "name": "אתר נופש", "description": "יעד נופש יוקרתי" }
+      "apartment_building": {
+        "name": "בניין דירות",
+        "description": "בניין דירות סטנדרטי עם 50 יחידות"
+      },
+      "luxury_apartments": {
+        "name": "דירות יוקרה",
+        "description": "מגדל דירות יוקרה עם 100 יחידות"
+      },
+      "housing_complex": {
+        "name": "מתחם מגורים",
+        "description": "מתחם מגורים גדול עם 200 יחידות"
+      },
+      "office_building": {
+        "name": "בניין משרדים",
+        "description": "בניין משרדים מסחרי עם שטחי השכרה פרימיום"
+      },
+      "shopping_center": {
+        "name": "מרכז קניות",
+        "description": "מרכז קניות גדול עם שטחי מסחר"
+      },
+      "retail_complex": {
+        "name": "מתחם קמעונאי",
+        "description": "מתחם קמעונאי קטן עם חזיתות חנויות"
+      },
+      "hotel": {
+        "name": "מלון",
+        "description": "מלון שירות מלא עם 150 חדרים"
+      },
+      "resort": {
+        "name": "אתר נופש",
+        "description": "יעד נופש יוקרתי"
+      }
     }
   },
   "projectDetail": {
@@ -869,7 +900,7 @@
     "restoreWarning": "פעולה זו תדרוס את מסד הנתונים הנוכחי. גיבוי ייווצר אוטומטית לפני השחזור.",
     "logs": "לוגים",
     "backupLogs": "לוגי גיבוי",
-    "noLogs": "אין לוגים זמינים",
+    "noLogs": "לא נמצאה פעילות",
     "disabled": "מושבת",
     "demographicsTab": "דמוגרפיה",
     "economicCondition": "מצב כלכלי",
@@ -883,7 +914,6 @@
     "deletePermanently": "מחק לצמיתות",
     "expired": "פג תוקף",
     "lastLogin": "כניסה אחרונה",
-    "never": "אף פעם",
     "viewLogs": "יומנים",
     "totalUsersCount": "סה\"כ משתמשים: {{total}}",
     "pageOf": "עמוד {{page}} מתוך {{total}}",
@@ -891,10 +921,8 @@
     "last": "אחרון",
     "allCategories": "כל הקטגוריות",
     "searchLogs": "חיפוש ביומנים...",
-    "noLogs": "לא נמצאה פעילות",
     "totalLogs": "סה\"כ אירועים: {{total}}",
     "date": "תאריך",
-    "category": "קטגוריה",
     "event": "אירוע",
     "amount": "סכום",
     "actor": "מקור",
@@ -1321,7 +1349,6 @@
     "loans": "הלוואות",
     "friendsAdded": "חברים",
     "upgrades": "שדרוגים",
-    "construction": "בנייה",
     "seasons": "עונות שהשתתף",
     "connectedAccounts": "חשבונות מחוברים",
     "linked": "מחובר",
@@ -1952,7 +1979,7 @@
     "season": "עונה #{{number}}",
     "rewards": {
       "endOfSeason": "פרסי העונה מחולקים בסיום העונה",
-      "yourReward": "אתה מדורג #{{rank}} \u2014 תוכל לזכות ב-{{amount}} בסיום העונה!"
+      "yourReward": "אתה מדורג #{{rank}} — תוכל לזכות ב-{{amount}} בסיום העונה!"
     },
     "categories": {
       "netWorth": "שווי נקי",
@@ -2321,10 +2348,7 @@
     "contracts": "חוזים",
     "contractsDescription": "חוזים עירוניים מספקים לחברות הזדמנויות להרוויח תגמולים על ידי ביצוע פרויקטים עירוניים. קבל חוזה כדי להתחיל.",
     "noContracts": "אין חוזים זמינים",
-    "contractStatusAvailable": "זמין",
     "contractStatusAccepted": "בביצוע",
-    "contractStatusCompleted": "הושלם",
-    "contractStatusFailed": "נכשל",
     "accept": "קבל",
     "reward": "תגמול",
     "cost": "עלות",
@@ -2336,7 +2360,6 @@
     "noInvestments": "אין השקעות עדיין",
     "return": "תשואה שנתית",
     "minInvestment": "השקעה מינימלית",
-    "principal": "קרן",
     "currentValue": "ערך נוכחי",
     "duration": "משך",
     "risk": "סיכון",
@@ -2889,66 +2912,162 @@
       "chain_property_empire": {
         "name": "אימפריית נדלן ראשונה",
         "description": "שליטה בלולאת פיתוח הנדלן",
-        "step1": { "name": "רכישה", "description": "קנה את הנכס הראשון שלך" },
-        "step2": { "name": "שדרוג", "description": "שדרג את אחד הנכסים שלך" },
-        "step3": { "name": "הכנסה", "description": "אסוף שכירות מנכס אחד" },
-        "step4": { "name": "תיק נכסים", "description": "החזק 3 נכסים בו_זמנית" }
+        "step1": {
+          "name": "רכישה",
+          "description": "קנה את הנכס הראשון שלך"
+        },
+        "step2": {
+          "name": "שדרוג",
+          "description": "שדרג את אחד הנכסים שלך"
+        },
+        "step3": {
+          "name": "הכנסה",
+          "description": "אסוף שכירות מנכס אחד"
+        },
+        "step4": {
+          "name": "תיק נכסים",
+          "description": "החזק 3 נכסים בו_זמנית"
+        }
       },
       "chain_auction_apprentice": {
         "name": "מתלמד מכרז",
         "description": "למד איך מכרזים עובדים",
-        "step1": { "name": "צפייה", "description": "צפה במכרז" },
-        "step2": { "name": "הצעה", "description": " הגש הצעת מכרז תקפה" },
-        "step3": { "name": "תחרות", "description": "הגש הצעה במכרז שבו שחקן אחר גם הציע" },
-        "step4": { "name": "זכייה", "description": "זכה במכרז" }
+        "step1": {
+          "name": "צפייה",
+          "description": "צפה במכרז"
+        },
+        "step2": {
+          "name": "הצעה",
+          "description": " הגש הצעת מכרז תקפה"
+        },
+        "step3": {
+          "name": "תחרות",
+          "description": "הגש הצעה במכרז שבו שחקן אחר גם הציע"
+        },
+        "step4": {
+          "name": "זכייה",
+          "description": "זכה במכרז"
+        }
       },
       "chain_corporate_founder": {
         "name": "מייסד חברה",
         "description": "בנה את חברתך מאפס",
-        "step1": { "name": "יצירה", "description": "צור או הצטרף לחברה לנדלן" },
-        "step2": { "name": "בנייה יחד", "description": "חברתך מחזיקה לפחות 2 נכסים" },
-        "step3": { "name": "תפעול", "description": "הפעל צוות מלא בנכס חברה אחד" },
-        "step4": { "name": "צמיחה", "description": "הגעה לרמת חברה 10" }
+        "step1": {
+          "name": "יצירה",
+          "description": "צור או הצטרף לחברה לנדלן"
+        },
+        "step2": {
+          "name": "בנייה יחד",
+          "description": "חברתך מחזיקה לפחות 2 נכסים"
+        },
+        "step3": {
+          "name": "תפעול",
+          "description": "הפעל צוות מלא בנכס חברה אחד"
+        },
+        "step4": {
+          "name": "צמיחה",
+          "description": "הגעה לרמת חברה 10"
+        }
       },
       "chain_corporate_auction": {
         "name": "מכרז חברה",
         "description": "שליטה בהצעות מכרז חברה",
-        "step1": { "name": "הצעה", "description": "הגש הצעת מכרז חברה" },
-        "step2": { "name": "אישור", "description": "קבל אישור הצעת מכרז חברה" },
-        "step3": { "name": "ביצוע", "description": "בצע בהצלחה הצעת מכרז חברה" },
-        "step4": { "name": "רכישה", "description": "זכה במכרז באמצעות חברתך" }
+        "step1": {
+          "name": "הצעה",
+          "description": "הגש הצעת מכרז חברה"
+        },
+        "step2": {
+          "name": "אישור",
+          "description": "קבל אישור הצעת מכרז חברה"
+        },
+        "step3": {
+          "name": "ביצוע",
+          "description": "בצע בהצלחה הצעת מכרז חברה"
+        },
+        "step4": {
+          "name": "רכישה",
+          "description": "זכה במכרז באמצעות חברתך"
+        }
       },
       "chain_market_investor": {
         "name": "משקיע שוק",
         "description": "למד השקעה בשוק המניות",
-        "step1": { "name": "השקעה", "description": "קנה מניות בחברה" },
-        "step2": { "name": "בניית פוזיציה", "description": "החזק מניות ב-3 חברות שונות" },
-        "step3": { "name": "החזקה", "description": "שמור פוזציית מניה לפחות חודש עולם אחד" },
-        "step4": { "name": "דיבידנד", "description": "קבל דיבידנד" }
+        "step1": {
+          "name": "השקעה",
+          "description": "קנה מניות בחברה"
+        },
+        "step2": {
+          "name": "בניית פוזיציה",
+          "description": "החזק מניות ב-3 חברות שונות"
+        },
+        "step3": {
+          "name": "החזקה",
+          "description": "שמור פוזציית מניה לפחות חודש עולם אחד"
+        },
+        "step4": {
+          "name": "דיבידנד",
+          "description": "קבל דיבידנד"
+        }
       },
       "chain_global_explorer": {
         "name": "חוקר עולמי",
         "description": "חקור שכונות וערים ברחבי העולם",
-        "step1": { "name": "גילוי", "description": "חקור את השכונה הראשונה שלך" },
-        "step2": { "name": "הרחבה", "description": "גלה 3 שכונות שונות" },
-        "step3": { "name": "גלובלי", "description": "החזק נכסים ב-3 ערים שונות" },
-        "step4": { "name": "מטייל עולמי", "description": "החזק נכסים ב-5 ערים שונות" }
+        "step1": {
+          "name": "גילוי",
+          "description": "חקור את השכונה הראשונה שלך"
+        },
+        "step2": {
+          "name": "הרחבה",
+          "description": "גלה 3 שכונות שונות"
+        },
+        "step3": {
+          "name": "גלובלי",
+          "description": "החזק נכסים ב-3 ערים שונות"
+        },
+        "step4": {
+          "name": "מטייל עולמי",
+          "description": "החזק נכסים ב-5 ערים שונות"
+        }
       },
       "chain_property_mogul": {
         "name": "טייקון נדלן",
         "description": "שליטה מתקדמת בפיתוח נדלן",
-        "step1": { "name": "שדרוג", "description": "השלם 3 שדרוגי נכסים" },
-        "step2": { "name": "תיק פרימיום", "description": "החזק 5 נכסים משודרגים" },
-        "step3": { "name": "יוצר ערך", "description": "הגדל את שווי התיק שלך ב-500,000$ דרך פיתוח" },
-        "step4": { "name": "טייקון", "description": "החזק תיק נכסים בשווי של לפחות 2,000,000$" }
+        "step1": {
+          "name": "שדרוג",
+          "description": "השלם 3 שדרוגי נכסים"
+        },
+        "step2": {
+          "name": "תיק פרימיום",
+          "description": "החזק 5 נכסים משודרגים"
+        },
+        "step3": {
+          "name": "יוצר ערך",
+          "description": "הגדל את שווי התיק שלך ב-500,000$ דרך פיתוח"
+        },
+        "step4": {
+          "name": "טייקון",
+          "description": "החזק תיק נכסים בשווי של לפחות 2,000,000$"
+        }
       },
       "chain_global_empire": {
         "name": "אימפריית נדלן גלובלית",
         "description": "האתגר החוצ-מערכתי הסופי",
-        "step1": { "name": "גיוון", "description": "החזק נדלן ומניות בו_זמנית" },
-        "step2": { "name": "התרחבות חברה", "description": "חברתך מחזיקה נכסים ב-2 ערים שונות" },
-        "step3": { "name": "אימפריית מכרז", "description": "זכה במכרז באמצעות חברתך" },
-        "step4": { "name": "כוח שוק", "description": "קבל דיבידנד בזמן שחברתך מחזיקה לפחות 3 נכסים" },
+        "step1": {
+          "name": "גיוון",
+          "description": "החזק נדלן ומניות בו_זמנית"
+        },
+        "step2": {
+          "name": "התרחבות חברה",
+          "description": "חברתך מחזיקה נכסים ב-2 ערים שונות"
+        },
+        "step3": {
+          "name": "אימפריית מכרז",
+          "description": "זכה במכרז באמצעות חברתך"
+        },
+        "step4": {
+          "name": "כוח שוק",
+          "description": "קבל דיבידנד בזמן שחברתך מחזיקה לפחות 3 נכסים"
+        },
         "step5": {
           "name": "שליטה עולמית",
           "description": "10+ נכסים, 3+ ערים, חברה עם 5+ נכסים, פוזיציות מניות ב-3+ חברות, זכייה במכרז, ושדרוג אחד"
@@ -3001,5 +3120,78 @@
       "stocks": "בורסה",
       "prestige": "יוקרה"
     }
+  },
+  "cityNames": {
+    "new-york": "ניו יורק",
+    "los-angeles": "לוס אנג׳לס",
+    "miami": "מיאמי",
+    "chicago": "שיקגו",
+    "san-francisco": "סן פרנסיסקו",
+    "london": "לונדון",
+    "manchester": "מנצ׳סטר",
+    "birmingham": "ברמינגהאם",
+    "paris": "פריז",
+    "lyon": "ליון",
+    "marseille": "מרסיי",
+    "berlin": "ברלין",
+    "munich": "מינכן",
+    "frankfurt": "פרנקפורט",
+    "hamburg": "המבורג",
+    "dubai": "דובאי",
+    "abu-dhabi": "אבו דאבי",
+    "tokyo": "טוקיו",
+    "osaka": "אוסקה",
+    "kyoto": "קיוטו",
+    "yokohama": "יוקוהמה",
+    "toronto": "טורונטו",
+    "vancouver": "ונקובר",
+    "montreal": "מונטריאול",
+    "sydney": "סידני",
+    "melbourne": "מלבורן",
+    "brisbane": "בריסביין",
+    "singapore": "סינגפור",
+    "seoul": "סיאול",
+    "busan": "בוסאן",
+    "madrid": "מדריד",
+    "barcelona": "ברצלונה",
+    "rome": "רומא",
+    "milan": "מילאנו",
+    "amsterdam": "אמסטרדם",
+    "rotterdam": "רוטרדם",
+    "zurich": "ציריך",
+    "geneva": "ז׳נבה",
+    "tel-aviv": "תל אביב",
+    "jerusalem": "ירושלים",
+    "haifa": "חיפה",
+    "sao-paulo": "סאו פאולו",
+    "rio-de-janeiro": "ריו דה ז׳ניירו",
+    "mexico-city": "מקסיקו סיטי",
+    "mumbai": "מומבאי",
+    "delhi": "דלהי",
+    "bangalore": "בנגלור",
+    "hong-kong": "הונג קונג",
+    "istanbul": "איסטנבול"
+  },
+  "countryNames": {
+    "usa": "ארה״ב",
+    "uk": "בריטניה",
+    "france": "צרפת",
+    "germany": "גרמניה",
+    "uae": "איחוד האמירויות",
+    "japan": "יפן",
+    "canada": "קנדה",
+    "australia": "אוסטרליה",
+    "singapore": "סינגפור",
+    "south-korea": "דרום קוריאה",
+    "spain": "ספרד",
+    "italy": "איטליה",
+    "netherlands": "הולנד",
+    "switzerland": "שווייץ",
+    "israel": "ישראל",
+    "brazil": "ברזיל",
+    "mexico": "מקסיקו",
+    "india": "הודו",
+    "china": "סין",
+    "turkey": "טורקיה"
   }
 }

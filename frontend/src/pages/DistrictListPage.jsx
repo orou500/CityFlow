@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getApiBaseUrl } from '../utils/capacitor';
 import { formatMoney, formatCompact } from '../utils/format';
+import { localizeCityName } from '../utils/cityNames';
 
 const TIER_STYLES = {
   premium: { bg: 'bg-purple-100 dark:bg-purple-900/50', text: 'text-purple-700 dark:text-purple-300', icon: '👑' },
@@ -71,7 +72,7 @@ export default function DistrictListPage() {
             <option value="">{t('districts.allCities', 'All Cities')}</option>
             {cities.map((c) => (
               <option key={c._id} value={c._id}>
-                {c.name}
+                {localizeCityName(c.name, t)}
               </option>
             ))}
           </select>
@@ -122,7 +123,7 @@ export default function DistrictListPage() {
                         <span className="text-lg">{tierStyle.icon}</span>
                         <h3 className="font-bold text-gray-900 dark:text-white">{district.name}</h3>
                       </div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{cityName}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{localizeCityName(cityName, t)}</p>
                     </div>
                     <span
                       className={`text-xs font-semibold px-2 py-0.5 rounded-full ${tierStyle.bg} ${tierStyle.text}`}

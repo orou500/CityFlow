@@ -5,6 +5,7 @@ import { useCompanyStore } from '../store/useCompanyStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { useGameStore } from '../store/useGameStore';
 import { formatMoney } from '../utils/format';
+import { localizeCityName, localizeCountryName } from '../utils/cityNames';
 
 const CREATION_FEE = 5_000_000;
 const MIN_CREATION_LEVEL = 12; // must match backend MIN_FOUNDER_LEVEL (realEstateCompanies.js)
@@ -222,7 +223,7 @@ export default function CompaniesListPage() {
             <option value="">{t('companies.selectHQ')}</option>
             {cities.map((city) => (
               <option key={city._id} value={city._id}>
-                {city.name}, {city.country}
+                {localizeCityName(city.name, t)}, {localizeCountryName(city.country, t)}
               </option>
             ))}
           </select>

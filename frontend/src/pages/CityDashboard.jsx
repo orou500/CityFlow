@@ -5,6 +5,7 @@ import { useGameStore } from '../store/useGameStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { translateError } from '../i18n/errors';
 import { formatMoney, formatCompact } from '../utils/format';
+import { localizeCityName, localizeCountryName } from '../utils/cityNames';
 import CompactValue from '../components/CompactValue';
 import PropertyImage from '../components/PropertyImage';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -146,8 +147,8 @@ export default function CityDashboard() {
       <div className="bg-white dark:bg-gray-900 rounded-lg p-6 mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
           <div>
-            <h1 className="text-3xl font-bold">{selectedCity.name}</h1>
-            <p className="text-gray-500 dark:text-gray-400">{selectedCity.country}</p>
+            <h1 className="text-3xl font-bold">{localizeCityName(selectedCity.name, t)}</h1>
+            <p className="text-gray-500 dark:text-gray-400">{localizeCountryName(selectedCity.country, t)}</p>
           </div>
           {demo && (
             <span

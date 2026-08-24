@@ -19,6 +19,7 @@ const citySchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     country: { type: String, required: true },
+    seedKey: { type: String },
     coordinates: {
       lat: { type: Number, required: true },
       lng: { type: Number, required: true },
@@ -57,6 +58,10 @@ const citySchema = new mongoose.Schema(
   },
   { timestamps: true },
 );
+
+citySchema.index({ seedKey: 1 }, { unique: true, sparse: true });
+citySchema.index({ name: 1 });
+citySchema.index({ country: 1 });
 
 citySchema.set('toJSON', {
   virtuals: true,
