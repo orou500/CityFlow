@@ -5,7 +5,7 @@ import Transaction from '../models/Transaction.js';
 import CreditScoreHistory from '../models/CreditScoreHistory.js';
 import { triggerMissionProgress } from '../utils/missionTrigger.js';
 
-export async function processLoans() {
+export async function processLoans(currentTick = 0) {
   const activeLoans = await Loan.find({ active: true, companyId: null });
   const results = [];
 
@@ -14,9 +14,21 @@ export async function processLoans() {
     if (!user) continue;
     if (user.deletedAt) continue;
 
-    const payment = loan.paymentPerTick;
-    const interestPortion = Math.round(loan.remainingBalance * (loan.interestRate / loan.durationTicks));
-    const principalPortion = payment - interestPortion;
+    // Amortized (flexible) loans use the stored monthly rate on the declining
+    // principal balance; legacy loans keep the original term-based semantics.
+    const interestPortion = loan.amortized
+      ? Math.round(loan.remainingBalance * (loan.monthlyInterestRate || loan.interestRate / 12))
+      : Math.round(loan.remainingBalance * (loan.interestRate / loan.durationTicks));
+
+    let payment = loan.paymentPerTick;
+    let principalPortion = payment - interestPortion;
+
+    // Final amortized payment: pay only the remaining principal + this
+    // month's interest so the balance lands exactly at $0.
+    if (loan.amortized && principalPortion >= loan.remainingBalance) {
+      principalPortion = loan.remainingBalance;
+      payment = principalPortion + interestPortion;
+    }
 
     if (user.balance >= payment) {
       user.balance -= payment;
@@ -42,7 +54,7 @@ export async function processLoans() {
       user.creditScore = Math.max(300, (user.creditScore || 650) - 15);
       await CreditScoreHistory.create({
         userId: user._id,
-        tick: 0,
+        tick: currentTick,
         score: user.creditScore,
         change: -15,
         reason: 'missed_payment',
@@ -73,7 +85,7 @@ export async function processLoans() {
         user.creditScore = Math.max(300, (user.creditScore || 650) - 30);
         await CreditScoreHistory.create({
           userId: user._id,
-          tick: 0,
+          tick: currentTick,
           score: user.creditScore,
           change: -30,
           reason: 'default',

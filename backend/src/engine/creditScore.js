@@ -1,6 +1,7 @@
 import User from '../models/User.js';
 import Loan from '../models/Loan.js';
 import CreditScoreHistory from '../models/CreditScoreHistory.js';
+import { LOAN_CONFIG } from '../config/loans.js';
 
 const SCORE_MIN = 300;
 const SCORE_MAX = 850;
@@ -122,6 +123,10 @@ export function getDebtToIncomeRatio(user, activeLoans) {
 
 export function getLoanProducts(score, netWorth) {
   const products = [];
+  const range = (id) => {
+    const r = LOAN_CONFIG.PRODUCT_DURATION_RANGES[id] || { min: 6, max: 24 };
+    return { minMonths: r.min, maxMonths: r.max };
+  };
 
   const personalLoanMax = Math.round(netWorth * getLoanMultiplier(score) * 0.5);
   if (personalLoanMax >= 10000) {
@@ -133,6 +138,7 @@ export function getLoanProducts(score, netWorth) {
       durations: [6, 12, 24],
       baseInterestRate: 0.06,
       creditRequirement: 400,
+      ...range('personal'),
     });
   }
 
@@ -146,6 +152,7 @@ export function getLoanProducts(score, netWorth) {
       durations: [24, 36, 48, 60],
       baseInterestRate: 0.035,
       creditRequirement: 600,
+      ...range('mortgage'),
     });
   }
 
@@ -159,6 +166,7 @@ export function getLoanProducts(score, netWorth) {
       durations: [12, 24, 36, 48],
       baseInterestRate: 0.045,
       creditRequirement: 650,
+      ...range('business'),
     });
   }
 
@@ -173,6 +181,7 @@ export function getLoanProducts(score, netWorth) {
         durations: [6, 12],
         baseInterestRate: 0.05,
         creditRequirement: 700,
+        ...range('line_of_credit'),
       });
     }
   }
@@ -180,7 +189,7 @@ export function getLoanProducts(score, netWorth) {
   return products;
 }
 
-function getLoanMultiplier(score) {
+export function getLoanMultiplier(score) {
   if (score >= 800) return 2.0;
   if (score >= 740) return 1.5;
   if (score >= 670) return 1.0;

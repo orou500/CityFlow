@@ -1,4 +1,4 @@
-{
+﻿{
   "app": {
     "title": "CityFlow",
     "subtitle": "סימולציית נדל\"ן עולמית"
@@ -347,7 +347,32 @@
     "reasonDefault": "חדלות פירעון",
     "score": "ציון",
     "tick": "חודש",
-    "type": "סוג"
+    "type": "סוג",
+    "borrowAmount": "סכום ההלוואה",
+    "loanDuration": "משך ההלוואה",
+    "durationLabel": "חודשים",
+    "offerPreview": "הצעת ההלוואה",
+    "interestRate": "ריבית",
+    "totalInterest": "סה״כ ריבית",
+    "riskLevel": "רמת סיכון",
+    "riskLow": "נמוך",
+    "riskModerate": "בינוני",
+    "riskHigh": "גבוה",
+    "riskVeryHigh": "גבוה מאוד",
+    "approved": "מאושר",
+    "rejected": "לא מאושר",
+    "previewLoading": "מחשב...",
+    "amountBetween": "בין {min} ל-{max}",
+    "monthsBetween": "{min} עד {max} חודשים",
+    "takeLoan": "קח הלוואה",
+    "chooseProduct": "בחר סוג הלוואה",
+    "reasonInvalidProduct": "סוג הלוואה לא תקין",
+    "reasonInvalidAmount": "סכום לא תקין",
+    "reasonInvalidDuration": "משך לא תקין",
+    "reasonCreditLow": "רמת אשראי נמוכה מדי למוצר זה",
+    "reasonLeverage": "מינוף קיים גבוה מדי",
+    "reasonCapacity": "יכולת גיוס לא מספקת",
+    "reasonUserNotFound": "משתמש לא נמצא"
   },
   "propertyDetail": {
     "title": "פרטי נכס",

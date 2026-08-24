@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useGameStore } from '../store/useGameStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { translateError } from '../i18n/errors';
-import { formatMoney } from '../utils/format';
+import { formatMoney, formatCompact } from '../utils/format';
 import CompactValue from '../components/CompactValue';
 import { getApiBaseUrl } from '../utils/capacitor';
 
@@ -63,21 +63,57 @@ function getLoanTypeLabel(type, t) {
   return map[type] || type;
 }
 
+function getRiskLabel(risk, t) {
+  const map = {
+    LOW: t('bank.riskLow'),
+    MODERATE: t('bank.riskModerate'),
+    HIGH: t('bank.riskHigh'),
+    VERY_HIGH: t('bank.riskVeryHigh'),
+  };
+  return map[risk] || risk;
+}
+
+function getRiskStyle(risk) {
+  if (risk === 'VERY_HIGH') return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400';
+  if (risk === 'HIGH') return 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400';
+  if (risk === 'MODERATE') return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400';
+  return 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400';
+}
+
+function getRejectionLabel(reason, t) {
+  const map = {
+    'Invalid loan product': t('bank.reasonInvalidProduct'),
+    'Invalid loan amount': t('bank.reasonInvalidAmount'),
+    'Invalid loan duration': t('bank.reasonInvalidDuration'),
+    'Credit score too low for this product': t('bank.reasonCreditLow'),
+    'Excessive existing leverage': t('bank.reasonLeverage'),
+    'Insufficient borrowing capacity': t('bank.reasonCapacity'),
+    'User not found': t('bank.reasonUserNotFound'),
+  };
+  return map[reason] || reason;
+}
+
 export default function BankPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const API = getApiBaseUrl();
   const { user, fetchMe } = useAuthStore();
-  const { loans, fetchLoans, fetchLoanOptions, applyLoan, repayLoan, fetchUserData } = useGameStore();
+  const { loans, fetchLoans, fetchLoanOptions, applyFlexibleLoan, fetchLoanOffer, repayLoan, fetchUserData } =
+    useGameStore();
   const [summary, setSummary] = useState(null);
   const [options, setOptions] = useState([]);
-  const [selectedOption, setSelectedOption] = useState(null);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [amount, setAmount] = useState(0);
+  const [durationMonths, setDurationMonths] = useState(12);
+  const [offer, setOffer] = useState(null);
+  const [offerLoading, setOfferLoading] = useState(false);
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState(null);
   const [repayAmounts, setRepayAmounts] = useState({});
   const [loanHistory, setLoanHistory] = useState([]);
   const [creditHistory, setCreditHistory] = useState([]);
   const [activeTab, setActiveTab] = useState('overview');
+  const previewTimer = useRef(null);
 
   useEffect(() => {
     if (!user) {
@@ -92,7 +128,18 @@ export default function BankPage() {
     fetchUserData();
     fetchLoans();
     fetchLoanOptions()
-      .then(setOptions)
+      .then((opts) => {
+        setOptions(opts);
+        if (opts.length > 0 && !selectedProduct) {
+          const product = opts[0];
+          setSelectedProduct(product);
+          setAmount(
+            Math.round(((product.maxPrincipal - product.minPrincipal) / 2 + product.minPrincipal) / 5000) * 5000,
+          );
+          const minMonths = product.minMonths || product.durationTicks || 6;
+          setDurationMonths(Math.min(Math.max(minMonths, 12), product.maxMonths || 36));
+        }
+      })
       .catch(() => {});
     fetch(`${API}/bank/summary`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
@@ -123,25 +170,64 @@ export default function BankPage() {
       .catch(() => {});
   };
 
+  const selectProduct = (product) => {
+    setSelectedProduct(product);
+    setAmount(Math.round(((product.maxPrincipal - product.minPrincipal) / 2 + product.minPrincipal) / 5000) * 5000);
+    const minMonths = product.minMonths || product.durationTicks || 6;
+    setDurationMonths(Math.min(Math.max(minMonths, 12), product.maxMonths || 36));
+    setOffer(null);
+    setError(null);
+  };
+
+  const fetchPreview = useCallback(
+    async (product, amt, months) => {
+      if (!product) return;
+      setOfferLoading(true);
+      try {
+        const result = await fetchLoanOffer(product.productId, amt, months);
+        setOffer(result);
+        setError(null);
+      } catch (err) {
+        setError(translateError(err, t));
+        setOffer(null);
+      } finally {
+        setOfferLoading(false);
+      }
+    },
+    [fetchLoanOffer, t],
+  );
+
+  useEffect(() => {
+    if (!selectedProduct || activeTab !== 'overview') return;
+    if (previewTimer.current) clearTimeout(previewTimer.current);
+    previewTimer.current = setTimeout(() => {
+      fetchPreview(selectedProduct, amount, durationMonths);
+    }, 300);
+    return () => {
+      if (previewTimer.current) clearTimeout(previewTimer.current);
+    };
+  }, [selectedProduct, amount, durationMonths, activeTab, fetchPreview]);
+
   const handleApply = async () => {
-    if (!selectedOption) return;
+    if (!selectedProduct || !offer?.approved) return;
     setApplying(true);
     setError(null);
     try {
-      await applyLoan(selectedOption.productId, selectedOption.principal, selectedOption.durationTicks);
+      await applyFlexibleLoan(selectedProduct.productId, offer.amount, offer.durationMonths);
       fetchData();
-      setSelectedOption(null);
+      setOffer(null);
     } catch (err) {
       setError(translateError(err, t));
+      fetchPreview(selectedProduct, amount, durationMonths);
     }
     setApplying(false);
   };
 
   const handleRepay = async (loanId) => {
-    const amount = repayAmounts[loanId];
-    if (!amount || amount <= 0) return;
+    const amountToRepay = repayAmounts[loanId];
+    if (!amountToRepay || amountToRepay <= 0) return;
     try {
-      await repayLoan(loanId, amount);
+      await repayLoan(loanId, amountToRepay);
       fetchData();
     } catch {}
   };
@@ -150,6 +236,12 @@ export default function BankPage() {
 
   const creditScore = summary?.creditScore || user.creditScore || 650;
   const scoreWidth = getScoreWidth(creditScore);
+
+  const productMin = selectedProduct?.minPrincipal || 0;
+  const productMax = selectedProduct?.maxPrincipal || 1;
+  const minMonths = selectedProduct?.minMonths || 6;
+  const maxMonths = selectedProduct?.maxMonths || 36;
+  const amountStep = Math.max(5000, Math.round((productMax - productMin) / 40 / 5000) * 5000);
 
   return (
     <div className="flex-1 p-4 overflow-y-auto">
@@ -254,68 +346,195 @@ export default function BankPage() {
             <div className="bg-white dark:bg-gray-900 rounded-lg p-4">
               <h2 className="text-lg font-bold mb-3">{t('bank.newLoan')}</h2>
               {error && <p className="text-red-600 dark:text-red-400 text-sm mb-2">{error}</p>}
+
               {options.length > 0 ? (
-                <div className="space-y-2 mb-3">
-                  {options.map((opt) => (
-                    <div
-                      key={`${opt.productId}-${opt.principal}-${opt.durationTicks}`}
-                      onClick={() => setSelectedOption(opt)}
-                      className={`block p-3 rounded border cursor-pointer transition-colors ${
-                        selectedOption?.productId === opt.productId &&
-                        selectedOption?.principal === opt.principal &&
-                        selectedOption?.durationTicks === opt.durationTicks
-                          ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20'
-                          : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
-                      }`}
-                    >
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold">{formatMoney(opt.principal)}</span>
-                            <span className="text-xs px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                              {getLoanTypeLabel(opt.productId, t)}
-                            </span>
+                <>
+                  {/* Loan type selector */}
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">{t('bank.chooseProduct')}</p>
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                    {options.map((opt) => {
+                      const active = selectedProduct?.productId === opt.productId;
+                      return (
+                        <button
+                          key={opt.productId}
+                          onClick={() => selectProduct(opt)}
+                          className={`text-left p-2.5 rounded border transition-colors ${
+                            active
+                              ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20'
+                              : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
+                          }`}
+                        >
+                          <div className="font-semibold text-sm">{getLoanTypeLabel(opt.productId, t)}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            {formatCompact(opt.minPrincipal)} – {formatCompact(opt.maxPrincipal)}
                           </div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {opt.durationTicks} {t('general.months')} &middot; {(opt.interestRate * 100).toFixed(1)}%{' '}
-                            {t('bank.interest')}
-                          </p>
-                        </div>
-                        <div className="text-right text-sm">
-                          <p className="text-orange-500 dark:text-orange-400">
-                            {formatMoney(opt.paymentPerTick)}/{t('general.period')}
-                          </p>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {opt.minMonths || 6}–{opt.maxMonths || 36} {t('bank.durationLabel')}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {selectedProduct && (
+                    <>
+                      {/* Amount selector */}
+                      <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">
+                        {t('bank.borrowAmount')}
+                      </label>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                        {t('bank.amountBetween', { min: formatMoney(productMin), max: formatMoney(productMax) })}
+                      </p>
+                      <input
+                        type="range"
+                        min={productMin}
+                        max={productMax}
+                        step={amountStep}
+                        value={amount}
+                        onChange={(e) => setAmount(Number(e.target.value))}
+                        className="w-full accent-orange-500 mb-1"
+                        aria-label={t('bank.borrowAmount')}
+                      />
+                      <div className="flex items-center justify-between mb-4 gap-2">
+                        <span className="text-lg font-bold text-gray-900 dark:text-white">{formatMoney(amount)}</span>
+                        <input
+                          type="number"
+                          min={productMin}
+                          max={productMax}
+                          step={amountStep}
+                          value={amount}
+                          onChange={(e) => {
+                            const v = Number(e.target.value);
+                            if (Number.isFinite(v)) setAmount(Math.max(0, v));
+                          }}
+                          className="w-32 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm text-gray-900 dark:text-white text-right"
+                          aria-label={t('bank.borrowAmount')}
+                        />
+                      </div>
+
+                      {/* Duration selector */}
+                      <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">
+                        {t('bank.loanDuration')}
+                      </label>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                        {t('bank.monthsBetween', { min: minMonths, max: maxMonths })}
+                      </p>
+                      <input
+                        type="range"
+                        min={minMonths}
+                        max={maxMonths}
+                        step={1}
+                        value={durationMonths}
+                        onChange={(e) => setDurationMonths(Number(e.target.value))}
+                        className="w-full accent-orange-500 mb-1"
+                        aria-label={t('bank.loanDuration')}
+                      />
+                      <div className="flex items-center justify-between mb-4 gap-2">
+                        <span className="text-lg font-bold text-gray-900 dark:text-white">
+                          {durationMonths} {t('bank.durationLabel')}
+                        </span>
+                        <div className="flex gap-1 flex-wrap justify-end">
+                          {[12, 24, 36, 48, 60, 72, 84]
+                            .filter((m) => m >= minMonths && m <= maxMonths)
+                            .map((m) => (
+                              <button
+                                key={m}
+                                onClick={() => setDurationMonths(m)}
+                                className={`px-2 py-1 rounded text-xs transition-colors ${
+                                  durationMonths === m
+                                    ? 'bg-orange-500 text-gray-900 dark:text-white'
+                                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                }`}
+                              >
+                                {m}
+                              </button>
+                            ))}
                         </div>
                       </div>
-                      {selectedOption?.productId === opt.productId &&
-                        selectedOption?.principal === opt.principal &&
-                        selectedOption?.durationTicks === opt.durationTicks && (
-                          <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 grid grid-cols-2 gap-1">
-                            <span>
-                              {t('bank.totalRepayment')}:{' '}
-                              <span className="text-gray-900 dark:text-white">{formatMoney(opt.totalRepayment)}</span>
-                            </span>
-                            <span>
-                              {t('bank.interestCost')}:{' '}
-                              <span className="text-yellow-600 dark:text-yellow-400">
-                                {formatMoney(opt.totalInterest)}
+
+                      {/* Live offer preview */}
+                      <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-gray-50 dark:bg-gray-800">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                            {t('bank.offerPreview')}
+                          </h3>
+                          {offerLoading && (
+                            <span className="text-xs text-gray-400 dark:text-gray-500">{t('bank.previewLoading')}</span>
+                          )}
+                        </div>
+
+                        {!offer ? (
+                          <p className="text-sm text-gray-500 dark:text-gray-400">{t('bank.previewLoading')}</p>
+                        ) : offer.approved ? (
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{t('bank.amount')}</p>
+                              <p className="font-semibold">{formatMoney(offer.amount)}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{t('bank.loanDuration')}</p>
+                              <p className="font-semibold">
+                                {offer.durationMonths} {t('bank.durationLabel')}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{t('bank.creditScore')}</p>
+                              <p className={`font-semibold ${getScoreColor(offer.creditScore || creditScore)}`}>
+                                {offer.creditScore || creditScore}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{t('bank.interestRate')}</p>
+                              <p className="font-semibold text-orange-500 dark:text-orange-400">
+                                {(offer.interestRate * 100).toFixed(2)}%
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{t('bank.monthlyPayment')}</p>
+                              <p className="font-semibold">{formatMoney(offer.monthlyPayment)}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{t('bank.totalInterest')}</p>
+                              <p className="font-semibold text-yellow-600 dark:text-yellow-400">
+                                {formatMoney(offer.totalInterest)}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{t('bank.totalRepayment')}</p>
+                              <p className="font-semibold">{formatMoney(offer.totalRepayment)}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{t('bank.riskLevel')}</p>
+                              <span
+                                className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${getRiskStyle(offer.riskLevel)}`}
+                              >
+                                {getRiskLabel(offer.riskLevel, t)}
                               </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-sm">
+                            <span className="inline-block px-2 py-0.5 rounded text-xs font-semibold bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 mb-2">
+                              {t('bank.rejected')}
                             </span>
+                            <p className="text-gray-600 dark:text-gray-300">{getRejectionLabel(offer.reason, t)}</p>
                           </div>
                         )}
-                    </div>
-                  ))}
-                </div>
+                      </div>
+
+                      <button
+                        onClick={handleApply}
+                        disabled={!offer?.approved || applying}
+                        className="w-full bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-gray-900 dark:text-white py-2 rounded transition-colors mt-3"
+                      >
+                        {applying ? t('common.loading') : t('bank.takeLoan')}
+                      </button>
+                    </>
+                  )}
+                </>
               ) : (
                 <p className="text-gray-500 dark:text-gray-400 text-sm">{t('bank.noProducts')}</p>
               )}
-              <button
-                onClick={handleApply}
-                disabled={!selectedOption || applying}
-                className="w-full bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-gray-900 dark:text-white py-2 rounded transition-colors"
-              >
-                {applying ? t('common.loading') : t('bank.applyLoan')}
-              </button>
             </div>
           </div>
 
@@ -334,11 +553,9 @@ export default function BankPage() {
                         <p className="text-sm font-medium">
                           {getLoanTypeLabel(loan.type || 'personal', t)} #{idx + 1}
                         </p>
-                        {loan.creditScoreAtApply && (
-                          <span className="text-xs text-gray-400 dark:text-gray-500">
-                            {t('bank.scoreAtApply')}: {loan.creditScoreAtApply}
-                          </span>
-                        )}
+                        <span className="text-xs text-gray-400 dark:text-gray-500">
+                          {t('bank.scoreAtApply')}: {loan.creditScoreAtApply}
+                        </span>
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div>
@@ -351,7 +568,7 @@ export default function BankPage() {
                         </div>
                         <div>
                           <p className="text-gray-500 dark:text-gray-400 text-xs">{t('bank.interest')}</p>
-                          <p className="font-semibold">{(loan.interestRate * 100).toFixed(1)}%</p>
+                          <p className="font-semibold">{(loan.interestRate * 100).toFixed(2)}%</p>
                         </div>
                         <div>
                           <p className="text-gray-500 dark:text-gray-400 text-xs">{t('bank.ticksLeft')}</p>
@@ -371,6 +588,16 @@ export default function BankPage() {
                             {loan.missedPayments || 0}
                           </p>
                         </div>
+                        {loan.riskLevel && (
+                          <div>
+                            <p className="text-gray-500 dark:text-gray-400 text-xs">{t('bank.riskLevel')}</p>
+                            <span
+                              className={`inline-block px-1.5 py-0.5 rounded text-xs font-semibold ${getRiskStyle(loan.riskLevel)}`}
+                            >
+                              {getRiskLabel(loan.riskLevel, t)}
+                            </span>
+                          </div>
+                        )}
                       </div>
                       <div className="mt-2 flex gap-2">
                         <input
@@ -420,7 +647,7 @@ export default function BankPage() {
                     <tr key={loan._id} className="border-b border-gray-100 dark:border-gray-800">
                       <td className="py-2">{getLoanTypeLabel(loan.type || 'personal', t)}</td>
                       <td className="py-2">{formatMoney(loan.principal)}</td>
-                      <td className="py-2">{(loan.interestRate * 100).toFixed(1)}%</td>
+                      <td className="py-2">{(loan.interestRate * 100).toFixed(2)}%</td>
                       <td className="py-2">{loan.ticksRemaining}</td>
                       <td className="py-2">
                         <span

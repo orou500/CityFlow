@@ -101,7 +101,7 @@ export async function executeTick() {
 
     const rentResults = await processRent();
 
-    const loanResults = await processLoans();
+    const loanResults = await processLoans(tickNumber);
 
     const creditResults = await updateCreditScores(tickNumber);
 

@@ -160,6 +160,20 @@ export const useGameStore = create((set, get) => ({
     return data;
   },
 
+  fetchLoanOffer: async (productId, amount, durationMonths) => {
+    const q = new URLSearchParams({ productId, amount: String(amount), durationMonths: String(durationMonths) });
+    return await api(`/bank/offer-preview?${q.toString()}`);
+  },
+
+  applyFlexibleLoan: async (productId, principal, durationMonths) => {
+    const data = await api('/bank/apply', {
+      method: 'POST',
+      body: JSON.stringify({ productId, principal, durationMonths }),
+    });
+    await get().fetchLoans();
+    return data;
+  },
+
   repayLoan: async (loanId, amount) => {
     const data = await api('/bank/repay', {
       method: 'POST',

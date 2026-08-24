@@ -334,8 +334,9 @@ describe('World lifecycle — new cities go through the real gameplay mechanisms
     const ownerAfterSell = await User.findById(buyer.user._id);
     expect(ownerAfterSell.balance).toBeGreaterThan(ownerAfterBuy.balance);
 
-    // Still discoverable after re-listing
-    const relisted = await request(app).get('/properties?city=Miami&seller=bank');
+    // Still discoverable after re-listing (oldest-first puts the early-created
+    // property deterministically inside the page)
+    const relisted = await request(app).get('/properties?city=Miami&seller=bank&sort=oldest&limit=100');
     expect(relisted.body.properties.some((p) => p._id === prop._id.toString())).toBe(true);
   });
 

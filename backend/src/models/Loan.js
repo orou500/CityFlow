@@ -19,6 +19,15 @@ const loanSchema = new mongoose.Schema(
     ticksPaid: { type: Number, default: 0 },
     active: { type: Boolean, default: true },
     creditScoreAtApply: { type: Number, default: 650 },
+    // Flexible-loan snapshot (immutable terms for loans created after the
+    // dynamic-pricing upgrade). Existing loans leave these unset.
+    durationMonths: { type: Number },
+    monthlyPayment: { type: Number },
+    totalRepayment: { type: Number },
+    totalInterest: { type: Number },
+    riskLevel: { type: String, enum: ['LOW', 'MODERATE', 'HIGH', 'VERY_HIGH'] },
+    amortized: { type: Boolean, default: false },
+    monthlyInterestRate: { type: Number },
   },
   { timestamps: true },
 );
