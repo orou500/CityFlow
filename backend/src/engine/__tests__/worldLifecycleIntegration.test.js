@@ -272,8 +272,10 @@ describe('World lifecycle — new cities go through the real gameplay mechanisms
     expect(
       byCity.body.properties.every((p) => p.cityId?.name === 'Miami' || p.cityId?._id === miami._id.toString()),
     ).toBe(true);
-    const prop = byCity.body.properties.find((p) => p.type !== 'land');
-    expect(prop, 'non-land Miami property').toBeTruthy();
+    // Houses always reach 100% occupancy (simulateOccupancy), making rent
+    // accrual deterministic — independent of tick timing on slow CI runners.
+    const prop = byCity.body.properties.find((p) => p.type === 'house');
+    expect(prop, 'house property in Miami').toBeTruthy();
 
     const byCountry = await request(app).get('/properties?country=Germany&seller=bank&limit=100');
     expect(byCountry.status).toBe(200);
