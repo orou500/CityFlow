@@ -866,9 +866,7 @@ describe('AUDIT — /bank/options advertises only approvable amounts', () => {
       for (const amount of [opt.minPrincipal, Math.floor((opt.minPrincipal + max) / 2), max]) {
         if (amount < opt.minPrincipal) continue;
         const preview = await request(app)
-          .get(
-            `/bank/offer-preview?productId=${opt.productId}&amount=${amount}&durationMonths=${opt.minMonths}`,
-          )
+          .get(`/bank/offer-preview?productId=${opt.productId}&amount=${amount}&durationMonths=${opt.minMonths}`)
           .set(authHeader(token));
         // The advertised maximum must never be rejected for exceeding capacity
         // (credit gate aside — these fixtures all pass it).

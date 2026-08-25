@@ -108,10 +108,7 @@ router.get('/options', authenticate, async (req, res) => {
 
       // The largest amount this product can actually approve right now:
       // within the product cap AND within the player's remaining debt room.
-      const effectiveMaxPrincipal = Math.max(
-        0,
-        Math.min(product.maxPrincipal, maxDebt - totalDebt),
-      );
+      const effectiveMaxPrincipal = Math.max(0, Math.min(product.maxPrincipal, maxDebt - totalDebt));
 
       for (const duration of product.durations) {
         const rate = getInterestRateForScore(product.baseInterestRate, creditScore);
