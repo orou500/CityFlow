@@ -129,13 +129,17 @@ export default function BankPage() {
     fetchLoans();
     fetchLoanOptions()
       .then((opts) => {
-        setOptions(opts);
-        if (opts.length > 0 && !selectedProduct) {
-          const product = opts[0];
+        // The backend returns one entry per (product x duration preset) — dedupe
+        // so each loan type renders exactly one card.
+        const unique = opts.filter((opt, i, arr) => arr.findIndex((o) => o.productId === opt.productId) === i);
+        setOptions(unique);
+        if (unique.length > 0 && !selectedProduct) {
+          const product = unique[0];
           setSelectedProduct(product);
-          setAmount(
-            Math.round(((product.maxPrincipal - product.minPrincipal) / 2 + product.minPrincipal) / 5000) * 5000,
-          );
+          const min = product.minPrincipal;
+          const max = product.maxPrincipal;
+          const midpoint = Math.round(((max - min) / 2 + min) / 5000) * 5000;
+          setAmount(Math.min(max, Math.max(min, midpoint)));
           const minMonths = product.minMonths || product.durationTicks || 6;
           setDurationMonths(Math.min(Math.max(minMonths, 12), product.maxMonths || 36));
         }
@@ -172,7 +176,10 @@ export default function BankPage() {
 
   const selectProduct = (product) => {
     setSelectedProduct(product);
-    setAmount(Math.round(((product.maxPrincipal - product.minPrincipal) / 2 + product.minPrincipal) / 5000) * 5000);
+    const min = product.minPrincipal;
+    const max = product.maxPrincipal;
+    const midpoint = Math.round(((max - min) / 2 + min) / 5000) * 5000;
+    setAmount(Math.min(max, Math.max(min, midpoint)));
     const minMonths = product.minMonths || product.durationTicks || 6;
     setDurationMonths(Math.min(Math.max(minMonths, 12), product.maxMonths || 36));
     setOffer(null);
@@ -241,7 +248,13 @@ export default function BankPage() {
   const productMax = selectedProduct?.maxPrincipal || 1;
   const minMonths = selectedProduct?.minMonths || 6;
   const maxMonths = selectedProduct?.maxMonths || 36;
-  const amountStep = Math.max(5000, Math.round((productMax - productMin) / 40 / 5000) * 5000);
+  // Fixed 5k grid — matches the midpoint snap and the backend's integer
+  // rounding, so the slider value always equals the displayed amount.
+  const amountStep = 5000;
+  const clampedAmount = Number.isFinite(amount) ? Math.min(productMax, Math.max(productMin, amount)) : productMin;
+  const clampedDuration = Number.isFinite(durationMonths)
+    ? Math.min(maxMonths, Math.max(minMonths, durationMonths))
+    : minMonths;
 
   return (
     <div className="flex-1 p-4 overflow-y-auto">
@@ -390,22 +403,33 @@ export default function BankPage() {
                         min={productMin}
                         max={productMax}
                         step={amountStep}
-                        value={amount}
+                        value={clampedAmount}
                         onChange={(e) => setAmount(Number(e.target.value))}
                         className="w-full accent-orange-500 mb-1"
                         aria-label={t('bank.borrowAmount')}
                       />
                       <div className="flex items-center justify-between mb-4 gap-2">
-                        <span className="text-lg font-bold text-gray-900 dark:text-white">{formatMoney(amount)}</span>
+                        <span className="text-lg font-bold text-gray-900 dark:text-white">
+                          {formatMoney(clampedAmount)}
+                        </span>
                         <input
                           type="number"
                           min={productMin}
                           max={productMax}
                           step={amountStep}
-                          value={amount}
+                          value={clampedAmount}
                           onChange={(e) => {
                             const v = Number(e.target.value);
-                            if (Number.isFinite(v)) setAmount(Math.max(0, v));
+                            if (Number.isFinite(v)) setAmount(Math.min(productMax, Math.max(productMin, v)));
+                          }}
+                          onBlur={() => {
+                            // Snap typed values back onto the slider grid.
+                            setAmount(
+                              Math.min(
+                                productMax,
+                                Math.max(productMin, Math.round(clampedAmount / amountStep) * amountStep),
+                              ),
+                            );
                           }}
                           className="w-32 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm text-gray-900 dark:text-white text-right"
                           aria-label={t('bank.borrowAmount')}
@@ -424,14 +448,14 @@ export default function BankPage() {
                         min={minMonths}
                         max={maxMonths}
                         step={1}
-                        value={durationMonths}
+                        value={clampedDuration}
                         onChange={(e) => setDurationMonths(Number(e.target.value))}
                         className="w-full accent-orange-500 mb-1"
                         aria-label={t('bank.loanDuration')}
                       />
                       <div className="flex items-center justify-between mb-4 gap-2">
                         <span className="text-lg font-bold text-gray-900 dark:text-white">
-                          {durationMonths} {t('bank.durationLabel')}
+                          {clampedDuration} {t('bank.durationLabel')}
                         </span>
                         <div className="flex gap-1 flex-wrap justify-end">
                           {[12, 24, 36, 48, 60, 72, 84]
@@ -524,7 +548,13 @@ export default function BankPage() {
 
                       <button
                         onClick={handleApply}
-                        disabled={!offer?.approved || applying}
+                        disabled={
+                          !offer?.approved ||
+                          applying ||
+                          offerLoading ||
+                          offer?.amount !== clampedAmount ||
+                          offer?.durationMonths !== clampedDuration
+                        }
                         className="w-full bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-gray-900 dark:text-white py-2 rounded transition-colors mt-3"
                       >
                         {applying ? t('common.loading') : t('bank.takeLoan')}

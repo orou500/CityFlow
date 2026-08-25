@@ -2,8 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import '@testing-library/jest-dom/vitest';
+import enJson from '../../i18n/en.json';
+import heJson from '../../i18n/he.json';
 
 const i18nState = vi.hoisted(() => ({ language: 'en' }));
+const tState = vi.hoisted(() => ({ fn: (key) => key }));
 const authState = vi.hoisted(() => ({ user: { _id: 'u1', balance: 1000000, creditScore: 700 }, fetchMe: vi.fn() }));
 const storeState = vi.hoisted(() => ({
   loans: [],
@@ -16,7 +19,7 @@ const storeState = vi.hoisted(() => ({
 }));
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key) => key, i18n: i18nState }),
+  useTranslation: () => ({ t: tState.fn, i18n: i18nState }),
 }));
 
 vi.mock('../../store/useAuthStore', () => ({
@@ -35,6 +38,23 @@ import BankPage from '../BankPage';
 
 function jsonResponse(body, ok = true) {
   return Promise.resolve({ ok, json: () => Promise.resolve(body) });
+}
+
+// Realistic i18next-style translator: resolves keys from en/he.json and
+// interpolates {{var}} tokens with the passed variables.
+function makeRealT(lang) {
+  const dict = lang === 'he' ? heJson : enJson;
+  return (key, vars) => {
+    const [ns, sub] = key.split('.');
+    let value = dict[ns]?.[sub];
+    if (value == null) return key;
+    if (vars) {
+      for (const [k, v] of Object.entries(vars)) {
+        value = value.split(`{{${k}}}`).join(String(v));
+      }
+    }
+    return value;
+  };
 }
 
 const OFFER = {
@@ -91,8 +111,15 @@ function renderPage() {
 beforeEach(() => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();
+  tState.fn = (key) => key;
   storeState.fetchLoanOptions.mockResolvedValue(PRODUCTS);
-  storeState.fetchLoanOffer.mockResolvedValue(OFFER);
+  // Echo the requested amount/duration so the preview and the Apply guard
+  // stay consistent (offer.amount === slider amount).
+  storeState.fetchLoanOffer.mockImplementation(async (productId, amount, durationMonths) => ({
+    ...OFFER,
+    amount,
+    durationMonths,
+  }));
   storeState.fetchLoans.mockResolvedValue();
   storeState.fetchUserData.mockResolvedValue();
   storeState.applyFlexibleLoan.mockResolvedValue({ loan: {}, balance: 1000000 });
@@ -192,6 +219,10 @@ describe('BankPage — flexible loan wizard', () => {
   it('applies the loan with the server-returned terms', async () => {
     renderPage();
     await waitFor(() => expect(screen.getByText('bank.takeLoan')).toBeTruthy());
+    const amountSlider = rangeInput('bank.borrowAmount');
+    const durationSlider = rangeInput('bank.loanDuration');
+    fireEvent.change(amountSlider, { target: { value: '750000' } });
+    fireEvent.change(durationSlider, { target: { value: '36' } });
     const button = screen.getByText('bank.takeLoan').closest('button');
     await waitFor(() => expect(button.disabled).toBe(false));
     fireEvent.click(button);
@@ -226,5 +257,120 @@ describe('BankPage — flexible loan wizard', () => {
     await waitFor(() => expect(screen.getByText('bank.borrowAmount')).toBeTruthy());
     expect(container.querySelector('input[type="range"]')).toBeTruthy();
     i18nState.language = 'en';
+  });
+});
+
+describe('BankPage — min/max interpolation and slider consistency', () => {
+  // With the realistic translator, labels resolve to English/Hebrew text.
+  const AMOUNT_LABEL = 'Borrow Amount';
+  const DURATION_LABEL = 'Loan Duration';
+  const rangeInput = (label) => screen.getAllByLabelText(label).find((el) => el.type === 'range');
+
+  beforeEach(() => {
+    tState.fn = makeRealT('en');
+  });
+
+  it('renders interpolated min/max values — no {min}/{max} placeholders', async () => {
+    renderPage();
+    await waitFor(() => expect(screen.getByText('Between $10K and $2.5M')).toBeTruthy());
+    expect(screen.getByText('6 to 36 months')).toBeTruthy();
+    expect(screen.queryByText(/\{min\}/)).toBeNull();
+    expect(screen.queryByText(/\{max\}/)).toBeNull();
+  });
+
+  it('renders Hebrew interpolated min/max values with RTL content', async () => {
+    tState.fn = makeRealT('he');
+    renderPage();
+    await waitFor(() => expect(screen.getByText('בין $10K ל-$2.5M')).toBeTruthy());
+    expect(screen.getByText('6 עד 36 חודשים')).toBeTruthy();
+    expect(screen.queryByText(/\{min\}/)).toBeNull();
+    expect(screen.queryByText(/\{max\}/)).toBeNull();
+  });
+
+  it('slider minimum: displayed and submitted amounts equal the backend minimum', async () => {
+    renderPage();
+    await waitFor(() => expect(screen.getAllByLabelText(AMOUNT_LABEL).length).toBeGreaterThan(0));
+    // Wait for the initial debounced fetch so the slider change schedules a fresh one.
+    await waitFor(() => expect(storeState.fetchLoanOffer).toHaveBeenCalled());
+    const slider = rangeInput(AMOUNT_LABEL);
+    fireEvent.change(slider, { target: { value: '10000' } });
+    await waitFor(() => expect(screen.getAllByText('$10K').length).toBeGreaterThan(0));
+    await waitFor(() => expect(storeState.fetchLoanOffer.mock.calls.length).toBeGreaterThanOrEqual(2));
+    expect(storeState.fetchLoanOffer.mock.calls.at(-1)[1]).toBe(10000);
+
+    const durationSlider = rangeInput(DURATION_LABEL);
+    fireEvent.change(durationSlider, { target: { value: '6' } });
+    const button = screen.getByText('Take Loan').closest('button');
+    await waitFor(() => expect(button.disabled).toBe(false));
+    fireEvent.click(button);
+    await waitFor(() => expect(storeState.applyFlexibleLoan).toHaveBeenCalled());
+    expect(storeState.applyFlexibleLoan).toHaveBeenCalledWith('personal', 10000, 6);
+  });
+
+  it('slider maximum: displayed and submitted amounts equal the backend maximum', async () => {
+    renderPage();
+    await waitFor(() => expect(screen.getAllByLabelText(AMOUNT_LABEL).length).toBeGreaterThan(0));
+    await waitFor(() => expect(storeState.fetchLoanOffer).toHaveBeenCalled());
+    const slider = rangeInput(AMOUNT_LABEL);
+    fireEvent.change(slider, { target: { value: '2500000' } });
+    await waitFor(() => expect(screen.getAllByText('$2.5M').length).toBeGreaterThan(0));
+    await waitFor(() => expect(storeState.fetchLoanOffer.mock.calls.length).toBeGreaterThanOrEqual(2));
+    expect(storeState.fetchLoanOffer.mock.calls.at(-1)[1]).toBe(2500000);
+
+    const durationSlider = rangeInput(DURATION_LABEL);
+    fireEvent.change(durationSlider, { target: { value: '36' } });
+    const button = screen.getByText('Take Loan').closest('button');
+    await waitFor(() => expect(button.disabled).toBe(false));
+    fireEvent.click(button);
+    await waitFor(() => expect(storeState.applyFlexibleLoan).toHaveBeenCalled());
+    expect(storeState.applyFlexibleLoan).toHaveBeenCalledWith('personal', 2500000, 36);
+  });
+
+  it('slider middle value: displayed amount matches the slider and is submitted unchanged', async () => {
+    renderPage();
+    await waitFor(() => expect(screen.getAllByLabelText(AMOUNT_LABEL).length).toBeGreaterThan(0));
+    await waitFor(() => expect(storeState.fetchLoanOffer).toHaveBeenCalled());
+    const slider = rangeInput(AMOUNT_LABEL);
+    fireEvent.change(slider, { target: { value: '1000000' } });
+    await waitFor(() => expect(screen.getAllByText('$1M').length).toBeGreaterThan(0));
+    await waitFor(() => expect(storeState.fetchLoanOffer.mock.calls.at(-1)[1]).toBe(1000000));
+  });
+
+  it('duration minimum and maximum follow the backend product range', async () => {
+    renderPage();
+    await waitFor(() => expect(screen.getAllByLabelText(DURATION_LABEL).length).toBeGreaterThan(0));
+    const slider = rangeInput(DURATION_LABEL);
+    expect(Number(slider.min)).toBe(6);
+    expect(Number(slider.max)).toBe(36);
+
+    fireEvent.change(slider, { target: { value: '6' } });
+    await waitFor(() => expect(screen.getByText('6 months')).toBeTruthy());
+    fireEvent.change(slider, { target: { value: '36' } });
+    await waitFor(() => expect(screen.getByText('36 months')).toBeTruthy());
+  });
+
+  it('switching loan products updates the amount and duration ranges', async () => {
+    renderPage();
+    await waitFor(() => expect(screen.getAllByText('Mortgage').length).toBeGreaterThan(0));
+    fireEvent.click(screen.getAllByText('Mortgage')[0]);
+
+    const amountSlider = rangeInput(AMOUNT_LABEL);
+    const durationSlider = rangeInput(DURATION_LABEL);
+    await waitFor(() => expect(Number(amountSlider.max)).toBe(5000000));
+    expect(Number(amountSlider.min)).toBe(50000);
+    expect(Number(durationSlider.min)).toBe(12);
+    expect(Number(durationSlider.max)).toBe(84);
+    expect(screen.getByText('12 to 84 months')).toBeTruthy();
+
+    // Switch back to Personal — ranges restore.
+    fireEvent.click(screen.getAllByText('Personal')[0]);
+    await waitFor(() => expect(Number(rangeInput(AMOUNT_LABEL).max)).toBe(2500000));
+    expect(Number(rangeInput(DURATION_LABEL).max)).toBe(36);
+  });
+
+  it('each loan product renders exactly one card (deduplicated)', async () => {
+    renderPage();
+    await waitFor(() => expect(screen.getAllByText('Personal').length).toBe(1));
+    expect(screen.getAllByText('Mortgage').length).toBe(1);
   });
 });
