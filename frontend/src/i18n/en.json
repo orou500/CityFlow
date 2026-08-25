@@ -248,6 +248,7 @@
   "common": {
     "loading": "Loading...",
     "error": "Error",
+    "retry": "Retry",
     "success": "Success",
     "confirm": "Confirm",
     "cancel": "Cancel",

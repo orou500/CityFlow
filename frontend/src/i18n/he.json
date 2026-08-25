@@ -248,6 +248,7 @@
   "common": {
     "loading": "טוען...",
     "error": "שגיאה",
+    "retry": "נסה שוב",
     "success": "הצלחה",
     "confirm": "אישור",
     "cancel": "ביטול",

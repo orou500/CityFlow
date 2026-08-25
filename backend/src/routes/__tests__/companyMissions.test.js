@@ -518,6 +518,28 @@ describe('Company Mission System', () => {
       expect(firstMission.definition.name).toBeDefined();
       expect(firstMission.percentage).toBeDefined();
     });
+
+    it('populates contributor usernames in the dashboard', async () => {
+      const { user } = await createAuthenticatedUser();
+      const city = await createTestCity();
+      const company = await RealEstateCompany.create({
+        name: `TestCo_${Date.now()}`,
+        founderId: user._id,
+        hqCityId: city._id,
+        members: [{ userId: user._id, role: 'ceo' }],
+      });
+
+      await initializeCompanyMissions(company._id);
+      await createTestProperty({ companyId: company._id, cityId: city._id, forSale: false });
+      await updateCompanyMissionProgress(company._id, 'property_purchased', user._id);
+
+      const dashboard = await getCompanyMissionDashboard(company._id);
+
+      const withContributors = [...dashboard.active, ...dashboard.completed].find((m) => m.contributors?.length > 0);
+      expect(withContributors).toBeDefined();
+      expect(withContributors.contributors[0].userId).toBeTruthy();
+      expect(withContributors.contributors[0].userId.username).toBe(user.username);
+    });
   });
 
   describe('API Routes', () => {

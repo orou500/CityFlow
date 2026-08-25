@@ -441,7 +441,7 @@ export async function processAllCompanyMissionProgress() {
 }
 
 export async function getCompanyMissionDashboard(companyId) {
-  const missions = await CompanyMissionProgress.find({ companyId }).lean();
+  const missions = await CompanyMissionProgress.find({ companyId }).populate('contributors.userId', 'username').lean();
 
   const active = missions.filter((m) => m.status === 'active');
   const completed = missions.filter((m) => m.status === 'completed');

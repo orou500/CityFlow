@@ -261,6 +261,7 @@ export default function CompanyDetailPage() {
     fetchCompanyLoans,
     fetchCompanyLoanOptions,
     fetchCompanyProperties,
+    companyMissions,
     fetchCompanyMissions,
     claimCompanyMissionReward,
   } = useCompanyStore();
@@ -282,6 +283,8 @@ export default function CompanyDetailPage() {
   const [loanReqDuration, setLoanReqDuration] = useState('');
   const [loanReqType, setLoanReqType] = useState('business');
   const [loanReqError, setLoanReqError] = useState('');
+  const [missionsError, setMissionsError] = useState(false);
+  const [claimingMissionId, setClaimingMissionId] = useState(null);
   const [directLoanAmount, setDirectLoanAmount] = useState('');
   const [directLoanDuration, setDirectLoanDuration] = useState('');
   const [directLoanProduct, setDirectLoanProduct] = useState('');
@@ -444,7 +447,8 @@ export default function CompanyDetailPage() {
         .catch(() => {});
     }
     if (tab === 'missions') {
-      fetchCompanyMissions(id).catch(() => {});
+      setMissionsError(false);
+      fetchCompanyMissions(id).catch(() => setMissionsError(true));
     }
   }, [tab, id, propertiesPage, auditPage, company?.memberRole, user?.role]);
 
@@ -2386,6 +2390,44 @@ export default function CompanyDetailPage() {
       {tab === 'missions' &&
         (() => {
           const missions = companyMissions;
+          const missionTypeKeys = {
+            daily: 'companies.missionTypeDaily',
+            weekly: 'companies.missionTypeWeekly',
+            milestone: 'companies.missionTypeMilestone',
+          };
+          const handleClaim = async (missionId) => {
+            if (claimingMissionId) return;
+            setClaimingMissionId(missionId);
+            try {
+              await claimCompanyMissionReward(id, missionId);
+            } catch {
+            } finally {
+              setClaimingMissionId(null);
+            }
+          };
+          if (missionsError) {
+            return (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                <p className="text-sm mb-3">{t('common.error')}</p>
+                <button
+                  onClick={() => {
+                    setMissionsError(false);
+                    fetchCompanyMissions(id).catch(() => setMissionsError(true));
+                  }}
+                  className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700"
+                >
+                  {t('common.retry')}
+                </button>
+              </div>
+            );
+          }
+          if (!missions) {
+            return (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                <p className="text-sm">{t('common.loading')}</p>
+              </div>
+            );
+          }
           return (
             <div className="space-y-3 sm:space-y-4">
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 sm:p-4">
@@ -2436,7 +2478,7 @@ export default function CompanyDetailPage() {
                                 {m.definition?.name || m.missionId}
                               </span>
                               <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
-                                {m.definition?.type || 'milestone'}
+                                {t(missionTypeKeys[m.definition?.type] || 'companies.missionTypeMilestone')}
                               </span>
                             </div>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{m.definition?.description}</p>
@@ -2457,14 +2499,18 @@ export default function CompanyDetailPage() {
                             {m.contributors?.length > 0 && (
                               <div className="mt-2 flex flex-wrap gap-1">
                                 <span className="text-xs text-gray-400">{t('companies.missionContributors')}:</span>
-                                {m.contributors.map((c) => (
-                                  <span
-                                    key={c.userId}
-                                    className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded"
-                                  >
-                                    {typeof c.userId === 'string' ? c.userId.slice(0, 8) + '...' : c.userId}
-                                  </span>
-                                ))}
+                                {m.contributors.map((c) => {
+                                  const contributorId = c.userId?._id || c.userId;
+                                  return (
+                                    <span
+                                      key={contributorId}
+                                      className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded"
+                                    >
+                                      {c.userId?.username ||
+                                        (typeof contributorId === 'string' ? `${contributorId.slice(0, 8)}…` : '')}
+                                    </span>
+                                  );
+                                })}
                               </div>
                             )}
                             <div className="mt-2 flex items-center gap-3 text-xs">
@@ -2510,14 +2556,13 @@ export default function CompanyDetailPage() {
                             </div>
                           </div>
                           <button
-                            onClick={async () => {
-                              try {
-                                await claimCompanyMissionReward(id, m.missionId);
-                              } catch {}
-                            }}
-                            className="px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700"
+                            onClick={() => handleClaim(m.missionId)}
+                            disabled={claimingMissionId === m.missionId}
+                            className="px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            {t('companies.missionClaimReward')}
+                            {claimingMissionId === m.missionId
+                              ? t('common.loading')
+                              : t('companies.missionClaimReward')}
                           </button>
                         </div>
                         <div className="mt-2 flex items-center gap-3 text-xs">
