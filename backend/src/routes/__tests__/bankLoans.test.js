@@ -809,3 +809,95 @@ describe('AUDIT — borrowing capacity cannot be manufactured from borrowed cash
     expect(withIncome.approved).toBe(base.approved);
   });
 });
+
+describe('AUDIT — /bank/options advertises only approvable amounts', () => {
+  beforeEach(async () => {
+    await GameState.deleteMany({});
+    await GameState.create({ key: 'global', tickNumber: 100 });
+    await Loan.deleteMany({});
+    await User.deleteMany({});
+    await Property.deleteMany({});
+  });
+
+  it('options use lending net worth and effectiveMaxPrincipal respects existing debt', async () => {
+    // gross netWorth = 1M, lendingNetWorth = 900k + max(0, 100k − 400k) = 900k
+    const { user, token } = await createAuthenticatedUser({ balance: 100000, creditScore: 670 });
+    await createTestProperty({ ownerId: user._id, currentPrice: 900000, basePrice: 900000 });
+    await Loan.create({
+      userId: user._id,
+      type: 'personal',
+      principal: 400000,
+      remainingBalance: 400000,
+      interestRate: 0.06,
+      durationTicks: 12,
+      ticksRemaining: 12,
+      paymentPerTick: 40000,
+      active: true,
+      creditScoreAtApply: 670,
+    });
+
+    const res = await request(app).get('/bank/options').set(authHeader(token));
+    expect(res.status).toBe(200);
+
+    for (const opt of res.body) {
+      // maxDebt = 900k x 1.0 = 900k; room after existing debt = 500k.
+      // No product may advertise more than the approvable maximum.
+      expect(opt.effectiveMaxPrincipal, opt.productId).toBeLessThanOrEqual(500000);
+      expect(opt.effectiveMaxPrincipal).toBeGreaterThanOrEqual(0);
+    }
+
+    // The personal product (cap = lendingNW x 0.5 = 450k) keeps its cap;
+    // products whose raw cap exceeded the room are clamped to the room.
+    const personal = res.body.find((o) => o.productId === 'personal');
+    expect(personal.maxPrincipal).toBeLessThanOrEqual(450000);
+    expect(personal.effectiveMaxPrincipal).toBeLessThanOrEqual(personal.maxPrincipal);
+  });
+
+  it('every advertised slider position is approvable end-to-end (options -> offer)', async () => {
+    const { user, token } = await createAuthenticatedUser({ balance: 100000, creditScore: 700 });
+    await createTestProperty({ ownerId: user._id, currentPrice: 1000000, basePrice: 1000000 });
+
+    const options = (await request(app).get('/bank/options').set(authHeader(token))).body;
+    expect(options.length).toBeGreaterThan(0);
+
+    for (const opt of options) {
+      const max = opt.effectiveMaxPrincipal ?? opt.maxPrincipal;
+      // Sample the full range including both endpoints.
+      for (const amount of [opt.minPrincipal, Math.floor((opt.minPrincipal + max) / 2), max]) {
+        if (amount < opt.minPrincipal) continue;
+        const preview = await request(app)
+          .get(
+            `/bank/offer-preview?productId=${opt.productId}&amount=${amount}&durationMonths=${opt.minMonths}`,
+          )
+          .set(authHeader(token));
+        // The advertised maximum must never be rejected for exceeding capacity
+        // (credit gate aside — these fixtures all pass it).
+        expect(preview.body.approved, `${opt.productId} @ ${amount}`).not.toBe(false);
+      }
+    }
+  });
+
+  it('a player with no remaining debt room gets no usable personal option', async () => {
+    // lendingNW = 900k; pre-load debt to exactly the cap -> room = 0.
+    const { user, token } = await createAuthenticatedUser({ balance: 100000, creditScore: 670 });
+    await createTestProperty({ ownerId: user._id, currentPrice: 900000, basePrice: 900000 });
+    await Loan.create({
+      userId: user._id,
+      type: 'personal',
+      principal: 900000,
+      remainingBalance: 900000,
+      interestRate: 0.06,
+      durationTicks: 12,
+      ticksRemaining: 12,
+      paymentPerTick: 80000,
+      active: true,
+      creditScoreAtApply: 670,
+    });
+
+    const res = await request(app).get('/bank/options').set(authHeader(token));
+    expect(res.status).toBe(200);
+    for (const opt of res.body) {
+      expect(opt.effectiveMaxPrincipal, opt.productId).toBeLessThanOrEqual(0);
+    }
+  });
+});

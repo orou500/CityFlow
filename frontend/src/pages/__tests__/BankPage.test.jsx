@@ -373,4 +373,52 @@ describe('BankPage — min/max interpolation and slider consistency', () => {
     await waitFor(() => expect(screen.getAllByText('Personal').length).toBe(1));
     expect(screen.getAllByText('Mortgage').length).toBe(1);
   });
+
+  it('slider max uses effectiveMaxPrincipal (approvable amount) when provided', async () => {
+    storeState.fetchLoanOptions.mockResolvedValue([
+      {
+        productId: 'personal',
+        minPrincipal: 10000,
+        maxPrincipal: 83836, // advertised gross cap
+        effectiveMaxPrincipal: 39000, // server-computed approvable maximum
+        minMonths: 6,
+        maxMonths: 36,
+        durationTicks: 12,
+      },
+    ]);
+    renderPage();
+    await waitFor(() => expect(screen.getAllByLabelText(AMOUNT_LABEL).length).toBeGreaterThan(0));
+    const slider = rangeInput(AMOUNT_LABEL);
+    expect(Number(slider.min)).toBe(10000);
+    expect(Number(slider.max)).toBe(39000); // NOT the advertised 83,836
+
+    // The numeric input must be clamped inside the approvable range too.
+    const numeric = screen.getAllByLabelText(AMOUNT_LABEL).find((el) => el.type === 'number');
+    expect(Number(numeric.value)).toBeLessThanOrEqual(39000);
+    expect(Number(numeric.value)).toBeGreaterThanOrEqual(10000);
+  });
+
+  it('hides products whose entire range exceeds the approvable capacity', async () => {
+    storeState.fetchLoanOptions.mockResolvedValue([
+      {
+        productId: 'personal',
+        minPrincipal: 10000,
+        maxPrincipal: 2500000,
+        effectiveMaxPrincipal: 500000,
+        minMonths: 6,
+        maxMonths: 36,
+      },
+      {
+        productId: 'business',
+        minPrincipal: 100000,
+        maxPrincipal: 251508,
+        effectiveMaxPrincipal: 2000,
+        minMonths: 12,
+        maxMonths: 60,
+      }, // unusable
+    ]);
+    renderPage();
+    await waitFor(() => expect(screen.getAllByText('Personal').length).toBe(1));
+    expect(screen.queryByText('Business')).toBeNull(); // filtered out — nothing selectable would ever approve
+  });
 });

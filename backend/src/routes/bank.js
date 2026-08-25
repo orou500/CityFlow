@@ -91,14 +91,27 @@ router.get('/options', authenticate, async (req, res) => {
     const user = await User.findById(req.user._id);
     const properties = await Property.find({ ownerId: user._id });
     const propertyValue = properties.reduce((sum, p) => sum + p.currentPrice, 0);
-    const netWorth = user.balance + propertyValue;
     const creditScore = user.creditScore || 650;
+    const activeLoans = await Loan.find({ userId: user._id, active: true }).select('remainingBalance').lean();
+    const totalDebt = activeLoans.reduce((sum, l) => sum + (l.remainingBalance || 0), 0);
+    // Products must be advertised against the SAME lending net worth the
+    // offer engine enforces — gross net worth would advertise amounts the
+    // backend then rejects.
+    const lendingNetWorth = computeLendingNetWorth(user.balance, propertyValue, totalDebt);
+    const maxDebt = Math.round(Math.max(1, lendingNetWorth) * getLoanMultiplier(creditScore));
 
-    const products = getLoanProducts(creditScore, netWorth);
+    const products = getLoanProducts(creditScore, lendingNetWorth);
 
     const options = [];
     for (const product of products) {
       if (creditScore < product.creditRequirement) continue;
+
+      // The largest amount this product can actually approve right now:
+      // within the product cap AND within the player's remaining debt room.
+      const effectiveMaxPrincipal = Math.max(
+        0,
+        Math.min(product.maxPrincipal, maxDebt - totalDebt),
+      );
 
       for (const duration of product.durations) {
         const rate = getInterestRateForScore(product.baseInterestRate, creditScore);
@@ -110,6 +123,10 @@ router.get('/options', authenticate, async (req, res) => {
           name: product.name,
           principal: product.maxPrincipal,
           minPrincipal: product.minPrincipal,
+          maxPrincipal: product.maxPrincipal,
+          // Server-computed selectable maximum after existing debt — the
+          // frontend drives its amount slider with this value.
+          effectiveMaxPrincipal,
           durationTicks: duration,
           minMonths: product.minMonths,
           maxMonths: product.maxMonths,

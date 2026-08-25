@@ -132,12 +132,15 @@ export default function BankPage() {
         // The backend returns one entry per (product x duration preset) — dedupe
         // so each loan type renders exactly one card.
         const unique = opts.filter((opt, i, arr) => arr.findIndex((o) => o.productId === opt.productId) === i);
-        setOptions(unique);
-        if (unique.length > 0 && !selectedProduct) {
-          const product = unique[0];
+        // The backend's effectiveMaxPrincipal is the largest amount it will
+        // actually approve right now (product cap minus existing-debt room).
+        const usable = unique.filter((o) => (o.effectiveMaxPrincipal ?? o.maxPrincipal) >= o.minPrincipal);
+        setOptions(usable);
+        if (usable.length > 0 && !selectedProduct) {
+          const product = usable[0];
           setSelectedProduct(product);
           const min = product.minPrincipal;
-          const max = product.maxPrincipal;
+          const max = product.effectiveMaxPrincipal ?? product.maxPrincipal;
           const midpoint = Math.round(((max - min) / 2 + min) / 5000) * 5000;
           setAmount(Math.min(max, Math.max(min, midpoint)));
           const minMonths = product.minMonths || product.durationTicks || 6;
@@ -177,7 +180,7 @@ export default function BankPage() {
   const selectProduct = (product) => {
     setSelectedProduct(product);
     const min = product.minPrincipal;
-    const max = product.maxPrincipal;
+    const max = product.effectiveMaxPrincipal ?? product.maxPrincipal;
     const midpoint = Math.round(((max - min) / 2 + min) / 5000) * 5000;
     setAmount(Math.min(max, Math.max(min, midpoint)));
     const minMonths = product.minMonths || product.durationTicks || 6;
@@ -245,7 +248,9 @@ export default function BankPage() {
   const scoreWidth = getScoreWidth(creditScore);
 
   const productMin = selectedProduct?.minPrincipal || 0;
-  const productMax = selectedProduct?.maxPrincipal || 1;
+  // Slider bound = server-computed selectable maximum (product cap minus
+  // existing-debt room) — never the raw advertised maximum.
+  const productMax = selectedProduct?.effectiveMaxPrincipal ?? selectedProduct?.maxPrincipal ?? 1;
   const minMonths = selectedProduct?.minMonths || 6;
   const maxMonths = selectedProduct?.maxMonths || 36;
   // Fixed 5k grid — matches the midpoint snap and the backend's integer
@@ -367,6 +372,7 @@ export default function BankPage() {
                   <div className="grid grid-cols-2 gap-2 mb-4">
                     {options.map((opt) => {
                       const active = selectedProduct?.productId === opt.productId;
+                      const effectiveMax = opt.effectiveMaxPrincipal ?? opt.maxPrincipal;
                       return (
                         <button
                           key={opt.productId}
@@ -379,7 +385,7 @@ export default function BankPage() {
                         >
                           <div className="font-semibold text-sm">{getLoanTypeLabel(opt.productId, t)}</div>
                           <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                            {formatCompact(opt.minPrincipal)} – {formatCompact(opt.maxPrincipal)}
+                            {formatCompact(opt.minPrincipal)} – {formatCompact(effectiveMax)}
                           </div>
                           <div className="text-xs text-gray-500 dark:text-gray-400">
                             {opt.minMonths || 6}–{opt.maxMonths || 36} {t('bank.durationLabel')}
