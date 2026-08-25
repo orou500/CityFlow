@@ -1,0 +1,327 @@
+export const COMPANY_MISSION_CATEGORIES = ['property_growth', 'financial', 'expansion', 'member_activity', 'market'];
+
+export const COMPANY_MISSION_TYPES = ['daily', 'weekly', 'milestone'];
+
+export const COMPANY_MISSION_DEFINITIONS = [
+  // ─── DAILY MISSIONS ──────────────────────────────────
+  {
+    id: 'daily_collect_rent',
+    name: 'Daily Collections',
+    description: 'Collect rent from company properties',
+    category: 'financial',
+    type: 'daily',
+    order: 1,
+    condition: { type: 'company_rent_collected_today', target: 1 },
+    rewards: { xp: 50, treasury: 5000, reputation: 2 },
+    icon: '💰',
+  },
+  {
+    id: 'daily_member_activity',
+    name: 'Team Activity',
+    description: 'Have 2 different members perform company actions',
+    category: 'member_activity',
+    type: 'daily',
+    order: 2,
+    condition: { type: 'company_unique_contributors_today', target: 2 },
+    rewards: { xp: 75, treasury: 10000, reputation: 3 },
+    icon: '👥',
+  },
+  {
+    id: 'daily_treasury_growth',
+    name: 'Growing Treasury',
+    description: 'Increase company treasury balance',
+    category: 'financial',
+    type: 'daily',
+    order: 3,
+    condition: { type: 'company_treasury_deposit_today', target: 10000 },
+    rewards: { xp: 40, treasury: 3000, reputation: 1 },
+    icon: '🏦',
+  },
+  {
+    id: 'daily_property_upgrade',
+    name: 'Property Improvement',
+    description: 'Complete an upgrade on a company property',
+    category: 'property_growth',
+    type: 'daily',
+    order: 4,
+    condition: { type: 'company_upgrades_today', target: 1 },
+    rewards: { xp: 80, treasury: 8000, reputation: 3 },
+    icon: '🔧',
+  },
+
+  // ─── WEEKLY MISSIONS ─────────────────────────────────
+  {
+    id: 'weekly_acquire_properties',
+    name: 'Portfolio Expansion',
+    description: 'Acquire 3 new properties for the company',
+    category: 'property_growth',
+    type: 'weekly',
+    order: 10,
+    condition: { type: 'company_properties_acquired_week', target: 3 },
+    rewards: { xp: 200, treasury: 30000, reputation: 10 },
+    icon: '🏢',
+  },
+  {
+    id: 'weekly_rent_revenue',
+    name: 'Revenue Week',
+    description: 'Collect $50,000 in rent this week',
+    category: 'financial',
+    type: 'weekly',
+    order: 11,
+    condition: { type: 'company_rent_collected_week', target: 50000 },
+    rewards: { xp: 150, treasury: 25000, reputation: 8 },
+    icon: '📈',
+  },
+  {
+    id: 'weekly_members_active',
+    name: 'Corporate Spirit',
+    description: 'Have 3 different members contribute to company activities',
+    category: 'member_activity',
+    type: 'weekly',
+    order: 12,
+    condition: { type: 'company_unique_contributors_week', target: 3 },
+    rewards: { xp: 250, treasury: 40000, reputation: 15 },
+    icon: '🤝',
+  },
+  {
+    id: 'weekly_marketplace_deals',
+    name: 'Deal Maker',
+    description: 'Complete 2 marketplace transactions',
+    category: 'market',
+    type: 'weekly',
+    order: 13,
+    condition: { type: 'company_transactions_week', target: 2 },
+    rewards: { xp: 180, treasury: 20000, reputation: 10 },
+    icon: '💼',
+  },
+  {
+    id: 'weekly_developments',
+    name: 'Building Spree',
+    description: 'Complete 2 development projects',
+    category: 'property_growth',
+    type: 'weekly',
+    order: 14,
+    condition: { type: 'company_developments_week', target: 2 },
+    rewards: { xp: 300, treasury: 50000, reputation: 12 },
+    icon: '🏗️',
+  },
+  {
+    id: 'weekly_diverse_cities',
+    name: 'Multi-City Presence',
+    description: 'Own properties in 3 different cities',
+    category: 'expansion',
+    type: 'weekly',
+    order: 15,
+    condition: { type: 'company_cities_with_properties', target: 3 },
+    rewards: { xp: 200, treasury: 35000, reputation: 10 },
+    icon: '🌆',
+  },
+
+  // ─── MILESTONE MISSIONS (permanent, complete once) ───
+  {
+    id: 'milestone_first_property',
+    name: 'First Acquisition',
+    description: 'Acquire your first company property',
+    category: 'property_growth',
+    type: 'milestone',
+    order: 20,
+    condition: { type: 'company_properties_owned', target: 1 },
+    rewards: { xp: 100, treasury: 10000, reputation: 5 },
+    icon: '🏠',
+  },
+  {
+    id: 'milestone_five_properties',
+    name: 'Growing Portfolio',
+    description: 'Own 5 company properties',
+    category: 'property_growth',
+    type: 'milestone',
+    order: 21,
+    condition: { type: 'company_properties_owned', target: 5 },
+    rewards: { xp: 300, treasury: 50000, reputation: 15 },
+    icon: '🏘️',
+  },
+  {
+    id: 'milestone_ten_properties',
+    name: 'Property Mogul',
+    description: 'Own 10 company properties',
+    category: 'property_growth',
+    type: 'milestone',
+    order: 22,
+    condition: { type: 'company_properties_owned', target: 10 },
+    rewards: { xp: 600, treasury: 100000, reputation: 25 },
+    icon: '🏢',
+  },
+  {
+    id: 'milestone_five_cities',
+    name: 'National Expansion',
+    description: 'Own properties in 5 different cities',
+    category: 'expansion',
+    type: 'milestone',
+    order: 25,
+    condition: { type: 'company_cities_with_properties', target: 5 },
+    rewards: { xp: 500, treasury: 75000, reputation: 20 },
+    icon: '🗺️',
+  },
+  {
+    id: 'milestone_ten_cities',
+    name: 'Global Reach',
+    description: 'Own properties in 10 different cities',
+    category: 'expansion',
+    type: 'milestone',
+    order: 26,
+    condition: { type: 'company_cities_with_properties', target: 10 },
+    rewards: { xp: 1000, treasury: 200000, reputation: 40 },
+    icon: '🌍',
+  },
+  {
+    id: 'milestone_revenue_500k',
+    name: 'Revenue Trail',
+    description: 'Collect $500,000 in total rent',
+    category: 'financial',
+    type: 'milestone',
+    order: 30,
+    condition: { type: 'company_total_rent_collected', target: 500000 },
+    rewards: { xp: 400, treasury: 60000, reputation: 15 },
+    icon: '💵',
+  },
+  {
+    id: 'milestone_revenue_5m',
+    name: 'Revenue Engine',
+    description: 'Collect $5,000,000 in total rent',
+    category: 'financial',
+    type: 'milestone',
+    order: 31,
+    condition: { type: 'company_total_rent_collected', target: 5000000 },
+    rewards: { xp: 1500, treasury: 300000, reputation: 50 },
+    icon: '💹',
+  },
+  {
+    id: 'milestone_net_worth_10m',
+    name: 'Millionaire Club',
+    description: 'Reach $10,000,000 company net worth',
+    category: 'financial',
+    type: 'milestone',
+    order: 35,
+    condition: { type: 'company_net_worth', target: 10000000 },
+    rewards: { xp: 800, treasury: 150000, reputation: 30 },
+    icon: '🏅',
+  },
+  {
+    id: 'milestone_net_worth_100m',
+    name: 'Corporate Giant',
+    description: 'Reach $100,000,000 company net worth',
+    category: 'financial',
+    type: 'milestone',
+    order: 36,
+    condition: { type: 'company_net_worth', target: 100000000 },
+    rewards: { xp: 3000, treasury: 500000, reputation: 75 },
+    icon: '🏆',
+  },
+  {
+    id: 'milestone_five_members',
+    name: 'Full Team',
+    description: 'Have 5 members in the company',
+    category: 'member_activity',
+    type: 'milestone',
+    order: 40,
+    condition: { type: 'company_member_count', target: 5 },
+    rewards: { xp: 200, treasury: 25000, reputation: 10 },
+    icon: '👥',
+  },
+  {
+    id: 'milestone_ten_members',
+    name: 'Large Corporation',
+    description: 'Have 10 members in the company',
+    category: 'member_activity',
+    type: 'milestone',
+    order: 41,
+    condition: { type: 'company_member_count', target: 10 },
+    rewards: { xp: 500, treasury: 75000, reputation: 25 },
+    icon: '🏛️',
+  },
+  {
+    id: 'milestone_first_development',
+    name: 'Builder',
+    description: 'Complete your first development project',
+    category: 'property_growth',
+    type: 'milestone',
+    order: 45,
+    condition: { type: 'company_developments_total', target: 1 },
+    rewards: { xp: 150, treasury: 15000, reputation: 8 },
+    icon: '🔨',
+  },
+  {
+    id: 'milestone_ten_developments',
+    name: 'Master Developer',
+    description: 'Complete 10 development projects',
+    category: 'property_growth',
+    type: 'milestone',
+    order: 46,
+    condition: { type: 'company_developments_total', target: 10 },
+    rewards: { xp: 600, treasury: 100000, reputation: 30 },
+    icon: '🏗️',
+  },
+  {
+    id: 'milestone_three_districts',
+    name: 'District Explorer',
+    description: 'Own properties in 3 different districts',
+    category: 'expansion',
+    type: 'milestone',
+    order: 50,
+    condition: { type: 'company_districts_with_properties', target: 3 },
+    rewards: { xp: 350, treasury: 45000, reputation: 18 },
+    icon: '🏘️',
+  },
+  {
+    id: 'milestone_profitable_sale',
+    name: 'Smart Flipper',
+    description: 'Sell a company property for a profit',
+    category: 'market',
+    type: 'milestone',
+    order: 55,
+    condition: { type: 'company_profitable_sales', target: 1 },
+    rewards: { xp: 200, treasury: 30000, reputation: 10 },
+    icon: '💎',
+  },
+  {
+    id: 'milestone_auction_win',
+    name: 'Auction Champion',
+    description: 'Win a property at auction',
+    category: 'market',
+    type: 'milestone',
+    order: 56,
+    condition: { type: 'company_auctions_won', target: 1 },
+    rewards: { xp: 250, treasury: 35000, reputation: 12 },
+    icon: '🎖️',
+  },
+];
+
+export function getCompanyMissionById(id) {
+  return COMPANY_MISSION_DEFINITIONS.find((m) => m.id === id);
+}
+
+export function getCompanyMissionsByType(type) {
+  return COMPANY_MISSION_DEFINITIONS.filter((m) => m.type === type);
+}
+
+export function getCompanyMissionsByCategory(category) {
+  return COMPANY_MISSION_DEFINITIONS.filter((m) => m.category === category);
+}
+
+export function getCompanyDailyMissions() {
+  return getCompanyMissionsByType('daily');
+}
+
+export function getCompanyWeeklyMissions() {
+  return getCompanyMissionsByType('weekly');
+}
+
+export function getCompanyMilestoneMissions() {
+  return getCompanyMissionsByType('milestone');
+}
+
+export const COMPANY_MISSION_CACHE_TTL = {
+  list: 30,
+  detail: 60,
+  dashboard: 30,
+};

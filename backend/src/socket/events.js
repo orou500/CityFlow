@@ -51,6 +51,11 @@ export const SOCKET_EVENTS = {
   MISSION_REWARD_CLAIMED: 'mission:reward:claimed',
   MISSIONS_REFRESHED: 'mission:refreshed',
 
+  COMPANY_MISSION_COMPLETED: 'company:mission:completed',
+  COMPANY_MISSION_REWARD_CLAIMED: 'company:mission:reward:claimed',
+  COMPANY_MISSION_PROGRESS: 'company:mission:progress',
+  COMPANY_MISSIONS_REFRESHED: 'company:mission:refreshed',
+
   ACHIEVEMENT_UNLOCKED: 'achievement:unlocked',
   CAREER_UPDATED: 'career:updated',
 

@@ -15,6 +15,7 @@ const TABS = [
   'treasury',
   'properties',
   'loans',
+  'missions',
   'contracts',
   'investments',
   'auctions',
@@ -260,6 +261,8 @@ export default function CompanyDetailPage() {
     fetchCompanyLoans,
     fetchCompanyLoanOptions,
     fetchCompanyProperties,
+    fetchCompanyMissions,
+    claimCompanyMissionReward,
   } = useCompanyStore();
 
   const [tab, setTab] = useState(searchParams.get('tab') || 'overview');
@@ -439,6 +442,9 @@ export default function CompanyDetailPage() {
       fetchInvestmentPerformance(id)
         .then(setInvestmentPerformance)
         .catch(() => {});
+    }
+    if (tab === 'missions') {
+      fetchCompanyMissions(id).catch(() => {});
     }
   }, [tab, id, propertiesPage, auditPage, company?.memberRole, user?.role]);
 
@@ -2376,6 +2382,159 @@ export default function CompanyDetailPage() {
           })()}
         </div>
       )}
+
+      {tab === 'missions' && (() => {
+        const missions = companyMissions;
+        return (
+          <div className="space-y-3 sm:space-y-4">
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 sm:p-4">
+              <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300">{t('companies.missionsDescription')}</p>
+            </div>
+
+            {missions?.stats && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+                <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border dark:border-gray-700">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{t('companies.missionStatActive')}</p>
+                  <p className="text-lg font-bold">{missions.stats.totalActive}</p>
+                </div>
+                <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border dark:border-gray-700">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{t('companies.missionStatCompleted')}</p>
+                  <p className="text-lg font-bold text-green-600">{missions.stats.totalCompleted}</p>
+                </div>
+                <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border dark:border-gray-700">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{t('companies.missionStatXPEarned')}</p>
+                  <p className="text-lg font-bold text-purple-600">{missions.stats.totalXP.toLocaleString()}</p>
+                </div>
+                <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border dark:border-gray-700">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{t('companies.missionStatTreasuryEarned')}</p>
+                  <p className="text-lg font-bold text-yellow-600">${missions.stats.totalTreasury.toLocaleString()}</p>
+                </div>
+              </div>
+            )}
+
+            {missions?.active?.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold mb-2 dark:text-gray-200">{t('companies.missionsActive')}</h3>
+                <div className="space-y-2">
+                  {missions.active.map((m) => (
+                    <div key={m._id} className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 border dark:border-gray-700">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">{m.definition?.icon || '📋'}</span>
+                            <span className="font-medium text-sm dark:text-gray-200">{m.definition?.name || m.missionId}</span>
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
+                              {m.definition?.type || 'milestone'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{m.definition?.description}</p>
+                          <div className="mt-2">
+                            <div className="flex items-center justify-between text-xs mb-1">
+                              <span className="text-gray-500 dark:text-gray-400">{m.progress} / {m.target}</span>
+                              <span className="text-gray-500 dark:text-gray-400">{m.percentage}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                              <div
+                                className="bg-blue-600 h-2 rounded-full transition-all"
+                                style={{ width: `${m.percentage}%` }}
+                              />
+                            </div>
+                          </div>
+                          {m.contributors?.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-1">
+                              <span className="text-xs text-gray-400">{t('companies.missionContributors')}:</span>
+                              {m.contributors.map((c) => (
+                                <span key={c.userId} className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
+                                  {typeof c.userId === 'string' ? c.userId.slice(0, 8) + '...' : c.userId}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          <div className="mt-2 flex items-center gap-3 text-xs">
+                            {m.definition?.rewards?.xp > 0 && (
+                              <span className="text-purple-600">+{m.definition.rewards.xp} XP</span>
+                            )}
+                            {m.definition?.rewards?.treasury > 0 && (
+                              <span className="text-yellow-600">+${m.definition.rewards.treasury.toLocaleString()}</span>
+                            )}
+                            {m.definition?.rewards?.reputation > 0 && (
+                              <span className="text-blue-600">+{m.definition.rewards.reputation} Rep</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {missions?.completed?.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold mb-2 dark:text-gray-200">{t('companies.missionsReadyToClaim')}</h3>
+                <div className="space-y-2">
+                  {missions.completed.map((m) => (
+                    <div key={m._id} className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 sm:p-4 border border-green-200 dark:border-green-800">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">{m.definition?.icon || '✅'}</span>
+                          <div>
+                            <span className="font-medium text-sm dark:text-gray-200">{m.definition?.name || m.missionId}</span>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{m.definition?.description}</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await claimCompanyMissionReward(id, m.missionId);
+                            } catch {
+                            }
+                          }}
+                          className="px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700"
+                        >
+                          {t('companies.missionClaimReward')}
+                        </button>
+                      </div>
+                      <div className="mt-2 flex items-center gap-3 text-xs">
+                        {m.definition?.rewards?.xp > 0 && (
+                          <span className="text-purple-600">+{m.definition.rewards.xp} XP</span>
+                        )}
+                        {m.definition?.rewards?.treasury > 0 && (
+                          <span className="text-yellow-600">+${m.definition.rewards.treasury.toLocaleString()}</span>
+                        )}
+                        {m.definition?.rewards?.reputation > 0 && (
+                          <span className="text-blue-600">+{m.definition.rewards.reputation} Rep</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {missions?.claimed?.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold mb-2 dark:text-gray-200">{t('companies.missionsClaimed')}</h3>
+                <div className="space-y-1">
+                  {missions.claimed.map((m) => (
+                    <div key={m._id} className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 py-1">
+                      <span>{m.definition?.icon || '✓'}</span>
+                      <span>{m.definition?.name || m.missionId}</span>
+                      <span className="text-green-600">{t('companies.missionCompleted')}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {(!missions?.active?.length && !missions?.completed?.length && !missions?.claimed?.length) && (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                <p className="text-sm">{t('companies.noMissions')}</p>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {tab === 'contracts' && (
         <div className="space-y-3 sm:space-y-4">

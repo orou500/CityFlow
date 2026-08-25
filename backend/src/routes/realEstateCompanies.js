@@ -60,6 +60,12 @@ import { cacheDel } from '../utils/cache.js';
 import { cacheKeys as ck } from '../utils/cacheKeys.js';
 import StockMarketEvent from '../models/StockMarketEvent.js';
 import StockHolding from '../models/StockHolding.js';
+import {
+  getCompanyMissionDashboard,
+  claimCompanyMissionReward,
+  initializeCompanyMissions,
+} from '../engine/companyMissionProcessing.js';
+import { COMPANY_MISSION_DEFINITIONS } from '../config/companyMissions.js';
 
 const router = Router();
 router.use(authenticate);
@@ -3981,6 +3987,71 @@ router.get('/:id/milestones', async (req, res) => {
       completed: completedIds.size,
       total: COMPANY_MILESTONES.length,
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/:id/missions', async (req, res) => {
+  try {
+    const company = await RealEstateCompany.findById(req.params.id);
+    if (!company) return res.status(404).json({ error: 'Company not found' });
+
+    const member = getMember(company, req.user._id);
+    if (!member) return res.status(403).json({ error: 'You are not a member of this company' });
+
+    await initializeCompanyMissions(company._id);
+    const dashboard = await getCompanyMissionDashboard(company._id);
+
+    res.json(dashboard);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/:id/missions/definitions', async (req, res) => {
+  try {
+    const company = await RealEstateCompany.findById(req.params.id);
+    if (!company) return res.status(404).json({ error: 'Company not found' });
+
+    const member = getMember(company, req.user._id);
+    if (!member) return res.status(403).json({ error: 'You are not a member of this company' });
+
+    res.json({ definitions: COMPANY_MISSION_DEFINITIONS });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/:id/missions/:missionId/claim', async (req, res) => {
+  try {
+    const company = await RealEstateCompany.findById(req.params.id);
+    if (!company) return res.status(404).json({ error: 'Company not found' });
+
+    const member = getMember(company, req.user._id);
+    if (!member) return res.status(403).json({ error: 'You are not a member of this company' });
+
+    const result = await claimCompanyMissionReward(company._id, req.params.missionId, req.user._id);
+    if (!result) return res.status(400).json({ error: 'Mission not completed or already claimed' });
+
+    res.json({ success: true, rewards: result.rewards });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/:id/missions/refresh', async (req, res) => {
+  try {
+    const company = await RealEstateCompany.findById(req.params.id);
+    if (!company) return res.status(404).json({ error: 'Company not found' });
+
+    const member = getMember(company, req.user._id);
+    if (!member) return res.status(403).json({ error: 'You are not a member of this company' });
+
+    await initializeCompanyMissions(company._id);
+    const dashboard = await getCompanyMissionDashboard(company._id);
+
+    res.json(dashboard);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

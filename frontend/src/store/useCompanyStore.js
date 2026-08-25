@@ -31,6 +31,7 @@ export const useCompanyStore = create((set, get) => ({
   companyAuditTotalPages: 1,
   companyStats: null,
   companyProgression: null,
+  companyMissions: null,
   loading: false,
   error: null,
 
@@ -740,6 +741,30 @@ export const useCompanyStore = create((set, get) => ({
         body: JSON.stringify({ vote }),
       });
       await get().fetchCompany(companyId);
+    } catch (err) {
+      set({ error: err.message });
+      throw err;
+    }
+  },
+
+  async fetchCompanyMissions(companyId) {
+    try {
+      const data = await api(`/real-estate-companies/${companyId}/missions`);
+      set({ companyMissions: data });
+      return data;
+    } catch (err) {
+      set({ error: err.message });
+      throw err;
+    }
+  },
+
+  async claimCompanyMissionReward(companyId, missionId) {
+    try {
+      const data = await api(`/real-estate-companies/${companyId}/missions/${missionId}/claim`, {
+        method: 'POST',
+      });
+      await get().fetchCompanyMissions(companyId);
+      return data;
     } catch (err) {
       set({ error: err.message });
       throw err;

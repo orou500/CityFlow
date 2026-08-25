@@ -74,6 +74,7 @@ export async function createTestProperty(overrides = {}) {
     name: `TestProp_${Date.now()}`,
     type: 'apartment',
     currentPrice: 100000,
+    basePrice: 100000,
     ...overrides,
     cityId: overrides.cityId || city._id,
   };

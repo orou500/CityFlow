@@ -60,6 +60,7 @@ const companyAuditLogSchema = new mongoose.Schema(
         'development_rejected',
         'development_failed',
         'milestone_completed',
+        'mission_reward_claimed',
         'employees_hired',
         'employees_fired',
         'salary_updated',

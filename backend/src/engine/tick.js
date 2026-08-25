@@ -60,6 +60,7 @@ import { evaluateExpiredReports } from './marketIntelligence.js';
 import { processAuctions, generateBankAuctions } from './auctionProcessing.js';
 import { processMissionReset } from './missionProcessing.js';
 import { processPublicCompanies } from './publicCompanyProcessing.js';
+import { processCompanyMissionReset, processAllCompanyMissionProgress } from './companyMissionProcessing.js';
 
 export async function executeTick() {
   const startTime = Date.now();
@@ -181,6 +182,10 @@ export async function executeTick() {
 
     await processMissionReset();
 
+    const companyMissionReset = await processCompanyMissionReset();
+
+    const companyMissionsCompleted = await processAllCompanyMissionProgress();
+
     const publicCompanyResults = await processPublicCompanies(tickNumber);
 
     if (publicCompanyResults.length > 0) {
@@ -233,6 +238,7 @@ export async function executeTick() {
     console.log(`  Expired rent: ${expiredRentCount} users, warnings sent: ${rentWarningsCount}`);
     console.log(`  Auctions: ${auctionResults.activated} activated, ${auctionResults.completed} completed`);
     console.log(`  Bank auctions generated: ${newBankAuctions.length}`);
+    console.log(`  Company missions: ${companyMissionReset} refreshed, ${companyMissionsCompleted} completed`);
     console.log(`  Public companies processed: ${publicCompanyResults.length}`);
     console.log(`  Leaderboard snapshots: ${leaderboardSnapshots.length}`);
     console.log(
@@ -275,6 +281,7 @@ export async function executeTick() {
     await cacheDelPattern('cf:mi:*');
     await cacheDelPattern('cf:auction*');
     await cacheDelPattern('cf:missions:*');
+    await cacheDelPattern('cf:company-missions:*');
     await cacheDelPattern('cf:stats:*');
     await cacheDelPattern('cf:stocks:*');
     await publish(CHANNELS.TICK, { tickNumber, timestamp: new Date().toISOString() });
