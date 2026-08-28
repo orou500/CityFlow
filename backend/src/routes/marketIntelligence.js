@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import { body, param, query, validationResult } from 'express-validator';
 import User from '../models/User.js';
 import MarketReport from '../models/MarketReport.js';
@@ -65,7 +65,7 @@ router.get(
       if (error.message === 'City not found') {
         return res.status(404).json({ success: false, error: 'City not found' });
       }
-      return res.status(500).json({ success: false, error: error.message });
+      return res.serverError(error);
     }
   },
 );
@@ -181,7 +181,7 @@ router.post(
         balance: user.balance,
       });
     } catch (error) {
-      return res.status(500).json({ success: false, error: error.message });
+      return res.serverError(error);
     }
   },
 );
@@ -214,7 +214,7 @@ router.get(
 
       return res.json({ success: true, reports, total, offset: Number(offset), limit: Number(limit) });
     } catch (error) {
-      return res.status(500).json({ success: false, error: error.message });
+      return res.serverError(error);
     }
   },
 );
@@ -235,7 +235,7 @@ router.get(
 
       return res.json({ success: true, report });
     } catch (error) {
-      return res.status(500).json({ success: false, error: error.message });
+      return res.serverError(error);
     }
   },
 );
@@ -306,7 +306,7 @@ router.get('/performance', authenticate, async (req, res) => {
       },
     });
   } catch (error) {
-    return res.status(500).json({ success: false, error: error.message });
+    return res.serverError(error);
   }
 });
 

@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import StockIndex from '../models/StockIndex.js';
 import IndexHolding from '../models/IndexHolding.js';
 import IndexTransaction from '../models/IndexTransaction.js';
@@ -24,7 +24,7 @@ router.get('/', async (req, res) => {
 
     res.json(indexes);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -54,7 +54,7 @@ router.get('/portfolio', authenticate, async (req, res) => {
 
     res.json({ holdings: portfolio, totalValue, totalCost, totalPL: totalValue - totalCost });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -76,7 +76,7 @@ router.get('/market/overview', async (req, res) => {
 
     res.json({ totalMarketValue, byType, gainers, losers, totalIndexes: indexes.length });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -100,7 +100,7 @@ router.get('/:id', async (req, res) => {
 
     res.json({ ...idx.toObject(), userHolding });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -110,7 +110,7 @@ router.get('/:id/history', async (req, res) => {
     if (!idx) return res.status(404).json({ error: 'Index not found' });
     res.json(idx.performance || []);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -126,7 +126,7 @@ router.get('/:id/constituents', async (req, res) => {
 
     res.json(companies);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -184,7 +184,7 @@ router.post('/buy', authenticate, async (req, res) => {
       balance: user.balance,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -239,7 +239,7 @@ router.post('/sell', authenticate, async (req, res) => {
       balance: user.balance,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -251,7 +251,7 @@ router.get('/user/transactions', authenticate, async (req, res) => {
       .limit(100);
     res.json(transactions);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 

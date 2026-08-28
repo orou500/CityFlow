@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import RealEstateCompany from '../models/RealEstateCompany.js';
 import CompanyAuditLog from '../models/CompanyAuditLog.js';
 import User from '../models/User.js';
@@ -58,6 +58,7 @@ import { SOCKET_EVENTS } from '../socket/events.js';
 import { publish, CHANNELS } from '../utils/pubsub.js';
 import { cacheDel } from '../utils/cache.js';
 import { cacheKeys as ck } from '../utils/cacheKeys.js';
+import { escapeRegex } from '../utils/escapeRegex.js';
 import StockMarketEvent from '../models/StockMarketEvent.js';
 import StockHolding from '../models/StockHolding.js';
 import {
@@ -141,7 +142,7 @@ router.get('/', async (req, res) => {
     const filter = { active: true };
 
     if (search) {
-      filter.name = { $regex: search, $options: 'i' };
+      filter.name = { $regex: escapeRegex(search), $options: 'i' };
     }
 
     let sortOpts = { reputation: -1 };
@@ -169,7 +170,7 @@ router.get('/', async (req, res) => {
 
     res.json({ companies, total, page: pageNum, totalPages: Math.ceil(total / limitNum) });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -185,7 +186,7 @@ router.get('/my', async (req, res) => {
 
     res.json(companies);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -226,7 +227,7 @@ router.get('/invitations', async (req, res) => {
 
     res.json(invitations);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -250,7 +251,9 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Selected city not found' });
     }
 
-    const existing = await RealEstateCompany.findOne({ name: { $regex: `^${name.trim()}$`, $options: 'i' } });
+    const existing = await RealEstateCompany.findOne({
+      name: { $regex: `^${escapeRegex(name.trim())}$`, $options: 'i' },
+    });
     if (existing) {
       return res.status(400).json({ error: 'A company with this name already exists' });
     }
@@ -357,7 +360,7 @@ router.post('/', async (req, res) => {
 
     res.status(201).json(company);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -431,7 +434,7 @@ router.get('/:id', async (req, res) => {
     if (!data) return res.status(404).json({ error: 'Company not found' });
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -458,7 +461,7 @@ router.put('/:id', async (req, res) => {
 
     res.json(company);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -540,7 +543,7 @@ router.post('/:id/invite', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -616,11 +619,11 @@ router.post('/:id/invite/:invitationId/accept', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
-// ─── Employee Management ───────────────────────────────────────────────
+// â”€â”€â”€ Employee Management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 router.post('/:id/employees/hire', async (req, res) => {
   try {
@@ -659,7 +662,7 @@ router.post('/:id/employees/hire', async (req, res) => {
 
     res.json({ employees: company.employees });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -699,7 +702,7 @@ router.post('/:id/employees/fire', async (req, res) => {
 
     res.json({ employees: company.employees });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -734,7 +737,7 @@ router.put('/:id/employees/salary', async (req, res) => {
 
     res.json({ employees: company.employees });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -768,7 +771,7 @@ router.post('/:id/employees/departments', async (req, res) => {
     await invalidateCompany(company._id);
     res.json({ departments: company.employees.departments });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -793,7 +796,7 @@ router.post('/:id/invite/:invitationId/decline', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -828,7 +831,7 @@ router.post('/:id/leadership/transfer', async (req, res) => {
     // Enforce the single-CEO invariant: exactly one CEO must always exist.
     // The caller (current CEO) becomes director, and any other legacy CEO is
     // also demoted to director so the company can never end up with two CEOs.
-    // founderId is never touched — the Founder is a permanent ownership identity.
+    // founderId is never touched â€” the Founder is a permanent ownership identity.
     const demotedCeos = [];
     for (const m of company.members) {
       if (m.userId?.toString() === target.userId?.toString()) {
@@ -886,7 +889,7 @@ router.post('/:id/leadership/transfer', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -945,7 +948,7 @@ router.post('/:id/leave', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -1016,7 +1019,7 @@ router.delete('/:id/members/:userId', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -1064,7 +1067,7 @@ router.put('/:id/members/:userId/role', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -1132,7 +1135,7 @@ router.post('/:id/treasury/deposit', async (req, res) => {
 
     res.json({ treasury: company.treasury, balance: user.balance });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -1203,7 +1206,7 @@ router.post('/:id/treasury/withdraw', async (req, res) => {
 
     res.json({ treasury: company.treasury, balance: recipient.balance });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -1232,7 +1235,7 @@ router.get('/:id/treasury/transactions', async (req, res) => {
       totalPages: Math.ceil(allTransactions.length / limitNum),
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -1357,7 +1360,7 @@ router.post('/:id/properties/purchase', async (req, res) => {
 
     res.json({ property, treasury: company.treasury });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -1446,7 +1449,7 @@ router.post('/:id/properties/:propertyId/sell', async (req, res) => {
 
     res.json({ treasury: company.treasury });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -1483,7 +1486,7 @@ router.get('/:id/properties', async (req, res) => {
 
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -1506,7 +1509,7 @@ router.get('/:id/loans', async (req, res) => {
 
     res.json(loans);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -1587,7 +1590,7 @@ router.post('/:id/loans/:loanId/repay', async (req, res) => {
 
     res.json({ loan, treasury: company.treasury });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -1614,7 +1617,7 @@ router.get('/:id/audit', async (req, res) => {
 
     res.json({ logs, total, page: pageNum, totalPages: Math.ceil(total / limitNum) });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -1676,7 +1679,7 @@ router.get('/:id/stats', async (req, res) => {
 
     res.json(statsData);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -1755,7 +1758,7 @@ router.post('/:id/apply', async (req, res) => {
 
     res.status(201).json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -1775,7 +1778,7 @@ router.get('/:id/applications', async (req, res) => {
 
     res.json(company.applications);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -1851,7 +1854,7 @@ router.post('/:id/applications/:appId/approve', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -1891,7 +1894,7 @@ router.post('/:id/applications/:appId/reject', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -1927,7 +1930,7 @@ router.post('/:id/applications/:appId/cancel', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -2030,7 +2033,7 @@ router.post('/:id/loan-requests', async (req, res) => {
 
     res.status(201).json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -2049,7 +2052,7 @@ router.get('/:id/loan-requests', async (req, res) => {
 
     res.json(company.loanRequests);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -2123,7 +2126,7 @@ router.post('/:id/loan-requests/:reqId/vote', async (req, res) => {
 
     res.json({ success: true, loanRequest: loanReq });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -2195,7 +2198,7 @@ router.post('/:id/loan-requests/:reqId/execute', async (req, res) => {
 
     res.json({ loan, treasury: company.treasury });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -2298,7 +2301,7 @@ router.get('/:id/loan-options', async (req, res) => {
       products,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -2403,7 +2406,7 @@ router.post('/:id/direct-loan', async (req, res) => {
 
     res.json({ loan, treasury: company.treasury, product });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -2492,7 +2495,7 @@ router.post('/:id/property-purchase-requests', async (req, res) => {
 
     res.status(201).json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -2510,7 +2513,7 @@ router.get('/:id/property-purchase-requests', async (req, res) => {
 
     res.json(company.propertyPurchaseRequests);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -2532,7 +2535,7 @@ router.get('/:id/auction-bids', async (req, res) => {
 
     res.json(company.auctionBids || []);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -2673,7 +2676,7 @@ router.post('/:id/property-purchase-requests/:reqId/vote', async (req, res) => {
     await onCompanyVoteCompleted(company._id);
     res.json({ success: true, purchaseRequest: purchaseReq });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -2843,7 +2846,7 @@ router.post('/:id/development-requests', async (req, res) => {
 
     res.status(201).json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -2865,7 +2868,7 @@ router.get('/:id/development-requests', async (req, res) => {
 
     res.json(company.developmentRequests);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -2981,7 +2984,7 @@ router.post('/:id/development-requests/:reqId/vote', async (req, res) => {
             type: 'upgrade',
             amount: cost,
             tick: currentPeriod,
-            description: `${upgradeDef.name} (Level ${currentLevel + 1}) — Company Vote`,
+            description: `${upgradeDef.name} (Level ${currentLevel + 1}) â€” Company Vote`,
           });
 
           company.treasury.balance -= cost;
@@ -2991,7 +2994,7 @@ router.post('/:id/development-requests/:reqId/vote', async (req, res) => {
               type: 'development',
               amount: cost,
               userId: req.user._id,
-              description: `Upgrade: ${upgradeDef.name} on "${property.name}" — $${cost.toLocaleString()} (member approved)`,
+              description: `Upgrade: ${upgradeDef.name} on "${property.name}" â€” $${cost.toLocaleString()} (member approved)`,
             },
             currentPeriod,
           );
@@ -3014,7 +3017,7 @@ router.post('/:id/development-requests/:reqId/vote', async (req, res) => {
             type: 'improvement',
             amount: cost,
             tick: currentPeriod,
-            description: `${improvement.name} — Company Vote`,
+            description: `${improvement.name} â€” Company Vote`,
           });
 
           company.treasury.balance -= cost;
@@ -3024,7 +3027,7 @@ router.post('/:id/development-requests/:reqId/vote', async (req, res) => {
               type: 'development',
               amount: cost,
               userId: req.user._id,
-              description: `Improvement: ${improvement.name} on "${property.name}" — $${cost.toLocaleString()} (member approved)`,
+              description: `Improvement: ${improvement.name} on "${property.name}" â€” $${cost.toLocaleString()} (member approved)`,
             },
             currentPeriod,
           );
@@ -3061,7 +3064,7 @@ router.post('/:id/development-requests/:reqId/vote', async (req, res) => {
               type: 'development',
               amount: totalCost,
               userId: req.user._id,
-              description: `Construction: ${project.name} on "${property.name}" — $${totalCost.toLocaleString()} (member approved)`,
+              description: `Construction: ${project.name} on "${property.name}" â€” $${totalCost.toLocaleString()} (member approved)`,
             },
             currentPeriod,
           );
@@ -3135,7 +3138,7 @@ router.post('/:id/development-requests/:reqId/vote', async (req, res) => {
     await onCompanyVoteCompleted(company._id);
     res.json({ success: true, developmentRequest: devReq });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -3150,7 +3153,7 @@ router.get('/:id/investments/products', authenticate, async (req, res) => {
     const products = await getAvailableInvestments(company.level);
     res.json(products);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -3171,7 +3174,7 @@ router.get('/:id/investments', authenticate, async (req, res) => {
 
     res.json(investments.map((inv) => ({ ...inv.toJSON(), currentTick })));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -3208,7 +3211,7 @@ router.get('/:id/investments/performance', authenticate, async (req, res) => {
       proposedCount: await CompanyInvestment.countDocuments({ companyId: company._id, status: 'proposed' }),
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -3332,7 +3335,7 @@ router.post('/:id/investments', authenticate, async (req, res) => {
           userId,
           type: 'company_vote',
           title: 'Investment Vote',
-          message: `${caller.role} proposed investment: ${product.name} —" $${amount.toLocaleString()}. Vote to approve or reject.`,
+          message: `${caller.role} proposed investment: ${product.name} â€”" $${amount.toLocaleString()}. Vote to approve or reject.`,
           eventKey: `company:${company._id}:investment:${investment._id}:vote_request:${userId}`,
           route: `/real-estate-companies/${company._id}`,
           tab: 'investments',
@@ -3401,7 +3404,7 @@ router.post('/:id/investments', authenticate, async (req, res) => {
       throw createErr;
     }
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -3501,7 +3504,7 @@ router.post('/:id/investments/:invId/vote', authenticate, async (req, res) => {
 
     res.json({ investment });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -3540,7 +3543,7 @@ router.post('/:id/investments/:invId/cancel', authenticate, async (req, res) => 
 
     res.json({ investment });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -3654,7 +3657,7 @@ router.post('/:id/ipo', async (req, res) => {
       expansionHistory: [],
       active: true,
       foundedTick: company.foundedTick || 0,
-      description: `${company.name} — Real Estate Investment Company`,
+      description: `${company.name} â€” Real Estate Investment Company`,
       totalReturn: 0,
       dayChange: 0,
       dayChangePercent: 0,
@@ -3775,11 +3778,11 @@ router.post('/:id/ipo', async (req, res) => {
       stockCompany: { _id: stockCompany._id, ticker: stockCompany.ticker, sharePrice, sharesOutstanding, marketCap },
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
-// ─── Secondary Offering (Controlled Share Issuance) ───────────────────
+// â”€â”€â”€ Secondary Offering (Controlled Share Issuance) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 router.post('/:id/secondary-offering', async (req, res) => {
   try {
@@ -3892,7 +3895,7 @@ router.post('/:id/secondary-offering', async (req, res) => {
       ceoProtected: !!ceoHolding,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -3952,7 +3955,7 @@ router.get('/:id/progression', async (req, res) => {
 
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -3988,7 +3991,7 @@ router.get('/:id/milestones', async (req, res) => {
       total: COMPANY_MILESTONES.length,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -4005,7 +4008,7 @@ router.get('/:id/missions', async (req, res) => {
 
     res.json(dashboard);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -4019,7 +4022,7 @@ router.get('/:id/missions/definitions', async (req, res) => {
 
     res.json({ definitions: COMPANY_MISSION_DEFINITIONS });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -4036,7 +4039,7 @@ router.post('/:id/missions/:missionId/claim', async (req, res) => {
 
     res.json({ success: true, rewards: result.rewards });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -4053,7 +4056,7 @@ router.post('/:id/missions/refresh', async (req, res) => {
 
     res.json(dashboard);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 

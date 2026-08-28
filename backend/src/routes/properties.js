@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import Property from '../models/Property.js';
 import User from '../models/User.js';
 import City from '../models/City.js';
@@ -14,6 +14,8 @@ import { processPlayerProgress } from '../utils/playerProgress.js';
 import { getPropertyRiskProfile } from '../engine/propertyRisk.js';
 import { trackEvent, EVENTS } from '../utils/analytics.js';
 import { getAvailableBalance } from '../utils/auctionMoney.js';
+import { debitUserBalance, creditUserBalance, addOwnedProperty, removeOwnedProperty } from '../utils/atomicBalance.js';
+import { withUserLock } from '../utils/userMutex.js';
 import { getCityPropertyLimit } from '../utils/ownershipLimits.js';
 import {
   GRADE_NAMES,
@@ -140,7 +142,7 @@ router.get('/', optionalAuth, async (req, res) => {
 
     res.json({ properties, total, page: pageNum, totalPages: Math.ceil(total / limitNum), limit: limitNum });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -197,7 +199,7 @@ router.get('/:id/detail', authenticate, async (req, res) => {
     if (!data) return res.status(404).json({ error: 'Property not found' });
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -215,7 +217,7 @@ router.get('/:id', authenticate, async (req, res) => {
     if (!data) return res.status(404).json({ error: 'Property not found' });
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -256,66 +258,106 @@ router.post('/buy', authenticate, async (req, res) => {
     }
 
     const sellerId = property.ownerId;
-    if (sellerId) {
-      const seller = await User.findById(sellerId);
-      if (seller) {
-        seller.balance += price;
-        seller.ownedProperties = seller.ownedProperties.filter((p) => p.toString() !== propertyId);
-        await seller.save();
+
+    await withUserLock(`buy:${buyer._id}`, async () => {
+      // Atomic claim: only one request can transition the property from
+      // for-sale (with the same owner we validated) to owned.
+      const claimed = await Property.findOneAndUpdate(
+        {
+          _id: property._id,
+          forSale: true,
+          ownerId: sellerId || null,
+        },
+        {
+          $set: {
+            ownerId: buyer._id,
+            forSale: false,
+            lastPurchasePrice: price,
+            lastPurchaseDate: new Date(),
+            activeImprovement: undefined,
+          },
+          $push: {
+            investmentHistory: {
+              type: 'purchase',
+              amount: price,
+              description: `Purchased by ${buyer.username}`,
+            },
+          },
+        },
+        { new: true },
+      );
+      if (!claimed) {
+        const err = new Error('This property is no longer available');
+        err.status = 409;
+        throw err;
       }
-    }
 
-    buyer.balance -= price;
-    buyer.ownedProperties.push(property._id);
-    await buyer.save();
+      // Atomic debit with available-balance guard; refunds the claim if the
+      // buyer can no longer afford it (concurrent spend elsewhere).
+      const debited = await debitUserBalance(buyer._id, price);
+      if (!debited) {
+        await Property.updateOne(
+          { _id: property._id },
+          {
+            $set: {
+              ownerId: sellerId || null,
+              forSale: true,
+              lastPurchasePrice: undefined,
+              lastPurchaseDate: undefined,
+            },
+          },
+        );
+        const err = new Error('Insufficient balance');
+        err.status = 400;
+        throw err;
+      }
 
-    collectOperatingFee(buyer._id, price, 'property_purchase');
+      if (sellerId) {
+        await creditUserBalance(sellerId, price);
+        await removeOwnedProperty(sellerId, property._id);
+      }
+      await addOwnedProperty(buyer._id, property._id);
 
-    property.ownerId = buyer._id;
-    property.forSale = false;
-    property.lastPurchasePrice = price;
-    property.lastPurchaseDate = new Date();
-    property.activeImprovement = undefined;
+      await collectOperatingFee(buyer._id, price, 'property_purchase');
 
-    if (!property.investmentHistory) property.investmentHistory = [];
-    property.investmentHistory.push({
-      type: 'purchase',
-      amount: price,
-      description: `Purchased by ${buyer.username}`,
+      const lastBuyTx = await Transaction.findOne({
+        buyerId: buyer._id,
+        type: 'buy',
+      }).sort({ createdAt: -1 });
+      const boughtRecently = lastBuyTx && new Date() - new Date(lastBuyTx.createdAt) < PROPERTY_XP_COOLDOWN_MS;
+
+      await Transaction.create({
+        propertyId: property._id,
+        buyerId: buyer._id,
+        sellerId: sellerId && sellerId.toString() !== buyer._id.toString() ? sellerId : undefined,
+        price,
+        type: 'buy',
+      });
+
+      if (!boughtRecently) {
+        await awardXp(debited, 10, 'property_buy');
+      }
+      await User.updateOne(
+        { _id: buyer._id },
+        {
+          $inc: {
+            'lifetimeStats.totalTransactions': 1,
+            'lifetimeStats.totalPropertiesOwned': 1,
+            'lifetimeStats.totalMoneySpent': price,
+          },
+        },
+      );
+
+      await onPropertyPurchased(buyer._id, sellerId, property._id, city._id);
+      trackEvent(EVENTS.PROPERTY_PURCHASED, { userId: buyer._id, propertyId: property._id, price });
+
+      await processPlayerProgress(buyer._id, 'property_buy', { skipXp: true });
+
+      res.json({ property: claimed, balance: debited.balance });
     });
-
-    await property.save();
-
-    const lastBuyTx = await Transaction.findOne({
-      buyerId: buyer._id,
-      type: 'buy',
-    }).sort({ createdAt: -1 });
-    const boughtRecently = lastBuyTx && new Date() - new Date(lastBuyTx.createdAt) < PROPERTY_XP_COOLDOWN_MS;
-
-    await Transaction.create({
-      propertyId: property._id,
-      buyerId: buyer._id,
-      sellerId: sellerId && sellerId.toString() !== buyer._id.toString() ? sellerId : undefined,
-      price,
-      type: 'buy',
-    });
-
-    if (!boughtRecently) {
-      await awardXp(buyer, 10, 'property_buy');
-    }
-    buyer.lifetimeStats.totalTransactions += 1;
-    buyer.lifetimeStats.totalPropertiesOwned += 1;
-    buyer.lifetimeStats.totalMoneySpent += price;
-    await buyer.save();
-
-    await onPropertyPurchased(buyer._id, sellerId, property._id, city._id);
-    trackEvent(EVENTS.PROPERTY_PURCHASED, { userId: buyer._id, propertyId: property._id, price });
-
-    await processPlayerProgress(buyer._id, 'property_buy', { skipXp: true });
-
-    res.json({ property, balance: buyer.balance });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -335,45 +377,67 @@ router.post('/sell', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Property is under construction and cannot be sold yet' });
     }
 
-    const seller = await User.findById(req.user._id);
     const salePrice = property.currentPrice;
     const purchasedAt = property.lastPurchaseDate;
 
-    seller.balance += salePrice;
-    seller.ownedProperties = seller.ownedProperties.filter((p) => p.toString() !== propertyId);
-    await seller.save();
+    await withUserLock(`sell:${req.user._id}`, async () => {
+      // Atomic claim: only one request can transition owned â†’ for-sale.
+      const claimed = await Property.findOneAndUpdate(
+        {
+          _id: property._id,
+          ownerId: req.user._id,
+          forSale: false,
+          developmentLevel: { $ne: 1 },
+        },
+        {
+          $set: {
+            ownerId: null,
+            forSale: true,
+            lastPurchasePrice: salePrice,
+            lastPurchaseDate: new Date(),
+          },
+        },
+        { new: true },
+      );
+      if (!claimed) {
+        const err = new Error('This property is no longer sellable');
+        err.status = 409;
+        throw err;
+      }
 
-    collectOperatingFee(seller._id, salePrice, 'property_sale');
+      await creditUserBalance(req.user._id, salePrice);
+      await removeOwnedProperty(req.user._id, property._id);
 
-    property.ownerId = null;
-    property.forSale = true;
-    property.lastPurchasePrice = salePrice;
-    property.lastPurchaseDate = new Date();
-    await property.save();
+      await collectOperatingFee(req.user._id, salePrice, 'property_sale');
 
-    await Transaction.create({
-      propertyId: property._id,
-      sellerId: req.user._id,
-      price: salePrice,
-      type: 'sell',
+      await Transaction.create({
+        propertyId: property._id,
+        sellerId: req.user._id,
+        price: salePrice,
+        type: 'sell',
+      });
+
+      const seller = await User.findById(req.user._id);
+      const heldLongEnough = purchasedAt && new Date() - new Date(purchasedAt) >= PROPERTY_XP_COOLDOWN_MS;
+      if (heldLongEnough) {
+        await awardXp(seller, 5, 'property_sell');
+      }
+      await User.updateOne(
+        { _id: req.user._id },
+        { $inc: { 'lifetimeStats.totalTransactions': 1, 'lifetimeStats.totalMoneyEarned': salePrice } },
+      );
+
+      await onPropertySold(req.user._id, property._id, property.cityId);
+      trackEvent(EVENTS.PROPERTY_SOLD, { userId: req.user._id, propertyId: property._id, price: salePrice });
+
+      await processPlayerProgress(req.user._id, 'property_sell', { skipXp: true });
     });
 
-    const heldLongEnough = purchasedAt && new Date() - new Date(purchasedAt) >= PROPERTY_XP_COOLDOWN_MS;
-    if (heldLongEnough) {
-      await awardXp(seller, 5, 'property_sell');
-    }
-    seller.lifetimeStats.totalTransactions += 1;
-    seller.lifetimeStats.totalMoneyEarned += salePrice;
-    await seller.save();
-
-    await onPropertySold(req.user._id, property._id, property.cityId);
-    trackEvent(EVENTS.PROPERTY_SOLD, { userId: req.user._id, propertyId: property._id, price: salePrice });
-
-    await processPlayerProgress(req.user._id, 'property_sell', { skipXp: true });
-
+    const seller = await User.findById(req.user._id);
     res.json({ property, balance: seller.balance });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -411,7 +475,7 @@ router.get('/:id/grade', authenticate, async (req, res) => {
       nextAvailableAt: nextAvailableAt ? nextAvailableAt.toISOString() : null,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -490,7 +554,7 @@ router.post('/grade/upgrade', authenticate, async (req, res) => {
       userId: user._id,
       type: 'system',
       title: 'Property Grade Upgraded',
-      message: `"${property.name}" upgraded to Grade ${GRADE_NAMES[newGrade - 1]}. Value: $${prevPrice.toLocaleString()} → $${property.currentPrice.toLocaleString()}. Rent: $${prevRent.toLocaleString()} → $${property.rent.toLocaleString()}.`,
+      message: `"${property.name}" upgraded to Grade ${GRADE_NAMES[newGrade - 1]}. Value: $${prevPrice.toLocaleString()} â†’ $${property.currentPrice.toLocaleString()}. Rent: $${prevRent.toLocaleString()} â†’ $${property.rent.toLocaleString()}.`,
       eventKey: `property:${property._id}:grade:${newGrade}`,
       route: `/property/${property._id}`,
       entityType: 'property',
@@ -511,7 +575,7 @@ router.post('/grade/upgrade', authenticate, async (req, res) => {
 
     res.json({ property, balance: user.balance, grade: newGrade, upgradeCost: cost });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 

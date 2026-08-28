@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import Property from '../models/Property.js';
 import GameState from '../models/GameState.js';
@@ -69,7 +69,7 @@ router.get('/:propertyId', authenticate, async (req, res) => {
     const rentValidation = computeRentValidation(property);
     const unitCount = rentValidation.unitCount;
     const perUnitRent = property.rentPerUnit || (unitCount > 0 ? Math.round(property.rent / unitCount) : 0);
-    // Show the occupancy-adjusted income — this is what actually accrues to
+    // Show the occupancy-adjusted income â€” this is what actually accrues to
     // the rent pool (same formula the engine uses every tick).
     const actualRentIncome = calculatePropertyRentIncome(property);
     const tier = MAINTENANCE_TIERS[property.maintenanceLevel] || MAINTENANCE_TIERS.none;
@@ -146,7 +146,7 @@ router.get('/:propertyId', authenticate, async (req, res) => {
       })),
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -166,7 +166,7 @@ router.get('/:propertyId/history', authenticate, async (req, res) => {
     const limit = Math.min(history.length, parseInt(req.query.limit) || 30);
     res.json(history.slice(-limit));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -227,7 +227,7 @@ router.post('/:propertyId/rent', authenticate, async (req, res) => {
       maxValidatedRentPerUnit: property.maxValidatedRentPerUnit,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -263,7 +263,7 @@ router.post('/:propertyId/maintenance', authenticate, async (req, res) => {
       occupancyModifier: tier.occupancyModifier,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 

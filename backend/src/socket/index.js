@@ -78,9 +78,9 @@ export async function initSocketIO(httpServer) {
 
       const jwt = await import('jsonwebtoken');
       const { config } = await import('../config/index.js');
-      const decoded = jwt.default.verify(token, config.jwtSecret);
+      const decoded = jwt.default.verify(token, config.jwtSecret, { algorithms: ['HS256'] });
       const user = await User.findById(decoded.userId).select('_id username companyId');
-      if (!user || user.deletedAt) return next(new Error('User not found'));
+      if (!user || user.deletedAt || user.banned) return next(new Error('User not found'));
 
       socket.userId = user._id.toString();
       socket.username = user.username;
@@ -110,9 +110,22 @@ export async function initSocketIO(httpServer) {
       await heartbeat(userId, socket.id);
     });
 
-    socket.on(SOCKET_EVENTS.COMPANY_JOIN, (companyId) => {
-      socket.join(companyRoom(companyId));
-      socket.companyId = companyId;
+    socket.on(SOCKET_EVENTS.COMPANY_JOIN, async (companyId) => {
+      // Server-side membership verification — never trust a client-supplied
+      // companyId. Non-members must not receive private company events.
+      try {
+        const RealEstateCompany = (await import('../models/RealEstateCompany.js')).default;
+        const company = await RealEstateCompany.findById(companyId).select('members').lean();
+        const isMember = company?.members?.some((m) => m.userId?.toString() === userId);
+        if (!isMember) {
+          socket.emit('company:error', { error: 'Not a member of this company' });
+          return;
+        }
+        socket.join(companyRoom(companyId));
+        socket.companyId = companyId;
+      } catch {
+        socket.emit('company:error', { error: 'Invalid company' });
+      }
     });
 
     socket.on(SOCKET_EVENTS.COMPANY_LEAVE, (companyId) => {

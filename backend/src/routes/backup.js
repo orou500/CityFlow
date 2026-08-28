@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import fs from 'fs/promises';
 import path from 'path';
 import multer from 'multer';
@@ -45,7 +45,7 @@ router.get('/', async (req, res) => {
     const stats = await getBackupStats();
     res.json({ backups, stats });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -56,7 +56,7 @@ router.get('/settings', async (req, res) => {
       schedule: config.backupSchedule,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -65,7 +65,7 @@ router.post('/', async (req, res) => {
     const backup = await createBackup(req.user._id, 'manual');
     res.status(201).json({ message: 'Backup created successfully', backup });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -84,7 +84,7 @@ router.get('/:id/logs', async (req, res) => {
       logs: backup.logs,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -96,7 +96,7 @@ router.get('/:id', async (req, res) => {
     }
     res.json({ backup });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -105,7 +105,7 @@ router.post('/:id/restore', async (req, res) => {
     const result = await restoreBackup(req.params.id, req.user._id);
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -128,7 +128,7 @@ router.get('/:id/download', async (req, res) => {
     const stream = (await import('fs')).createReadStream(filepath);
     stream.pipe(res);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -141,7 +141,7 @@ router.post('/upload', upload.single('backup'), async (req, res) => {
     const backup = await uploadBackup(req.file.path, req.file.originalname, req.user._id);
     res.status(201).json({ message: 'Backup uploaded successfully', backup });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -150,7 +150,7 @@ router.delete('/:id', async (req, res) => {
     await deleteBackup(req.params.id);
     res.json({ message: 'Backup deleted successfully' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -159,7 +159,7 @@ router.post('/retention', async (req, res) => {
     const deleted = await enforceRetention();
     res.json({ message: `Removed ${deleted} old backup(s)` });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 

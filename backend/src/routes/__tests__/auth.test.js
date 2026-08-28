@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+﻿import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import { createApp } from '../../test/createApp.js';
@@ -272,7 +272,7 @@ describe('GET /auth/me', () => {
     const res = await request(app).get('/auth/me').set(authHeader(token));
 
     expect(res.status).toBe(401);
-    expect(res.body.error).toBe('User not found');
+    expect(res.body.error).toBe('Invalid token');
   });
 
   it('returns 401 with malformed authorization header', async () => {

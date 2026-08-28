@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import Event from '../models/Event.js';
 import { cacheGetOrSet } from '../utils/cache.js';
 import { cacheKeys, cacheTTL } from '../utils/cacheKeys.js';
@@ -15,7 +15,7 @@ router.get('/active', async (req, res) => {
 
     res.json(events);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 

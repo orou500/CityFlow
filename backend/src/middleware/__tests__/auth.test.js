@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+﻿import { describe, it, expect } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 import { authenticate, optionalAuth } from '../auth.js';
@@ -97,7 +97,7 @@ describe('authenticate middleware', () => {
     const res = await request(app).get('/protected').set(authHeader(token));
 
     expect(res.status).toBe(401);
-    expect(res.body.error).toBe('User not found');
+    expect(res.body.error).toBe('Invalid token');
   });
 });
 

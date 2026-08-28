@@ -1,6 +1,7 @@
-import express from 'express';
+﻿import express from 'express';
 import Company from '../models/Company.js';
 import { optionalAuth } from '../middleware/auth.js';
+import { escapeRegex } from '../utils/escapeRegex.js';
 
 const router = express.Router();
 router.use(optionalAuth);
@@ -11,7 +12,7 @@ router.get('/', async (req, res) => {
     const filter = { active: true };
     if (industry) filter.industry = industry;
     if (city) filter.hqCityId = city;
-    if (search) filter.name = { $regex: search, $options: 'i' };
+    if (search) filter.name = { $regex: escapeRegex(search), $options: 'i' };
 
     let sortOpts = { marketCap: -1 };
     if (sort === 'price') sortOpts = { sharePrice: -1 };
@@ -26,7 +27,7 @@ router.get('/', async (req, res) => {
 
     res.json(companies);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -58,7 +59,7 @@ router.get('/portfolio', async (req, res) => {
 
     res.json({ holdings: portfolio, totalValue, totalCost, totalPL });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -89,7 +90,7 @@ router.get('/market/overview', async (req, res) => {
 
     res.json({ totalMarketCap, industries, gainers, losers, totalCompanies: companies.length });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -120,7 +121,7 @@ router.get('/:id', async (req, res) => {
       userHolding,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -130,7 +131,7 @@ router.get('/:id/history', async (req, res) => {
     if (!company) return res.status(404).json({ error: 'Company not found' });
     res.json(company.performance || []);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -140,7 +141,7 @@ router.get('/:id/events', async (req, res) => {
     if (!company) return res.status(404).json({ error: 'Company not found' });
     res.json(company.expansionHistory || []);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 

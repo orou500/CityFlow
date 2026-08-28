@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
@@ -62,7 +62,7 @@ function getFrontendBaseUrl() {
 
 /**
  * Sends an email and logs a structured server-side error on failure. The
- * sendEmail service never rejects — it returns { sent, reason|error } — so
+ * sendEmail service never rejects â€” it returns { sent, reason|error } â€” so
  * callers must inspect the result; a bare .catch() would silently swallow
  * undelivered verification emails. Never logs tokens or credentials.
  */
@@ -133,7 +133,7 @@ router.post('/register', registerLimiter, async (req, res) => {
 
     res.status(201).json({ message: 'Account created. Please verify your email before logging in.' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -179,7 +179,7 @@ router.post('/login', loginLimiter, async (req, res) => {
     const token = generateToken(user._id);
     res.json({ token, user });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -225,7 +225,7 @@ router.get('/verify-email', async (req, res) => {
 
     res.json({ success: true, message: 'Email verified successfully' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -249,7 +249,7 @@ router.post('/resend-verification', resendVerifyLimiter, async (req, res) => {
 
     res.json({ success: true, message: 'If an unverified account exists, a new link has been sent.' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -274,7 +274,7 @@ router.post('/forgot-password', forgotPwLimiter, async (req, res) => {
 
     res.json({ success: true, message: 'If an account with that email exists, a reset link has been sent.' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -304,7 +304,7 @@ router.post('/reset-password', async (req, res) => {
 
     res.json({ success: true, message: 'Password has been reset successfully' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -340,7 +340,7 @@ router.post('/set-password', authenticate, setPasswordLimiter, async (req, res) 
 
     res.json({ success: true, message: 'Password set successfully' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -380,7 +380,7 @@ router.post('/restore-account', async (req, res) => {
     const token = generateToken(user._id);
     res.json({ token, user });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 

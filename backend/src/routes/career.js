@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import {
   getCareerDashboard,
@@ -27,7 +27,7 @@ router.get('/', async (req, res) => {
     res.json({ success: true, career });
   } catch (err) {
     console.error('[CAREER] Error fetching dashboard:', err);
-    res.status(500).json({ success: false, error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -36,7 +36,7 @@ router.get('/achievements', async (req, res) => {
     const career = await getCareerDashboard(req.user._id);
     res.json({ success: true, achievements: career.achievements });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -67,7 +67,7 @@ router.post('/check-achievements', async (req, res) => {
     const result = await checkAndAwardAchievements(req.user._id, req.body.triggerType || 'manual');
     res.json({ success: true, newlyCompleted: result });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    res.serverError(err);
   }
 });
 

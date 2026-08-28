@@ -1,9 +1,11 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import User from '../models/User.js';
 import Transaction from '../models/Transaction.js';
 import { authenticate } from '../middleware/auth.js';
 import { awardXp } from '../utils/leveling.js';
 import { processPlayerProgress } from '../utils/playerProgress.js';
+import { creditUserBalance } from '../utils/atomicBalance.js';
+import { withUserLock } from '../utils/userMutex.js';
 
 const router = Router();
 
@@ -46,54 +48,63 @@ router.get('/status', authenticate, async (req, res) => {
       level: user.level,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
 router.post('/claim', authenticate, async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    await withUserLock(`bonus:${req.user._id}`, async () => {
+      const periodStart = new Date(Math.floor(Date.now() / PERIOD_MS) * PERIOD_MS);
 
-    const currentPeriod = getCurrentPeriod();
-    const lastClaim = user.lastPeriodBonusClaim;
-    const lastClaimPeriod = lastClaim ? Math.floor(lastClaim.getTime() / PERIOD_MS) : -1;
+      // Atomic claim: only one request can pass the period gate.
+      const claimed = await User.findOneAndUpdate(
+        {
+          _id: req.user._id,
+          $or: [{ lastPeriodBonusClaim: null }, { lastPeriodBonusClaim: { $lt: periodStart } }],
+        },
+        { $set: { lastPeriodBonusClaim: new Date() } },
+        { new: true },
+      );
+      if (!claimed) {
+        const err = new Error('Bonus already claimed this period');
+        err.status = 400;
+        throw err;
+      }
 
-    if (currentPeriod <= lastClaimPeriod) {
-      return res.status(400).json({ error: 'Bonus already claimed this period' });
-    }
+      const money = randomBetween(MIN_MONEY, MAX_MONEY);
+      const xp = randomBetween(MIN_XP, MAX_XP);
 
-    const money = randomBetween(MIN_MONEY, MAX_MONEY);
-    const xp = randomBetween(MIN_XP, MAX_XP);
+      // awardXp saves the (fresh) user doc â€” run it BEFORE the balance $inc so
+      // its save() can never clobber the credit.
+      const xpResult = await awardXp(claimed, xp, 'period_bonus');
+      await creditUserBalance(req.user._id, money);
 
-    user.balance += money;
-    user.lastPeriodBonusClaim = new Date();
-    await user.save();
+      await Transaction.create({
+        buyerId: req.user._id,
+        type: 'period_bonus',
+        price: money,
+        description: 'Period bonus claim',
+      });
 
-    const xpResult = await awardXp(user, xp, 'period_bonus');
+      await processPlayerProgress(req.user._id, 'bonus_claim', { skipXp: true });
 
-    await Transaction.create({
-      buyerId: user._id,
-      type: 'period_bonus',
-      price: money,
-      description: 'Period bonus claim',
-    });
-
-    await processPlayerProgress(user._id, 'bonus_claim', { skipXp: true });
-
-    res.json({
-      money,
-      xp,
-      balance: user.balance,
-      level: xpResult.level,
-      xpInLevel: xpResult.xp,
-      xpToNextLevel: xpResult.xpToNextLevel,
-      levelUps: xpResult.levelUps,
-      nextPeriodAt: new Date(getNextPeriodStart()).toISOString(),
-      nextInMs: getNextPeriodStart() - Date.now(),
+      res.json({
+        success: true,
+        money,
+        xp,
+        balance: claimed.balance + money,
+        level: xpResult.level,
+        xpInLevel: xpResult.xp,
+        xpToNextLevel: xpResult.xpToNextLevel,
+        levelUps: xpResult.levelUps,
+        nextPeriodAt: new Date(getNextPeriodStart()).toISOString(),
+        nextInMs: getNextPeriodStart() - Date.now(),
+      });
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    res.serverError(err);
   }
 });
 

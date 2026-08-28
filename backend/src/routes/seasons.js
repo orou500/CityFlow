@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import mongoose from 'mongoose';
 import Season from '../models/Season.js';
 import { getCurrentSeason } from '../engine/seasonReset.js';
@@ -36,7 +36,7 @@ router.get('/', async (req, res) => {
 
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -79,7 +79,7 @@ router.get('/player/:userId', async (req, res) => {
 
     res.json(playerHistory);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -89,7 +89,7 @@ router.get('/:id', async (req, res) => {
     if (!season) return res.status(404).json({ error: 'Season not found' });
     res.json(season);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 

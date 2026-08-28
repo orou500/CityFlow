@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import Loan from '../models/Loan.js';
 import User from '../models/User.js';
 import Property from '../models/Property.js';
@@ -34,7 +34,7 @@ function computePayment(principal, rate, ticks) {
 const loanMutexes = new Map();
 
 async function withUserLoanMutex(userId, fn) {
-  // Key on the string form — each request carries its own ObjectId instance,
+  // Key on the string form â€” each request carries its own ObjectId instance,
   // and Map identity lookup would otherwise miss.
   const key = userId.toString();
   const previous = loanMutexes.get(key) || Promise.resolve();
@@ -82,7 +82,7 @@ router.get('/summary', authenticate, async (req, res) => {
       debtToIncome: dti,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -95,7 +95,7 @@ router.get('/options', authenticate, async (req, res) => {
     const activeLoans = await Loan.find({ userId: user._id, active: true }).select('remainingBalance').lean();
     const totalDebt = activeLoans.reduce((sum, l) => sum + (l.remainingBalance || 0), 0);
     // Products must be advertised against the SAME lending net worth the
-    // offer engine enforces — gross net worth would advertise amounts the
+    // offer engine enforces â€” gross net worth would advertise amounts the
     // backend then rejects.
     const lendingNetWorth = computeLendingNetWorth(user.balance, propertyValue, totalDebt);
     const maxDebt = Math.round(Math.max(1, lendingNetWorth) * getLoanMultiplier(creditScore));
@@ -121,7 +121,7 @@ router.get('/options', authenticate, async (req, res) => {
           principal: product.maxPrincipal,
           minPrincipal: product.minPrincipal,
           maxPrincipal: product.maxPrincipal,
-          // Server-computed selectable maximum after existing debt — the
+          // Server-computed selectable maximum after existing debt â€” the
           // frontend drives its amount slider with this value.
           effectiveMaxPrincipal,
           durationTicks: duration,
@@ -138,12 +138,12 @@ router.get('/options', authenticate, async (req, res) => {
 
     res.json(options);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
 /**
- * Live offer preview — the authoritative, server-computed terms for the
+ * Live offer preview â€” the authoritative, server-computed terms for the
  * selected amount + duration. The frontend renders this as the loan summary;
  * the client never computes rates itself.
  */
@@ -162,7 +162,7 @@ router.get('/offer-preview', authenticate, async (req, res) => {
     }
     res.json(offer);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -176,7 +176,7 @@ router.get('/history', authenticate, async (req, res) => {
     const loans = await Loan.find({ userId: req.user._id }).sort({ createdAt: -1 }).limit(50);
     res.json(loans);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -185,7 +185,7 @@ router.get('/credit-history', authenticate, async (req, res) => {
     const history = await CreditScoreHistory.find({ userId: req.user._id }).sort({ tick: -1 }).limit(50);
     res.json(history);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -200,7 +200,7 @@ router.post('/apply', authenticate, async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    // ── Server-authoritative offer ─────────────────────────────────────────
+    // â”€â”€ Server-authoritative offer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // The client never supplies the rate; every term is recomputed here from
     // live financial data.
     const offer = await calculateLoanOffer({
@@ -216,7 +216,7 @@ router.post('/apply', authenticate, async (req, res) => {
 
     const { interestRate, monthlyPayment, totalRepayment, totalInterest, riskLevel } = offer;
 
-    // ── Concurrency guard ──────────────────────────────────────────────────
+    // â”€â”€ Concurrency guard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Redis lock (multi-replica) + in-process mutex (single replica/tests).
     const lockOwner = await acquireLock(`loan:apply:${userId}`, 15000);
     const applyFn = async () => {
@@ -314,7 +314,7 @@ router.post('/apply', authenticate, async (req, res) => {
       if (lockOwner) await releaseLock(`loan:apply:${userId}`, lockOwner);
     }
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -359,7 +359,7 @@ router.post('/repay', authenticate, async (req, res) => {
 
     res.json({ loan, balance: user.balance, creditScore: user.creditScore });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 

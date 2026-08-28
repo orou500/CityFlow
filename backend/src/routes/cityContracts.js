@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import RealEstateCompany from '../models/RealEstateCompany.js';
 import CityContract from '../models/CityContract.js';
@@ -73,7 +73,7 @@ router.get('/:id/contracts', authenticate, async (req, res) => {
 
     res.json(contracts.map((c) => ({ ...c.toJSON(), currentTick })));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -98,7 +98,7 @@ router.get('/:id/contracts/history', authenticate, async (req, res) => {
 
     res.json(contracts.map((c) => ({ ...c.toJSON(), currentTick })));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -201,7 +201,7 @@ router.post('/:id/contracts/:contractId/propose', authenticate, async (req, res)
 
     res.json(contract);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -341,7 +341,7 @@ router.post('/:id/contracts/:contractId/vote', authenticate, async (req, res) =>
     await onCompanyVote(company._id);
     res.json({ contract, approved: false });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 

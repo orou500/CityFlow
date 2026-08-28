@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import User from '../models/User.js';
 import { generateLinkCode, verifyLinkCode, removeDiscordLink } from '../services/discordBot.js';
@@ -14,7 +14,7 @@ router.post('/link/generate', authenticate, async (req, res) => {
     }
     res.json({ code });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -34,7 +34,7 @@ router.post('/link/verify', authenticate, async (req, res) => {
 
     res.json({ success: true, discordUserId });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -47,7 +47,7 @@ router.delete('/link', authenticate, async (req, res) => {
     await User.findByIdAndUpdate(req.user._id, { discordId: null });
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -56,7 +56,7 @@ router.get('/link/status', authenticate, async (req, res) => {
     const user = await User.findById(req.user._id).select('discordId');
     res.json({ linked: !!user.discordId, discordId: user.discordId || null });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -68,7 +68,7 @@ router.get('/notifications/settings', authenticate, async (req, res) => {
     }
     res.json(settings);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -92,7 +92,7 @@ router.put('/notifications/settings', authenticate, async (req, res) => {
     await settings.save();
     res.json(settings);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 

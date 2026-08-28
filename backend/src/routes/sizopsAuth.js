@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import SizopsAuditLog from '../models/SizopsAuditLog.js';
@@ -104,7 +104,7 @@ async function generateUniqueUsername(base) {
 }
 
 /**
- * Shared post-identity login tail — mirrors the existing OAuth/login handlers:
+ * Shared post-identity login tail â€” mirrors the existing OAuth/login handlers:
  * banned/deleted checks, lastLogin tracking, progression, and the existing
  * CityFlow JWT. Never issues a SizOps token as the game session token.
  */
@@ -138,7 +138,7 @@ async function finalizeLogin(user, req, isNewUser) {
  * account. Atomic + idempotent: the `findOneAndUpdate` only matches accounts
  * that have never claimed the reward (`sizopsWelcomeRewardClaimedAt: null`),
  * so concurrent logins, link retries and callback replays can never double-
- * credit. Returns `{ granted, amount }` — callers may pass `granted` through
+ * credit. Returns `{ granted, amount }` â€” callers may pass `granted` through
  * to the frontend to show a reward banner.
  */
 async function grantSizopsWelcomeReward(userId) {
@@ -177,7 +177,7 @@ async function findOrCreateUserForSizOps(sub, claims) {
   const email = claims.email ? String(claims.email).toLowerCase().trim() : null;
   let emailForUser = email;
   if (emailForUser) {
-    // The email is only stored for display/contact — it is NEVER used to
+    // The email is only stored for display/contact â€” it is NEVER used to
     // match accounts. If another account already uses it, fall back to a
     // generated address rather than failing (or worse, merging) accounts.
     const emailTaken = await User.findOne({ email: emailForUser });
@@ -232,7 +232,7 @@ function cryptoRandomSuffix() {
 // --- Start ---------------------------------------------------------------
 
 /**
- * GET /auth/sizops — starts the SizOps SSO login flow (redirects to SizOps).
+ * GET /auth/sizops â€” starts the SizOps SSO login flow (redirects to SizOps).
  */
 router.get('/sizops', async (req, res) => {
   try {
@@ -253,7 +253,7 @@ router.get('/sizops', async (req, res) => {
 });
 
 /**
- * POST /auth/sizops/link-start — starts the account-linking flow for the
+ * POST /auth/sizops/link-start â€” starts the account-linking flow for the
  * authenticated CityFlow session. Returns the SizOps authorize URL as JSON
  * (the browser then navigates there), so the session token never leaves the
  * Authorization header.
@@ -429,7 +429,7 @@ router.get('/sizops/status', authenticate, async (req, res) => {
 });
 
 /**
- * POST /auth/sizops/unlink — removes the SizOps link.
+ * POST /auth/sizops/unlink â€” removes the SizOps link.
  * Protected: blocked if it would leave the account with no password and no
  * other OAuth provider; requires the current password when one exists.
  */
@@ -470,7 +470,7 @@ router.post('/sizops/unlink', authenticate, unlinkLimiter, async (req, res) => {
 
     // Remove the GamePlayer link on the SizOps side. The notification is
     // durable (outbox) so a transient SizOps/network failure never leaves the
-    // two systems out of sync silently — the scheduler retries until done.
+    // two systems out of sync silently â€” the scheduler retries until done.
     await enqueueSizopsDisconnect(removed);
     processSizopsDisconnectOutbox().catch((err) =>
       console.error(`[SIZOPS] Disconnect outbox processing failed (${user._id}): ${err.message}`),
@@ -479,17 +479,17 @@ router.post('/sizops/unlink', authenticate, unlinkLimiter, async (req, res) => {
 
     res.json({ success: true, message: 'SizOps account unlinked' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
 /**
- * POST /auth/sizops/disconnect-notify — server-to-server webhook called by
+ * POST /auth/sizops/disconnect-notify â€” server-to-server webhook called by
  * SizOps when a user disconnects CityFlow on the SizOps side.
  *
  * Authenticated by a SizOps-signed RS256 service JWT (verified against the
  * SizOps JWKS + issuer + our own OIDC client id + the `cityflow:disconnect`
- * purpose), never by a CityFlow session — so only SizOps can trigger it, and
+ * purpose), never by a CityFlow session â€” so only SizOps can trigger it, and
  * only for the identity named in the token's `sub`. Idempotent: notifying for
  * an already-disconnected user returns 200 with `disconnected: false`.
  */

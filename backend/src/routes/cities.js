@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import City from '../models/City.js';
 import Property from '../models/Property.js';
 import Event from '../models/Event.js';
@@ -16,7 +16,7 @@ router.get('/', async (req, res) => {
 
     res.json(cities);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -64,7 +64,7 @@ router.get('/:id', optionalAuth, async (req, res) => {
     if (req.user) recordVisit(req.user._id, 'city', data.city._id);
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -76,7 +76,7 @@ router.get('/:id/history', async (req, res) => {
     const history = city.demographicsHistory || [];
     res.json(history.slice(-limit));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 

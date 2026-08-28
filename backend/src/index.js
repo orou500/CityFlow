@@ -45,6 +45,7 @@ import missionRoutes from './routes/missions.js';
 import onboardingRoutes from './routes/onboarding.js';
 import careerRoutes from './routes/career.js';
 import { maintenanceCheck } from './middleware/maintenance.js';
+import { requireAdmin } from './middleware/admin.js';
 import { getMaintenanceInfo, getTickNumber } from './models/GameState.js';
 import { createNewSeason } from './engine/seasonReset.js';
 import Season from './models/Season.js';
@@ -65,8 +66,62 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const httpServer = createServer(app);
 
-app.use(cors());
+// Behind Traefik (1 trusted hop): req.ip resolves to the real client IP from
+// the X-Forwarded-For header appended by the proxy, so rate limits are
+// per-client and spoofed forwarding headers cannot bypass them.
+app.set('trust proxy', 1);
+
+const CORS_ALLOWLIST = [config.frontendUrl, 'capacitor://localhost'];
+app.use(
+  cors({
+    origin(origin, cb) {
+      if (!origin || CORS_ALLOWLIST.includes(origin) || /^https?:\/\/localhost(:\d+)?$/.test(origin)) {
+        return cb(null, true);
+      }
+      return cb(null, false);
+    },
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: false,
+    maxAge: 86400,
+  }),
+);
 app.use(express.json());
+
+// Security headers (defense in depth for the API; the SPA is served by the
+// frontend nginx which applies its own headers).
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  res.setHeader(
+    'Content-Security-Policy',
+    [
+      "default-src 'self'",
+      "script-src 'self' https://cdn.enable.co.il",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: https:",
+      "font-src 'self' data:",
+      "connect-src 'self' https://cityflow.sizops.co.il wss://cityflow.sizops.co.il ws://localhost:* http://localhost:* https://localhost:* http://10.0.2.2:*",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "frame-ancestors 'none'",
+    ].join('; '),
+  );
+  next();
+});
+
+// Generic server-error responder: logs server-side, sends nothing internal to
+// the client. Replaces per-route `res.status(500).json({ error: err.message })`.
+app.use((req, res, next) => {
+  res.serverError = (err) => {
+    console.error(`[ERROR] ${req.method} ${req.originalUrl}:`, err?.stack || err?.message || err);
+    res.status(500).json({ error: 'An unexpected error occurred' });
+  };
+  next();
+});
 
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
@@ -89,7 +144,7 @@ app.get('/ready', (req, res) => {
   });
 });
 
-app.get('/metrics', async (req, res) => {
+app.get('/metrics', requireAdmin, async (req, res) => {
   const cacheKeys = await getCacheKeyCount();
   const notifQueueSize = await getNotificationQueueSize();
   const delayedJobs = await getDelayedJobCount();
@@ -182,6 +237,19 @@ app.use((req, res) => {
 
 async function start() {
   try {
+    // Fail fast in production when security-critical configuration is missing —
+    // never silently start with insecure defaults.
+    if (process.env.NODE_ENV === 'production') {
+      const missing = [];
+      if (!config.jwtSecret) missing.push('JWT_SECRET');
+      if (!config.adminPassword) missing.push('ADMIN_PASSWORD');
+      if (!config.mongodbUri) missing.push('MONGODB_URI');
+      if (missing.length > 0) {
+        console.error('[STARTUP] Missing required security configuration: ' + missing.join(', '));
+        process.exit(1);
+      }
+    }
+
     await connectDB();
     await connectRedis();
 

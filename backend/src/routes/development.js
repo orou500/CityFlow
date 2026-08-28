@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import Property from '../models/Property.js';
 import City from '../models/City.js';
 import User from '../models/User.js';
@@ -75,7 +75,7 @@ router.get('/options', async (req, res) => {
     }
     res.json(categories);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -102,7 +102,7 @@ router.get('/options/city/:cityId', async (req, res) => {
     }
     res.json(categories);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -149,7 +149,7 @@ router.post('/estimate', async (req, res) => {
       city: land.cityId?.name,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -162,7 +162,7 @@ router.get('/my-land', async (req, res) => {
     }).populate('cityId', 'name country demandIndex supplyIndex');
     res.json(land);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -259,7 +259,7 @@ router.post('/start', async (req, res) => {
       balance: user.balance,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -270,7 +270,7 @@ router.get('/projects', async (req, res) => {
       .sort({ createdAt: -1 });
     res.json(projects);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -285,7 +285,7 @@ router.get('/projects/:id', async (req, res) => {
     }
     res.json(project);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -297,7 +297,7 @@ router.get('/my-buildings', async (req, res) => {
     }).populate('cityId', 'name country');
     res.json(buildings);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -332,7 +332,7 @@ router.get('/upgrades/:propertyId', async (req, res) => {
       upgradeLevel: property.upgradeLevel || 0,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -441,7 +441,7 @@ router.post('/upgrade', async (req, res) => {
 
     res.json({ property, balance: user.balance });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -460,7 +460,7 @@ router.get('/improvements/options', async (req, res) => {
     }));
     res.json(improvements);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -545,7 +545,7 @@ router.get('/improvements/requirements/:propertyId', async (req, res) => {
       totalImprovements: Object.keys(IMPROVEMENT_PROJECTS).length,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -583,7 +583,7 @@ router.get('/improvements/available/:propertyId', async (req, res) => {
       nextImprovementCost: cost,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -621,7 +621,7 @@ router.get('/improvements/status/:propertyId', async (req, res) => {
       currentPeriod,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -714,7 +714,7 @@ router.post('/improvements/start', async (req, res) => {
       completionPeriod: currentPeriod + improvement.constructionPeriods,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -817,7 +817,7 @@ router.post('/company/start', async (req, res) => {
       throw createErr;
     }
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -831,7 +831,7 @@ router.get('/company/projects', async (req, res) => {
       .sort({ createdAt: -1 });
     res.json(projects);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 

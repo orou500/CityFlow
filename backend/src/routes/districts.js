@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import District from '../models/District.js';
 import Property from '../models/Property.js';
 import User from '../models/User.js';
@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
     );
     res.json(districts);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -35,7 +35,7 @@ router.get('/leaderboard/top', async (req, res) => {
       .limit(20);
     res.json(districts);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -49,7 +49,7 @@ router.get('/city/:cityId', async (req, res) => {
     );
     res.json(districts);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -119,7 +119,7 @@ router.get('/:id', optionalAuth, async (req, res) => {
       },
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -134,7 +134,7 @@ router.get('/:id/history', async (req, res) => {
 
     res.json({ history: district.history, name: district.name });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -162,7 +162,7 @@ router.get('/:id/influence', async (req, res) => {
       rankings: enriched,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 

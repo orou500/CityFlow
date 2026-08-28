@@ -2,6 +2,8 @@ import jwt from 'jsonwebtoken';
 import { config } from '../config/index.js';
 import User from '../models/User.js';
 
+const VERIFY_OPTIONS = { algorithms: ['HS256'] };
+
 export async function authenticate(req, res, next) {
   const header = req.headers.authorization;
   if (!header || !header.startsWith('Bearer ')) {
@@ -10,14 +12,16 @@ export async function authenticate(req, res, next) {
   let decoded;
   try {
     const token = header.split(' ')[1];
-    decoded = jwt.verify(token, config.jwtSecret);
+    decoded = jwt.verify(token, config.jwtSecret, VERIFY_OPTIONS);
   } catch {
     return res.status(401).json({ error: 'Invalid token' });
   }
   try {
     const user = await User.findById(decoded.userId);
-    if (!user) {
-      return res.status(401).json({ error: 'User not found' });
+    // Reject deleted or banned accounts — a token must never outlive the
+    // account state (aligned with the Socket.IO handshake middleware).
+    if (!user || user.deletedAt || user.banned) {
+      return res.status(401).json({ error: 'Invalid token' });
     }
     req.user = user;
     next();
@@ -34,13 +38,15 @@ export async function optionalAuth(req, res, next) {
   let decoded;
   try {
     const token = header.split(' ')[1];
-    decoded = jwt.verify(token, config.jwtSecret);
+    decoded = jwt.verify(token, config.jwtSecret, VERIFY_OPTIONS);
   } catch {
     return next();
   }
   try {
     const user = await User.findById(decoded.userId);
-    req.user = user;
+    if (user && !user.deletedAt && !user.banned) {
+      req.user = user;
+    }
   } catch {
     // ignore DB errors on optional auth
   }

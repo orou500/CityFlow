@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import User from '../models/User.js';
 import Property from '../models/Property.js';
 import City from '../models/City.js';
@@ -63,7 +63,7 @@ router.get('/', async (req, res) => {
           { $project: { username: 1, displayName: 1, avatar: 1, netWorth: 1, balance: 1 } },
         ]);
 
-        // ── Global Activity: real players only ────────────────────────
+        // â”€â”€ Global Activity: real players only â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // Meaningful transaction types, non-zero amounts, at least one real
         // player actor (bank/system transfers have no buyerId/sellerId).
         const [playerTxs, companyPurchases, auctionWins, missionCompletions, companyEvents] = await Promise.all([
@@ -80,7 +80,7 @@ router.get('/', async (req, res) => {
             .populate('companyId', 'name')
             .lean(),
           // Company property purchases (no personal buyer/seller) are their own
-          // activity type — never attributed to a player.
+          // activity type â€” never attributed to a player.
           Transaction.find({
             type: 'buy',
             companyId: { $ne: null },
@@ -118,7 +118,7 @@ router.get('/', async (req, res) => {
           // the company, not a property). Classify them as
           // `company_funds_contributed` so they can never render as a property
           // purchase. Any other buy/sell row without a propertyId and without a
-          // company is not a real property transaction — skip it entirely.
+          // company is not a real property transaction â€” skip it entirely.
           const isCompanyContribution = tx.type === 'buy' && tx.companyId && !tx.propertyId;
           if ((tx.type === 'buy' || tx.type === 'sell') && !tx.propertyId && !tx.companyId) {
             continue;
@@ -191,7 +191,7 @@ router.get('/', async (req, res) => {
 
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 

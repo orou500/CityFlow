@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import LeaderboardSnapshot from '../models/LeaderboardSnapshot.js';
 import CompetitiveEvent from '../models/CompetitiveEvent.js';
 import User from '../models/User.js';
@@ -72,7 +72,7 @@ router.get('/rankings/:category', async (req, res) => {
     await cacheSet(cacheKey, result, LEADERBOARD_TTL);
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -127,7 +127,7 @@ router.get('/my-rank', authenticate, async (req, res) => {
     await cacheSet(cacheKey, result, LEADERBOARD_TTL);
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -182,7 +182,7 @@ router.get('/history/:category', async (req, res) => {
     await cacheSet(cacheKey, result, LEADERBOARD_TTL);
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -236,7 +236,7 @@ router.get('/player/:userId', optionalAuth, async (req, res) => {
           id: m.rewards.badge,
           name: m.name,
           description: m.description,
-          icon: m.icon || '🎖️',
+          icon: m.icon || 'ðŸŽ–ï¸',
         };
       }
     });
@@ -274,7 +274,7 @@ router.get('/player/:userId', optionalAuth, async (req, res) => {
     await cacheSet(cacheKey, result, LEADERBOARD_TTL);
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -289,7 +289,7 @@ router.get('/events', async (req, res) => {
     const events = await CompetitiveEvent.find(filter).sort({ startDate: -1 }).limit(50);
     res.json({ events });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -299,7 +299,7 @@ router.get('/events/:id', async (req, res) => {
     if (!event) return res.status(404).json({ error: 'Event not found' });
     res.json({ event });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -326,7 +326,7 @@ router.post('/events', requireAdmin, async (req, res) => {
 
     res.status(201).json({ event });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -386,7 +386,7 @@ router.get('/summary', async (req, res) => {
     await cacheSet(cacheKey, result, LEADERBOARD_SUMMARY_TTL);
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -396,7 +396,7 @@ router.get('/rewards', async (req, res) => {
     const seasonNumber = activeSeason ? activeSeason.number : 1;
     res.json({ rewards: LEADERBOARD_REWARD_TIERS, seasonNumber });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 

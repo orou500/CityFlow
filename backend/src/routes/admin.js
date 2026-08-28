@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import mongoose from 'mongoose';
 import User from '../models/User.js';
 import Property from '../models/Property.js';
@@ -107,7 +107,7 @@ router.get('/overview', async (req, res) => {
       lastTickDuration: gameState.lastTickDuration,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -137,7 +137,7 @@ router.get('/ticks', async (req, res) => {
       tickIntervalMinutes: 360,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -152,7 +152,7 @@ router.post('/tick/run', async (req, res) => {
     }
     res.json({ ticksExecuted: results.length, results });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -205,7 +205,7 @@ router.get('/users', async (req, res) => {
     res.json({ users: result, total, page: pageNum, totalPages: Math.ceil(total / limitNum), limit: limitNum });
   } catch (err) {
     console.error('[Admin Users] Error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -229,12 +229,12 @@ router.get('/users/:id', async (req, res) => {
       },
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
-// ─── USER ACTIVITY LOG (admin-only) ────────────────────────────
-// Aggregated from existing systems — no duplicate logging.
+// â”€â”€â”€ USER ACTIVITY LOG (admin-only) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Aggregated from existing systems â€” no duplicate logging.
 
 const TX_CATEGORY_MAP = {
   buy: 'market',
@@ -373,7 +373,7 @@ router.get('/users/:id/activity', async (req, res) => {
           timestamp: n.createdAt,
           category: notifCategoryMap[n.entityType] || 'account',
           action: `notification:${n.type}`,
-          description: `${n.title} — ${n.message}`,
+          description: `${n.title} â€” ${n.message}`,
           amount: null,
           entityType: n.entityType || 'notification',
           entityId: n.entityId || n.relatedId || null,
@@ -417,7 +417,7 @@ router.get('/users/:id/activity', async (req, res) => {
           timestamp: r.distributedAt || r.createdAt,
           category: 'season',
           action: 'season_reward',
-          description: `Season ${r.seasonNumber} leaderboard reward — rank #${r.rank}`,
+          description: `Season ${r.seasonNumber} leaderboard reward â€” rank #${r.rank}`,
           amount: r.reward || 0,
           entityType: 'season',
           entityId: r.seasonId || null,
@@ -555,7 +555,7 @@ router.get('/users/:id/activity', async (req, res) => {
     });
   } catch (err) {
     console.error('[Admin Activity] Error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -569,7 +569,7 @@ router.post('/users/:id/restore', async (req, res) => {
     await logAdminAction(req, 'user_restored', user);
     res.json({ success: true, message: 'Account restored' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -581,7 +581,7 @@ router.delete('/users/:id/permanent', async (req, res) => {
     await logAdminAction(req, 'user_permanently_deleted', user);
     res.json({ success: true, message: 'Account permanently deleted' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -601,7 +601,7 @@ router.put('/users/:id/balance', async (req, res) => {
     });
     res.json(user);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -614,7 +614,7 @@ router.put('/users/:id/ban', async (req, res) => {
     await logAdminAction(req, user.banned ? 'user_banned' : 'user_unbanned', user);
     res.json({ _id: user._id, username: user.username, banned: user.banned });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -635,7 +635,7 @@ router.put('/users/:id/role', async (req, res) => {
     await logAdminAction(req, 'user_role_changed', user, { previous: previousRole, new: role });
     res.json({ _id: user._id, username: user.username, role: user.role });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -661,7 +661,7 @@ router.put('/users/:id/level', async (req, res) => {
       xpToNextLevel: user.xpToNextLevel,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -692,7 +692,7 @@ router.put('/users/:id/created-at', async (req, res) => {
     );
     res.json({ _id: result._id, username: result.username, createdAt: result.createdAt });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -712,7 +712,7 @@ router.get('/properties', async (req, res) => {
     ]);
     res.json({ properties, total, page, pages: Math.ceil(total / limit) });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -737,7 +737,7 @@ router.post('/properties', async (req, res) => {
     }
     res.status(201).json(property);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -747,7 +747,7 @@ router.delete('/properties/:id', async (req, res) => {
     if (!property) return res.status(404).json({ error: 'Property not found' });
 
     // Never let a property vanish while a live auction (upcoming/active/ending)
-    // depends on it — settlement and bidding read the live document.
+    // depends on it â€” settlement and bidding read the live document.
     const liveAuction = await Auction.findOne({
       propertyId: property._id,
       status: { $in: ['upcoming', 'active', 'ending'] },
@@ -769,7 +769,7 @@ router.delete('/properties/:id', async (req, res) => {
     }
     res.json({ deleted: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -784,7 +784,7 @@ router.put('/properties/:id', async (req, res) => {
     if (!property) return res.status(404).json({ error: 'Property not found' });
     res.json(property);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -807,7 +807,7 @@ router.put('/cities/:id', async (req, res) => {
     if (!city) return res.status(404).json({ error: 'City not found' });
     res.json(city);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -816,7 +816,7 @@ router.get('/events', async (req, res) => {
     const events = await Event.find().sort({ createdAt: -1 });
     res.json(events);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -840,7 +840,7 @@ router.post('/events', async (req, res) => {
     }
     res.status(201).json(event);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -870,7 +870,7 @@ router.put('/events/:id', async (req, res) => {
     await event.save();
     res.json(event);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -883,7 +883,7 @@ router.get('/construction-projects', async (req, res) => {
       .sort({ createdAt: -1 });
     res.json(projects);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -898,7 +898,7 @@ router.put('/construction-projects/:id', async (req, res) => {
     if (!project) return res.status(404).json({ error: 'Construction project not found' });
     res.json(project);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -939,7 +939,7 @@ router.post('/construction-projects/trigger-event', async (req, res) => {
       projects: updated,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -957,7 +957,7 @@ router.get('/development-zones', async (req, res) => {
     );
     res.json(zones);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -966,7 +966,7 @@ router.get('/seasons', async (req, res) => {
     const seasons = await Season.find().sort({ number: -1 });
     res.json(seasons);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -976,7 +976,7 @@ router.get('/seasons/current', async (req, res) => {
     if (!season) return res.json(null);
     res.json(season);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -1000,7 +1000,7 @@ router.get('/seasons/preview', async (req, res) => {
       },
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -1013,7 +1013,7 @@ router.post('/seasons/create', async (req, res) => {
     const season = await createNewSeason();
     res.json({ message: `Season ${season.number} created`, season });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -1041,7 +1041,7 @@ router.post('/seasons/end', async (req, res) => {
       newSeason: newSeason.number,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -1050,7 +1050,7 @@ router.get('/maintenance', async (req, res) => {
     const info = await getMaintenanceInfo();
     res.json(info);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -1076,7 +1076,7 @@ router.post('/maintenance/enable', async (req, res) => {
     }).catch(() => {});
     res.json({ enabled: true, message: message || '' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -1101,7 +1101,7 @@ router.post('/maintenance/disable', async (req, res) => {
     }).catch(() => {});
     res.json({ enabled: false });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -1121,7 +1121,7 @@ router.post('/email/test', async (req, res) => {
       res.status(500).json({ success: false, error: result.error });
     }
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -1148,7 +1148,7 @@ router.get('/email/status', async (req, res) => {
       from: config.emailFrom,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -1162,7 +1162,7 @@ router.get('/real-estate-companies', async (req, res) => {
 
     res.json(companies);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -1178,7 +1178,7 @@ router.get('/real-estate-companies/:id', async (req, res) => {
     if (!company) return res.status(404).json({ error: 'Company not found' });
     res.json(company);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -1202,7 +1202,7 @@ router.put('/real-estate-companies/:id', async (req, res) => {
     await company.save();
     res.json({ success: true, company });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -1215,7 +1215,7 @@ router.delete('/real-estate-companies/:id', async (req, res) => {
     await company.save();
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -1232,7 +1232,7 @@ router.put('/real-estate-companies/:id/members/:userId/role', async (req, res) =
     await company.save();
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -1245,7 +1245,7 @@ router.delete('/real-estate-companies/:id/members/:userId', async (req, res) => 
     await company.save();
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 

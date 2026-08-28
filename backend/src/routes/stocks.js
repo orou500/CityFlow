@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import Company from '../models/Company.js';
 import StockHolding from '../models/StockHolding.js';
 import StockTransaction from '../models/StockTransaction.js';
@@ -11,6 +11,8 @@ import { processPlayerProgress } from '../utils/playerProgress.js';
 import { cacheKeys } from '../utils/cacheKeys.js';
 import { cacheDel } from '../utils/cache.js';
 import { getAvailableBalance } from '../utils/auctionMoney.js';
+import { debitUserBalance, creditUserBalance } from '../utils/atomicBalance.js';
+import { withUserLock } from '../utils/userMutex.js';
 
 const router = express.Router();
 router.use(authenticate);
@@ -46,59 +48,81 @@ router.post('/buy', async (req, res) => {
       return res.status(400).json({ error: 'Insufficient balance' });
     }
 
-    if (company.isIPO) {
-      const capped = await Company.findOneAndUpdate(
-        {
-          _id: company._id,
-          $expr: { $lte: [{ $add: ['$totalSharesHeld', shares] }, '$sharesOutstanding'] },
-        },
-        { $inc: { totalSharesHeld: shares } },
-        { new: false },
-      );
-      if (!capped) {
-        const remaining = Math.max(0, (company.sharesOutstanding || 0) - (company.totalSharesHeld || 0));
-        return res.status(400).json({ error: `Only ${remaining} shares available` });
+    let holding;
+    await withUserLock(`stocks:${req.user._id}`, async () => {
+      if (company.isIPO) {
+        const capped = await Company.findOneAndUpdate(
+          {
+            _id: company._id,
+            $expr: { $lte: [{ $add: ['$totalSharesHeld', shares] }, '$sharesOutstanding'] },
+          },
+          { $inc: { totalSharesHeld: shares } },
+          { new: false },
+        );
+        if (!capped) {
+          const remaining = Math.max(0, (company.sharesOutstanding || 0) - (company.totalSharesHeld || 0));
+          const err = new Error(`Only ${remaining} shares available`);
+          err.status = 400;
+          throw err;
+        }
       }
-    }
 
-    user.balance -= totalCost;
-    await user.save();
+      // Atomic debit with available-balance guard â€” never overspends, even
+      // under concurrent buys/bids.
+      const debited = await debitUserBalance(req.user._id, totalCost);
+      if (!debited) {
+        if (company.isIPO) {
+          await Company.updateOne(
+            { _id: company._id, totalSharesHeld: { $gte: shares } },
+            { $inc: { totalSharesHeld: -shares } },
+          ).catch(() => {});
+        }
+        const err = new Error('Insufficient balance');
+        err.status = 400;
+        throw err;
+      }
 
-    let holding = await StockHolding.findOne({ userId: req.user._id, companyId });
-    if (holding) {
-      const totalShares = holding.shares + shares;
-      holding.avgBuyPrice = (holding.shares * holding.avgBuyPrice + shares * company.sharePrice) / totalShares;
-      holding.shares = totalShares;
-      await holding.save();
-    } else {
-      holding = await StockHolding.create({
+      holding = await StockHolding.findOneAndUpdate(
+        { userId: req.user._id, companyId },
+        [
+          {
+            $set: {
+              shares: { $add: [{ $ifNull: ['$shares', 0] }, shares] },
+              avgBuyPrice: {
+                $divide: [
+                  {
+                    $add: [{ $multiply: [{ $ifNull: ['$avgBuyPrice', 0] }, { $ifNull: ['$shares', 0] }] }, totalCost],
+                  },
+                  { $add: [{ $ifNull: ['$shares', 0] }, shares] },
+                ],
+              },
+            },
+          },
+        ],
+        { upsert: true, new: true },
+      );
+
+      await StockTransaction.create({
         userId: req.user._id,
         companyId,
+        type: 'buy',
         shares,
-        avgBuyPrice: company.sharePrice,
+        price: company.sharePrice,
+        total: totalCost,
       });
-    }
 
-    await StockTransaction.create({
-      userId: req.user._id,
-      companyId,
-      type: 'buy',
-      shares,
-      price: company.sharePrice,
-      total: totalCost,
+      if (company.isIPO) {
+        await Company.updateOne(
+          { _id: company._id },
+          {
+            $inc: { tradingVolume: shares, totalTrades: 1 },
+          },
+        );
+      }
+
+      await processPlayerProgress(req.user._id, 'stocks_buy');
+      await cacheDel(cacheKeys.stockPortfolio(req.user._id));
     });
-
-    if (company.isIPO) {
-      await Company.updateOne(
-        { _id: company._id },
-        {
-          $inc: { tradingVolume: shares, totalTrades: 1 },
-        },
-      );
-    }
-
-    await processPlayerProgress(req.user._id, 'stocks_buy');
-    await cacheDel(cacheKeys.stockPortfolio(req.user._id));
 
     res.json({
       holding: {
@@ -106,16 +130,17 @@ router.post('/buy', async (req, res) => {
         avgBuyPrice: holding.avgBuyPrice,
         currentValue: holding.shares * company.sharePrice,
       },
-      balance: user.balance,
+      balance: (await User.findById(req.user._id)).balance,
     });
   } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
     if (companyId && shares && shares > 0 && company?.isIPO) {
       Company.updateOne(
         { _id: companyId, totalSharesHeld: { $gte: shares } },
         { $inc: { totalSharesHeld: -shares } },
       ).catch(() => {});
     }
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -145,67 +170,85 @@ router.post('/sell', async (req, res) => {
     }
 
     const totalRevenue = shares * company.sharePrice;
-    const user = await User.findById(req.user._id);
 
-    if (company.isIPO) {
-      const decremented = await Company.findOneAndUpdate(
-        {
-          _id: company._id,
-          isIPO: true,
-          totalSharesHeld: { $gte: shares },
-        },
-        { $inc: { totalSharesHeld: -shares, tradingVolume: shares, totalTrades: 1 } },
-        { new: false },
-      );
-      if (!decremented) {
-        return res.status(400).json({ error: 'Insufficient shares available to sell' });
+    await withUserLock(`stocks:${req.user._id}`, async () => {
+      if (company.isIPO) {
+        const decremented = await Company.findOneAndUpdate(
+          {
+            _id: company._id,
+            isIPO: true,
+            totalSharesHeld: { $gte: shares },
+          },
+          { $inc: { totalSharesHeld: -shares, tradingVolume: shares, totalTrades: 1 } },
+          { new: false },
+        );
+        if (!decremented) {
+          const err = new Error('Insufficient shares available to sell');
+          err.status = 400;
+          throw err;
+        }
       }
-    }
 
-    holding.shares -= shares;
-
-    if (holding.shares <= 0) {
-      await StockHolding.deleteOne({ _id: holding._id });
-    } else {
-      await holding.save();
-    }
-
-    // Track realized stock profit for mission/achievement progress
-    const realizedProfit = Math.round((company.sharePrice - holding.avgBuyPrice) * shares * 100) / 100;
-    if (realizedProfit > 0) {
-      await User.updateOne({ _id: req.user._id }, { $inc: { 'lifetimeStats.stockProfit': realizedProfit } }).catch(
-        () => {},
+      // Atomic holding decrement â€” concurrent sells can never overdraw shares.
+      const updatedHolding = await StockHolding.findOneAndUpdate(
+        { _id: holding._id, shares: { $gte: shares }, locked: { $ne: true } },
+        { $inc: { shares: -shares } },
+        { new: true },
       );
-    }
+      if (!updatedHolding) {
+        if (company.isIPO) {
+          await Company.updateOne(
+            { _id: company._id },
+            { $inc: { totalSharesHeld: shares, tradingVolume: -shares, totalTrades: -1 } },
+          ).catch(() => {});
+        }
+        const err = new Error('Insufficient shares');
+        err.status = 400;
+        throw err;
+      }
 
-    user.balance += totalRevenue;
-    await user.save();
+      if (updatedHolding.shares <= 0) {
+        await StockHolding.deleteOne({ _id: holding._id });
+      }
 
-    await StockTransaction.create({
-      userId: req.user._id,
-      companyId,
-      type: 'sell',
-      shares,
-      price: company.sharePrice,
-      total: totalRevenue,
+      // Track realized stock profit for mission/achievement progress
+      const realizedProfit = Math.round((company.sharePrice - holding.avgBuyPrice) * shares * 100) / 100;
+      if (realizedProfit > 0) {
+        await User.updateOne({ _id: req.user._id }, { $inc: { 'lifetimeStats.stockProfit': realizedProfit } }).catch(
+          () => {},
+        );
+      }
+
+      await creditUserBalance(req.user._id, totalRevenue);
+
+      await StockTransaction.create({
+        userId: req.user._id,
+        companyId,
+        type: 'sell',
+        shares,
+        price: company.sharePrice,
+        total: totalRevenue,
+      });
+
+      await processPlayerProgress(req.user._id, 'stocks_sell');
+      await cacheDel(cacheKeys.stockPortfolio(req.user._id));
     });
 
-    await processPlayerProgress(req.user._id, 'stocks_sell');
-    await cacheDel(cacheKeys.stockPortfolio(req.user._id));
-
+    const freshHolding =
+      holding.shares - shares > 0 ? await StockHolding.findOne({ userId: req.user._id, companyId }) : null;
     res.json({
-      holding:
-        holding.shares > 0
-          ? {
-              shares: holding.shares,
-              avgBuyPrice: holding.avgBuyPrice,
-              currentValue: holding.shares * company.sharePrice,
-            }
-          : null,
-      balance: user.balance,
+      holding: freshHolding
+        ? {
+            shares: freshHolding.shares,
+            avgBuyPrice: freshHolding.avgBuyPrice,
+            currentValue: freshHolding.shares * company.sharePrice,
+          }
+        : null,
+      balance: (await User.findById(req.user._id)).balance,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -217,7 +260,7 @@ router.get('/transactions', async (req, res) => {
       .limit(100);
     res.json(transactions);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -232,7 +275,7 @@ router.get('/public', async (_req, res) => {
 
     res.json(companies);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -270,7 +313,7 @@ router.get('/public/statistics', async (_req, res) => {
       })),
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -283,7 +326,7 @@ router.get('/public/events', async (_req, res) => {
       .lean();
     res.json(events);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -295,7 +338,7 @@ router.get('/public/events/:companyId', async (req, res) => {
       .lean();
     res.json(events);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -313,7 +356,7 @@ router.get('/:id/statistics', async (req, res) => {
 
     res.json(company);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -341,7 +384,7 @@ router.get('/dividends', async (req, res) => {
 
     res.json({ dividends, totalUnclaimed });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -360,7 +403,7 @@ router.post('/dividends/claim', async (req, res) => {
 
     // IPO dividends cannot be claimed once the company is delisted;
     // non-IPO (auto-generated) company dividends remain claimable even if
-    // the company went bankrupt — the cash was set aside at declaration time.
+    // the company went bankrupt â€” the cash was set aside at declaration time.
     const ipoHoldings = holdings.filter((h) => h.companyId?.isIPO);
     const hasDelistedIpo = ipoHoldings.some((h) => !h.companyId?.active);
     if (hasDelistedIpo) {
@@ -421,7 +464,7 @@ router.post('/dividends/claim', async (req, res) => {
       claimedDetails,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 

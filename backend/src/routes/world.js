@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import { getGameState } from '../models/GameState.js';
 import { config } from '../config/index.js';
 import { cacheGetOrSet } from '../utils/cache.js';
@@ -23,7 +23,7 @@ router.get('/status', async (req, res) => {
 
         // The world reset is tick-driven: it fires when tickNumber reaches
         // SEASON_TICKS. The reset instant is therefore the exact time the
-        // (SEASON_TICKS - tickNumber)th next tick executes — derived from the
+        // (SEASON_TICKS - tickNumber)th next tick executes â€” derived from the
         // same GameState the engine uses, never from client clocks.
         const ticksRemaining = state.tickNumber >= SEASON_TICKS ? SEASON_TICKS : SEASON_TICKS - state.tickNumber;
         const nextResetAt = lastTick
@@ -43,7 +43,7 @@ router.get('/status', async (req, res) => {
 
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 

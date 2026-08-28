@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import multer from 'multer';
 import path from 'path';
 import { promises as fs } from 'fs';
@@ -11,6 +11,7 @@ import Transaction from '../models/Transaction.js';
 import { authenticate } from '../middleware/auth.js';
 import { validatePassword } from '../utils/validatePassword.js';
 import { invalidateUser } from '../utils/cacheInvalidation.js';
+import { escapeRegex } from '../utils/escapeRegex.js';
 import { ACHIEVEMENT_DEFINITIONS } from '../config/achievements.js';
 import { MISSION_DEFINITIONS } from '../config/missions.js';
 
@@ -41,7 +42,7 @@ router.get('/me', authenticate, async (req, res) => {
     const transactions = await Transaction.find(txFilter).sort({ createdAt: -1 }).limit(50).populate('propertyId');
     res.json({ user, properties, loans, transactions });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -51,15 +52,15 @@ router.get('/search', authenticate, async (req, res) => {
     if (!q || q.length < 1) return res.json([]);
     const users = await User.find({
       $or: [
-        { normalizedUsername: { $regex: q.toLowerCase(), $options: 'i' } },
-        { displayName: { $regex: q, $options: 'i' } },
+        { normalizedUsername: { $regex: escapeRegex(q).toLowerCase(), $options: 'i' } },
+        { displayName: { $regex: escapeRegex(q), $options: 'i' } },
       ],
     })
       .select('username normalizedUsername displayName avatar')
       .limit(10);
     res.json(users);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -97,7 +98,7 @@ router.get('/:username', authenticate, async (req, res) => {
           id: m.rewards.badge,
           name: m.name,
           description: m.description,
-          icon: m.icon || '🎖️',
+          icon: m.icon || 'ðŸŽ–ï¸',
         };
       }
     });
@@ -136,7 +137,7 @@ router.get('/:username', authenticate, async (req, res) => {
       isOwner,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -155,7 +156,7 @@ router.put('/settings', authenticate, async (req, res) => {
     await invalidateUser(req.user._id);
     res.json({ user: req.user });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -177,7 +178,7 @@ router.put('/password', authenticate, async (req, res) => {
     await req.user.save();
     res.json({ message: 'Password updated successfully' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -208,7 +209,7 @@ router.post('/avatar', authenticate, (req, res) => {
       await invalidateUser(req.user._id);
       res.json({ avatar: req.user.avatar });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.serverError(err);
     }
   });
 });
@@ -224,7 +225,7 @@ router.put('/theme', authenticate, async (req, res) => {
     await invalidateUser(req.user._id);
     res.json({ theme });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -239,7 +240,7 @@ router.put('/language', authenticate, async (req, res) => {
     await invalidateUser(req.user._id);
     res.json({ preferredLanguage: language });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -253,7 +254,7 @@ router.put('/onboarding', authenticate, async (req, res) => {
     await req.user.save();
     res.json({ onboarding: req.user.onboarding });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -279,7 +280,7 @@ router.post('/push-token', authenticate, async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -296,7 +297,7 @@ router.delete('/account', authenticate, async (req, res) => {
 
     res.json({ success: true, message: 'Account deleted successfully' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -311,7 +312,7 @@ router.delete('/push-token', authenticate, async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 

@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import User from '../models/User.js';
 import FriendRequest from '../models/FriendRequest.js';
 import { enqueueNotification } from '../utils/notificationQueue.js';
@@ -56,7 +56,7 @@ router.post('/request/:username', async (req, res) => {
 
     res.status(201).json(request);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -87,7 +87,7 @@ router.post('/accept/:requestId', async (req, res) => {
       await user.save();
     }
 
-    // The sender also gained a friend — fire their progress too
+    // The sender also gained a friend â€” fire their progress too
     const sender = await User.findById(request.senderId);
     if (sender) {
       await processPlayerProgress(sender._id, 'friend_add');
@@ -99,7 +99,7 @@ router.post('/accept/:requestId', async (req, res) => {
 
     res.json(request);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -115,7 +115,7 @@ router.post('/decline/:requestId', async (req, res) => {
 
     res.json(request);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -130,7 +130,7 @@ router.delete('/request/:requestId', async (req, res) => {
 
     res.json(request);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -155,7 +155,7 @@ router.delete('/:friendId', async (req, res) => {
 
     res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -181,7 +181,7 @@ router.get('/', async (req, res) => {
     );
     res.json(friendsWithNetWorth);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -199,7 +199,7 @@ router.get('/requests', async (req, res) => {
     ]);
     res.json({ incoming, sent });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -228,7 +228,7 @@ router.get('/status/:username', async (req, res) => {
 
     res.json({ status: 'none' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 

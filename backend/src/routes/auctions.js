@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import mongoose from 'mongoose';
 import { body, param, query, validationResult } from 'express-validator';
 import Auction from '../models/Auction.js';
@@ -33,7 +33,7 @@ import { onCompanyVote } from '../utils/cacheInvalidation.js';
 import { calculateAuctionBidVotingEndsAt, resolveAuctionBidProposal } from '../engine/auctionBidProposals.js';
 import CompanyAuditLog from '../models/CompanyAuditLog.js';
 
-// In-process mutex per user — serializes concurrent bids by the same player
+// In-process mutex per user â€” serializes concurrent bids by the same player
 // so reservation deltas and city-ownership checks can never race.
 const userBidLocks = new Map();
 
@@ -163,7 +163,7 @@ router.get('/featured', async (req, res) => {
 
     return res.json({ success: true, auctions: featured });
   } catch (error) {
-    return res.status(500).json({ success: false, error: error.message });
+    return res.serverError(error);
   }
 });
 
@@ -176,7 +176,7 @@ router.get('/analytics', async (req, res) => {
     await cacheSet(cacheKeys.auctionAnalytics(), stats, AUCTION_CONFIG.cacheTTL.analytics);
     return res.json({ success: true, stats });
   } catch (error) {
-    return res.status(500).json({ success: false, error: error.message });
+    return res.serverError(error);
   }
 });
 
@@ -292,7 +292,7 @@ router.get(
         limit: Number(limit),
       });
     } catch (error) {
-      return res.status(500).json({ success: false, error: error.message });
+      return res.serverError(error);
     }
   },
 );
@@ -372,7 +372,7 @@ router.get(
 
       return res.json({ success: true, auction: auctionObj });
     } catch (error) {
-      return res.status(500).json({ success: false, error: error.message });
+      return res.serverError(error);
     }
   },
 );
@@ -492,7 +492,7 @@ router.post(
         balance: user.balance,
       });
     } catch (error) {
-      return res.status(500).json({ success: false, error: error.message });
+      return res.serverError(error);
     }
   },
 );
@@ -527,7 +527,7 @@ async function tryPlaceBid({ id, amount, userId, currentTick }) {
   const user = await User.findById(userId);
   if (!user) return { status: 404, body: { success: false, error: 'User not found' } };
 
-  // ── Money reservation (atomic, cannot double-spend) ───────────────
+  // â”€â”€ Money reservation (atomic, cannot double-spend) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const prevReservation = await AuctionReservation.findOne({ userId, auctionId: auction._id }).lean();
   const delta = Math.max(0, amount - (prevReservation?.amount || 0));
 
@@ -539,11 +539,11 @@ async function tryPlaceBid({ id, amount, userId, currentTick }) {
     };
   }
 
-  // ── Optimistic auction update (guarded on currentBid/currentBidderId) ──
+  // â”€â”€ Optimistic auction update (guarded on currentBid/currentBidderId) â”€â”€
   // Anti-sniping: an auction may be extended AT MOST maxAntiSnipingExtensions
   // times in its whole life. One bid can therefore cause at most one valid
   // extension, and concurrent in-window bids (e.g. two different users racing
-  // at the deadline) can never extend repeatedly — the countdown never jumps
+  // at the deadline) can never extend repeatedly â€” the countdown never jumps
   // backward more than the configured single extension. The already-applied
   // count is derived from endTick/originalEndTick (legacy-safe) and persisted
   // in `extensionCount`; the filter pins `endTick` to the value we read so a
@@ -606,7 +606,7 @@ async function tryPlaceBid({ id, amount, userId, currentTick }) {
   );
 
   if (!updated) {
-    // Concurrent modification — roll back the reservation and retry
+    // Concurrent modification â€” roll back the reservation and retry
     await releaseAuctionFunds(userId, delta);
     return { retry: true };
   }
@@ -625,7 +625,7 @@ async function tryPlaceBid({ id, amount, userId, currentTick }) {
   // Record the reservation (full new amount for this auction)
   await setAuctionReservation(userId, updated._id, amount);
 
-  // ── Release the outbid user's reservation immediately ──────────────
+  // â”€â”€ Release the outbid user's reservation immediately â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const previousBidderId = auction.currentBidderId;
   const wasOutbid = previousBidderId && previousBidderId.toString() !== userId.toString();
   if (wasOutbid) {
@@ -794,7 +794,7 @@ router.post(
       const userId = req.user._id;
       const currentTick = await getTickNumber();
 
-      // ── City ownership limit — checked before any money moves ──────
+      // â”€â”€ City ownership limit â€” checked before any money moves â”€â”€â”€â”€â”€â”€
       const auctionRef = await Auction.findById(id).select('propertyId sellerId status endTick currentBidderId');
       if (!auctionRef) {
         return res.status(404).json({ success: false, error: 'Auction not found' });
@@ -832,7 +832,7 @@ router.post(
 
       return res.status(result.status).json(result.body);
     } catch (error) {
-      return res.status(500).json({ success: false, error: error.message });
+      return res.serverError(error);
     }
   },
 );
@@ -874,7 +874,7 @@ router.post(
 
       return res.json({ success: true, watching: true });
     } catch (error) {
-      return res.status(500).json({ success: false, error: error.message });
+      return res.serverError(error);
     }
   },
 );
@@ -939,7 +939,7 @@ router.post(
       const currentTick = await getTickNumber();
       if (auction.endTick <= currentTick) {
         console.warn(
-          `[COMPANY-BID] Rejected — auction ${id} endTick ${auction.endTick} <= currentTick ${currentTick}, status=${auction.status}`,
+          `[COMPANY-BID] Rejected â€” auction ${id} endTick ${auction.endTick} <= currentTick ${currentTick}, status=${auction.status}`,
         );
         await resolveStuckAuction(auction._id);
         return res.status(400).json({ success: false, error: 'Auction has ended' });
@@ -1026,7 +1026,7 @@ router.post(
         approvalThreshold: Math.ceil(totalVoters / 2),
       });
     } catch (error) {
-      return res.status(500).json({ success: false, error: error.message });
+      return res.serverError(error);
     }
   },
 );
@@ -1046,7 +1046,7 @@ router.post(
       const { vote } = req.body;
       const userId = req.user._id;
 
-      // The URL is nested under /auctions/:id — `id` is the auction id, not
+      // The URL is nested under /auctions/:id â€” `id` is the auction id, not
       // the company id. The proposal is the canonical object; find the
       // company that owns it so the lookup never depends on a mis-sent id.
       const company = await RealEstateCompany.findOne({ 'auctionBids._id': reqId });
@@ -1072,7 +1072,7 @@ router.post(
         return res.status(400).json({ success: false, error: 'Bid proposal is not pending' });
       }
 
-      // Backend-computed voting deadline — never trust the client. Votes after
+      // Backend-computed voting deadline â€” never trust the client. Votes after
       // it are rejected (the deadline job resolves the proposal atomically).
       if (bidReq.votingEndsAt && new Date(bidReq.votingEndsAt).getTime() <= Date.now()) {
         return res.status(400).json({ success: false, error: 'Voting has ended' });
@@ -1143,7 +1143,7 @@ router.post(
         },
       });
     } catch (error) {
-      return res.status(500).json({ success: false, error: error.message });
+      return res.serverError(error);
     }
   },
 );
@@ -1156,7 +1156,7 @@ router.get('/reputation/:userId', async (req, res) => {
 
     return res.json({ success: true, reputation: rep || null });
   } catch (error) {
-    return res.status(500).json({ success: false, error: error.message });
+    return res.serverError(error);
   }
 });
 
@@ -1186,7 +1186,7 @@ router.get(
 
       return res.json({ success: true, auctions: enriched, total });
     } catch (error) {
-      return res.status(500).json({ success: false, error: error.message });
+      return res.serverError(error);
     }
   },
 );
@@ -1234,7 +1234,7 @@ router.get(
 
       return res.json({ success: true, auctions: enriched });
     } catch (error) {
-      return res.status(500).json({ success: false, error: error.message });
+      return res.serverError(error);
     }
   },
 );
@@ -1293,7 +1293,7 @@ router.get('/my/analytics', authenticate, async (req, res) => {
     await cacheSet(cacheKey, stats, AUCTION_CONFIG.cacheTTL.analytics);
     return res.json({ success: true, stats });
   } catch (error) {
-    return res.status(500).json({ success: false, error: error.message });
+    return res.serverError(error);
   }
 });
 
@@ -1329,7 +1329,7 @@ router.get('/my/watchlist', authenticate, async (req, res) => {
     await cacheSet(cacheKey, enriched, AUCTION_CONFIG.cacheTTL.watchlist);
     return res.json({ success: true, auctions: enriched });
   } catch (error) {
-    return res.status(500).json({ success: false, error: error.message });
+    return res.serverError(error);
   }
 });
 

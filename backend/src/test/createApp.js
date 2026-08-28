@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import { config } from '../config/index.js';
 import authRoutes from '../routes/auth.js';
 import cityRoutes from '../routes/cities.js';
 import propertyRoutes from '../routes/properties.js';
@@ -27,11 +28,54 @@ import leaderboardRoutes from '../routes/leaderboards.js';
 import onboardingRoutes from '../routes/onboarding.js';
 import sizopsAuthRoutes from '../routes/sizopsAuth.js';
 import managementRoutes from '../routes/management.js';
+import { requireAdmin } from '../middleware/admin.js';
+import bonusRoutes from '../routes/bonus.js';
+import rentRoutes from '../routes/rent.js';
+import careerRoutes from '../routes/career.js';
+import companyRoutes from '../routes/companies.js';
+import indexRoutes from '../routes/indexes.js';
+import imageProxyRoutes from '../routes/imageProxy.js';
+import donationRoutes from '../routes/donations.js';
+import marketIntelligenceRoutes from '../routes/marketIntelligence.js';
+import oauthRoutes from '../routes/oauth.js';
 
 export function createApp() {
   const app = express();
-  app.use(cors());
+  app.set('trust proxy', 1);
+
+  const CORS_ALLOWLIST = [config.frontendUrl, 'capacitor://localhost'];
+  app.use(
+    cors({
+      origin(origin, cb) {
+        if (!origin || CORS_ALLOWLIST.includes(origin) || /^https?:\/\/localhost(:\d+)?$/.test(origin)) {
+          return cb(null, true);
+        }
+        return cb(null, false);
+      },
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+      credentials: false,
+      maxAge: 86400,
+    }),
+  );
   app.use(express.json());
+
+  app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    next();
+  });
+
+  app.use((req, res, next) => {
+    res.serverError = (err) => {
+      console.error(`[ERROR] ${req.method} ${req.originalUrl}:`, err?.stack || err?.message || err);
+      res.status(500).json({ error: 'An unexpected error occurred' });
+    };
+    next();
+  });
 
   app.use('/auth', authRoutes);
   app.use('/cities', cityRoutes);
@@ -59,10 +103,23 @@ export function createApp() {
   app.use('/leaderboards', leaderboardRoutes);
   app.use('/onboarding', onboardingRoutes);
   app.use('/auth', sizopsAuthRoutes);
+  app.use('/auth', oauthRoutes);
   app.use('/management', managementRoutes);
+  app.use('/bonus', bonusRoutes);
+  app.use('/rent', rentRoutes);
+  app.use('/career', careerRoutes);
+  app.use('/companies', companyRoutes);
+  app.use('/indexes', indexRoutes);
+  app.use('/image-proxy', imageProxyRoutes);
+  app.use('/donations', donationRoutes);
+  app.use('/market-intelligence', marketIntelligenceRoutes);
 
   app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
+  app.get('/metrics', requireAdmin, (req, res) => {
+    res.json({ ok: true });
   });
 
   app.use((req, res) => {

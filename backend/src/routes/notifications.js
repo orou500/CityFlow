@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import Notification from '../models/Notification.js';
 import { authenticate } from '../middleware/auth.js';
 import { emitToUser } from '../socket/index.js';
@@ -54,7 +54,7 @@ router.get('/', async (req, res) => {
       },
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -63,7 +63,7 @@ router.get('/unread-count', async (req, res) => {
     const count = await Notification.countDocuments({ userId: req.user._id, read: false });
     res.json({ count });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -77,7 +77,7 @@ router.put('/:id/read', async (req, res) => {
     if (!notification) return res.status(404).json({ error: 'Notification not found' });
     res.json(notification);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -86,7 +86,7 @@ router.put('/read-all', async (req, res) => {
     await Notification.updateMany({ userId: req.user._id, read: false }, { read: true, readAt: new Date() });
     res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -95,7 +95,7 @@ router.get('/preferences', async (req, res) => {
     const prefs = await getUserNotificationPreferences(req.user._id);
     res.json({ preferences: prefs });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -111,7 +111,7 @@ router.put('/preferences', async (req, res) => {
     const preferences = await updateUserNotificationPreferences(req.user._id, updates);
     res.json({ preferences });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -134,7 +134,7 @@ router.delete('/:id', async (req, res) => {
 
     res.json({ ok: true, deletedId: notification._id.toString() });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 

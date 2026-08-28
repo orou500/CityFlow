@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import User from '../models/User.js';
 import Transaction from '../models/Transaction.js';
 import { authenticate } from '../middleware/auth.js';
@@ -6,6 +6,7 @@ import { collectOperatingFee } from '../utils/companyFees.js';
 import { onRentCollected } from '../utils/cacheInvalidation.js';
 import { processPlayerProgress } from '../utils/playerProgress.js';
 import { clearRentReadyNotification } from '../engine/rentProcessing.js';
+import { withUserLock } from '../utils/userMutex.js';
 
 const router = Router();
 
@@ -37,7 +38,7 @@ router.get('/status', authenticate, async (req, res) => {
       balance: user.balance,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -56,42 +57,64 @@ router.post('/collect', authenticate, async (req, res) => {
     if (storageStartedAt) {
       const elapsed = Date.now() - storageStartedAt.getTime();
       if (elapsed >= RENT_STORAGE_DURATION_MS) {
-        user.uncollectedRent = 0;
-        user.rentStorageStartedAt = null;
-        await user.save();
+        await User.updateOne(
+          { _id: req.user._id, uncollectedRent: { $gt: 0 } },
+          { $set: { uncollectedRent: 0, rentStorageStartedAt: null } },
+        );
         return res.status(400).json({ error: 'Rent has expired and was forfeited' });
       }
     }
 
-    const collected = uncollectedRent;
-    user.balance += collected;
-    user.uncollectedRent = 0;
-    user.rentStorageStartedAt = null;
-    user.lastRentCollectedAt = new Date();
-    if (!user.lifetimeStats) user.lifetimeStats = {};
-    user.lifetimeStats.totalRentCollected = (user.lifetimeStats.totalRentCollected || 0) + collected;
-    await user.save();
+    let collected = 0;
+    await withUserLock(`rent:${req.user._id}`, async () => {
+      // Atomic claim: only one request can convert uncollectedRent â†’ balance.
+      const claimed = await User.findOneAndUpdate(
+        { _id: req.user._id, uncollectedRent: { $gt: 0 } },
+        [
+          {
+            $set: {
+              balance: { $add: ['$balance', { $ifNull: ['$uncollectedRent', 0] }] },
+              uncollectedRent: 0,
+              rentStorageStartedAt: null,
+              lastRentCollectedAt: new Date(),
+              'lifetimeStats.totalRentCollected': {
+                $add: [{ $ifNull: ['$lifetimeStats.totalRentCollected', 0] }, { $ifNull: ['$uncollectedRent', 0] }],
+              },
+            },
+          },
+        ],
+        { new: true },
+      );
+      if (!claimed) {
+        const err = new Error('No rent to collect');
+        err.status = 400;
+        throw err;
+      }
+      collected = uncollectedRent;
 
-    collectOperatingFee(user._id, collected, 'rent_income');
+      collectOperatingFee(req.user._id, collected, 'rent_income');
 
-    await onRentCollected(user._id);
-    await clearRentReadyNotification(user._id);
+      await onRentCollected(req.user._id);
+      await clearRentReadyNotification(req.user._id);
 
-    await Transaction.create({
-      buyerId: user._id,
-      type: 'rent',
-      price: collected,
+      await Transaction.create({
+        buyerId: req.user._id,
+        type: 'rent',
+        price: collected,
+      });
+
+      await processPlayerProgress(req.user._id, 'rent_collect');
     });
 
-    await processPlayerProgress(user._id, 'rent_collect');
-
+    const fresh = await User.findById(req.user._id);
     res.json({
       collected,
-      balance: user.balance,
+      balance: fresh.balance,
       message: `Collected $${collected.toLocaleString()} in rent`,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    res.serverError(err);
   }
 });
 

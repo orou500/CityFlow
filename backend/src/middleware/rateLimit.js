@@ -38,10 +38,16 @@ async function redisRateLimit(key, windowMs, max) {
   }
 }
 
-export function rateLimit({ windowMs = 900_000, max = 5, keyPrefix = 'rl', message } = {}) {
+export function rateLimit({ windowMs = 900_000, max = 5, keyPrefix = 'rl', message, enabled } = {}) {
   return async (req, res, next) => {
-    if (process.env.NODE_ENV === 'test') return next();
+    // Rate limiting is disabled in tests unless explicitly enabled (the
+    // security regression suite constructs its own limiter instances).
+    const isEnabled = enabled === undefined ? process.env.NODE_ENV !== 'test' : enabled;
+    if (!isEnabled) return next();
 
+    // req.ip honors X-Forwarded-For via `trust proxy` (see index.js) so every
+    // client is bucketed individually behind Traefik, and spoofed forwarding
+    // headers cannot bypass the limit (Traefik appends the real client IP).
     const ip = req.ip || req.connection?.remoteAddress || 'unknown';
     const key = `${keyPrefix}:${ip}`;
 

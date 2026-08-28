@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import User from '../models/User.js';
 import Property from '../models/Property.js';
 import { authenticate } from '../middleware/auth.js';
@@ -37,7 +37,7 @@ router.get('/status', async (req, res) => {
       completed: user.completedOnboarding || [],
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -64,12 +64,12 @@ router.post('/complete', async (req, res) => {
       })),
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
 /**
- * Guided tour — state is persisted in User.onboardingV2. Gameplay steps
+ * Guided tour â€” state is persisted in User.onboardingV2. Gameplay steps
  * (buy_property, collect_rent, upgrade_property, missions) only advance
  * server-side when the real event happens; the client can never claim them.
  */
@@ -80,7 +80,7 @@ router.get('/tour/status', async (req, res) => {
     if (!state) return res.status(404).json({ error: 'User not found' });
     res.json({ success: true, ...state });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -89,7 +89,7 @@ router.get('/tour/status', async (req, res) => {
  * property priced <= CHEAP_PROPERTY_CAP that the player can actually buy?
  * Bank properties (ownerId null, forSale) or player-listed properties that
  * are not under construction. Never creates properties and never bypasses
- * purchase rules — it only tells the UI whether to offer the fallback.
+ * purchase rules â€” it only tells the UI whether to offer the fallback.
  */
 router.get('/tour/buy-property-availability', async (req, res) => {
   try {
@@ -119,7 +119,7 @@ router.get('/tour/buy-property-availability', async (req, res) => {
       })),
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -133,7 +133,7 @@ router.post('/tour/advance', async (req, res) => {
     if (err.code === 'ONBOARDING_EVENT_STEP') {
       return res.status(400).json({ error: err.message });
     }
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -143,7 +143,7 @@ router.post('/tour/skip', async (req, res) => {
     if (!state) return res.status(404).json({ error: 'User not found' });
     res.json({ success: true, status: state.status });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 

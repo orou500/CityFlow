@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { config } from '../config/index.js';
@@ -26,7 +26,7 @@ function signState(payload) {
 
 function verifyState(token) {
   try {
-    return jwt.verify(token, config.jwtSecret);
+    return jwt.verify(token, config.jwtSecret, { algorithms: ['HS256'] });
   } catch {
     return null;
   }
@@ -228,7 +228,7 @@ router.get('/google/callback', async (req, res) => {
     const tokenData = await tokenResponse.json();
 
     if (!tokenResponse.ok) {
-      console.error('[OAUTH] Google token exchange failed:', tokenData);
+      console.error(`[OAUTH] Google token exchange failed: HTTP ${tokenResponse.status}`);
       return res.redirect(errorRedirect('token_exchange_failed'));
     }
 
@@ -239,8 +239,13 @@ router.get('/google/callback', async (req, res) => {
     const googleUser = await userInfoResponse.json();
 
     if (!userInfoResponse.ok || !googleUser.email) {
-      console.error('[OAUTH] Google userinfo failed:', googleUser);
+      console.error(`[OAUTH] Google userinfo failed: HTTP ${userInfoResponse.status}`);
       return res.redirect(errorRedirect('userinfo_failed'));
+    }
+
+    // Never link or bind identity from an unverified provider email.
+    if (googleUser.email_verified !== true) {
+      return res.redirect(errorRedirect('unverified_email'));
     }
 
     const result = await handleOAuthCallback({
@@ -310,7 +315,7 @@ router.get('/discord/callback', async (req, res) => {
     const tokenData = await tokenResponse.json();
 
     if (!tokenResponse.ok) {
-      console.error('[OAUTH] Discord token exchange failed:', tokenData);
+      console.error(`[OAUTH] Discord token exchange failed: HTTP ${tokenResponse.status}`);
       return res.redirect(errorRedirect('token_exchange_failed'));
     }
 
@@ -321,8 +326,13 @@ router.get('/discord/callback', async (req, res) => {
     const discordUser = await userInfoResponse.json();
 
     if (!userInfoResponse.ok || !discordUser.email) {
-      console.error('[OAUTH] Discord userinfo failed:', discordUser);
+      console.error(`[OAUTH] Discord userinfo failed: HTTP ${userInfoResponse.status}`);
       return res.redirect(errorRedirect('userinfo_failed'));
+    }
+
+    // Never link or bind identity from an unverified provider email.
+    if (discordUser.verified !== true) {
+      return res.redirect(errorRedirect('unverified_email'));
     }
 
     const avatar = discordUser.avatar
@@ -375,7 +385,7 @@ router.post('/unlink', authenticate, async (req, res) => {
 
     res.json({ success: true, message: `${provider} unlinked successfully` });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -395,7 +405,7 @@ router.post('/accept-terms', authenticate, async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 

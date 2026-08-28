@@ -39,6 +39,16 @@ spec:
             - secretRef:
                 name: oauth-secrets
                 optional: true
+            - secretRef:
+                name: redis-secret
+                optional: true
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
           resources:
             requests:
               cpu: 250m
@@ -72,7 +82,15 @@ spec:
           volumeMounts:
             - name: backups
               mountPath: /app/backups
+            - name: tmp
+              mountPath: /tmp
+            - name: uploads
+              mountPath: /app/uploads
       volumes:
         - name: backups
           persistentVolumeClaim:
             claimName: cityflow-backups
+        - name: tmp
+          emptyDir: {}
+        - name: uploads
+          emptyDir: {}

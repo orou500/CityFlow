@@ -22,7 +22,10 @@ export function createRedisClient() {
   };
 
   if (config.redis.url) {
-    client = new Redis(config.redis.url, opts);
+    client = new Redis(config.redis.url, {
+      password: config.redis.password || undefined,
+      ...opts,
+    });
   } else {
     client = new Redis({
       host: config.redis.host,

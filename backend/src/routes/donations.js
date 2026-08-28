@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import Donation from '../models/Donation.js';
 import User from '../models/User.js';
 import { authenticate, optionalAuth } from '../middleware/auth.js';
@@ -118,7 +118,7 @@ router.get('/history', authenticate, async (req, res) => {
 
     res.json({ donations });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -147,7 +147,7 @@ router.get('/top-supporters', optionalAuth, async (req, res) => {
       totalDonations: total,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
@@ -175,7 +175,7 @@ router.get('/admin/stats', authenticate, async (req, res) => {
       })),
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.serverError(err);
   }
 });
 
