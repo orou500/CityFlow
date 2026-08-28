@@ -28,6 +28,7 @@ import StockTransaction from '../models/StockTransaction.js';
 import LeaderboardReward from '../models/LeaderboardReward.js';
 import CompanyAuditLog from '../models/CompanyAuditLog.js';
 import Auction from '../models/Auction.js';
+import { buildPropertySnapshot } from '../utils/auctionProperty.js';
 
 const router = Router();
 
@@ -742,8 +743,27 @@ router.post('/properties', async (req, res) => {
 
 router.delete('/properties/:id', async (req, res) => {
   try {
-    const property = await Property.findByIdAndDelete(req.params.id);
+    const property = await Property.findById(req.params.id);
     if (!property) return res.status(404).json({ error: 'Property not found' });
+
+    // Never let a property vanish while a live auction (upcoming/active/ending)
+    // depends on it — settlement and bidding read the live document.
+    const liveAuction = await Auction.findOne({
+      propertyId: property._id,
+      status: { $in: ['upcoming', 'active', 'ending'] },
+    });
+    if (liveAuction) {
+      return res.status(400).json({ error: 'Property is referenced by an active auction and cannot be deleted' });
+    }
+
+    // Historical auctions that reference this property get an immutable
+    // snapshot first, so their records stay fully readable after deletion.
+    await Auction.updateMany(
+      { propertyId: property._id, propertySnapshot: { $exists: false } },
+      { $set: { propertySnapshot: buildPropertySnapshot(property) } },
+    );
+
+    await Property.findByIdAndDelete(property._id);
     if (property.ownerId) {
       await User.findByIdAndUpdate(property.ownerId, { $pull: { ownedProperties: property._id } });
     }

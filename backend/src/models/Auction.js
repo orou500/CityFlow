@@ -30,9 +30,42 @@ const activitySchema = new mongoose.Schema(
   { _id: false, timestamps: { createdAt: true, updatedAt: false } },
 );
 
+/**
+ * Immutable capture of the property at auction creation time.
+ *
+ * Live Property documents can legitimately disappear after an auction ends
+ * (bank properties created solely for an auction are recycled on a
+ * no-winner/cancelled settlement to keep the DB light). Historical auction
+ * records must remain fully readable regardless, so this snapshot preserves
+ * every display-relevant field forever. It is written once when the auction is
+ * created (and defensively backfilled right before any reference-clearing
+ * deletion) and NEVER mutated afterwards — settlement outcome lives in the
+ * auction fields (winnerId/winningBid/status), not here.
+ */
+const propertySnapshotSchema = new mongoose.Schema(
+  {
+    propertyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Property', default: null },
+    name: { type: String },
+    type: { type: String },
+    propertyRating: { type: String },
+    condition: { type: Number },
+    currentPrice: { type: Number },
+    basePrice: { type: Number },
+    cityId: { type: mongoose.Schema.Types.ObjectId, ref: 'City', default: null },
+    location: { type: String },
+  },
+  { _id: false, timestamps: false },
+);
+
 const auctionSchema = new mongoose.Schema(
   {
     propertyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Property', required: true },
+    // Immutable creation-time copy of the property (see propertySnapshotSchema).
+    propertySnapshot: propertySnapshotSchema,
+    // Number of anti-sniping extensions actually applied. Gated by
+    // AUCTION_CONFIG.maxAntiSnipingExtensions so the countdown can never be
+    // pushed out repeatedly by a run of last-minute bidders.
+    extensionCount: { type: Number, default: 0 },
     sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     sellerType: { type: String, enum: ['bank', 'player', 'event'], required: true },
     auctionType: { type: String, enum: ['standard', 'reserve'], default: 'standard' },

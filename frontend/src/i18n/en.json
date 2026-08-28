@@ -2728,6 +2728,7 @@
     "cancel": "Cancel",
     "noAuctions": "No auctions found",
     "unknownProperty": "Unknown Property",
+    "propertyUnavailable": "Property no longer available",
     "unknownBidder": "Unknown Bidder",
     "you": "You",
     "optional": "Optional",

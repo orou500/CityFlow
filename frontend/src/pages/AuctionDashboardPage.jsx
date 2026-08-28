@@ -8,13 +8,9 @@ import { translateError } from '../i18n/errors';
 import { useSocket, useSocketEvent } from '../hooks/useSocket';
 import PropertyImage from '../components/PropertyImage';
 import AuctionTimeLeft from '../components/AuctionTimeLeft';
+import { getAuctionProperty, isAuctionPropertyKnown } from '../utils/auctionProperty';
 
 const API = getApiBaseUrl();
-
-function getProperty(auction) {
-  const p = auction.property || auction.propertyId || {};
-  return typeof p === 'object' ? p : {};
-}
 
 async function api(path, options = {}) {
   const token = localStorage.getItem('token');
@@ -96,7 +92,8 @@ function FeaturedSection({ auctions, onSelect }) {
 
 function FeaturedCard({ auction, onClick }) {
   const { t } = useTranslation();
-  const property = getProperty(auction);
+  const property = getAuctionProperty(auction);
+  const propertyKnown = isAuctionPropertyKnown(auction);
   const isEndingSoon = auction.isEndingSoon;
   const isHot = auction.totalBids >= 3;
 
@@ -117,7 +114,7 @@ function FeaturedCard({ auction, onClick }) {
       </div>
       <PropertyImage property={property} alt={property?.name} className="w-full h-32 object-cover rounded-lg mb-3" />
       <div className="text-sm font-medium text-primary truncate pr-16">
-        {property?.name || t('auctions.unknownProperty')}
+        {propertyKnown ? property.name : t('auctions.propertyUnavailable')}
       </div>
       <div className="text-xs text-muted mt-1">
         {SELLER_ICONS[auction.sellerType]}{' '}
@@ -194,7 +191,8 @@ function StatCard({ label, value }) {
 function AuctionCard({ auction, onClick, onWatch, isWatched, user }) {
   const { t } = useTranslation();
   const statusStyle = STATUS_STYLES[auction.status] || STATUS_STYLES.active;
-  const property = getProperty(auction);
+  const property = getAuctionProperty(auction);
+  const propertyKnown = isAuctionPropertyKnown(auction);
   const isHot = (auction.totalBids || 0) >= 3;
   const isEndingSoon =
     auction.isEndingSoon ||
@@ -226,7 +224,7 @@ function AuctionCard({ auction, onClick, onWatch, isWatched, user }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-primary truncate">
-              {property?.name || t('auctions.unknownProperty')}
+              {propertyKnown ? property.name : t('auctions.propertyUnavailable')}
             </span>
             {auction.sellerType === 'bank' && <span title={t('auctions.bankAuction')}>🏦</span>}
             {isHot && <span title={t('auctions.hot')}>🔥</span>}
@@ -423,7 +421,8 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
   const [cancelling, setCancelling] = useState(false);
   const activityRef = useRef([]);
 
-  const property = getProperty(detail);
+  const property = getAuctionProperty(detail);
+  const propertyKnown = isAuctionPropertyKnown(detail);
   const isOwner = user && detail.sellerId?._id === user._id;
   const isWinning =
     user &&
@@ -587,12 +586,16 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
       <PropertyImage property={property} alt={property?.name} className="w-full h-48 object-cover rounded-xl mb-3" />
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Link
-            to={`/property/${property?._id}`}
-            className="text-lg font-bold text-primary hover:text-blue-400 transition-colors"
-          >
-            {property?.name || t('auctions.unknownProperty')}
-          </Link>
+          {propertyKnown && property?._id ? (
+            <Link
+              to={`/property/${property._id}`}
+              className="text-lg font-bold text-primary hover:text-blue-400 transition-colors"
+            >
+              {property.name}
+            </Link>
+          ) : (
+            <span className="text-lg font-bold text-muted">{t('auctions.propertyUnavailable')}</span>
+          )}
           {auction.sellerType === 'bank' && <span>🏦</span>}
           {auction.auctionType === 'reserve' && <span>💎</span>}
         </div>
@@ -638,7 +641,7 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
         </div>
       </div>
 
-      {property && (
+      {property && propertyKnown && (
         <div className="bg-gradient-to-br from-gray-100/90 to-gray-200 dark:from-gray-800/90 dark:to-gray-900 rounded-xl p-4 border border-border/40">
           <h3 className="text-sm font-medium text-primary mb-2">{t('auctions.propertyDetails')}</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
@@ -1190,6 +1193,8 @@ export default function AuctionDashboardPage() {
                 totalBids: data.totalBids,
                 uniqueBidders: data.uniqueBidders,
                 endTick: data.endTick,
+                currentTick: data.currentTick,
+                remainingMonths: data.remainingMonths,
               }
             : a,
         ),

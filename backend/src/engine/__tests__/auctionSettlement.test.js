@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterAll, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterAll, afterEach } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../../test/createApp.js';
 import { createAuthenticatedUser, createTestCity, authHeader, setTestTick } from '../../test/helpers.js';
@@ -8,7 +8,7 @@ import City from '../../models/City.js';
 import Auction from '../../models/Auction.js';
 import AuctionReservation from '../../models/AuctionReservation.js';
 import AuctionReputation from '../../models/AuctionReputation.js';
-import { processAuctions, resolveStuckAuction } from '../../engine/auctionProcessing.js';
+import { processAuctions, resolveStuckAuction, generateBankAuctions } from '../../engine/auctionProcessing.js';
 import { cacheDelPattern } from '../../utils/cache.js';
 
 /**
@@ -193,6 +193,150 @@ describe('Auction settlement integrity', () => {
     expect(settled.winnerId?.toString()).toBe(user._id.toString());
     const property = await Property.findById(auction.propertyId);
     expect(property.ownerId?.toString()).toBe(user._id.toString());
+  });
+
+  it('end-to-end: bank-generated property is transferred to the REAL winning bidder at settlement', async () => {
+    await setTestTick(1);
+    await createTestCity();
+    const bidder = await makeBidder('bank_win_e2e', 50_000_000);
+
+    // Exercise the REAL bank-generation path: Property + auction created together.
+    const generated = await generateBankAuctions();
+    expect(generated.length).toBe(1);
+    const auction = generated[0];
+    const propId = auction.propertyId;
+
+    // The property exists while the auction exists and is never recycled.
+    let live = await Property.findById(propId);
+    expect(live).toBeTruthy();
+    expect(live.ownerId).toBeNull();
+    expect(live.companyId).toBeFalsy();
+    expect(live.forSale).toBe(false);
+
+    // Let the tick engine activate the auction, then bid through the HTTP flow.
+    await Auction.updateOne({ _id: auction._id }, { $set: { startTick: 1, endTick: 2, originalEndTick: 2 } });
+    await processAuctions();
+    expect((await Auction.findById(auction._id)).status).toBe('active');
+
+    const bidRes = await request(app)
+      .post(`/auctions/${auction._id}/bid`)
+      .set(authHeader(bidder.token))
+      .send({ amount: 5_000_000 });
+    expect(bidRes.status).toBe(200);
+
+    // endTick was extended by the anti-sniping extension (bid within 2 ticks) to 3.
+    // The claim + settlement happen together at tick 3 (status 'ending'), and the
+    // state machine flips 'ending' -> 'ended' 2 ticks later.
+    await setTestTick(3);
+    await processAuctions();
+
+    const settled = await Auction.findById(auction._id);
+    expect(settled.status).toBe('ending');
+    expect(settled.winnerId?.toString()).toBe(bidder.user._id.toString());
+    expect(settled.winningBid).toBe(5_000_000);
+    expect(settled.propertyId.toString()).toBe(propId.toString());
+
+    // THE acceptance criterion applies the moment the winner is decided: the
+    // winner owns the REAL, still-existing property.
+    live = await Property.findById(propId);
+    expect(live).toBeTruthy();
+    expect(live.ownerId?.toString()).toBe(bidder.user._id.toString());
+    expect(live.companyId).toBeFalsy();
+    expect(live.forSale).toBe(false);
+
+    const settledBidder = await User.findById(bidder.user._id);
+    expect(settledBidder.ownedProperties.map(String)).toContain(propId.toString());
+    // Charged exactly once, for exactly the winning bid.
+    expect(settledBidder.balance).toBe(50_000_000 - 5_000_000);
+
+    // Two ticks later the auction record is finalized as 'ended' and the same
+    // real property is still owned by the winner (ownerless state impossible).
+    await setTestTick(5);
+    await processAuctions();
+    expect((await Auction.findById(auction._id)).status).toBe('ended');
+
+    const finalizedProperty = await Property.findById(propId);
+    expect(finalizedProperty).toBeTruthy();
+    expect(finalizedProperty.ownerId?.toString()).toBe(bidder.user._id.toString());
+  });
+
+  it('settlement crash never recycles the property and never strands a charged winner', async () => {
+    await setTestTick(10);
+    const bidder = await makeBidder('crash_winner', 300000);
+    const auction = await makeSettlingAuction({
+      city: await createTestCity(),
+      currentBid: 50000,
+      currentBidderId: bidder.user._id,
+      bids: [bidEntry(bidder.user, 50000)],
+      endTick: 10,
+    });
+    const propId = auction.propertyId;
+    const before = await Property.findById(propId);
+    expect(before.forSale).toBe(true);
+
+    // Make property.save fail at the very first transfer write. With
+    // transfer-first ordering nothing has been persisted or debited yet.
+    const spy = vi.spyOn(Property.prototype, 'save').mockRejectedValueOnce(new Error('simulated crash'));
+    await processAuctions();
+    spy.mockRestore();
+
+    // The property must SURVIVE the crash — it is never destroyed in an
+    // ambiguous winner/charge state, and its fields are untouched.
+    const after = await Property.findById(propId);
+    expect(after).toBeTruthy();
+    expect(after.ownerId).toBeNull();
+    expect(after.forSale).toBe(before.forSale);
+
+    const cancelled = await Auction.findById(auction._id);
+    expect(cancelled.status).toBe('cancelled');
+    expect(cancelled.winnerId).toBeNull();
+
+    // The bidder was never charged and their reservation was released.
+    const freshBidder = await User.findById(bidder.user._id);
+    expect(freshBidder.balance).toBe(300000);
+    expect(await AuctionReservation.countDocuments({ auctionId: auction._id })).toBe(0);
+
+    // A display snapshot was still captured on the crash path.
+    expect(cancelled.propertySnapshot).toBeTruthy();
+  });
+
+  it('legacy dangling auction (property already gone) is cancelled WITHOUT fabricating a new property', async () => {
+    await setTestTick(10);
+    const bidder = await makeBidder('dangling_bidder', 300000);
+    const auction = await makeSettlingAuction({
+      city: await createTestCity(),
+      currentBid: 40000,
+      currentBidderId: bidder.user._id,
+      bids: [bidEntry(bidder.user, 40000)],
+      endTick: 10,
+    });
+    const propId = auction.propertyId;
+
+    // The property has already been removed (production dangling corruption) and
+    // the auction carries only an immutable display snapshot.
+    await Property.deleteOne({ _id: propId });
+    await Auction.updateOne(
+      { _id: auction._id },
+      { $set: { propertySnapshot: { name: 'Legacy ghost property', basePrice: 100000, type: 'apartment' } } },
+    );
+
+    await processAuctions();
+
+    const cancelled = await Auction.findById(auction._id);
+    expect(cancelled.status).toBe('cancelled');
+    expect(cancelled.winnerId).toBeNull();
+    expect(cancelled.winningBid).toBe(0);
+
+    // No fabrication: no new property was created and the snapshot was NOT
+    // promoted to a live Property doc.
+    expect(await Property.findById(propId)).toBeNull();
+    expect(await Property.countDocuments({})).toBe(0);
+    expect(cancelled.propertySnapshot).toBeTruthy();
+    expect(cancelled.propertySnapshot.name).toBe('Legacy ghost property');
+
+    // The bidder was never charged.
+    const freshBidder = await User.findById(bidder.user._id);
+    expect(freshBidder.balance).toBe(300000);
   });
 
   it('highest valid bid wins (multiple players)', async () => {
@@ -401,6 +545,11 @@ describe('Property lifecycle after auction settlement', () => {
 
     const settled = await Auction.findById(auction._id);
     expect(settled.winnerId).toBeNull();
+    // The immutable snapshot captured before the recycle keeps the historical
+    // record fully readable even though the live property is gone.
+    expect(settled.propertySnapshot).toBeDefined();
+    expect(settled.propertySnapshot.name).toBe(property.name);
+    expect(settled.propertySnapshot.propertyId.toString()).toBe(propId.toString());
 
     const deleted = await Property.findById(propId);
     expect(deleted).toBeNull();
@@ -425,6 +574,10 @@ describe('Property lifecycle after auction settlement', () => {
     const settled = await Auction.findById(auction._id);
     expect(settled.winnerId).toBeNull();
     expect(settled.reserveMet).toBe(false);
+    // Reserve-not-met bank auctions recycle the property as well — the snapshot
+    // keeps the historical auction readable.
+    expect(settled.propertySnapshot).toBeDefined();
+    expect(settled.propertySnapshot.name).toBe(property.name);
 
     const deleted = await Property.findById(propId);
     expect(deleted).toBeNull();

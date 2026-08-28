@@ -24,6 +24,7 @@ import { enqueueNotification } from '../utils/notificationQueue.js';
 import { cacheGet, cacheSet, cacheDel } from '../utils/cache.js';
 import { cacheKeys } from '../utils/cacheKeys.js';
 import { computeAuctionRemaining } from '../utils/auctionTime.js';
+import { buildPropertySnapshot, ensureAuctionProperty, ensureLookupProperty } from '../utils/auctionProperty.js';
 import { getTickNumber, getGameState } from '../models/GameState.js';
 import { reserveAuctionFunds, releaseAuctionFunds, setAuctionReservation } from '../utils/auctionMoney.js';
 import { getCityPropertyLimit, getCityOwnershipStats } from '../utils/ownershipLimits.js';
@@ -142,13 +143,17 @@ router.get('/featured', async (req, res) => {
 
       const featuredScore = valueScore + bidsScore + watchersScore + rarityScore + endingScore;
 
-      return {
-        ...a,
-        ...timing,
-        isEndingSoon,
-        isHot,
-        featuredScore,
-      };
+      const item = ensureAuctionProperty(
+        {
+          ...a,
+          ...timing,
+          isEndingSoon,
+          isHot,
+          featuredScore,
+        },
+        a,
+      );
+      return item;
     });
 
     scored.sort((a, b) => b.featuredScore - a.featuredScore);
@@ -262,6 +267,7 @@ router.get(
           winnerId: 1,
           winningBid: 1,
           createdAt: 1,
+          propertySnapshot: 1,
           'property._id': 1,
           'property.name': 1,
           'property.type': 1,
@@ -271,10 +277,12 @@ router.get(
         },
       });
 
-      const auctions = (await Auction.aggregate(pipeline)).map((a) => ({
-        ...a,
-        ...computeAuctionRemaining(a, currentTick),
-      }));
+      const auctions = (await Auction.aggregate(pipeline)).map((a) =>
+        ensureLookupProperty({
+          ...a,
+          ...computeAuctionRemaining(a, currentTick),
+        }),
+      );
 
       return res.json({
         success: true,
@@ -333,6 +341,8 @@ router.get(
           }
         }
       }
+
+      ensureAuctionProperty(auctionObj, auction);
 
       const property = auctionObj.propertyId;
       if (property && typeof property === 'object') {
@@ -437,6 +447,7 @@ router.post(
 
       const auction = await Auction.create({
         propertyId,
+        propertySnapshot: buildPropertySnapshot(property),
         sellerId: userId,
         sellerType: 'player',
         auctionType,
@@ -529,9 +540,21 @@ async function tryPlaceBid({ id, amount, userId, currentTick }) {
   }
 
   // ── Optimistic auction update (guarded on currentBid/currentBidderId) ──
+  // Anti-sniping: an auction may be extended AT MOST maxAntiSnipingExtensions
+  // times in its whole life. One bid can therefore cause at most one valid
+  // extension, and concurrent in-window bids (e.g. two different users racing
+  // at the deadline) can never extend repeatedly — the countdown never jumps
+  // backward more than the configured single extension. The already-applied
+  // count is derived from endTick/originalEndTick (legacy-safe) and persisted
+  // in `extensionCount`; the filter pins `endTick` to the value we read so a
+  // concurrent extension aborts this write and the retry loop re-reads fresh.
   const ticksRemaining = auction.endTick - currentTick;
-  const extend = ticksRemaining <= AUCTION_CONFIG.antiSnipingThresholdTicks;
-  const newEndTick = extend ? auction.endTick + auction.antiSnipingExtension : auction.endTick;
+  const extensionAmount = auction.antiSnipingExtension || AUCTION_CONFIG.antiSnipingTicks;
+  const alreadyExtended = Math.max(0, Math.round((auction.endTick - auction.originalEndTick || 0) / extensionAmount));
+  const extend =
+    ticksRemaining <= AUCTION_CONFIG.antiSnipingThresholdTicks &&
+    alreadyExtended < AUCTION_CONFIG.maxAntiSnipingExtensions;
+  const newEndTick = extend ? auction.endTick + extensionAmount : auction.endTick;
 
   const reserveMetNow = auction.auctionType === 'reserve' && !auction.reserveMet && amount >= auction.reservePrice;
 
@@ -541,6 +564,14 @@ async function tryPlaceBid({ id, amount, userId, currentTick }) {
   const activityEntries = [
     { type: 'bid', userId, username: user.username, amount, tick: currentTick, createdAt: new Date() },
   ];
+  if (extend) {
+    activityEntries.push({
+      type: 'extended',
+      message: `Auction extended by ${extensionAmount} tick(s)`,
+      tick: currentTick,
+      createdAt: new Date(),
+    });
+  }
   if (reserveMetNow) {
     activityEntries.push({
       type: 'reserve_met',
@@ -554,6 +585,7 @@ async function tryPlaceBid({ id, amount, userId, currentTick }) {
     {
       _id: auction._id,
       status: 'active',
+      endTick: auction.endTick,
       currentBid: auction.currentBid,
       currentBidderId: auction.currentBidderId,
     },
@@ -564,7 +596,7 @@ async function tryPlaceBid({ id, amount, userId, currentTick }) {
         reserveMet: auction.reserveMet || reserveMetNow,
         ...(extend ? { endTick: newEndTick } : {}),
       },
-      $inc: { totalBids: 1 },
+      $inc: { totalBids: 1, ...(extend ? { extensionCount: 1 } : {}) },
       $push: {
         bids: { bidderId: userId, amount, tick: currentTick, username: user.username, createdAt: new Date() },
         activity: { $each: activityEntries },
@@ -734,6 +766,7 @@ async function tryPlaceBid({ id, amount, userId, currentTick }) {
         totalBids: updated.totalBids,
         uniqueBidders: uniqueAfter.size,
         endTick: updated.endTick,
+        extensionCount: updated.extensionCount ?? 0,
         reserveMet: updated.reserveMet,
         currentTick: timing.currentTick,
         remainingMonths: timing.remainingMonths,
@@ -1149,7 +1182,9 @@ router.get(
         Auction.countDocuments({ status: { $in: ['ended', 'ending'] } }),
       ]);
 
-      return res.json({ success: true, auctions, total });
+      const enriched = auctions.map((a) => ensureAuctionProperty(a, a));
+
+      return res.json({ success: true, auctions: enriched, total });
     } catch (error) {
       return res.status(500).json({ success: false, error: error.message });
     }
@@ -1180,15 +1215,22 @@ router.get(
         .limit(Number(limit))
         .lean();
 
-      const enriched = auctions.map((a) => ({
-        ...a,
-        ...computeAuctionRemaining(a, currentTick),
-        isWinning:
-          a.status === 'ended'
-            ? a.winnerId?.toString() === userId.toString()
-            : a.currentBidderId?.toString() === userId.toString(),
-        myMaxBid: Math.max(...a.bids.filter((b) => b.bidderId.toString() === userId.toString()).map((b) => b.amount)),
-      }));
+      const enriched = auctions.map((a) =>
+        ensureAuctionProperty(
+          {
+            ...a,
+            ...computeAuctionRemaining(a, currentTick),
+            isWinning:
+              a.status === 'ended'
+                ? a.winnerId?.toString() === userId.toString()
+                : a.currentBidderId?.toString() === userId.toString(),
+            myMaxBid: Math.max(
+              ...a.bids.filter((b) => b.bidderId.toString() === userId.toString()).map((b) => b.amount),
+            ),
+          },
+          a,
+        ),
+      );
 
       return res.json({ success: true, auctions: enriched });
     } catch (error) {
@@ -1273,11 +1315,16 @@ router.get('/my/watchlist', authenticate, async (req, res) => {
       .sort({ endTick: 1 })
       .lean();
 
-    const enriched = auctions.map((a) => ({
-      ...a,
-      ...computeAuctionRemaining(a, currentTick),
-      isWinning: a.currentBidderId?._id?.toString() === userId.toString(),
-    }));
+    const enriched = auctions.map((a) =>
+      ensureAuctionProperty(
+        {
+          ...a,
+          ...computeAuctionRemaining(a, currentTick),
+          isWinning: a.currentBidderId?._id?.toString() === userId.toString(),
+        },
+        a,
+      ),
+    );
 
     await cacheSet(cacheKey, enriched, AUCTION_CONFIG.cacheTTL.watchlist);
     return res.json({ success: true, auctions: enriched });

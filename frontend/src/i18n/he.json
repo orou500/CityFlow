@@ -2732,6 +2732,7 @@
     "cancel": "ביטול",
     "noAuctions": "אין מכרזים",
     "unknownProperty": "נכס לא ידוע",
+    "propertyUnavailable": "הנכס כבר לא זמין",
     "unknownBidder": "מציע לא ידוע",
     "you": "אתה",
     "optional": "אופציונלי",

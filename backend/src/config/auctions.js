@@ -8,6 +8,12 @@ export const AUCTION_CONFIG = {
   endingDurationTicks: 2,
   antiSnipingTicks: 1,
   antiSnipingThresholdTicks: 2,
+  // Hard cap on how many times the anti-sniping extension may lengthen a single
+  // auction. Without it, every last-minute bid would push endTick out again
+  // (extensions accumulate across bidders), making the countdown visibly jump
+  // backward repeatedly. One bid may therefore trigger at most one valid
+  // extension, and concurrent in-window bids can never extend more than once.
+  maxAntiSnipingExtensions: 1,
   minBidIncrementPercent: 5,
   bankAuctionIntervalTicks: 8,
   maxActiveAuctionsPerPlayer: 10,

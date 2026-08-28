@@ -13,6 +13,7 @@ import { cacheDel } from '../utils/cache.js';
 import { cacheKeys } from '../utils/cacheKeys.js';
 import { triggerMissionProgress } from '../utils/missionTrigger.js';
 import { releaseAuctionReservations } from '../utils/auctionMoney.js';
+import { buildPropertySnapshot } from '../utils/auctionProperty.js';
 import { getTickNumber } from '../models/GameState.js';
 
 export function emitAuctionBid(auctionId, data) {
@@ -86,10 +87,18 @@ export async function processAuctions() {
       ending++;
     } catch (err) {
       console.error(`[AUCTION-TICK ${currentTick}] ✗ Failed to settle auction ${auction._id}:`, err.message);
-      await Auction.updateOne({ _id: claimed._id }, { $set: { status: 'cancelled', currentBidderId: null } });
+      await Auction.updateOne(
+        { _id: claimed._id },
+        { $set: { status: 'cancelled', currentBidderId: null, winnerId: null, winningBid: 0 } },
+      );
       await releaseAuctionReservations(claimed._id);
+      // NEVER recycle the bank property on a crash: the exception may have been
+      // thrown after the winner was decided — or, with transfer-first ordering,
+      // after the property was transferred but before the winner was debited.
+      // Deleting it could strand a charged winner with no property at all. Keep
+      // the Property doc for reconciliation (orphan-recovery tooling).
       const crashedProperty = await Property.findById(claimed.propertyId);
-      await recoverAuctionProperty(claimed, crashedProperty, 'settlement crash');
+      await recoverAuctionProperty(claimed, crashedProperty, 'settlement crash', { deleteBankProperty: false });
     }
   }
 
@@ -120,7 +129,9 @@ export async function processAuctions() {
     for (const auction of stuckEnding) {
       await releaseAuctionReservations(auction._id);
       const stuckProperty = await Property.findById(auction.propertyId);
-      await recoverAuctionProperty(auction, stuckProperty, 'stuck ending');
+      // Same guard as the crash path: an 'ending'-stuck auction may already have
+      // a decided winner / partial transfer — never recycle its property either.
+      await recoverAuctionProperty(auction, stuckProperty, 'stuck ending', { deleteBankProperty: false });
     }
   }
 
@@ -150,16 +161,36 @@ export async function resolveStuckAuction(auctionId) {
  * (no bids, reserve not met, insufficient funds for winner, or settlement crash).
  *
  *  - Bank properties (created solely for auction) are deleted — they have no
- *    owner and no purpose outside the auction.
+ *    owner and no purpose outside the auction. Ambiguous paths (crash / stuck
+ *    ending) pass `deleteBankProperty: false` so the property survives for
+ *    reconciliation — a winner may already have been charged/transferred.
  *  - Player-listed properties are restored to the marketplace so the seller
  *    can sell or re-auction them.
  */
-async function recoverAuctionProperty(auction, property, reason) {
+async function recoverAuctionProperty(auction, property, reason, options = {}) {
   if (!property) return;
 
   if (auction.sellerType === 'bank') {
-    await Property.findByIdAndDelete(property._id);
-    console.log(`[AUCTION-SETTLE] ${reason}: deleted bank property ${property._id} (auction ${auction._id})`);
+    // Preserve an immutable display snapshot BEFORE the bank property is
+    // recycled, so the historical auction record stays fully readable even
+    // though the live Property document is gone.
+    if (!auction.propertySnapshot && property) {
+      await Auction.updateOne(
+        { _id: auction._id, propertySnapshot: { $exists: false } },
+        { $set: { propertySnapshot: buildPropertySnapshot(property) } },
+      );
+    }
+    // Ambiguous paths (settlement crash / stuck ending) pass deleteBankProperty:
+    // false — the property may belong to a partially-settled winner, so it is
+    // kept for reconciliation instead of being destroyed.
+    if (options.deleteBankProperty !== false) {
+      await Property.findByIdAndDelete(property._id);
+      console.log(`[AUCTION-SETTLE] ${reason}: deleted bank property ${property._id} (auction ${auction._id})`);
+    } else {
+      console.log(
+        `[AUCTION-SETTLE] ${reason}: kept bank property ${property._id} (auction ${auction._id}) — left for reconciliation`,
+      );
+    }
   } else if (
     auction.sellerType === 'player' &&
     property.ownerId &&
@@ -352,6 +383,23 @@ async function settleAuction(auction) {
     await auction.save();
 
     if (winner.balance >= auction.winningBid) {
+      // Transfer-first ordering: the property is committed to the winner BEFORE
+      // they are debited, so a crash mid-settlement can never leave a winner
+      // charged for a property they do not own. The worst-case window (crash
+      // between the two writes) leaves the property transferred and the payment
+      // uncollected — a recoverable freebie, never a paid loss.
+      property.ownerId = winner._id;
+      property.forSale = false;
+      property.lastPurchasePrice = auction.winningBid;
+      property.lastPurchaseDate = new Date();
+      property.investmentHistory.push({
+        type: 'purchase',
+        amount: auction.winningBid,
+        tick: currentTick,
+        description: `Won auction for ${property.name}`,
+      });
+      await property.save();
+
       // The reserved funds are converted into the purchase payment
       winner.balance -= auction.winningBid;
       winner.reservedAuctionFunds = Math.max(0, (winner.reservedAuctionFunds || 0) - auction.winningBid);
@@ -365,18 +413,6 @@ async function settleAuction(auction) {
         .model('AuctionReservation')
         .deleteOne({ userId: winner._id, auctionId: auction._id })
         .catch(() => {});
-
-      property.ownerId = winner._id;
-      property.forSale = false;
-      property.lastPurchasePrice = auction.winningBid;
-      property.lastPurchaseDate = new Date();
-      property.investmentHistory.push({
-        type: 'purchase',
-        amount: auction.winningBid,
-        tick: currentTick,
-        description: `Won auction for ${property.name}`,
-      });
-      await property.save();
 
       if (auction.sellerId && auction.sellerType === 'player') {
         const commission = Math.floor(auction.winningBid * (AUCTION_CONFIG.playerSoldCommissionPercent / 100));
@@ -634,6 +670,7 @@ export async function generateBankAuctions() {
 
     const auction = await Auction.create({
       propertyId: property._id,
+      propertySnapshot: buildPropertySnapshot(property),
       sellerId: null,
       sellerType: 'bank',
       auctionType: rarity === 'legendary' ? 'reserve' : 'standard',
@@ -668,9 +705,17 @@ export async function processAntiSniping(auction) {
   const currentTick = await getTickNumber();
   const ticksRemaining = auction.endTick - currentTick;
 
+  // Same ceiling as the bid path: an auction may only be extended a bounded
+  // number of times, so a run of last-minute bidders can never push the
+  // countdown out repeatedly.
+  if ((auction.extensionCount || 0) >= AUCTION_CONFIG.maxAntiSnipingExtensions) {
+    return false;
+  }
+
   if (ticksRemaining <= AUCTION_CONFIG.antiSnipingThresholdTicks) {
     const newEndTick = auction.endTick + auction.antiSnipingExtension;
     auction.endTick = newEndTick;
+    auction.extensionCount = (auction.extensionCount || 0) + 1;
 
     auction.activity.push({
       type: 'extended',
@@ -796,7 +841,7 @@ export async function getAuctionStats() {
     highestAuctionEver: highest
       ? {
           winningBid: highest.winningBid,
-          propertyName: highest.propertyId?.name || 'Unknown',
+          propertyName: highest.propertyId?.name || highest.propertySnapshot?.name || 'Unknown',
           auctionId: highest._id,
         }
       : null,
