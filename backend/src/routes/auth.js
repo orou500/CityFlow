@@ -10,6 +10,7 @@ import emailTemplates from '../services/emailTemplates.js';
 import { rateLimit } from '../middleware/rateLimit.js';
 import { downloadOAuthAvatar } from '../services/avatarDownload.js';
 import { validatePassword } from '../utils/validatePassword.js';
+import { validateUsername, normalizeUsername } from '../utils/username.js';
 import { awardXp } from '../utils/leveling.js';
 import { processPlayerProgress } from '../utils/playerProgress.js';
 import Transaction from '../models/Transaction.js';
@@ -93,6 +94,10 @@ router.post('/register', registerLimiter, async (req, res) => {
     if (!username || !email || !password) {
       return res.status(400).json({ error: 'All fields are required' });
     }
+    const usernameError = validateUsername(username);
+    if (usernameError) {
+      return res.status(400).json({ error: usernameError });
+    }
     if (password !== confirmPassword) {
       return res.status(400).json({ error: 'Passwords do not match' });
     }
@@ -103,7 +108,7 @@ router.post('/register', registerLimiter, async (req, res) => {
     if (!acceptedTerms || !acceptedPrivacy) {
       return res.status(400).json({ error: 'You must accept the Terms of Service and Privacy Policy' });
     }
-    const normalizedUsername = username.toLowerCase().trim();
+    const normalizedUsername = normalizeUsername(username);
     const normalizedEmail = email.toLowerCase().trim();
     const existing = await User.findOne({ $or: [{ email: normalizedEmail }, { normalizedUsername }] });
     if (existing) {

@@ -50,7 +50,7 @@ async function registerUser(overrides = {}) {
   const res = await request(app)
     .post('/auth/register')
     .send({
-      username: `verifyuser_${Date.now()}`,
+      username: `vuser_${Date.now()}`,
       email,
       password: 'SecurePass1',
       confirmPassword: 'SecurePass1',

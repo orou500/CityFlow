@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { useGameStore } from '../store/useGameStore';
+import { useLeaderboardStore } from '../store/useLeaderboardStore';
 import { useTheme } from './ThemeProvider';
 import { useToast } from './Toast';
 import UserSearch from './UserSearch';
@@ -80,6 +81,19 @@ export default function Navbar() {
     // unread fetch reconciles the badge with the server.
     removeNotification(data.notificationId);
     fetchUnreadCount();
+  });
+
+  useSocketEvent('user:updated', (data) => {
+    if (!user || !data?.userId || String(data.userId) !== String(user._id)) return;
+    // Live username/displayName update — no page reload. Keeping persisted
+    // `user` in sync means navbars, leaderboards and per-user components show
+    // the new identity immediately; any server-backed current-state data is
+    // invalidated on the backend so subsequent fetches are already fresh.
+    useAuthStore.setState({
+      user: { ...user, username: data.username, displayName: data.displayName ?? user.displayName },
+    });
+    useLeaderboardStore.getState().fetchSummary();
+    useLeaderboardStore.getState().fetchEvents('active');
   });
 
   useEffect(() => {

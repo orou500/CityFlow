@@ -13,6 +13,7 @@ const adminAuditLogSchema = new mongoose.Schema(
         'user_role_changed',
         'user_level_changed',
         'user_created_at_changed',
+        'user_username_changed',
         'user_restored',
         'user_permanently_deleted',
         'maintenance_enabled',

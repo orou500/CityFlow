@@ -16,6 +16,44 @@ const router = Router();
 const LEADERBOARD_TTL = 180;
 const LEADERBOARD_SUMMARY_TTL = 120;
 
+/**
+ * Overrides username/displayName/avatar on a collection of ranking-like
+ * entries with the CURRENT User values, using ONE bulk User query (no N+1).
+ * Deleted/missing users keep their snapshot value so historical rows remain
+ * readable. Pure snapshot data (rank, value, tick numbers) is untouched.
+ */
+async function resolveCurrentUsers(entries, idField = 'userId') {
+  if (!entries || entries.length === 0) return entries;
+  const ids = [...new Set(entries.map((e) => e[idField]?.toString()).filter(Boolean))];
+  if (ids.length === 0) return entries;
+
+  const users = await User.find({ _id: { $in: ids } }).select('_id username displayName avatar');
+  const byId = new Map(users.map((u) => [u._id.toString(), u]));
+
+  for (const entry of entries) {
+    const id = entry[idField]?.toString();
+    const user = id ? byId.get(id) : null;
+    if (!user) continue;
+    entry.username = user.username;
+    if (user.displayName) entry.displayName = user.displayName;
+    if (user.avatar) entry.avatar = user.avatar;
+  }
+  return entries;
+}
+
+/**
+ * For a list of competitive events, replaces participant usernames with
+ * CURRENT values ONLY for events that are still live (status 'active').
+ * Completed/upcoming events keep their historical participants snapshot.
+ */
+async function resolveActiveEventParticipants(events) {
+  const active = events.filter((e) => e.status === 'active');
+  for (const event of active) {
+    await resolveCurrentUsers(event.participants || [], 'userId');
+  }
+  return events;
+}
+
 router.get('/rankings/:category', async (req, res) => {
   try {
     const { category } = req.params;
@@ -60,6 +98,10 @@ router.get('/rankings/:category', async (req, res) => {
     }
 
     const rankings = snapshot.rankings.slice(Number(offset), Number(offset) + Number(limit));
+    // Resolve CURRENT usernames/displayNames/avatars (bulk) so a snapshot
+    // generated before a username change still shows the player's current
+    // name. Historical snapshot rows are NOT rewritten on disk.
+    await resolveCurrentUsers(rankings, 'userId');
     const result = {
       rankings,
       total: snapshot.rankings.length,
@@ -287,6 +329,7 @@ router.get('/events', async (req, res) => {
     }
 
     const events = await CompetitiveEvent.find(filter).sort({ startDate: -1 }).limit(50);
+    await resolveActiveEventParticipants(events);
     res.json({ events });
   } catch (err) {
     res.serverError(err);
@@ -297,6 +340,9 @@ router.get('/events/:id', async (req, res) => {
   try {
     const event = await CompetitiveEvent.findById(req.params.id);
     if (!event) return res.status(404).json({ error: 'Event not found' });
+    if (event.status === 'active') {
+      await resolveActiveEventParticipants([event]);
+    }
     res.json({ event });
   } catch (err) {
     res.serverError(err);
@@ -372,8 +418,10 @@ router.get('/summary', async (req, res) => {
         summary[cat] = { topPlayer: null, totalPlayers: 0 };
         continue;
       }
+      const topPlayer = snapshot.rankings[0] || null;
+      if (topPlayer) await resolveCurrentUsers([topPlayer], 'userId');
       summary[cat] = {
-        topPlayer: snapshot.rankings[0] || null,
+        topPlayer,
         totalPlayers: snapshot.rankings.length,
         tickNumber: snapshot.tickNumber,
         computedAt: snapshot.computedAt,
@@ -381,6 +429,7 @@ router.get('/summary', async (req, res) => {
     }
 
     const activeEvents = await CompetitiveEvent.find({ status: 'active' }).sort({ startDate: -1 }).limit(5);
+    await resolveActiveEventParticipants(activeEvents);
 
     const result = { summary, activeEvents, seasonNumber };
     await cacheSet(cacheKey, result, LEADERBOARD_SUMMARY_TTL);

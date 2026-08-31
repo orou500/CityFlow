@@ -57,6 +57,10 @@ export async function connectSocket() {
     triggerListeners('sizops:connection:updated', data);
   });
 
+  socket.on('user:updated', (data) => {
+    triggerListeners('user:updated', data);
+  });
+
   socket.on('company:treasury:updated', (data) => {
     triggerListeners('company:treasury:updated', data);
   });

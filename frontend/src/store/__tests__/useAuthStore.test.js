@@ -87,4 +87,37 @@ describe('useAuthStore', () => {
     expect(state.user).toBeNull();
     expect(state.token).toBeNull();
   });
+
+  it('updateUsername updates the user in the store on success', async () => {
+    useAuthStore.setState({
+      user: { _id: 'u1', username: 'oldname', displayName: '' },
+      token: 'tok',
+    });
+    localStorage.setItem('token', 'tok');
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, user: { _id: 'u1', username: 'NewName', displayName: '' } }),
+    });
+
+    await useAuthStore.getState().updateUsername('NewName');
+    const state = useAuthStore.getState();
+    expect(state.user.username).toBe('NewName');
+    expect(state.error).toBeNull();
+  });
+
+  it('updateUsername records the error on failure and throws', async () => {
+    useAuthStore.setState({ user: { _id: 'u1', username: 'oldname' }, token: 'tok' });
+    localStorage.setItem('token', 'tok');
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 409,
+      json: async () => ({ error: 'Username already taken' }),
+    });
+
+    await expect(useAuthStore.getState().updateUsername('taken')).rejects.toThrow('Username already taken');
+    expect(useAuthStore.getState().error).toBe('Username already taken');
+    expect(useAuthStore.getState().user.username).toBe('oldname');
+  });
 });

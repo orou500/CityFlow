@@ -92,6 +92,20 @@ export const useAuthStore = create(
         }
       },
 
+      updateUsername: async (username) => {
+        try {
+          const data = await api('/users/username', {
+            method: 'PUT',
+            body: JSON.stringify({ username }),
+          });
+          if (data?.user) set({ user: data.user, error: null });
+          return data;
+        } catch (err) {
+          set({ error: err.message });
+          throw err;
+        }
+      },
+
       fetchMe: async () => {
         try {
           const rawToken = await loadToken();

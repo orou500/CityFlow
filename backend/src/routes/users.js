@@ -12,6 +12,8 @@ import { authenticate } from '../middleware/auth.js';
 import { validatePassword } from '../utils/validatePassword.js';
 import { invalidateUser } from '../utils/cacheInvalidation.js';
 import { escapeRegex } from '../utils/escapeRegex.js';
+import { rateLimit } from '../middleware/rateLimit.js';
+import { changeUsername } from '../services/usernameService.js';
 import { ACHIEVEMENT_DEFINITIONS } from '../config/achievements.js';
 import { MISSION_DEFINITIONS } from '../config/missions.js';
 
@@ -30,6 +32,13 @@ const upload = multer({
 
 const router = Router();
 
+const usernameChangeLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  keyPrefix: 'rl:username',
+  message: 'Too many username changes. Please try again later.',
+});
+
 router.get('/me', authenticate, async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
@@ -43,6 +52,27 @@ router.get('/me', authenticate, async (req, res) => {
     res.json({ user, properties, loans, transactions });
   } catch (err) {
     res.serverError(err);
+  }
+});
+
+router.put('/username', authenticate, usernameChangeLimiter, async (req, res) => {
+  try {
+    const { username } = req.body;
+    if (typeof username !== 'string' || !username.trim()) {
+      return res.status(400).json({ error: 'Username is required' });
+    }
+
+    // Identity comes exclusively from req.user._id (JWT). The request body
+    // can never select whose username changes.
+    const result = await changeUsername(req.user._id, username);
+    if (!result.changed) {
+      return res.json({ success: true, user: result.user });
+    }
+    return res.json({ success: true, user: result.user });
+  } catch (err) {
+    if (err.status === 409) return res.status(409).json({ error: 'Username already taken' });
+    if (err.status === 400) return res.status(400).json({ error: err.message });
+    return res.serverError(err);
   }
 });
 

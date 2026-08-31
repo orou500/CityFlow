@@ -41,6 +41,8 @@ export const SOCKET_EVENTS = {
 
   SIZOPS_CONNECTION_UPDATED: 'sizops:connection:updated',
 
+  USER_UPDATED: 'user:updated',
+
   PRESENCE_UPDATE: 'presence:update',
   LEADERBOARD_UPDATED: 'leaderboard:updated',
 
