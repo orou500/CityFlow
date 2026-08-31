@@ -115,17 +115,27 @@ describe('Full Progression Pipeline', () => {
 
       triggerMissionProgress(user._id, 'property_buy');
 
-      await new Promise((r) => setTimeout(r, 200));
+      await vi.waitFor(
+        async () => {
+          const mp = await MissionProgress.findOne({
+            userId: user._id,
+            missionId: 'first_property',
+          }).lean();
+          expect(mp).toBeDefined();
+          expect(mp.progress).toBe(1);
+        },
+        { timeout: 5000, interval: 50 },
+      );
 
-      const mp = await MissionProgress.findOne({
-        userId: user._id,
-        missionId: 'first_property',
-      }).lean();
-      expect(mp).toBeDefined();
-      expect(mp.progress).toBe(1);
-
-      const careerCalls = vi.mocked(socket.emitToUser).mock.calls.filter(([, event]) => event === 'career:updated');
-      expect(careerCalls.length).toBeGreaterThanOrEqual(1);
+      await vi.waitFor(
+        () => {
+          const careerCalls = vi.mocked(socket.emitToUser).mock.calls.filter(
+            ([, event]) => event === 'career:updated',
+          );
+          expect(careerCalls.length).toBeGreaterThanOrEqual(1);
+        },
+        { timeout: 5000, interval: 50 },
+      );
     });
   });
 
