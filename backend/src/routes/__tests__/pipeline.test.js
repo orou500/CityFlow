@@ -129,9 +129,7 @@ describe('Full Progression Pipeline', () => {
 
       await vi.waitFor(
         () => {
-          const careerCalls = vi.mocked(socket.emitToUser).mock.calls.filter(
-            ([, event]) => event === 'career:updated',
-          );
+          const careerCalls = vi.mocked(socket.emitToUser).mock.calls.filter(([, event]) => event === 'career:updated');
           expect(careerCalls.length).toBeGreaterThanOrEqual(1);
         },
         { timeout: 5000, interval: 50 },
