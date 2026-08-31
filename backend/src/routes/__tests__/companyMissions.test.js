@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../../test/createApp.js';
 import { createAuthenticatedUser, createTestCity, createTestProperty, authHeader } from '../../test/helpers.js';
@@ -97,6 +97,10 @@ describe('Company Mission System', () => {
   });
 
   describe('Model', () => {
+    beforeAll(async () => {
+      await CompanyMissionProgress.init();
+    });
+
     it('can create CompanyMissionProgress', async () => {
       const { user } = await createAuthenticatedUser();
       const city = await createTestCity();
