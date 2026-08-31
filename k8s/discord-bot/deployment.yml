@@ -20,6 +20,12 @@ spec:
         app.kubernetes.io/name: discord-bot
         app.kubernetes.io/part-of: cityflow
     spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsUser: 100
+        runAsGroup: 101
+        fsGroup: 101
+        fsGroupChangePolicy: OnRootMismatch
       imagePullSecrets:
         - name: ghcr-pull
       containers:
@@ -53,6 +59,8 @@ spec:
             failureThreshold: 3
           securityContext:
             runAsNonRoot: true
+            runAsUser: 100
+            runAsGroup: 101
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities:
