@@ -212,7 +212,14 @@ router.put('/password', authenticate, async (req, res) => {
   }
 });
 
-router.post('/avatar', authenticate, (req, res) => {
+const avatarLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  keyPrefix: 'rl:avatar',
+  message: 'Too many avatar uploads. Please try again later.',
+});
+
+router.post('/avatar', authenticate, avatarLimiter, (req, res) => {
   upload.single('avatar')(req, res, async (err) => {
     if (err) return res.status(400).json({ error: err.message });
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
@@ -221,6 +228,23 @@ router.post('/avatar', authenticate, (req, res) => {
       const avatarsDir = path.join(__dirname, '../../uploads/avatars');
       const filename = `${req.user._id}.webp`;
       const outputPath = path.join(avatarsDir, filename);
+      // The uploads volume may be empty on a fresh pod (backed by a shared PVC
+      // in production); create the avatars dir before touching it.
+      await fs.mkdir(avatarsDir, { recursive: true });
+
+      // Decode + re-encode to a temp file first: a corrupt upload must never
+      // wipe the player's existing avatar and must be rejected cleanly (400),
+      // not a 500.
+      const tmpPath = path.join(avatarsDir, `tmp-${filename}`);
+      try {
+        await sharp(req.file.buffer)
+          .resize(256, 256, { fit: 'cover', position: 'center' })
+          .webp({ quality: 80 })
+          .toFile(tmpPath);
+      } catch {
+        await fs.unlink(tmpPath).catch(() => {});
+        return res.status(400).json({ error: 'Invalid image file' });
+      }
 
       const files = await fs.readdir(avatarsDir);
       for (const file of files) {
@@ -229,10 +253,7 @@ router.post('/avatar', authenticate, (req, res) => {
         }
       }
 
-      await sharp(req.file.buffer)
-        .resize(256, 256, { fit: 'cover', position: 'center' })
-        .webp({ quality: 80 })
-        .toFile(outputPath);
+      await fs.rename(tmpPath, outputPath);
 
       req.user.avatar = `/uploads/avatars/${filename}`;
       await req.user.save();

@@ -3,8 +3,11 @@ kind: Middleware
 metadata:
   name: strip-api-prefix
   namespace: cityflow
+# Only `/api` must be stripped: backend routes mount at `/auth`, `/users`, …
+# Static files served from `express.static('/uploads', …)` need the `/uploads`
+# prefix PRESERVED, so the `/uploads/avatars/...` requests reach the backend
+# intact (previously stripping it produced a systemic 404 on every avatar).
 spec:
   stripPrefix:
     prefixes:
       - /api
-      - /uploads

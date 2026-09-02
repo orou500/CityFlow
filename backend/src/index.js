@@ -3,6 +3,7 @@ import cors from 'cors';
 import mongoose from 'mongoose';
 import { createServer } from 'http';
 import path from 'path';
+import { promises as fs } from 'fs';
 import { fileURLToPath } from 'url';
 import { config, describeOidcMisconfig } from './config/index.js';
 import { connectDB } from './config/db.js';
@@ -263,6 +264,9 @@ async function start() {
     }
 
     await ensureBackupDir();
+    // Ensure the uploads volume layout exists before the server accepts
+    // connections, so first avatar uploads never 500 on a fresh pod.
+    await fs.mkdir(path.join(__dirname, '../uploads/avatars'), { recursive: true });
     await enforceRetention().catch(() => {});
 
     if (!isEmailConfigured()) {

@@ -1,8 +1,9 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import L from 'leaflet';
+import MapResize from './MapResize';
 import { formatMoney } from '../utils/format';
 import { localizeCityName, localizeCountryName } from '../utils/cityNames';
 
@@ -55,12 +56,38 @@ function getEventIcon(event) {
 
 function FitBounds({ cities }) {
   const map = useMap();
+  const fittedFor = useRef(null);
+
   useEffect(() => {
-    if (cities.length > 0) {
+    if (cities.length === 0) return;
+    // Fit exactly once per dataset. The store hands back new array references
+    // on every fetch/re-render — refitting then (or on each resize) would fight
+    // the player's pan/zoom. Key on stable ids where available, coordinates otherwise.
+    const key = cities
+      .map((c) =>
+        c._id
+          ? `i${c._id}`
+          : `${Math.round(c.coordinates?.lat * 1e4) || 0}:${Math.round(c.coordinates?.lng * 1e4) || 0}`,
+      )
+      .join('|');
+    if (!key || fittedFor.current === key) return;
+    fittedFor.current = key;
+
+    const fit = () => {
       const bounds = L.latLngBounds(cities.map((c) => [c.coordinates.lat, c.coordinates.lng]));
       map.fitBounds(bounds, { padding: [50, 50] });
+    };
+
+    // Wait until the map is fully initialized before fitting; on the very first
+    // render the container size may still be measured and FitBounds would fit a
+    // zero-sized map (deferring to MapResize's invalidateSize fixes the size).
+    if (map.whenReady) {
+      map.whenReady(fit);
+    } else {
+      fit();
     }
   }, [cities, map]);
+
   return null;
 }
 
@@ -298,6 +325,7 @@ export default function WorldMap({ cities, activeEvents = [] }) {
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+      <MapResize />
       {eventMarkers}
       {countries.map((country) => (
         <Marker

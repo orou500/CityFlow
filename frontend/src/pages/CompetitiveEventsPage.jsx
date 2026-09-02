@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLeaderboardStore } from '../store/useLeaderboardStore';
 import CompactValue from '../components/CompactValue';
-import { getAvatarUrl } from '../utils/capacitor';
-import useNativeAvatarUrl from '../hooks/useNativeAvatarUrl';
+import Avatar from '../components/Avatar';
 
 const EVENT_TYPE_ICONS = {
   wealth: '\uD83D\uDCB0',
@@ -249,19 +248,10 @@ function EventDetail({ event, onClose }) {
 }
 
 function EventPodiumItem({ participant, medal, formatValue, highlight = false }) {
-  const avatarUrl = useNativeAvatarUrl(getAvatarUrl(participant.avatar || null));
-  const initial = (participant.displayName || participant.username || '?').charAt(0).toUpperCase();
-
   return (
     <div className="flex flex-col items-center flex-1 min-w-0 max-w-[100px]">
       {medal === '\uD83E\uDD47' && <div className="text-sm mb-0.5">{medal}</div>}
-      {avatarUrl ? (
-        <img src={avatarUrl} alt="" className="w-9 h-9 rounded-full object-cover" />
-      ) : (
-        <div className="w-9 h-9 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-medium">
-          {initial}
-        </div>
-      )}
+      <Avatar avatar={participant.avatar} name={participant.displayName || participant.username} className="w-9 h-9" />
       <div className="mt-1 text-center w-full">
         <div className="text-[10px] font-medium text-primary truncate">
           {participant.displayName || participant.username}
@@ -278,19 +268,15 @@ function EventPodiumItem({ participant, medal, formatValue, highlight = false })
 }
 
 function EventParticipantRow({ participant, formatValue }) {
-  const avatarUrl = useNativeAvatarUrl(getAvatarUrl(participant.avatar || null));
-  const initial = (participant.displayName || participant.username || '?').charAt(0).toUpperCase();
-
   return (
     <div className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50">
       <span className="w-6 text-center text-[11px] font-semibold text-muted shrink-0">#{participant.rank}</span>
-      {avatarUrl ? (
-        <img src={avatarUrl} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
-      ) : (
-        <div className="w-6 h-6 rounded-full bg-blue-600 text-white text-[9px] flex items-center justify-center font-medium shrink-0">
-          {initial}
-        </div>
-      )}
+      <Avatar
+        avatar={participant.avatar}
+        name={participant.displayName || participant.username}
+        className="w-6 h-6"
+        textClassName="text-[9px]"
+      />
       <div className="flex-1 min-w-0">
         <span className="text-xs sm:text-sm font-medium text-primary truncate block">
           {participant.displayName || participant.username}

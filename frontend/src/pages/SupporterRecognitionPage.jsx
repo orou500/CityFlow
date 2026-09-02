@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getApiBaseUrl } from '../utils/capacitor';
+import Avatar from '../components/Avatar';
 
 const API = getApiBaseUrl();
 
@@ -42,15 +43,12 @@ export default function SupporterRecognitionPage() {
             className="bg-card border border-border rounded-lg p-4 hover:border-gray-400 dark:hover:border-gray-600 transition"
           >
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden flex-shrink-0">
-                {s.avatar ? (
-                  <img src={s.avatar} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-muted text-lg font-bold">
-                    {s.username?.[0]?.toUpperCase() || '?'}
-                  </div>
-                )}
-              </div>
+              <Avatar
+                avatar={s.avatar}
+                name={s.displayName || s.username}
+                className="w-10 h-10"
+                textClassName="text-lg font-bold"
+              />
               <div className="flex-1 min-w-0">
                 <div className="text-primary font-semibold truncate">{s.displayName || s.username}</div>
                 <div className="text-xs text-muted">#{i + 1}</div>

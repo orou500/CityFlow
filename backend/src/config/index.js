@@ -23,7 +23,13 @@ export const config = {
     pass: process.env.SMTP_PASS || '',
   },
   emailFrom: process.env.EMAIL_FROM || 'noreply@sizops.co.il',
-  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+  // OAuth/SSO success redirects and emailed verification/reset links are built
+  // from this URL. The default is env-aware so a production image without an
+  // explicit FRONTEND_URL never poisons those links with http://localhost:3000
+  // (the local dev default). The k8s backend Secret overrides it.
+  frontendUrl:
+    process.env.FRONTEND_URL ||
+    (process.env.NODE_ENV === 'production' ? 'https://cityflow.sizops.co.il' : 'http://localhost:3000'),
   socketio: {
     corsOrigin: process.env.SOCKETIO_CORS_ORIGIN || '*',
     pingInterval: parseInt(process.env.SOCKETIO_PING_INTERVAL) || 25000,

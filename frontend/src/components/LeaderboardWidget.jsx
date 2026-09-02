@@ -4,21 +4,10 @@ import { Link } from 'react-router-dom';
 import { useLeaderboardStore } from '../store/useLeaderboardStore';
 import { useAuthStore } from '../store/useAuthStore';
 import CompactValue from './CompactValue';
-import { getAvatarUrl } from '../utils/capacitor';
-import useNativeAvatarUrl from '../hooks/useNativeAvatarUrl';
+import Avatar from './Avatar';
 
 function MiniAvatar({ avatar, username }) {
-  const avatarUrl = useNativeAvatarUrl(getAvatarUrl(avatar || null));
-  const initial = (username || '?').charAt(0).toUpperCase();
-
-  if (avatarUrl) {
-    return <img src={avatarUrl} alt="" className="w-6 h-6 rounded-full object-cover" />;
-  }
-  return (
-    <div className="w-6 h-6 rounded-full bg-blue-600 text-white text-[10px] flex items-center justify-center font-medium">
-      {initial}
-    </div>
-  );
+  return <Avatar avatar={avatar} name={username} className="w-6 h-6" />;
 }
 
 function MiniRankBadge({ rank }) {

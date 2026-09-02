@@ -7,8 +7,8 @@ import { useTheme } from './ThemeProvider';
 import UserSearch from './UserSearch';
 import { formatMoney } from '../utils/format';
 import CompactValue from './CompactValue';
-import { getApiBaseUrl, getAvatarUrl } from '../utils/capacitor';
-import useNativeAvatarUrl from '../hooks/useNativeAvatarUrl';
+import Avatar from './Avatar';
+import { getApiBaseUrl } from '../utils/capacitor';
 import AudioPlayer from './AudioPlayer';
 
 export default function Sidebar({ collapsed, onToggleCollapse }) {
@@ -26,15 +26,7 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
   const userMenuRef = useRef(null);
 
   const hasUnread = unreadCount > 0;
-  const avatarClassName = useMemo(
-    () => `w-7 h-7 rounded-full object-cover ${hasUnread ? 'animate-avatar-pulse' : ''}`,
-    [hasUnread],
-  );
-  const avatarFallbackClassName = useMemo(
-    () =>
-      `w-7 h-7 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-medium ${hasUnread ? 'animate-avatar-pulse' : ''}`,
-    [hasUnread],
-  );
+  const avatarClassName = useMemo(() => `w-7 h-7 ${hasUnread ? 'animate-avatar-pulse' : ''}`, [hasUnread]);
 
   const handleLogout = () => {
     logout();
@@ -130,8 +122,6 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
   const themeIcon = preference === 'light' ? '\u2600\uFE0F' : preference === 'dark' ? '\uD83C\uDF19' : '\uD83D\uDD04';
   const langLabel = i18n.language === 'en' ? 'HE' : 'EN';
   const userInitial = (user?.displayName || user?.username || '?').charAt(0).toUpperCase();
-  const rawAvatarUrl = getAvatarUrl(user?.avatar || null);
-  const avatarUrl = useNativeAvatarUrl(rawAvatarUrl);
 
   function linkClasses(active, opts = {}) {
     const base = 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors';
@@ -260,11 +250,7 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
               className="flex items-center justify-center w-full px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors relative"
             >
               <div className="relative shrink-0">
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt="" className={avatarClassName} />
-                ) : (
-                  <div className={avatarFallbackClassName}>{userInitial}</div>
-                )}
+                <Avatar avatar={user?.avatar} name={userInitial} className={avatarClassName} />
                 {unreadCount > 0 && (
                   <span className="absolute -top-1.5 -end-1.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-card leading-none">
                     {unreadCount > 9 ? '9+' : unreadCount}

@@ -342,7 +342,13 @@ export default function LoginPage() {
                   href={`${getApiBaseUrl()}/auth/sizops`}
                   className="w-full flex items-center justify-center gap-2 bg-gray-900 dark:bg-gray-700 hover:bg-gray-800 dark:hover:bg-gray-600 text-white py-2 rounded transition-colors"
                 >
-                  <img src="https://sizops.co.il/icon.png" alt="SizOps" className="w-5 h-5 rounded" />
+                  {/* The SizOps mark is a dark glyph on a transparent canvas — on a
+                      dark button it is nearly invisible. A white chip keeps the
+                      official branding legible in both themes. The asset is vendored
+                      locally so the button never depends on the SizOps origin. */}
+                  <span className="w-6 h-6 rounded-full bg-white flex items-center justify-center overflow-hidden shrink-0">
+                    <img src="/images/sizops-icon.png" alt="" className="w-5 h-5 object-contain" />
+                  </span>
                   {t('auth.signInWithSizOps')}
                 </a>
                 <div className="flex items-start gap-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-3 text-sm text-blue-900 dark:text-blue-200">

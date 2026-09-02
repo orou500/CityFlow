@@ -5,8 +5,8 @@ import { useAuthStore } from '../store/useAuthStore';
 import { useGameStore } from '../store/useGameStore';
 import { formatMoney, formatCompact } from '../utils/format';
 import CompactValue from '../components/CompactValue';
-import { getApiBaseUrl, getAvatarUrl } from '../utils/capacitor';
-import useNativeAvatarUrl from '../hooks/useNativeAvatarUrl';
+import { getApiBaseUrl } from '../utils/capacitor';
+import Avatar from '../components/Avatar';
 import PropertyImage from '../components/PropertyImage';
 
 function StatCard({ label, value, color }) {
@@ -45,9 +45,6 @@ export default function UserProfilePage() {
   const [setPwError, setSetPwError] = useState('');
   const [setPwSuccess, setSetPwSuccess] = useState(false);
   const fileRef = useRef(null);
-
-  const rawProfileAvatarUrl = getAvatarUrl(profile?.user?.avatar);
-  const profileAvatarUrl = useNativeAvatarUrl(rawProfileAvatarUrl);
 
   const targetUsername = username || currentUser?.username;
   const isOwner = !username || (currentUser && targetUsername === currentUser.username);
@@ -321,13 +318,12 @@ export default function UserProfilePage() {
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6 md:p-8">
           <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
             <div className="relative">
-              <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden flex items-center justify-center text-3xl">
-                {profileUser.avatar ? (
-                  <img src={profileAvatarUrl} alt={displayName} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-gray-500 dark:text-gray-400">{displayName.charAt(0).toUpperCase()}</span>
-                )}
-              </div>
+              <Avatar
+                avatar={profileUser.avatar}
+                name={displayName}
+                className="w-24 h-24 md:w-28 md:h-28"
+                textClassName="text-3xl"
+              />
               {isOwner && (
                 <>
                   <button

@@ -7,6 +7,14 @@ import heJson from '../../i18n/he.json';
 const navMock = vi.hoisted(() => vi.fn());
 const i18nMock = vi.hoisted(() => ({ t: (key) => key }));
 
+// Shared Leaflet map instance so tests can assert on fitBounds/invalidateSize.
+const mapMock = vi.hoisted(() => ({
+  fitBounds: vi.fn(),
+  invalidateSize: vi.fn(),
+  whenReady: vi.fn((cb) => cb()),
+  getContainer: () => (typeof document !== 'undefined' ? document.createElement('div') : {}),
+}));
+
 vi.mock('react-router-dom', async (importOriginal) => {
   const actual = await importOriginal();
   return { ...actual, useNavigate: () => navMock };
@@ -32,7 +40,7 @@ vi.mock('react-leaflet', () => {
       children,
     );
   const Popup = ({ children }) => React.createElement('div', { 'data-testid': 'popup' }, children);
-  const useMap = () => ({ fitBounds: vi.fn() });
+  const useMap = () => mapMock;
   return { MapContainer, TileLayer, Marker, Popup, useMap };
 });
 
@@ -141,5 +149,85 @@ describe('WorldMap', () => {
     expect(japanMarker).toBeTruthy();
     expect(japanMarker.dataset.iconHtml).toContain('Japan');
     expect(screen.getAllByText('Tokyo').length).toBeGreaterThan(0);
+  });
+});
+
+describe('WorldMap resize resilience', () => {
+  beforeEach(() => {
+    mapMock.fitBounds.mockClear();
+    mapMock.invalidateSize.mockClear();
+    mapMock.whenReady.mockClear();
+  });
+
+  it('fits the view exactly once per dataset, even across refetch re-renders', () => {
+    const { rerender } = renderMap();
+    expect(mapMock.fitBounds).toHaveBeenCalledTimes(1);
+    // A refetch returns a new array with the same data — must NOT refit.
+    // Keep the same tree shape (MemoryRouter) or React remounts the map.
+    rerender(
+      <MemoryRouter initialEntries={['/map']}>
+        <WorldMap cities={worldCities.map((c) => ({ ...c }))} />
+      </MemoryRouter>,
+    );
+    expect(mapMock.fitBounds).toHaveBeenCalledTimes(1);
+    expect(mapMock.whenReady).toHaveBeenCalled();
+  });
+
+  it('debounced invalidateSize on window resize and drops the listener on unmount', () => {
+    vi.useFakeTimers();
+    const { unmount } = renderMap();
+    vi.advanceTimersByTime(200);
+    mapMock.invalidateSize.mockClear();
+
+    fireEvent(window, new Event('resize'));
+    vi.advanceTimersByTime(200);
+    expect(mapMock.invalidateSize).toHaveBeenCalledTimes(1);
+
+    unmount();
+    fireEvent(window, new Event('resize'));
+    vi.advanceTimersByTime(200);
+    expect(mapMock.invalidateSize).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  it('debounced invalidateSize on device orientation change', () => {
+    vi.useFakeTimers();
+    renderMap();
+    vi.advanceTimersByTime(200);
+    mapMock.invalidateSize.mockClear();
+
+    fireEvent(window, new Event('orientationchange'));
+    vi.advanceTimersByTime(200);
+    expect(mapMock.invalidateSize).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  it('invalidates size when the container resizes (ResizeObserver) and disconnects on unmount', () => {
+    const instances = [];
+    const RO = vi.fn(function ResizeObserver(cb) {
+      this.cb = cb;
+      this.disconnect = vi.fn();
+      instances.push(this);
+    });
+    RO.prototype.observe = vi.fn();
+    vi.stubGlobal('ResizeObserver', RO);
+
+    vi.useFakeTimers();
+    const { unmount } = renderMap();
+    vi.advanceTimersByTime(200);
+    mapMock.invalidateSize.mockClear();
+
+    expect(instances).toHaveLength(1);
+    expect(instances[0].observe).toHaveBeenCalledWith(mapMock.getContainer());
+
+    instances[0].cb(); // container resized
+    vi.advanceTimersByTime(200);
+    expect(mapMock.invalidateSize).toHaveBeenCalledTimes(1);
+
+    unmount();
+    expect(instances[0].disconnect).toHaveBeenCalled();
+
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 });

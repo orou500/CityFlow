@@ -4,8 +4,7 @@ import { useLeaderboardStore } from '../store/useLeaderboardStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { formatCount, formatMoneyExact } from '../utils/format';
 import CompactValue from '../components/CompactValue';
-import { getAvatarUrl } from '../utils/capacitor';
-import useNativeAvatarUrl from '../hooks/useNativeAvatarUrl';
+import Avatar from '../components/Avatar';
 import useIsMobile from '../hooks/useIsMobile';
 
 const CATEGORIES = ['netWorth', 'properties', 'passiveIncome', 'dealVolume', 'cityInfluence'];
@@ -55,18 +54,9 @@ function MovementIndicator({ change }) {
 }
 
 function PlayerAvatar({ avatar, username, size = 'md' }) {
-  const avatarUrl = useNativeAvatarUrl(getAvatarUrl(avatar || null));
-  const initial = (username || '?').charAt(0).toUpperCase();
-  const cls = size === 'lg' ? 'w-10 h-10 text-base' : 'w-7 h-7 text-[10px]';
-
-  if (avatarUrl) {
-    return <img src={avatarUrl} alt="" className={`${cls} rounded-full object-cover shrink-0`} />;
-  }
-  return (
-    <div className={`${cls} rounded-full bg-blue-600 text-white flex items-center justify-center font-medium shrink-0`}>
-      {initial}
-    </div>
-  );
+  const cls = size === 'lg' ? 'w-10 h-10' : 'w-7 h-7';
+  const textCls = size === 'lg' ? 'text-base font-bold' : 'text-[10px] font-medium';
+  return <Avatar avatar={avatar} name={username} className={cls} textClassName={textCls} />;
 }
 
 function PlayerRow({ entry, onClick, formatValue, isCurrentUser }) {
@@ -187,8 +177,6 @@ function Podium({ topThree, activeCategory, isMobile }) {
 
 function PlayerProfile({ profile, onClose }) {
   const { t } = useTranslation();
-  const avatarUrl = useNativeAvatarUrl(getAvatarUrl(profile.user.avatar || null));
-  const initial = (profile.user.displayName || profile.user.username || '?').charAt(0).toUpperCase();
 
   const CATEGORY_LABELS = {
     netWorth: t('leaderboard.categories.netWorth'),
@@ -216,13 +204,12 @@ function PlayerProfile({ profile, onClose }) {
           </div>
 
           <div className="flex items-center gap-4 mb-6">
-            {avatarUrl ? (
-              <img src={avatarUrl} alt="" className="w-14 h-14 rounded-full object-cover" />
-            ) : (
-              <div className="w-14 h-14 rounded-full bg-blue-600 text-white text-xl flex items-center justify-center font-bold">
-                {initial}
-              </div>
-            )}
+            <Avatar
+              avatar={profile.user.avatar}
+              name={profile.user.displayName || profile.user.username}
+              className="w-14 h-14"
+              textClassName="text-xl font-bold"
+            />
             <div className="min-w-0">
               <div className="text-lg font-bold text-primary truncate">
                 {profile.user.displayName || profile.user.username}

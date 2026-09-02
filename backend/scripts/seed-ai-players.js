@@ -22,10 +22,6 @@ const AI_PLAYERS = [
   { username: 'ViktorDevelop', displayName: 'Viktor Develop', level: 11, xp: 2800, balance: 590000, creditScore: 715, propsOwned: [12, 33], devLevels: [3, 5], occupancy: [68, 78] },
 ];
 
-function pickAvatar(name) {
-  return name.toLowerCase().replace(/[^a-z0-9]/g, '');
-}
-
 async function seed() {
   await mongoose.connect(config.mongodbUri);
   console.log('Connected to MongoDB');
@@ -57,7 +53,10 @@ async function seed() {
       xpToNextLevel: ai.level * 200,
       creditScore: ai.creditScore,
       creditScoreUpdatedTick: 50,
-      avatar: pickAvatar(ai.displayName),
+      // No generated avatar file exists for AI players; a bare string like
+      // "alexrealty" produced a broken relative <img>. Empty string makes the
+      // frontend fall back to the initials avatar.
+      avatar: '',
       bio: `AI player - ${ai.displayName}`,
       role: 'user',
       onboarding: { completed: true, completedAt: new Date() },

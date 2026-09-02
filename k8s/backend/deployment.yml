@@ -101,4 +101,5 @@ spec:
         - name: tmp
           emptyDir: {}
         - name: uploads
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: cityflow-uploads

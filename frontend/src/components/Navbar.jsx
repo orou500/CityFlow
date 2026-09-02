@@ -9,8 +9,8 @@ import { useToast } from './Toast';
 import UserSearch from './UserSearch';
 import { formatMoney } from '../utils/format';
 import CompactValue from './CompactValue';
-import { isNativePlatform, getApiBaseUrl, getAvatarUrl } from '../utils/capacitor';
-import useNativeAvatarUrl from '../hooks/useNativeAvatarUrl';
+import Avatar from './Avatar';
+import { isNativePlatform, getApiBaseUrl } from '../utils/capacitor';
 import { useSocketEvent } from '../hooks/useSocket';
 
 export default function Navbar() {
@@ -34,15 +34,7 @@ export default function Navbar() {
       `relative transition-colors ${hasUnread ? 'text-red-500 dark:text-red-400 animate-bell-ring' : 'text-muted hover:text-primary'}`,
     [hasUnread],
   );
-  const avatarClassName = useMemo(
-    () => `w-6 h-6 rounded-full object-cover ${hasUnread ? 'animate-avatar-pulse' : ''}`,
-    [hasUnread],
-  );
-  const avatarFallbackClassName = useMemo(
-    () =>
-      `w-6 h-6 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-medium ${hasUnread ? 'animate-avatar-pulse' : ''}`,
-    [hasUnread],
-  );
+  const avatarClassName = useMemo(() => `w-6 h-6 ${hasUnread ? 'animate-avatar-pulse' : ''}`, [hasUnread]);
 
   const handleLogout = () => {
     logout();
@@ -154,8 +146,6 @@ export default function Navbar() {
   ];
 
   const userInitial = (user?.displayName || user?.username || '?').charAt(0).toUpperCase();
-  const rawAvatarUrl = getAvatarUrl(user?.avatar || null);
-  const avatarUrl = useNativeAvatarUrl(rawAvatarUrl);
 
   return (
     <nav className="bg-card border-b border-border px-4 py-3 flex items-center justify-between relative z-50">
@@ -268,11 +258,7 @@ export default function Navbar() {
                 className="flex items-center gap-3 px-2 py-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               >
                 <div className="relative shrink-0">
-                  {avatarUrl ? (
-                    <img src={avatarUrl} alt="" className={avatarClassName} />
-                  ) : (
-                    <div className={avatarFallbackClassName}>{userInitial}</div>
-                  )}
+                  <Avatar avatar={user?.avatar} name={userInitial} className={avatarClassName} />
                   {unreadCount > 0 && (
                     <span className="absolute -top-1.5 -end-1.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-card leading-none animate-badge-glow">
                       {unreadCount > 9 ? '9+' : unreadCount}

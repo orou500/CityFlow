@@ -83,6 +83,20 @@ body {
   direction: ltr;
 }
 
+/* App shell viewport height. Prefers the dynamic viewport unit so the layout
+   (and the map) track mobile URL-bar show/hide; 100vh is the fallback for
+   browsers without dvh support. MapResize re-measures the map on viewport
+   changes, so the dynamic unit never leaves stale tiles. */
+.app-shell {
+  height: 100vh;
+}
+
+@supports (height: 100dvh) {
+  .app-shell {
+    height: 100dvh;
+  }
+}
+
 body[dir='rtl'] {
   direction: rtl;
 }

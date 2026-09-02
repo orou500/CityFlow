@@ -5,6 +5,7 @@ import { getApiBaseUrl } from '../utils/capacitor';
 import { formatMoney, formatCompact } from '../utils/format';
 import { localizeCityName, localizeCountryName } from '../utils/cityNames';
 import PropertyImage from '../components/PropertyImage';
+import Avatar from '../components/Avatar';
 
 const TIER_STYLES = {
   premium: { bg: 'bg-purple-100 dark:bg-purple-900/50', text: 'text-purple-700 dark:text-purple-300', icon: '👑' },
@@ -266,13 +267,7 @@ export default function DistrictPage() {
                     >
                       <div className="flex items-center gap-3">
                         <span className="text-sm font-bold text-gray-400 w-6">#{i + 1}</span>
-                        <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-sm overflow-hidden">
-                          {inv.avatar ? (
-                            <img src={inv.avatar} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <span>{inv.displayName?.charAt(0)?.toUpperCase() || '?'}</span>
-                          )}
-                        </div>
+                        <Avatar avatar={inv.avatar} name={inv.displayName} className="w-8 h-8" />
                         <div>
                           <Link
                             to={`/profile/${inv.username}`}

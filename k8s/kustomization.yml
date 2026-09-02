@@ -17,6 +17,7 @@ resources:
   - redis/networkpolicy.yml
   - backend/deployment.yml
   - backend/service.yml
+  - backend/uploads-pvc.yml
   - backend/networkpolicy.yml
   - frontend/deployment.yml
   - frontend/service.yml
