@@ -129,7 +129,8 @@ describe('WorldMap', () => {
     renderMap();
     const container = screen.getByTestId('map-container');
     expect(container.className).toContain('w-full');
-    expect(container.className).toContain('h-full');
+    expect(container.className).toContain('absolute');
+    expect(container.className).toContain('inset-0');
     // Starts at minZoom 0 so no fit is ever blocked; FitBounds raises the run-time
     // floor to the clean-world zoom for the viewport. "Zooming out of existence"
     // is prevented by maxBounds instead of a hard floor.

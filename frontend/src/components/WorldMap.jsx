@@ -356,7 +356,7 @@ export default function WorldMap({ cities, activeEvents = [], onMapCreated }) {
       ]}
       maxBoundsViscosity={0.8}
       zoomSnap={0.25}
-      className="w-full h-full rounded-lg"
+      className="absolute inset-0 w-full rounded-lg"
       scrollWheelZoom={true}
       whenReady={(event) => onMapCreated?.(event?.target)}
     >
