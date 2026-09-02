@@ -52,6 +52,7 @@ import MarketIntelligencePage from './pages/MarketIntelligencePage';
 import AuctionDashboardPage from './pages/AuctionDashboardPage';
 import MissionsPage from './pages/MissionsPage';
 import CareerPage from './pages/CareerPage';
+import RewardedAdsPage from './pages/RewardedAdsPage';
 import { useEffect } from 'react';
 import { useAuthStore } from './store/useAuthStore';
 import { useGameStore } from './store/useGameStore';
@@ -336,6 +337,16 @@ function AppRoutes() {
           <ErrorBoundary>
             <ProtectedRoute>
               <CareerPage />
+            </ProtectedRoute>
+          </ErrorBoundary>
+        }
+      />
+      <Route
+        path="/rewards"
+        element={
+          <ErrorBoundary>
+            <ProtectedRoute>
+              <RewardedAdsPage />
             </ProtectedRoute>
           </ErrorBoundary>
         }

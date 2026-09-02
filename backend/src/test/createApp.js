@@ -37,6 +37,8 @@ import indexRoutes from '../routes/indexes.js';
 import imageProxyRoutes from '../routes/imageProxy.js';
 import donationRoutes from '../routes/donations.js';
 import marketIntelligenceRoutes from '../routes/marketIntelligence.js';
+import rewardedAdRoutes from '../routes/rewardedAds.js';
+import adminRewardedAdsRoutes from '../routes/adminRewardedAds.js';
 import oauthRoutes from '../routes/oauth.js';
 
 export function createApp() {
@@ -113,6 +115,8 @@ export function createApp() {
   app.use('/image-proxy', imageProxyRoutes);
   app.use('/donations', donationRoutes);
   app.use('/market-intelligence', marketIntelligenceRoutes);
+  app.use('/rewarded-ads', rewardedAdRoutes);
+  app.use('/admin/rewarded-ads', adminRewardedAdsRoutes);
 
   app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });

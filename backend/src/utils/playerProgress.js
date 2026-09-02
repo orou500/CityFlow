@@ -43,6 +43,7 @@ const XP_REWARDS = {
   investment_create: 5,
   visit: 1,
   login: 0,
+  rewarded_ad_watch: 5,
 };
 
 export async function processPlayerProgress(userId, event, options = {}) {

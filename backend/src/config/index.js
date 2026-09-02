@@ -110,6 +110,28 @@ export const config = {
       amount: parseInt(process.env.SIZOPS_WELCOME_REWARD_AMOUNT, 10) || 100000,
     },
   },
+  // Rewarded video ads (HilltopAds VAST). The ad source is the server's
+  // responsibility: the client never embeds the VAST URL — POST /start issues
+  // a short-lived session and the VAST is served to the session owner through
+  // a backend proxy. No server-verifiable completion callback exists in the
+  // VAST protocol, so completion is client-reported; the backend enforces the
+  // strongest practical guards: one-time atomic completion per session,
+  // cooldown, daily limit, rate limiting and per-user locking.
+  rewardedAds: {
+    enabled: process.env.REWARDED_AD_ENABLED === 'true',
+    vastUrl: process.env.REWARDED_AD_VAST_URL || '',
+    rewardAmount: parseInt(process.env.REWARDED_AD_REWARD_AMOUNT, 10) || 2000,
+    cooldownMinutes: parseInt(process.env.REWARDED_AD_COOLDOWN_MINUTES, 10) || 5,
+    dailyLimit: parseInt(process.env.REWARDED_AD_DAILY_LIMIT, 10) || 10,
+    sessionTtlMinutes: parseInt(process.env.REWARDED_AD_SESSION_TTL_MINUTES, 10) || 10,
+    // Display metadata for the Admin Dashboard only — never sent to clients.
+    provider: process.env.REWARDED_AD_PROVIDER || 'HilltopAds',
+    publisherDashboardUrl: process.env.REWARDED_AD_PUBLISHER_URL || 'https://hilltopads.com/login',
+    publisherHelpUrl: process.env.REWARDED_AD_PUBLISHER_HELP_URL || 'https://hilltopads.com/faq',
+    get ready() {
+      return this.enabled && !!this.vastUrl;
+    },
+  },
 };
 
 /**

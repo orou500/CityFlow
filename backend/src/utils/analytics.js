@@ -18,6 +18,7 @@ export const EVENTS = {
   OFFER_ACCEPTED: 'offer_accepted',
   USER_REGISTERED: 'user_registered',
   TICK_COMPLETED: 'tick_completed',
+  REWARDED_AD_COMPLETED: 'rewarded_ad_completed',
 };
 
 export async function trackEvent(eventType, data = {}) {

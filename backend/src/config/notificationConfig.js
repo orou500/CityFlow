@@ -192,6 +192,9 @@ export function getNotificationMeta(eventKey = '', type = 'system') {
   } else if (key.startsWith('onboarding:')) {
     category = CATEGORY.ONBOARDING;
     priority = PRIORITY.LOW;
+  } else if (key.startsWith('rewardedad:')) {
+    category = CATEGORY.SYSTEM;
+    priority = PRIORITY.LOW;
   } else if (key.startsWith('system:')) {
     category = CATEGORY.SYSTEM;
     priority = PRIORITY.MEDIUM;

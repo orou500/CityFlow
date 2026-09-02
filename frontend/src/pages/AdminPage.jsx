@@ -4,6 +4,7 @@ import { useGameStore } from '../store/useGameStore';
 import { formatMoney, formatCount } from '../utils/format';
 import { getApiBaseUrl } from '../utils/capacitor';
 import PropertyImage from '../components/PropertyImage';
+import RewardedAdsAdminPanel from '../components/RewardedAdsAdminPanel';
 
 function StatCard({ label, value }) {
   return (
@@ -900,6 +901,9 @@ export default function AdminPage() {
         </TabButton>
         <TabButton active={tab === 'database'} onClick={() => setTab('database')}>
           {t('admin.database')}
+        </TabButton>
+        <TabButton active={tab === 'monetization'} onClick={() => setTab('monetization')}>
+          {t('admin.monetization')}
         </TabButton>
       </div>
 
@@ -2501,6 +2505,8 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+
+      {tab === 'monetization' && <RewardedAdsAdminPanel />}
 
       {backupLogs && (
         <div

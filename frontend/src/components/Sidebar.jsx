@@ -89,6 +89,7 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
     { to: '/auctions', icon: '\uD83C\uDFE9', label: t('nav.auctions'), tour: 'auctions' },
     { to: '/missions', icon: '\uD83C\uDFAF', label: t('nav.missions'), tour: 'missions' },
     { to: '/career', icon: '\uD83C\uDFC5', label: t('nav.career'), tour: 'career' },
+    { to: '/rewards', icon: '\uD83D\uDCB0', label: t('nav.watchAd'), tour: 'rewarded-ads' },
     { to: '/donate', icon: '\u2764\uFE0F', label: t('nav.donate'), tour: 'donate' },
   ];
 

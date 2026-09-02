@@ -20,6 +20,7 @@ const adminAuditLogSchema = new mongoose.Schema(
         'maintenance_disabled',
         'season_ended',
         'tick_run',
+        'rewarded_ads_config_updated',
       ],
       required: true,
     },
