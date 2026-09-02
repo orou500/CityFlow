@@ -26,8 +26,18 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('react-leaflet', () => {
   const React = require('react');
-  const MapContainer = ({ children, className }) =>
-    React.createElement('div', { 'data-testid': 'map-container', className }, children);
+  const MapContainer = ({ children, className, center, zoom, minZoom }) =>
+    React.createElement(
+      'div',
+      {
+        'data-testid': 'map-container',
+        className,
+        'data-center': JSON.stringify(center),
+        'data-zoom': String(zoom),
+        'data-minzoom': String(minZoom),
+      },
+      children,
+    );
   const TileLayer = () => React.createElement('div', { 'data-testid': 'tile-layer' });
   const Marker = ({ children, position, icon }) =>
     React.createElement(
@@ -103,6 +113,15 @@ describe('WorldMap', () => {
     const badges = markers.map((m) => (m.dataset.iconHtml.match(/country-badge">([^<]+)</) || [])[1]);
     expect(badges).toEqual(expect.arrayContaining(['USA', 'UK', 'France', 'Japan', 'Israel']));
     expect(markers).toHaveLength(5);
+  });
+
+  it('keeps the map container full-size and enforces a zoom floor so the world view is never lost', () => {
+    renderMap();
+    const container = screen.getByTestId('map-container');
+    expect(container.className).toContain('w-full');
+    expect(container.className).toContain('h-full');
+    expect(container.dataset.minzoom).toBe('2');
+    expect(container.dataset.zoom).toBe('2');
   });
 
   it('lists every city of a country in its popup and navigates on city click', () => {

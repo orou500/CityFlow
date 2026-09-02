@@ -23,7 +23,7 @@ export default function Layout({ children }) {
         className={`flex-1 flex flex-col min-h-0 overflow-y-auto transition-all duration-300 ${collapsed ? 'lg:ml-16' : 'lg:ml-60'}`}
       >
         {showBanner && <MaintenanceBanner message={maintenance.message} />}
-        <div className="flex-1 flex flex-col">{children}</div>
+        <div className="flex-1 flex flex-col min-h-0">{children}</div>
         <Footer />
       </main>
     </div>

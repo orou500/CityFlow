@@ -153,6 +153,19 @@ Every notification-producing event must be **at most one notification per user p
 
 ---
 
+## World Map Rules
+
+The world map (`/map`, `frontend/src/pages/MapPage.jsx` + `frontend/src/components/WorldMap.jsx`) is a Leaflet/react-leaflet v4 instance inside the `.app-shell` layout.
+
+- **Never unmount/remount the map for loading data.** `MapPage` renders `WorldMap` unconditionally and shows the loader as an absolutely-positioned OVERLAY (`absolute inset-0 z-[500]`) — the old code swapped the map for the loader whenever the shared `useGameStore.loading` flag flipped, which destroyed and recreated Leaflet on every visit (double init, camera reset, blank flash). Keep the map mounted; any future `loading` gating must stay an overlay.
+- **Keep the flex height chain shrunken so the map never overflows the fixed-height `.app-shell`.** Every flex container between `.app-shell` and the map wrapper needs `min-h-0` (`.app-shell` → `main` → content wrapper in `Layout.jsx` → `MapPage` root → map wrapper `flex-1 min-h-0`). Never reintroduce a tall pixel floor like `min-h-[500px]` on the map wrapper — it stretches the page and pushes tiles below the fold on short/landscape viewports.
+- **Do not cover Leaflet's controls.** `.leaflet-container` is `z-index: 0`, so a `z-10` card at the map's top-left hides the zoom in/out buttons. `WorldStatusWidget` sits at `top-4 right-4`; keep overlay panels out of the top-left corner (Leaflet zoom control) and away from `MapLegend` bottom-right.
+- **Camera:** `FitBounds` fits exactly once per dataset, keyed on city ids/coordinates (never refit on refetch re-renders or resize), deferred via `map.whenReady`. Keep that pattern. `MapContainer` uses `center={[20,0]} zoom={2} minZoom={2}` so the world view can't be zoomed out of existence.
+- **Resize:** `MapResize` (ResizeObserver + window `resize`/`orientationchange`, 150ms debounce, full cleanup) is the single resize system — reuse it; never add a second `invalidateSize()` path or a `setTimeout(schedule, 0)` retry loop.
+- E2E geometry/interaction regression coverage lives in `frontend/e2e/worldmap.spec.js` (single-instance, no-overflow at 1366x768/390x844/844x390/412x915, uncovered zoom controls, world→city popup navigation). Run it with `BASE_URL` set to the deployed site (see the auctions spec for the run-after-deploy pattern).
+
+---
+
 ## Onboarding Tour Rules
 
 - New-player guided tour state lives in `User.onboardingV2` (`{ status, currentStep, completedSteps, startedAt, completedAt, skippedAt }`) — persisted server-side, never client-only.
@@ -571,3 +584,125 @@ Every gameplay action route calls `processPlayerProgress()` with the correct eve
 ### ADR
 
 See `docs/adr/0001-sizops-oidc.md`.
+
+---
+
+## Rewarded Video Ads (HilltopAds VAST, September 2026)
+
+Players watch an ad from a **real** HilltopAds VAST tag and earn cash. The ad
+source and reward are server-controlled; the frontend only ever watches.
+
+### Security model (what the server enforces vs. what it cannot)
+
+- The VAST protocol has **no server-verifiable completion callback** (no SSAI:
+  tracking is client-side only). Completion is therefore **client-reported** —
+  this is a documented limitation, NOT fraud-proof. Tell the client it completed,
+  never claim it did on the server.
+- The backend is the authority for everything else: reward **amount** (from the
+  server-created session, never from the request body), single-use **sessions**,
+  **cooldown**, **daily limit**, rate limiting and per-user locking.
+- Session security: `POST /rewarded-ads/start` creates a short-lived `pending`
+  session with a `vastUrl` + `rewardAmount` snapshot and an `expiresAt`. Reward
+  is granted only by `POST /rewarded-ads/:id/complete`, which transitionally
+  flips `pending → completed` with a guarded `findOneAndUpdate`
+  (`{ status: 'pending', expiresAt: { $gt: now } }`) so concurrent completes can
+  never double-pay. Payout = `creditUserBalance` + `Transaction.create({ type:
+  'rewarded_ad' })`. If the payout DB write fails, the session is reverted to
+  `pending` (never pay twice, never lose the reward). All completion logic runs
+  inside `withUserLock` plus a best-effort distributed Redis lock
+  (`lock:rewarded-ad:{userId}:lock`).
+- Cooldown + daily limit are enforced at completion by querying the user's
+  completed sessions; daily window is the UTC calendar day.
+- The client **never embeds the VAST URL**: the player fetches
+  `GET /rewarded-ads/session/:id/vast` — an ownership-checked backend proxy that
+  serves the session's `vastUrl` as `text/xml`. `GET /rewarded-ads/config` is
+  public but only exposes non-secret flags (`enabled`, `rewardAmount`,
+  `cooldownSeconds`, `dailyLimit`); it never leaks the VAST url.
+- Notifications use eventKey `rewardedad:{sessionId}:completed` → category
+  `system`, priority `low` (see `getNotificationMeta()` in
+  `backend/src/config/notificationConfig.js`).
+- `processPlayerProgress(userId, 'rewarded_ad_watch')` awards 5 XP per completed
+  ad (add `rewarded_ad_watch: 5` to `XP_REWARDS` in
+  `backend/src/utils/playerProgress.js` — it's already there).
+
+### Key files
+
+- `backend/src/config/index.js` → `config.rewardedAds` (env-driven, `ready` =
+  `enabled && vastUrl`).
+- `backend/src/models/RewardedAdSession.js` — session model (`pending` /
+  `completed` / `expired` / `aborted`). Sessions are lazily marked `expired`
+  when past `expiresAt`; `POST /start` reaps stale `pending` sessions first.
+- `backend/src/routes/rewardedAds.js` — `GET /config`, `GET /status`,
+  `POST /start`, `GET /session/:id/vast`, `POST /:id/complete`, `GET /history`.
+- `backend/src/models/Transaction.js` — `type` enum includes `'rewarded_ad'`
+  (Mongoose validation at create — no DB migration needed).
+- `frontend/src/utils/vastParser.js` — dependency-free VAST 3.0 InLine parser.
+- `frontend/src/components/RewardedAdPlayer.jsx` — plays each Linear creative
+  sequentially, falls back through MediaFiles, fires Impression/TrackingEvent
+  beacons, reports `onComplete` only when the last ad `ended`.
+- `frontend/src/pages/RewardedAdsPage.jsx` — `/rewards`, protected route.
+- `frontend/nginx.conf` — CSP `media-src 'self' https:` (ad media comes from the
+  ad network's HTTPS CDN and the host rotates; the VAST itself is same-origin
+  through `/api`).
+
+### Env vars (backend Secret)
+
+- `REWARDED_AD_ENABLED` (default off)
+- `REWARDED_AD_VAST_URL` — the HilltopAds tag
+- `REWARDED_AD_REWARD_AMOUNT` (default `2000`)
+- `REWARDED_AD_COOLDOWN_MINUTES` (default `5`)
+- `REWARDED_AD_DAILY_LIMIT` (default `10`)
+- `REWARDED_AD_SESSION_TTL_MINUTES` (default `10`)
+
+Overriding the ad source is pure ops config — no frontend code change required.
+
+### Admin dashboard (Monetization → Rewarded Ads)
+
+- Route: `backend/src/routes/adminRewardedAds.js`, mounted at
+  `/admin/rewarded-ads` behind `requireAdmin` (mounted in `index.js` and
+  `test/createApp.js`). Never exposed to non-admins.
+- `GET /dashboard` — per-range (`today`/`7d`/`30d`/`all`) blocks of real counts
+  (`totalSessions` by status, `impressions`, `completionAttempts`,
+  `failedCompletions`, `completed`, `rewarded`, `completionRate`) + CPM-projected
+  `estimatedRevenue` + real `spend` (from `Transaction` type `rewarded_ad`) +
+  env `limits` + provider links. Never contains the VAST URL.
+- `GET /daily?days=7|30|90` — zero-filled day series (sessions/impressions/
+  completed) for the chart. `GET /sessions` — paginated admin table with
+  `username`, status, counters. `GET/PUT /config` — read/set the estimated CPM
+  (stored in the singleton `RewardedAdConfig` doc, `key: 'default'`);
+  `estimatedCpm` must be a finite non-negative number and the change is audited
+  via `AdminAuditLog` action `rewarded_ads_config_updated`.
+- Data honesty rules: reward amounts/limits come from the env config; only the
+  estimated CPM is DB-tunable. `estimatedRevenue = impressions/1000 × cpm` and
+  is always labeled **estimate** — it is NOT measured ad revenue (the VAST
+  protocol exposes no server-verifiable earnings; no HilltopAds API credentials
+  are stored or exposed to the frontend). The funnel is worst-case (impressions
+  ≥ completed sessions). Completion is client-reported — the dashboard reflects
+  that contract and never claims verified ad completion.
+- Session counters (`RewardedAdSession`): `impressions` ($inc on each VAST proxy
+  serve), `completionAttemptCount` ($inc on every `POST /:id/complete`),
+  `failedCompletionCount` ($inc when a completion attempt for a pending session
+  is rejected by cooldown/daily-limit/race). All increments are fire-and-forget
+  and never block the request.
+- Frontend: `frontend/src/components/RewardedAdsAdminPanel.jsx`, rendered as the
+  **Monetization** tab in `frontend/src/pages/AdminPage.jsx` (`admin.monetization`
+  + `rewardedAdsAdmin.*` i18n keys in `en.json`/`he.json`). Stat cards per range,
+  `7/30/90`-day Recharts chart, funnel, server-limits card, CPM editor,
+  HilltopAds publisher-dashboard/help links (default
+  `https://hilltopads.com/login`, overridable via `REWARDED_AD_PUBLISHER_URL`),
+  recent-sessions table with status filter + pagination.
+
+### Tests
+
+`backend/src/routes/__tests__/rewardedAds.test.js` (auth, disable 503, session
+snapshot/no URL leak, resume-pending, VAST proxy ownership + failure/expiry,
+one-time reward, concurrent completes → single payout, client amount ignored,
+cooldown, daily limit, expiry, idempotent notification),
+`backend/src/routes/__tests__/adminRewardedAds.test.js` (401/403/200, empty
+defaults, 1000 impressions × $2 CPM = $2, completion rate 50%, range exclusion,
+persisted CPM reflected, spend aggregation, daily fill, session pagination +
+status filter, config GET/PUT + audit + validation) and
+`frontend/src/utils/__tests__/vastParser.test.js`,
+`frontend/src/components/__tests__/RewardedAdPlayer.test.jsx`,
+`frontend/src/pages/__tests__/RewardedAdsPage.test.jsx`,
+`frontend/src/components/__tests__/RewardedAdsAdminPanel.test.jsx`.
