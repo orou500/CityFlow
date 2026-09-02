@@ -8,6 +8,7 @@ import City from '../../models/City.js';
 import Auction from '../../models/Auction.js';
 import AuctionReservation from '../../models/AuctionReservation.js';
 import AuctionReputation from '../../models/AuctionReputation.js';
+import Notification from '../../models/Notification.js';
 import { processAuctions, resolveStuckAuction, generateBankAuctions } from '../../engine/auctionProcessing.js';
 import { cacheDelPattern } from '../../utils/cache.js';
 
@@ -851,5 +852,232 @@ describe('Property lifecycle after auction settlement', () => {
     const s2 = await Auction.findById(auction2._id);
     expect(s2.status).toBe('active');
     expect(s2.currentBidderId?.toString()).toBe(winner.user._id.toString());
+  });
+});
+
+describe('Settlement outcome communication and crash safety (regression)', () => {
+  it('reserve not met -> bidder is notified exactly once, activity recorded, reservation released, settledAt stamped', async () => {
+    const city = await createTestCity({ propertyCount: 200 });
+    const { user } = await makeBidder('reserve_gap_bidder');
+    const { auction } = await makeLifecycleAuction({
+      city,
+      auctionType: 'reserve',
+      reservePrice: 50000,
+      currentBid: 30000,
+      currentBidderId: user._id,
+      bids: [bidEntry(user, 30000)],
+      endTick: 10,
+    });
+    await AuctionReservation.create({ userId: user._id, auctionId: auction._id, amount: 30000 });
+
+    await processAuctions();
+
+    const settled = await Auction.findById(auction._id);
+    expect(settled.winnerId).toBeNull();
+    expect(settled.winningBid).toBe(0);
+    expect(settled.settledAt).toBe(10);
+    expect(settled.activity.some((a) => a.type === 'ended')).toBe(true);
+
+    // The highest bidder gets exactly ONE outcome notification (idempotent key)
+    const key = `auction:${auction._id}:no_winner:${user._id}`;
+    expect(await Notification.countDocuments({ userId: user._id, eventKey: key })).toBe(1);
+
+    // Their reserved funds were released
+    expect(await AuctionReservation.countDocuments({ auctionId: auction._id })).toBe(0);
+    const releasedUser = await User.findById(user._id);
+    expect(releasedUser.reservedAuctionFunds).toBe(0);
+
+    // Re-running the engine cannot create a second notification
+    await processAuctions();
+    expect(await Notification.countDocuments({ userId: user._id, eventKey: key })).toBe(1);
+  });
+
+  it('no bids -> no outcome notification is created (nothing to release)', async () => {
+    const city = await createTestCity({ propertyCount: 200 });
+    const { auction } = await makeLifecycleAuction({ city, endTick: 10 });
+
+    await processAuctions();
+
+    const settled = await Auction.findById(auction._id);
+    expect(settled.winnerId).toBeNull();
+    expect(settled.settledAt).toBe(10);
+    expect(await Notification.countDocuments({ eventKey: { $regex: `auction:${auction._id}:no_winner:` } })).toBe(0);
+  });
+
+  it('winner path stamps settledAt and the auction finalizes as ended two ticks later', async () => {
+    const city = await createTestCity({ propertyCount: 200 });
+    const { user } = await makeBidder('settled_winner');
+    const { auction } = await makeLifecycleAuction({
+      city,
+      currentBid: 50000,
+      currentBidderId: user._id,
+      bids: [bidEntry(user, 50000)],
+      endTick: 10,
+    });
+
+    await processAuctions();
+
+    const claimed = await Auction.findById(auction._id);
+    expect(claimed.status).toBe('ending');
+    expect(claimed.settledAt).toBe(10);
+    expect(claimed.winnerId?.toString()).toBe(user._id.toString());
+
+    await setTestTick(12);
+    await processAuctions();
+    expect((await Auction.findById(auction._id)).status).toBe('ended');
+  });
+
+  it('endingCompleted never finalizes a claimed-but-unsettled auction as ended', async () => {
+    const city = await createTestCity({ propertyCount: 200 });
+    const { user } = await makeBidder('unsettled_bidder');
+
+    // Simulates a worker crash between the claim (status -> 'ending') and the
+    // settlement write: settledAt stays null, bidder still tracked.
+    const unsettled = await Auction.create({
+      propertyId: (
+        await Property.create({
+          cityId: city._id,
+          name: 'CrashProp',
+          type: 'apartment',
+          basePrice: 100000,
+          currentPrice: 100000,
+          forSale: false,
+        })
+      )._id,
+      sellerId: null,
+      sellerType: 'bank',
+      auctionType: 'standard',
+      startingBid: 1000,
+      currentBid: 50000,
+      currentBidderId: user._id,
+      bidIncrement: 100,
+      status: 'ending',
+      startTick: 1,
+      endTick: 9,
+      originalEndTick: 9,
+      endingStartedAt: 5,
+      settledAt: null,
+      totalBids: 1,
+      bids: [bidEntry(user, 50000)],
+      activity: [],
+      watchers: [],
+    });
+
+    // A properly settled auction that must finalize on schedule.
+    const settled = await Auction.create({
+      propertyId: (
+        await Property.create({
+          cityId: city._id,
+          name: 'SettledProp',
+          type: 'apartment',
+          basePrice: 100000,
+          currentPrice: 100000,
+          forSale: false,
+        })
+      )._id,
+      sellerId: null,
+      sellerType: 'bank',
+      auctionType: 'standard',
+      startingBid: 1000,
+      currentBid: 60000,
+      currentBidderId: user._id,
+      bidIncrement: 100,
+      status: 'ending',
+      startTick: 1,
+      endTick: 9,
+      originalEndTick: 9,
+      endingStartedAt: 5,
+      settledAt: 5,
+      totalBids: 1,
+      bids: [bidEntry(user, 60000)],
+      activity: [],
+      watchers: [],
+    });
+
+    await processAuctions();
+
+    // The un-settled auction must NOT silently become 'ended' — it stays
+    // 'ending' for the stuck-ending recovery to reconcile.
+    expect((await Auction.findById(unsettled._id)).status).toBe('ending');
+    // The settled auction finalizes normally.
+    expect((await Auction.findById(settled._id)).status).toBe('ended');
+
+    // Stuck-ending recovery (10+ ticks since claim) cancels the un-settled
+    // auction and releases reservations instead of pretending it ended.
+    await AuctionReservation.create({ userId: user._id, auctionId: unsettled._id, amount: 50000 });
+    await setTestTick(16);
+    await processAuctions();
+    expect((await Auction.findById(unsettled._id)).status).toBe('cancelled');
+    expect(await AuctionReservation.countDocuments({ auctionId: unsettled._id })).toBe(0);
+    const stuckProperty = await Property.findById(unsettled.propertyId);
+    // Ambiguous crash state: the property is kept for reconciliation, never
+    // destroyed on this path.
+    expect(stuckProperty).not.toBeNull();
+  });
+
+  it('resolveStuckAuction recovers a crashed settlement: cancelled, reservations released, property kept', async () => {
+    const city = await createTestCity({ propertyCount: 200 });
+    const { user } = await makeBidder('crash_bidder');
+    const { property, auction } = await makeLifecycleAuction({
+      city,
+      currentBid: 50000,
+      currentBidderId: user._id,
+      bids: [bidEntry(user, 50000)],
+      endTick: 9,
+    });
+    await AuctionReservation.create({ userId: user._id, auctionId: auction._id, amount: 50000 });
+
+    // The winner path writes the property first; a failure there crashes
+    // settlement AFTER the claim, exactly like a transient DB error.
+    const spy = vi.spyOn(Property.prototype, 'save').mockRejectedValueOnce(new Error('simulated db failure'));
+
+    try {
+      await resolveStuckAuction(auction._id);
+    } finally {
+      spy.mockRestore();
+    }
+
+    const recovered = await Auction.findById(auction._id);
+    expect(recovered.status).toBe('cancelled');
+    expect(recovered.winnerId).toBeNull();
+    expect(recovered.currentBidderId).toBeNull();
+    // Funds must never stay tied to an unsettled auction.
+    expect(await AuctionReservation.countDocuments({ auctionId: auction._id })).toBe(0);
+    // The property is kept for reconciliation (crash may have been partial).
+    expect(await Property.findById(property._id)).not.toBeNull();
+    // No winner notification was sent for a settlement that never completed.
+    expect(await Notification.countDocuments({ eventKey: `auction:${auction._id}:won:${user._id}` })).toBe(0);
+  });
+
+  it('insufficient funds -> winner and other bidders are both notified; settledAt stamped', async () => {
+    const city = await createTestCity({ propertyCount: 200 });
+    const winner = await makeBidder('broke_winner_2', 100);
+    const outbid = await makeBidder('outbid_loser');
+    const { auction } = await makeLifecycleAuction({
+      city,
+      currentBid: 90000,
+      currentBidderId: winner.user._id,
+      bids: [bidEntry(winner.user, 90000), bidEntry(outbid.user, 50000)],
+      endTick: 10,
+    });
+
+    await processAuctions();
+
+    const settled = await Auction.findById(auction._id);
+    expect(settled.status).toBe('cancelled');
+    expect(settled.settledAt).toBe(10);
+
+    expect(
+      await Notification.countDocuments({
+        userId: winner.user._id,
+        eventKey: `auction:${auction._id}:insufficient_funds:${winner.user._id}`,
+      }),
+    ).toBe(1);
+    expect(
+      await Notification.countDocuments({
+        userId: outbid.user._id,
+        eventKey: `auction:${auction._id}:no_winner:${outbid.user._id}`,
+      }),
+    ).toBe(1);
   });
 });

@@ -66,6 +66,19 @@ describe('AuctionTimeLeft', () => {
     expect(screen.getByText('Cancelled')).toBeInTheDocument();
   });
 
+  it('displays a SETTLED ending auction as ended instead of an endless "finalizing" state', () => {
+    // Settlement has already committed the outcome; the backend's 'ending'
+    // phase is only its finalization window.
+    render(<AuctionTimeLeft status="ending" remainingMonths={0} settledAt={123} />);
+    expect(screen.getByText('Ended')).toBeInTheDocument();
+    expect(screen.queryByText(/Finalizing\.\.\./)).not.toBeInTheDocument();
+  });
+
+  it('keeps showing the finalizing state for an ending auction with no settlement record yet', () => {
+    render(<AuctionTimeLeft status="ending" remainingMonths={0} settledAt={null} />);
+    expect(screen.getByText(/Finalizing\.\.\./)).toBeInTheDocument();
+  });
+
   it('shows a neutral placeholder instead of a bogus countdown when no authoritative data exists', () => {
     render(<AuctionTimeLeft status="active" />);
     expect(screen.getByText('Time unavailable')).toBeInTheDocument();

@@ -140,6 +140,7 @@ function FeaturedCard({ auction, onClick }) {
             currentTick={auction.currentTick}
             status={auction.status}
             remainingMonths={auction.remainingMonths}
+            settledAt={auction.settledAt}
             className="text-sm text-primary"
           />
         </div>
@@ -280,6 +281,7 @@ function AuctionCard({ auction, onClick, onWatch, isWatched, user }) {
             currentTick={auction.currentTick}
             status={auction.status}
             remainingMonths={auction.remainingMonths}
+            settledAt={auction.settledAt}
             className="text-sm text-primary"
           />
         </div>
@@ -424,13 +426,20 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
   const property = getAuctionProperty(detail);
   const propertyKnown = isAuctionPropertyKnown(detail);
   const isOwner = user && detail.sellerId?._id === user._id;
+  const isSettled = detail.settledAt != null;
+  // Settlement has already committed the outcome; the backend's 'ending' phase
+  // is only its finalization window, so a settled auction displays as ended.
+  const displayStatus = detail.status === 'ending' && isSettled ? 'ended' : detail.status;
   const isWinning =
     user &&
     (detail.winnerId?._id === user._id ||
       (!detail.winnerId &&
         detail.currentBidderId?._id === user._id &&
         detail.status !== 'ended' &&
-        detail.status !== 'cancelled'));
+        detail.status !== 'cancelled' &&
+        // A reserve auction is only "won" once the reserve is actually met —
+        // the highest bid alone is not enough.
+        (detail.auctionType !== 'reserve' || detail.reserveMet)));
   const availableBalance = Math.max(0, (user?.balance || 0) - (user?.reservedAuctionFunds || 0));
   const minNextBid =
     (detail.currentBid || 0) > 0 ? (detail.currentBid || 0) + (detail.bidIncrement || 0) : detail.startingBid;
@@ -632,6 +641,7 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
             currentTick={detail.currentTick}
             status={detail.status}
             remainingMonths={detail.remainingMonths}
+            settledAt={detail.settledAt}
             className="text-lg font-bold"
           />
         </div>
@@ -640,6 +650,17 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
           <div className="text-lg font-bold text-secondary">{formatMoney(detail.startingBid)}</div>
         </div>
       </div>
+
+      {displayStatus === 'ended' && !detail.winnerId && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-lg p-3 text-sm text-amber-800 dark:text-amber-200">
+          ⚠️ {t('auctions.endedNoWinner')}
+        </div>
+      )}
+      {displayStatus === 'cancelled' && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700 rounded-lg p-3 text-sm text-red-800 dark:text-red-200">
+          ✖️ {t('auctions.cancelledNotice')}
+        </div>
+      )}
 
       {property && propertyKnown && (
         <div className="bg-gradient-to-br from-gray-100/90 to-gray-200 dark:from-gray-800/90 dark:to-gray-900 rounded-xl p-4 border border-border/40">

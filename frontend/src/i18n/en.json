@@ -2770,6 +2770,8 @@
     },
     "finalizing": "Finalizing...",
     "timeUnknown": "Time unavailable",
+    "endedNoWinner": "Auction ended without a winner. Reserved funds have been released.",
+    "cancelledNotice": "This auction was cancelled.",
     "propertyTypes": {
       "apartment": "Apartment",
       "house": "House",

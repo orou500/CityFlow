@@ -252,7 +252,7 @@ describe('Auction bid money reservation', () => {
     expect(settled.status).toBe('cancelled');
   });
 
-  it('releases reservations when a stuck ending auction is rolled to ended', async () => {
+  it('releases reservations when a claimed-but-unsettled ending auction is reconciled as cancelled', async () => {
     const city = await createTestCity({ propertyCount: 200 });
     const { user, token } = await makeUser('stuck', 100000);
     const auction = await makeAuction({ city });
@@ -267,7 +267,10 @@ describe('Auction bid money reservation', () => {
     expect(updated.reservedAuctionFunds).toBe(0);
     expect(await AuctionReservation.countDocuments({ auctionId: auction._id })).toBe(0);
     const stuck = await Auction.findById(auction._id);
-    expect(stuck.status).toBe('ended');
+    // A claimed-but-never-settled auction must never be silently recorded as
+    // 'ended' without a settlement outcome — the stuck-ending recovery
+    // cancels it (and releases reservations) instead.
+    expect(stuck.status).toBe('cancelled');
   });
 });
 

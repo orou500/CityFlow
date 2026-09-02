@@ -1,14 +1,27 @@
 import { useTranslation } from 'react-i18next';
 import { getAuctionRemainingMonths } from '../utils/auctionTime';
 
-export default function AuctionTimeLeft({ startTick, endTick, currentTick, status, remainingMonths, className }) {
+export default function AuctionTimeLeft({
+  startTick,
+  endTick,
+  currentTick,
+  status,
+  remainingMonths,
+  settledAt,
+  className,
+}) {
   const { t } = useTranslation();
   const months = getAuctionRemainingMonths({ startTick, endTick, currentTick, status, remainingMonths });
 
-  if (status === 'ended' || status === 'cancelled') {
-    return <span className={className}>{t(`auctions.status.${status}`)}</span>;
+  // A settled auction is final: settlement has already committed the winner /
+  // no-winner outcome, so "ending" is only the backend's finalization window.
+  // Display it as ended instead of an open-ended "finalizing" state.
+  const effectiveStatus = status === 'ending' && settledAt != null ? 'ended' : status;
+
+  if (effectiveStatus === 'ended' || effectiveStatus === 'cancelled') {
+    return <span className={className}>{t(`auctions.status.${effectiveStatus}`)}</span>;
   }
-  if (status === 'ending') {
+  if (effectiveStatus === 'ending') {
     return <span className={`${className} text-purple-400 font-medium`}>⏰ {t('auctions.finalizing')}</span>;
   }
   // No authoritative data yet (e.g. a payload without remainingMonths/currentTick):

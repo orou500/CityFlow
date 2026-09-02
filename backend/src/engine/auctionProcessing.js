@@ -57,6 +57,35 @@ async function claimAuctionForSettlement(auctionId, currentTick) {
   );
 }
 
+/**
+ * Settles a claimed auction and, if settlement crashes, transitions it to a
+ * safe terminal state:
+ *  - status 'cancelled' with winner fields cleared (the claim was made but the
+ *    settlement never completed, so no winner may be recorded)
+ *  - reservations released (no one may keep funds tied to an unsettled auction)
+ *  - the property is NEVER recycled on this path: the crash may have happened
+ *    after the winner was decided or the property transferred, so the Property
+ *    doc is kept for reconciliation instead of being destroyed.
+ *
+ * Used by the tick loop AND by resolveStuckAuction so a settlement error in
+ * either path can never leave an auction silently stuck at 'ending'.
+ */
+async function settleWithCrashRecovery(claimedAuction) {
+  const currentTick = await getTickNumber();
+  try {
+    await settleAuction(claimedAuction);
+  } catch (err) {
+    console.error(`[AUCTION-TICK ${currentTick}] ✗ Failed to settle auction ${claimedAuction._id}:`, err.message);
+    await Auction.updateOne(
+      { _id: claimedAuction._id },
+      { $set: { status: 'cancelled', currentBidderId: null, winnerId: null, winningBid: 0 } },
+    );
+    await releaseAuctionReservations(claimedAuction._id);
+    const crashedProperty = await Property.findById(claimedAuction.propertyId);
+    await recoverAuctionProperty(claimedAuction, crashedProperty, 'settlement crash', { deleteBankProperty: false });
+  }
+}
+
 export async function processAuctions() {
   const currentTick = await getTickNumber();
   let activated = 0;
@@ -82,29 +111,19 @@ export async function processAuctions() {
     // Only the instance that wins the atomic claim settles this auction.
     const claimed = await claimAuctionForSettlement(auction._id, currentTick);
     if (!claimed) continue;
-    try {
-      await settleAuction(claimed);
-      ending++;
-    } catch (err) {
-      console.error(`[AUCTION-TICK ${currentTick}] ✗ Failed to settle auction ${auction._id}:`, err.message);
-      await Auction.updateOne(
-        { _id: claimed._id },
-        { $set: { status: 'cancelled', currentBidderId: null, winnerId: null, winningBid: 0 } },
-      );
-      await releaseAuctionReservations(claimed._id);
-      // NEVER recycle the bank property on a crash: the exception may have been
-      // thrown after the winner was decided — or, with transfer-first ordering,
-      // after the property was transferred but before the winner was debited.
-      // Deleting it could strand a charged winner with no property at all. Keep
-      // the Property doc for reconciliation (orphan-recovery tooling).
-      const crashedProperty = await Property.findById(claimed.propertyId);
-      await recoverAuctionProperty(claimed, crashedProperty, 'settlement crash', { deleteBankProperty: false });
-    }
+    await settleWithCrashRecovery(claimed);
+    ending++;
   }
 
+  // Only finalized (settled) auctions may leave the 'ending' phase. A claimed
+  // but never-settled auction (worker crash between claim and settlement, or a
+  // settlement that crashed before stamping settledAt) stays 'ending' and is
+  // picked up by the stuck-ending recovery below — it can never be silently
+  // recorded as 'ended' without a settlement outcome.
   const endingCompleted = await Auction.find({
     status: 'ending',
     endingStartedAt: { $lte: currentTick - AUCTION_CONFIG.endingDurationTicks },
+    $or: [{ settledAt: { $ne: null } }, { settledAt: { $exists: false } }],
   });
 
   if (endingCompleted.length > 0) {
@@ -149,7 +168,10 @@ export async function resolveStuckAuction(auctionId) {
     // that already settled this auction makes this a no-op.
     const claimed = await claimAuctionForSettlement(auctionId, currentTick);
     if (!claimed) return auction;
-    await settleAuction(claimed);
+    // Crash-safe: a settlement error here must NOT be swallowed silently
+    // (the caller's .catch(() => {}) previously left the auction stuck at
+    // 'ending' with no settlement and no recovery).
+    await settleWithCrashRecovery(claimed);
     console.log(`[AUCTIONS] Resolved stuck auction ${auctionId} → ending at tick ${currentTick}`);
     return claimed;
   }
@@ -265,6 +287,7 @@ async function settleAuction(auction) {
       if (!company) {
         auction.winnerId = null;
         auction.winningBid = 0;
+        auction.settledAt = currentTick;
         await auction.save();
         await releaseAuctionReservations(auction._id);
         await invalidateAuctionCaches(auction);
@@ -274,6 +297,7 @@ async function settleAuction(auction) {
       // The winner is ALWAYS the company. For legacy bids the persisted
       // bidderId may still be a voter (pre-fix), so override with the company.
       auction.winnerId = auction.companyId;
+      auction.settledAt = currentTick;
       auction.activity.push({
         type: 'won',
         userId: auction.companyId,
@@ -348,7 +372,32 @@ async function settleAuction(auction) {
       // the auction as having no winner.
       auction.winnerId = null;
       auction.winningBid = 0;
+      auction.settledAt = currentTick;
+      auction.activity.push({
+        type: 'ended',
+        message: 'Auction ended without a winner',
+        tick: currentTick,
+      });
       await auction.save();
+
+      // The other bidders' reservations are released below — tell them why.
+      const remainingBidders = new Set(
+        (auction.bids || []).map((b) => b.bidderId?.toString()).filter((id) => id && mongoose.isValidObjectId(id)),
+      );
+      for (const bidderId of remainingBidders) {
+        await enqueueNotification({
+          userId: new mongoose.Types.ObjectId(bidderId),
+          type: 'system',
+          title: 'Auction Ended - No Winner',
+          message: `The auction for ${property.name} ended without a valid winning bidder. Your reserved funds have been released.`,
+          eventKey: `auction:${auction._id}:no_winner:${bidderId}`,
+          route: `/auctions/${auction._id}`,
+          entityType: 'auction',
+          entityId: auction._id,
+          relatedId: auction._id,
+          global: false,
+        });
+      }
 
       if (auction.sellerId && auction.sellerType === 'player') {
         await enqueueNotification({
@@ -364,6 +413,8 @@ async function settleAuction(auction) {
           global: false,
         });
       }
+
+      emitAuctionEnded(auction._id.toString(), { winnerId: null, winningBid: 0 });
 
       await releaseAuctionReservations(auction._id);
       await invalidateAuctionCaches(auction);
@@ -500,6 +551,13 @@ async function settleAuction(auction) {
           });
         }
       }
+
+      // Settlement outcome is fully committed (winner decided, property
+      // transferred, payment collected, notifications queued). Stamp the
+      // settlement record so the state machine may finalize this auction as
+      // 'ended' instead of treating it as claimed-but-unsettled.
+      auction.settledAt = currentTick;
+      await auction.save();
     } else {
       if (winner) {
         await enqueueNotification({
@@ -515,8 +573,32 @@ async function settleAuction(auction) {
           global: false,
         });
       }
+
+      // The winner could not pay, so the auction is cancelled and the other
+      // bidders' reservations are released (releaseAuctionReservations below).
+      // Tell every other bidder what happened — a silent release looks exactly
+      // like "I won but got nothing".
+      const otherBidders = new Set(
+        (auction.bids || []).map((b) => b.bidderId?.toString()).filter((id) => id && id !== winnerId.toString()),
+      );
+      for (const bidderId of otherBidders) {
+        await enqueueNotification({
+          userId: new mongoose.Types.ObjectId(bidderId),
+          type: 'system',
+          title: 'Auction Ended - No Winner',
+          message: `The auction for ${property.name} was cancelled because the winning bidder could not pay. Your reserved funds have been released.`,
+          eventKey: `auction:${auction._id}:no_winner:${bidderId}`,
+          route: `/auctions/${auction._id}`,
+          entityType: 'auction',
+          entityId: auction._id,
+          relatedId: auction._id,
+          global: false,
+        });
+      }
+
       auction.status = 'cancelled';
       auction.currentBidderId = null;
+      auction.settledAt = currentTick;
       await auction.save();
       await recoverAuctionProperty(auction, property, 'insufficient funds');
     }
@@ -524,9 +606,37 @@ async function settleAuction(auction) {
     auction.winnerId = null;
     auction.winningBid = 0;
     auction.currentBidderId = null;
+    auction.settledAt = currentTick;
+    auction.activity.push({
+      type: 'ended',
+      message: 'Auction ended without a winner',
+      tick: currentTick,
+    });
     await auction.save();
 
     await recoverAuctionProperty(auction, property, 'no winner');
+
+    // No winner was determined (no bids, reserve not met, or no valid
+    // bidder), so the highest bidder(s) must be told the outcome — their
+    // reservations were released below. Without this, a player whose bid was
+    // below the reserve sees the auction "end" with no explanation.
+    const uniqueBidders = new Set(
+      (auction.bids || []).map((b) => b.bidderId?.toString()).filter((id) => id && mongoose.isValidObjectId(id)),
+    );
+    for (const bidderId of uniqueBidders) {
+      await enqueueNotification({
+        userId: new mongoose.Types.ObjectId(bidderId),
+        type: 'system',
+        title: 'Auction Ended - No Winner',
+        message: `The auction for ${property.name} ended without a winner. Your reserved funds have been released.`,
+        eventKey: `auction:${auction._id}:no_winner:${bidderId}`,
+        route: `/auctions/${auction._id}`,
+        entityType: 'auction',
+        entityId: auction._id,
+        relatedId: auction._id,
+        global: false,
+      });
+    }
 
     if (auction.sellerId && auction.sellerType === 'player') {
       await enqueueNotification({
@@ -542,6 +652,11 @@ async function settleAuction(auction) {
         global: false,
       });
     }
+
+    // Surface the outcome to open clients immediately (same event the winner
+    // path emits, with a null winner): the UI can then show "ended - no
+    // winner" instead of an endless "finalizing" state.
+    emitAuctionEnded(auction._id.toString(), { winnerId: null, winningBid: 0 });
   }
 
   // Release any reservations still held on this auction (losers, cancelled or

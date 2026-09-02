@@ -79,6 +79,15 @@ const auctionSchema = new mongoose.Schema(
     endTick: { type: Number, required: true },
     originalEndTick: { type: Number, required: true },
     endingStartedAt: { type: Number, default: null },
+    // Tick at which settleAuction() finished writing the final state (winner
+    // decided or no-winner determined, property transferred/recycled, funds
+    // settled). The state machine only flips 'ending' -> 'ended' for auctions
+    // with a settlement record — an auction claimed but never settled (worker
+    // crash between the claim and settlement completion) must NOT be silently
+    // finalized as 'ended' without a winner; it falls to the stuck-ending
+    // recovery path instead. `null` for legacy auctions created before this
+    // field existed and for claimed-but-unsettled auctions.
+    settledAt: { type: Number, default: null },
     antiSnipingExtension: { type: Number, default: 1 },
     bidIncrement: { type: Number, required: true },
     totalBids: { type: Number, default: 0 },

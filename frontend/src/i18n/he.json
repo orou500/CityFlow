@@ -2774,6 +2774,8 @@
     },
     "finalizing": "מסיים מכרז...",
     "timeUnknown": "הזמן אינו זמין",
+    "endedNoWinner": "המכרז הסתיים ללא זוכה. הכספים השמורים שוחררו.",
+    "cancelledNotice": "המכרז בוטל.",
     "propertyTypes": {
       "apartment": "דירה",
       "house": "בית",
