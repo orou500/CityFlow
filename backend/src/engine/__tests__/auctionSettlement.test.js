@@ -219,10 +219,13 @@ describe('Auction settlement integrity', () => {
     await processAuctions();
     expect((await Auction.findById(auction._id)).status).toBe('active');
 
+    const activeAuction = await Auction.findById(auction._id);
+    const bidAmount = activeAuction.startingBid + activeAuction.bidIncrement;
+
     const bidRes = await request(app)
       .post(`/auctions/${auction._id}/bid`)
       .set(authHeader(bidder.token))
-      .send({ amount: 5_000_000 });
+      .send({ amount: bidAmount });
     expect(bidRes.status).toBe(200);
 
     // endTick was extended by the anti-sniping extension (bid within 2 ticks) to 3.
@@ -234,7 +237,7 @@ describe('Auction settlement integrity', () => {
     const settled = await Auction.findById(auction._id);
     expect(settled.status).toBe('ending');
     expect(settled.winnerId?.toString()).toBe(bidder.user._id.toString());
-    expect(settled.winningBid).toBe(5_000_000);
+    expect(settled.winningBid).toBe(bidAmount);
     expect(settled.propertyId.toString()).toBe(propId.toString());
 
     // THE acceptance criterion applies the moment the winner is decided: the
@@ -248,7 +251,7 @@ describe('Auction settlement integrity', () => {
     const settledBidder = await User.findById(bidder.user._id);
     expect(settledBidder.ownedProperties.map(String)).toContain(propId.toString());
     // Charged exactly once, for exactly the winning bid.
-    expect(settledBidder.balance).toBe(50_000_000 - 5_000_000);
+    expect(settledBidder.balance).toBe(50_000_000 - bidAmount);
 
     // Two ticks later the auction record is finalized as 'ended' and the same
     // real property is still owned by the winner (ownerless state impossible).
