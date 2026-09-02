@@ -13,6 +13,13 @@ const mapMock = vi.hoisted(() => ({
   invalidateSize: vi.fn(),
   whenReady: vi.fn((cb) => cb()),
   getContainer: () => (typeof document !== 'undefined' ? document.createElement('div') : {}),
+  getSize: () => ({ x: 1092, y: 519 }),
+  getZoom: () => 2,
+  getMinZoom: () => 2,
+  setMinZoom: vi.fn(),
+  setView: vi.fn(),
+  on: vi.fn(),
+  off: vi.fn(),
 }));
 
 vi.mock('react-router-dom', async (importOriginal) => {
@@ -26,7 +33,7 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('react-leaflet', () => {
   const React = require('react');
-  const MapContainer = ({ children, className, center, zoom, minZoom }) =>
+  const MapContainer = ({ children, className, center, zoom, minZoom, maxBounds, maxBoundsViscosity, zoomSnap }) =>
     React.createElement(
       'div',
       {
@@ -35,6 +42,9 @@ vi.mock('react-leaflet', () => {
         'data-center': JSON.stringify(center),
         'data-zoom': String(zoom),
         'data-minzoom': String(minZoom),
+        'data-maxbounds': JSON.stringify(maxBounds),
+        'data-maxboundsviscosity': String(maxBoundsViscosity),
+        'data-zoomsnap': String(zoomSnap),
       },
       children,
     );
@@ -57,7 +67,7 @@ vi.mock('react-leaflet', () => {
 vi.mock('leaflet', () => ({
   default: {
     divIcon: (options) => ({ options }),
-    latLngBounds: () => ({ pad: () => {} }),
+    latLngBounds: () => ({ pad: () => {}, getCenter: () => ({ lat: 0, lng: 0 }) }),
   },
 }));
 
@@ -115,13 +125,36 @@ describe('WorldMap', () => {
     expect(markers).toHaveLength(5);
   });
 
-  it('keeps the map container full-size and enforces a zoom floor so the world view is never lost', () => {
+  it('keeps the map container full-size, allows zooming out to fit narrow screens, and locks the world edges', () => {
     renderMap();
     const container = screen.getByTestId('map-container');
     expect(container.className).toContain('w-full');
     expect(container.className).toContain('h-full');
-    expect(container.dataset.minzoom).toBe('2');
+    // Starts at minZoom 0 so no fit is ever blocked; FitBounds raises the run-time
+    // floor to the clean-world zoom for the viewport. "Zooming out of existence"
+    // is prevented by maxBounds instead of a hard floor.
+    expect(container.dataset.minzoom).toBe('0');
     expect(container.dataset.zoom).toBe('2');
+    expect(container.dataset.zoomsnap).toBe('0.25');
+    expect(container.dataset.maxbounds).toBe(
+      JSON.stringify([
+        [-85, -180],
+        [85, 180],
+      ]),
+    );
+    expect(container.dataset.maxboundsviscosity).toBe('0.8');
+  });
+
+  it('renders compact country badges (no per-country meta line)', () => {
+    renderMap();
+    const markers = screen.getAllByTestId('marker');
+    const html = markers.map((m) => m.dataset.iconHtml).join('');
+    expect(html).not.toContain('country-meta');
+    expect(html).toContain('country-badge');
+    expect(html).toContain('country-dot');
+    for (const m of markers) {
+      expect(JSON.parse(m.dataset.position)).toHaveLength(2);
+    }
   });
 
   it('lists every city of a country in its popup and navigates on city click', () => {

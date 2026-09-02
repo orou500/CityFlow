@@ -29,18 +29,16 @@ function getEventImpactLabel(event) {
 
 function createCountryIcon(country, countryName) {
   const color = getColor(country.avgDemand);
-  const { cities } = country;
   return L.divIcon({
     className: '',
     html: `
       <div class="country-pin">
         <div class="country-dot" style="background:${color};box-shadow:0 0 0 3px ${color}33,0 0 12px ${color}44"></div>
         <div class="country-badge">${countryName}</div>
-        <div class="country-meta">${cities.length} city${cities.length > 1 ? 's' : ''}</div>
       </div>
     `,
-    iconSize: [120, 52],
-    iconAnchor: [60, 52],
+    iconSize: [70, 36],
+    iconAnchor: [35, 36],
   });
 }
 
@@ -52,6 +50,14 @@ function getEventIcon(event) {
     iconSize: [14, 14],
     iconAnchor: [7, 7],
   });
+}
+
+// Smallest zoom (0.25 steps) whose 256*2^z px world width fills the container —
+// the whole planet then fits without repeating side-by-side. This is the floor:
+// below it the world is SMALLER than the viewport and continents duplicate.
+function minZoomForWidth(px) {
+  const z = Math.log2(Math.max(px, 1) / 256);
+  return Math.max(0.25, Math.ceil(z * 4) / 4);
 }
 
 function FitBounds({ cities }) {
@@ -73,10 +79,26 @@ function FitBounds({ cities }) {
     if (!key || fittedFor.current === key) return;
     fittedFor.current = key;
 
+    const applyFloor = (x) => {
+      const floor = minZoomForWidth(x);
+      if (map.getMinZoom() !== floor) map.setMinZoom(floor);
+    };
+
     const fit = () => {
       const bounds = L.latLngBounds(cities.map((c) => [c.coordinates.lat, c.coordinates.lng]));
+      applyFloor(map.getSize().x);
       map.fitBounds(bounds, { padding: [50, 50] });
+      const floor = minZoomForWidth(map.getSize().x);
+      if (map.getZoom() < floor) {
+        map.setView(bounds.getCenter(), floor);
+      }
     };
+
+    // When the viewport changes (rotation/resize), the clean-world floor must
+    // follow the new width — but never refit the camera. Only the zoom-out
+    // limit changes.
+    const onResize = () => applyFloor(map.getSize().x);
+    map.on('resize', onResize);
 
     // Wait until the map is fully initialized before fitting; on the very first
     // render the container size may still be measured and FitBounds would fit a
@@ -86,6 +108,8 @@ function FitBounds({ cities }) {
     } else {
       fit();
     }
+
+    return () => map.off('resize', onResize);
   }, [cities, map]);
 
   return null;
@@ -237,7 +261,7 @@ function EventPopup({ event, countryName }) {
   );
 }
 
-export default function WorldMap({ cities, activeEvents = [] }) {
+export default function WorldMap({ cities, activeEvents = [], onMapCreated }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
@@ -320,7 +344,22 @@ export default function WorldMap({ cities, activeEvents = [] }) {
   }, [activeEvents, countries]);
 
   return (
-    <MapContainer center={[20, 0]} zoom={2} minZoom={2} className="w-full h-full rounded-lg" scrollWheelZoom={true}>
+    <MapContainer
+      center={[20, 20]}
+      zoom={2}
+      // The container starts at minZoom 0; FitBounds raises it to the
+      // clean-world floor for the actual viewport once the dataset arrives.
+      minZoom={0}
+      maxBounds={[
+        [-85, -180],
+        [85, 180],
+      ]}
+      maxBoundsViscosity={0.8}
+      zoomSnap={0.25}
+      className="w-full h-full rounded-lg"
+      scrollWheelZoom={true}
+      whenReady={(event) => onMapCreated?.(event?.target)}
+    >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

@@ -83,17 +83,20 @@ body {
   direction: ltr;
 }
 
-/* App shell viewport height. Prefers the dynamic viewport unit so the layout
-   (and the map) track mobile URL-bar show/hide; 100vh is the fallback for
-   browsers without dvh support. MapResize re-measures the map on viewport
-   changes, so the dynamic unit never leaves stale tiles. */
+/* App shell is a document-flow container that is at least one viewport tall so
+   short pages can pin the footer to the bottom WITHOUT sticky/fixed positioning.
+   It uses min-height (not a fixed height) so long pages grow the document and
+   the footer scrolls into view after the content. Prefers the dynamic viewport
+   unit so the layout (and the map) track mobile URL-bar show/hide; 100vh is the
+   fallback for browsers without dvh support. MapResize re-measures the map on
+   viewport changes, so the dynamic unit never leaves stale tiles. */
 .app-shell {
-  height: 100vh;
+  min-height: 100vh;
 }
 
-@supports (height: 100dvh) {
+@supports (min-height: 100dvh) {
   .app-shell {
-    height: 100dvh;
+    min-height: 100dvh;
   }
 }
 
@@ -191,26 +194,15 @@ body[dir='rtl'] {
 }
 
 .country-badge {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   color: #fff;
   background: rgba(0, 0, 0, 0.65);
-  padding: 2px 8px;
+  padding: 2px 6px;
   border-radius: 5px;
   white-space: nowrap;
   backdrop-filter: blur(4px);
   letter-spacing: 0.01em;
-}
-
-.country-meta {
-  font-size: 9px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.8);
-  background: rgba(0, 0, 0, 0.4);
-  padding: 0 6px;
-  border-radius: 3px;
-  white-space: nowrap;
-  backdrop-filter: blur(4px);
 }
 
 .leaflet-popup-content-wrapper,

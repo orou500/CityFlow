@@ -10,25 +10,25 @@ export default function MapLegend() {
   ];
 
   return (
-    <div className="absolute bottom-6 right-6 z-10 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-lg p-4 min-w-[170px] shadow-xl">
-      <h4 className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-3">
+    <div className="map-legend-panel absolute bottom-6 right-6 z-10 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-lg p-4 min-w-[170px] shadow-xl [@media(max-height:480px)]:p-2 [@media(max-height:480px)]:min-w-[150px]">
+      <h4 className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-3 [@media(max-height:480px)]:mb-1.5">
         {t('legend.title')}
       </h4>
-      <div className="space-y-2">
+      <div className="space-y-2 [@media(max-height:480px)]:space-y-0.5">
         {items.map((item) => (
           <div key={item.color} className="flex items-center gap-2">
             <div
               className="w-3 h-3 rounded-full shrink-0"
               style={{ backgroundColor: item.color, border: '2px solid rgba(255,255,255,0.6)' }}
             />
-            <div className="text-xs">
+            <div className="text-xs [@media(max-height:480px)]:text-[10px]">
               <p className="text-gray-700 dark:text-gray-200 font-medium">{item.label}</p>
               <p className="text-gray-400 dark:text-gray-500">{item.desc}</p>
             </div>
           </div>
         ))}
       </div>
-      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-1.5">
+      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-1.5 [@media(max-height:480px)]:mt-1 [@media(max-height:480px)]:pt-1 [@media(max-height:480px)]:space-y-0.5">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-gray-500 shrink-0" />
           <p className="text-xs text-gray-500 dark:text-gray-400">{t('legend.country')}</p>
@@ -40,7 +40,9 @@ export default function MapLegend() {
           />
           <p className="text-xs text-gray-500 dark:text-gray-400">{t('legend.activeEvent')}</p>
         </div>
-        <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">{t('legend.clickHint')}</p>
+        <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 [@media(max-height:480px)]:hidden">
+          {t('legend.clickHint')}
+        </p>
       </div>
     </div>
   );

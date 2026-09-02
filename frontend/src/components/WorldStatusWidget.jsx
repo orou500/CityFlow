@@ -72,7 +72,7 @@ export default function WorldStatusWidget() {
 
   if (!status) {
     return (
-      <div className="absolute top-4 right-4 z-10 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-lg p-4 min-w-[200px] shadow-xl">
+      <div className="world-status-panel absolute top-20 left-4 z-10 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-lg p-4 min-w-[200px] shadow-xl [@media(max-width:480px)]:p-2 [@media(max-width:480px)]:min-w-[190px] [@media(max-height:480px)]:p-2 [@media(max-height:480px)]:min-w-[190px]">
         <p className="text-xs text-gray-400 dark:text-gray-500">{t('worldStatus.loading')}</p>
       </div>
     );
@@ -86,13 +86,16 @@ export default function WorldStatusWidget() {
   ];
 
   return (
-    <div className="absolute top-4 right-4 z-10 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-lg p-4 min-w-[220px] shadow-xl">
+    <div className="world-status-panel absolute top-20 left-4 z-10 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-lg p-4 min-w-[220px] shadow-xl [@media(max-width:480px)]:p-2 [@media(max-width:480px)]:min-w-[190px] [@media(max-height:480px)]:p-2 [@media(max-height:480px)]:min-w-[190px]">
       <h4 className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-3">
         {t('worldStatus.title')}
       </h4>
       <div className="space-y-2">
         {rows.map((row) => (
-          <div key={row.label} className="flex flex-col">
+          <div
+            key={row.label}
+            className={`flex flex-col ${row.highlight ? '' : '[@media(max-width:480px)]:hidden [@media(max-height:480px)]:hidden'}`}
+          >
             <span className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wide">{row.label}</span>
             <span
               className={`text-sm font-semibold ${
