@@ -19,7 +19,9 @@ export default function Layout({ children }) {
   return (
     <div className="flex app-shell bg-surface text-primary">
       <Sidebar collapsed={collapsed} onToggleCollapse={() => setCollapsed(!collapsed)} />
-      <main className={`flex-1 flex flex-col transition-all duration-300 ${collapsed ? 'lg:ml-16' : 'lg:ml-60'}`}>
+      <main
+        className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${collapsed ? 'lg:ml-16' : 'lg:ml-60'}`}
+      >
         {showBanner && <MaintenanceBanner message={maintenance.message} />}
         <div className="flex-1 flex flex-col min-h-0">{children}</div>
         <Footer />

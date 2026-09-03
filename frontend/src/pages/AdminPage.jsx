@@ -1,10 +1,12 @@
 ﻿import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import i18n from '../i18n';
 import { useGameStore } from '../store/useGameStore';
 import { formatMoney, formatCount } from '../utils/format';
 import { getApiBaseUrl } from '../utils/capacitor';
 import PropertyImage from '../components/PropertyImage';
 import RewardedAdsAdminPanel from '../components/RewardedAdsAdminPanel';
+import AdminModal from '../components/AdminModal';
 
 function StatCard({ label, value }) {
   return (
@@ -127,7 +129,7 @@ function UserDetailModal({ userId, onClose }) {
       onClick={onClose}
     >
       <div
-        className="bg-card border border-border rounded-t-2xl sm:rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto"
+        className="bg-card border border-border rounded-t-2xl sm:rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-x-auto overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
@@ -287,6 +289,7 @@ function UserDetailModal({ userId, onClose }) {
 
 export default function AdminPage() {
   const { t } = useTranslation();
+  const isRtl = i18n.language?.toLowerCase().startsWith('he');
   const {
     adminOverview,
     adminUsers,
@@ -865,7 +868,7 @@ export default function AdminPage() {
   const overview = adminOverview;
 
   return (
-    <div className="h-full overflow-y-auto bg-white dark:bg-gray-900 p-4 md:p-6">
+    <div dir={isRtl ? 'rtl' : 'ltr'} className="h-full min-w-0 overflow-y-auto bg-white dark:bg-gray-900 p-4 md:p-6">
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{t('admin.title')}</h1>
 
       <div className="flex gap-1 mb-6 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
@@ -1233,7 +1236,7 @@ export default function AdminPage() {
                 <h3 className="text-sm font-semibold text-red-600 dark:text-red-400 mb-3">
                   {t('admin.deletedUsers')} ({adminDeletedUsers.length})
                 </h3>
-                <div className="bg-red-50 dark:bg-red-900/10 rounded-lg border border-red-200 dark:border-red-800 overflow-hidden">
+                <div className="bg-red-50 dark:bg-red-900/10 rounded-lg border border-red-200 dark:border-red-800 overflow-x-auto">
                   <table className="w-full text-sm text-left">
                     <thead>
                       <tr className="border-b border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 uppercase text-xs">
@@ -1442,56 +1445,53 @@ export default function AdminPage() {
           })()}
 
           {editPropId && (
-            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 w-full max-w-md">
-                <h3 className="text-gray-900 dark:text-white font-semibold mb-4">{t('admin.editProperty')}</h3>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-xs text-gray-500 dark:text-gray-400 block">{t('admin.price')}</label>
-                    <input
-                      type="number"
-                      value={editPropData.currentPrice || ''}
-                      onChange={(e) => setEditPropData((p) => ({ ...p, currentPrice: parseFloat(e.target.value) }))}
-                      className="w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-gray-900 dark:text-white text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 dark:text-gray-400 block">{t('admin.rent')}</label>
-                    <input
-                      type="number"
-                      value={editPropData.rent || ''}
-                      onChange={(e) => setEditPropData((p) => ({ ...p, rent: parseFloat(e.target.value) }))}
-                      className="w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-gray-900 dark:text-white text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 dark:text-gray-400 block">{t('city.forSale')}</label>
-                    <select
-                      value={editPropData.forSale ? 'true' : 'false'}
-                      onChange={(e) => setEditPropData((p) => ({ ...p, forSale: e.target.value === 'true' }))}
-                      className="w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-gray-900 dark:text-white text-sm"
-                    >
-                      <option value="true">{t('admin.yes')}</option>
-                      <option value="false">{t('admin.no')}</option>
-                    </select>
-                  </div>
+            <AdminModal title={t('admin.editProperty')} onClose={() => setEditPropId(null)} panelClassName="p-4 sm:p-6">
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-gray-500 dark:text-gray-400 block">{t('admin.price')}</label>
+                  <input
+                    type="number"
+                    value={editPropData.currentPrice || ''}
+                    onChange={(e) => setEditPropData((p) => ({ ...p, currentPrice: parseFloat(e.target.value) }))}
+                    className="w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-gray-900 dark:text-white text-sm"
+                  />
                 </div>
-                <div className="flex gap-2 mt-4">
-                  <button
-                    onClick={() => handleUpdateProperty(editPropId)}
-                    className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-gray-900 dark:text-white text-sm rounded"
+                <div>
+                  <label className="text-xs text-gray-500 dark:text-gray-400 block">{t('admin.rent')}</label>
+                  <input
+                    type="number"
+                    value={editPropData.rent || ''}
+                    onChange={(e) => setEditPropData((p) => ({ ...p, rent: parseFloat(e.target.value) }))}
+                    className="w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-gray-900 dark:text-white text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 dark:text-gray-400 block">{t('city.forSale')}</label>
+                  <select
+                    value={editPropData.forSale ? 'true' : 'false'}
+                    onChange={(e) => setEditPropData((p) => ({ ...p, forSale: e.target.value === 'true' }))}
+                    className="w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-gray-900 dark:text-white text-sm"
                   >
-                    {t('common.save')}
-                  </button>
-                  <button
-                    onClick={() => setEditPropId(null)}
-                    className="px-4 py-1.5 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-900 dark:text-white text-sm rounded"
-                  >
-                    {t('common.cancel')}
-                  </button>
+                    <option value="true">{t('admin.yes')}</option>
+                    <option value="false">{t('admin.no')}</option>
+                  </select>
                 </div>
               </div>
-            </div>
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={() => handleUpdateProperty(editPropId)}
+                  className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-gray-900 dark:text-white text-sm rounded"
+                >
+                  {t('common.save')}
+                </button>
+                <button
+                  onClick={() => setEditPropId(null)}
+                  className="px-4 py-1.5 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-900 dark:text-white text-sm rounded"
+                >
+                  {t('common.cancel')}
+                </button>
+              </div>
+            </AdminModal>
           )}
         </div>
       )}
@@ -1567,56 +1567,53 @@ export default function AdminPage() {
       )}
 
       {editCityId && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 w-full max-w-md">
-            <h3 className="text-gray-900 dark:text-white font-semibold mb-4">{t('admin.editCity')}</h3>
-            <div className="space-y-3">
-              {['demandIndex', 'supplyIndex', 'population', 'growthRate', 'avgPrice', 'avgRent'].map((field) => (
-                <div key={field}>
-                  <label className="text-xs text-gray-500 dark:text-gray-400 block capitalize">
-                    {field.replace(/([A-Z])/g, ' $1')}
-                  </label>
-                  <input
-                    type="number"
-                    value={editCityData[field] ?? ''}
-                    onChange={(e) => setEditCityData((d) => ({ ...d, [field]: parseFloat(e.target.value) }))}
-                    className="w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-gray-900 dark:text-white text-sm"
-                  />
-                </div>
-              ))}
-              <div>
+        <AdminModal title={t('admin.editCity')} onClose={() => setEditCityId(null)} panelClassName="p-4 sm:p-6">
+          <div className="space-y-3">
+            {['demandIndex', 'supplyIndex', 'population', 'growthRate', 'avgPrice', 'avgRent'].map((field) => (
+              <div key={field}>
                 <label className="text-xs text-gray-500 dark:text-gray-400 block capitalize">
-                  {t('admin.economicCondition')}
+                  {field.replace(/([A-Z])/g, ' $1')}
                 </label>
-                <select
-                  value={editCityData.economicCondition || 'stable'}
-                  onChange={(e) => setEditCityData((d) => ({ ...d, economicCondition: e.target.value }))}
+                <input
+                  type="number"
+                  value={editCityData[field] ?? ''}
+                  onChange={(e) => setEditCityData((d) => ({ ...d, [field]: parseFloat(e.target.value) }))}
                   className="w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-gray-900 dark:text-white text-sm"
-                >
-                  <option value="boom">{t('demographics.economicConditions.boom')}</option>
-                  <option value="growth">{t('demographics.economicConditions.growth')}</option>
-                  <option value="stable">{t('demographics.economicConditions.stable')}</option>
-                  <option value="slowdown">{t('demographics.economicConditions.slowdown')}</option>
-                  <option value="recession">{t('demographics.economicConditions.recession')}</option>
-                </select>
+                />
               </div>
-            </div>
-            <div className="flex gap-2 mt-4">
-              <button
-                onClick={() => handleUpdateCity(editCityId)}
-                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-gray-900 dark:text-white text-sm rounded"
+            ))}
+            <div>
+              <label className="text-xs text-gray-500 dark:text-gray-400 block capitalize">
+                {t('admin.economicCondition')}
+              </label>
+              <select
+                value={editCityData.economicCondition || 'stable'}
+                onChange={(e) => setEditCityData((d) => ({ ...d, economicCondition: e.target.value }))}
+                className="w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-gray-900 dark:text-white text-sm"
               >
-                Save
-              </button>
-              <button
-                onClick={() => setEditCityId(null)}
-                className="px-4 py-1.5 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-900 dark:text-white text-sm rounded"
-              >
-                Cancel
-              </button>
+                <option value="boom">{t('demographics.economicConditions.boom')}</option>
+                <option value="growth">{t('demographics.economicConditions.growth')}</option>
+                <option value="stable">{t('demographics.economicConditions.stable')}</option>
+                <option value="slowdown">{t('demographics.economicConditions.slowdown')}</option>
+                <option value="recession">{t('demographics.economicConditions.recession')}</option>
+              </select>
             </div>
           </div>
-        </div>
+          <div className="flex gap-2 mt-4">
+            <button
+              onClick={() => handleUpdateCity(editCityId)}
+              className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-gray-900 dark:text-white text-sm rounded"
+            >
+              Save
+            </button>
+            <button
+              onClick={() => setEditCityId(null)}
+              className="px-4 py-1.5 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-900 dark:text-white text-sm rounded"
+            >
+              Cancel
+            </button>
+          </div>
+        </AdminModal>
       )}
 
       {tab === 'demographics' && (
@@ -1877,13 +1874,13 @@ export default function AdminPage() {
       {tab === 'companies' && (
         <div className="space-y-6">
           <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
               <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('admin.companies')}</h3>
               <input
                 value={companySearch}
                 onChange={(e) => setCompanySearch(e.target.value)}
                 placeholder={t('admin.searchCompanies')}
-                className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="w-full sm:w-auto sm:min-w-[220px] px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
             </div>
             {(() => {
@@ -2066,9 +2063,9 @@ export default function AdminPage() {
                     return (
                       <div
                         key={uid}
-                        className="flex items-center justify-between bg-gray-50 dark:bg-gray-700/50 rounded p-2"
+                        className="flex flex-wrap items-center justify-between gap-2 bg-gray-50 dark:bg-gray-700/50 rounded p-2"
                       >
-                        <div className="text-sm text-gray-900 dark:text-white">
+                        <div className="text-sm text-gray-900 dark:text-white min-w-0 break-words">
                           {typeof memberUser === 'object' ? memberUser.username : 'Unknown'} Â· {m.role}
                         </div>
                         <div className="flex gap-2">
@@ -2368,10 +2365,10 @@ export default function AdminPage() {
                 {backups.map((b) => (
                   <div
                     key={b._id}
-                    className="flex items-center justify-between p-3 bg-white dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600"
+                    className="flex flex-wrap items-center justify-between gap-3 p-3 bg-white dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600"
                   >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span
                           className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                             b.status === 'completed'
@@ -2385,10 +2382,10 @@ export default function AdminPage() {
                         </span>
                         <span className="text-xs text-gray-500 dark:text-gray-400">{b.type}</span>
                       </div>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white mt-1">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white mt-1 break-words">
                         {new Date(b.createdAt).toLocaleString()}
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 break-words">
                         {(b.size / 1024 / 1024).toFixed(1)} MB
                         {b.documents ? ` · ${b.documents.toLocaleString()} docs` : ''}
                         {b.collections ? ` · ${b.collections} collections` : ''}
@@ -2397,7 +2394,7 @@ export default function AdminPage() {
                         {b.createdBy?.username ? ` · ${b.createdBy.username}` : ''}
                       </p>
                     </div>
-                    <div className="flex gap-2 ml-4">
+                    <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => handleViewBackupLogs(b._id)}
                         className="px-3 py-1.5 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded transition-colors"
