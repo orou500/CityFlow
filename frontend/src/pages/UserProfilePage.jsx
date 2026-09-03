@@ -871,6 +871,10 @@ export default function UserProfilePage() {
                   development: { label: t('profile.development'), color: 'text-blue-600 dark:text-blue-400' },
                   season_reward: { label: t('profile.seasonReward'), color: 'text-green-600 dark:text-green-400' },
                   sizops_welcome: { label: t('profile.sizopsWelcome'), color: 'text-green-600 dark:text-green-400' },
+                  rewarded_ad: {
+                    label: t('transaction.type.rewarded_ad'),
+                    color: 'text-green-600 dark:text-green-400',
+                  },
                 };
                 const info = typeMap[tx.type] || {
                   label: t(`transaction.type.${tx.type}`) || tx.type,

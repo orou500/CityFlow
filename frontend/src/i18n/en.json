@@ -1312,7 +1312,8 @@
       "period_bonus": "PERIOD BONUS",
       "login": "LOGIN",
       "season_reward": "SEASON REWARD",
-      "sizops_welcome": "SIZOPS WELCOME BONUS"
+      "sizops_welcome": "SIZOPS WELCOME BONUS",
+      "rewarded_ad": "REWARDED AD"
     }
   },
   "landing": {
