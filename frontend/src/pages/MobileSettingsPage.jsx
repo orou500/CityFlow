@@ -125,19 +125,19 @@ export default function MobileSettingsPage() {
           </div>
         )}
 
-        <div className="flex items-center justify-between p-4">
-          <div>
+        <div className="flex flex-wrap items-center justify-between gap-y-2 p-4">
+          <div className="min-w-0">
             <div className="text-sm font-medium text-gray-900 dark:text-white">{t('mobile.darkMode', 'Dark Mode')}</div>
             <div className="text-xs text-gray-500 dark:text-gray-400">
               {t('mobile.darkModeDesc', 'Switch between light and dark themes')}
             </div>
           </div>
-          <div className="flex gap-1">
+          <div className="flex flex-wrap gap-1">
             {['light', 'dark', 'system'].map((mode) => (
               <button
                 key={mode}
                 onClick={() => setPreference(mode)}
-                className={`px-3 py-1 text-xs rounded font-medium transition-colors ${
+                className={`px-3 py-1 text-xs rounded font-medium transition-colors whitespace-nowrap ${
                   preference === mode
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'

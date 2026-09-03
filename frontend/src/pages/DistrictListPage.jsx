@@ -77,12 +77,12 @@ export default function DistrictListPage() {
             ))}
           </select>
 
-          <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-x-auto">
             {['price', 'demand', 'growth'].map((s) => (
               <button
                 key={s}
                 onClick={() => setSortBy(s)}
-                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                className={`px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap ${
                   sortBy === s
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'

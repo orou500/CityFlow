@@ -208,7 +208,7 @@ export default function AudioPlayer() {
       </div>
 
       <div className="flex items-center gap-1.5 px-1">
-        <span className="text-[10px] text-muted w-7 text-right tabular-nums shrink-0">{formatTime(currentTime)}</span>
+        <span className="text-[10px] text-muted w-7 text-end tabular-nums shrink-0">{formatTime(currentTime)}</span>
         <div
           ref={progressRef}
           className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden cursor-pointer group relative"
@@ -216,7 +216,7 @@ export default function AudioPlayer() {
         >
           <div className="h-full bg-blue-500 rounded-full transition-none" style={{ width: `${progress * 100}%` }} />
         </div>
-        <span className="text-[10px] text-muted w-7 text-left tabular-nums shrink-0">{formatTime(duration)}</span>
+        <span className="text-[10px] text-muted w-7 text-start tabular-nums shrink-0">{formatTime(duration)}</span>
       </div>
 
       <div className="flex items-center justify-between px-1">
@@ -290,7 +290,7 @@ export default function AudioPlayer() {
                   onChange={(e) => setStoreVolume(parseFloat(e.target.value))}
                   className="w-20 h-1 accent-blue-500 cursor-pointer"
                 />
-                <span className="text-[10px] text-muted w-8 text-right tabular-nums">{Math.round(volume * 100)}%</span>
+                <span className="text-[10px] text-muted w-8 text-end tabular-nums">{Math.round(volume * 100)}%</span>
               </div>
             </div>
           )}

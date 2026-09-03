@@ -354,11 +354,11 @@ export default function IndexPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
-                  <th className="px-4 py-3 text-left">{t('indexes.company')}</th>
-                  <th className="hidden sm:table-cell px-4 py-3 text-left">{t('indexes.industry')}</th>
-                  <th className="px-4 py-3 text-right">{t('indexes.sharePrice')}</th>
-                  <th className="px-4 py-3 text-right">{t('indexes.change')}</th>
-                  <th className="hidden sm:table-cell px-4 py-3 text-right">{t('indexes.marketCap')}</th>
+                  <th className="px-4 py-3 text-start">{t('indexes.company')}</th>
+                  <th className="hidden sm:table-cell px-4 py-3 text-start">{t('indexes.industry')}</th>
+                  <th className="px-4 py-3 text-end">{t('indexes.sharePrice')}</th>
+                  <th className="px-4 py-3 text-end">{t('indexes.change')}</th>
+                  <th className="hidden sm:table-cell px-4 py-3 text-end">{t('indexes.marketCap')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -379,15 +379,15 @@ export default function IndexPage() {
                     <td className="hidden sm:table-cell px-4 py-3 text-gray-500 dark:text-gray-400 capitalize">
                       {c.industry}
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-900 dark:text-white">${c.sharePrice?.toFixed(2)}</td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-end text-gray-900 dark:text-white">${c.sharePrice?.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-end">
                       <span className={c.dayChangePercent >= 0 ? 'text-green-500' : 'text-red-500'}>
                         {c.dayChangePercent >= 0 ? '+' : ''}
                         {c.dayChangePercent}%
                       </span>
                     </td>
                     <td
-                      className="hidden sm:table-cell px-4 py-3 text-right text-gray-500 dark:text-gray-400"
+                      className="hidden sm:table-cell px-4 py-3 text-end text-gray-500 dark:text-gray-400"
                       title={formatMoneyExact(c.marketCap)}
                     >
                       {formatMoney(c.marketCap)}

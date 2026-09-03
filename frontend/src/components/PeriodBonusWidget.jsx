@@ -135,7 +135,7 @@ export default function PeriodBonusWidget({ onClaimed }) {
             {claiming ? t('periodBonus.claiming') : t('periodBonus.claim')}
           </button>
         ) : (
-          <div className="text-right shrink-0">
+          <div className="text-end shrink-0">
             <p className="text-xs text-gray-400 dark:text-gray-500">{t('periodBonus.nextIn')}</p>
             <p className="text-sm font-mono font-semibold text-gray-600 dark:text-gray-300 tabular-nums">{countdown}</p>
           </div>

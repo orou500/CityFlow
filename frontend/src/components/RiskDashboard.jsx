@@ -53,7 +53,7 @@ export default function RiskDashboard({ riskProfile }) {
           <div className="text-gray-400 text-sm mb-1">{t('propertyRisk.riskScore')}</div>
           <div className="text-2xl font-bold" style={{ color: riskColor }}>
             {riskScore}
-            <span className="text-sm ml-2 font-normal opacity-80">/ 100</span>
+            <span className="text-sm ms-2 font-normal opacity-80">/ 100</span>
           </div>
         </div>
         <div className="bg-gray-900 rounded p-3">

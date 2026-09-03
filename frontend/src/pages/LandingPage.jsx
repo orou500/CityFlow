@@ -239,7 +239,7 @@ export default function LandingPage() {
         <DotGrid resolved={resolved} />
         <HeroOverlay resolved={resolved} />
         <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
-          <img src="/images/logo-big.png" alt="CityFlow" className="h-20 md:h-30 lg:h-48 mx-auto mb-6" />
+          <img src="/images/logo-big.png" alt="CityFlow" className="h-20 md:h-28 lg:h-48 mx-auto mb-6" />
           <h1 className="text-4xl md:text-6xl font-bold text-primary mb-6 leading-tight">{t('landing.hero.title')}</h1>
           <p className="text-lg md:text-xl text-secondary mb-3 max-w-2xl mx-auto leading-relaxed">
             {t('landing.hero.subtitle')}
@@ -313,7 +313,7 @@ export default function LandingPage() {
       <section className="py-20 px-4 bg-surface transition-colors duration-300">
         <div className="max-w-5xl mx-auto">
           <SectionHeading title={t('landing.stats.title')} description={null} />
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-8">
             {[
               { key: 'players', target: stats?.playersCount || 0, suffix: '' },
               { key: 'properties', target: stats?.propertiesCount || 0, suffix: '' },
@@ -321,8 +321,8 @@ export default function LandingPage() {
               { key: 'transactions', target: stats?.transactionsCount || 0, suffix: '' },
               { key: 'worldAge', target: worldAge?.currentCycle || 0, suffix: '' },
             ].map((s) => (
-              <div key={s.key} className="text-center">
-                <div className="text-3xl md:text-4xl font-bold text-orange-500 dark:text-orange-400 mb-1">
+              <div key={s.key} className="text-center min-w-0">
+                <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-orange-500 dark:text-orange-400 mb-1">
                   <AnimatedCounter target={s.target} suffix={s.suffix} />
                 </div>
                 <div className="text-sm text-secondary">{t(`landing.stats.${s.key}`)}</div>
@@ -351,18 +351,20 @@ export default function LandingPage() {
                   to={`/profile/${player.username}`}
                   className={`flex items-center justify-between px-6 py-4 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors ${i < leaderboard.length - 1 ? 'border-b border-border' : ''}`}
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 min-w-0">
                     <span
-                      className={`text-lg font-bold w-8 ${i === 0 ? 'text-yellow-600 dark:text-yellow-400' : i === 1 ? 'text-gray-500 dark:text-gray-300' : i === 2 ? 'text-amber-600 dark:text-amber-500' : 'text-muted'}`}
+                      className={`text-lg font-bold w-8 shrink-0 ${i === 0 ? 'text-yellow-600 dark:text-yellow-400' : i === 1 ? 'text-gray-500 dark:text-gray-300' : i === 2 ? 'text-amber-600 dark:text-amber-500' : 'text-muted'}`}
                     >
                       {i + 1}
                     </span>
-                    <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-sm text-muted">
+                    <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-sm text-muted shrink-0">
                       {(player.displayName || player.username).charAt(0).toUpperCase()}
                     </div>
-                    <span className="text-primary font-medium">{player.displayName || player.username}</span>
+                    <span className="text-primary font-medium min-w-0 truncate">
+                      {player.displayName || player.username}
+                    </span>
                   </div>
-                  <span className="text-blue-600 dark:text-blue-400 font-semibold">
+                  <span className="text-blue-600 dark:text-blue-400 font-semibold shrink-0">
                     <CompactValue value={player.netWorth || 0} />
                   </span>
                 </Link>

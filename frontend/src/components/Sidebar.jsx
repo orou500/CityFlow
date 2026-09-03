@@ -160,7 +160,7 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
 
       <button
         onClick={() => setMobileOpen(true)}
-        className="lg:hidden fixed top-3 left-3 z-30 p-2 rounded-md bg-card border border-border text-secondary hover:text-primary transition-colors"
+        className="lg:hidden fixed top-3 start-3 z-30 p-2 rounded-md bg-card border border-border text-secondary hover:text-primary transition-colors"
         aria-label="Open menu"
       >
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -183,7 +183,7 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
             <img
               src="/images/logo-text.png"
               alt="CityFlow"
-              className={`h-25 object-contain transition-all duration-300 ${collapsed ? 'hidden' : ''}`}
+              className={`h-9 w-auto object-contain transition-all duration-300 ${collapsed ? 'hidden' : ''}`}
             />
           </Link>
         </div>
@@ -312,7 +312,7 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
                       <span className="text-base shrink-0">{item.icon}</span>
                       <span>{item.label}</span>
                       {item.badge > 0 && (
-                        <span className="ml-auto bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold animate-badge-glow">
+                        <span className="ms-auto bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold animate-badge-glow">
                           {item.badge > 9 ? '9+' : item.badge}
                         </span>
                       )}

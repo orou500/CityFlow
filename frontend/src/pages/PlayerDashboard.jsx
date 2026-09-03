@@ -270,7 +270,7 @@ export default function PlayerDashboard() {
 
       {(sentOffers.length > 0 || receivedOffers.length > 0) && (
         <div className="bg-white dark:bg-gray-900 rounded-lg p-6 mb-6">
-          <div className="flex items-center gap-4 mb-4">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4">
             <h2 className="text-xl font-bold">{t('offers.title')}</h2>
             <button
               onClick={() => setOffersTab('received')}
@@ -311,7 +311,7 @@ export default function PlayerDashboard() {
                   </span>
                 </div>
                 {o.status === 'pending' && (
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() => handleAccept(o._id)}
                       className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-gray-900 dark:text-white text-xs rounded"

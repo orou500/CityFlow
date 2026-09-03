@@ -140,13 +140,13 @@ export default function LoginPage() {
                 {isVerificationError && !resendSent && (
                   <div className="mt-3 pt-3 border-t border-red-800">
                     <p className="mb-2 text-xs text-red-400">{t('auth.enterEmailToResend')}</p>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <input
                         type="email"
                         value={resendEmail}
                         onChange={(e) => setResendEmail(e.target.value)}
                         placeholder={t('auth.email')}
-                        className="flex-1 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 py-1 text-sm text-primary"
+                        className="flex-1 min-w-[160px] bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 py-1 text-sm text-primary"
                       />
                       <button
                         type="button"

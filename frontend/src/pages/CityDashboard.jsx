@@ -42,7 +42,8 @@ const DISTRICT_TIER_STYLES = {
 
 export default function CityDashboard() {
   const { id } = useParams();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isRtl = i18n.language?.toLowerCase().startsWith('he');
   const navigate = useNavigate();
   const { user, fetchMe } = useAuthStore();
   const { selectedCity, cityProperties, cityEvents, cityDemographics, fetchCity, buyProperty, sellProperty, loading } =
@@ -256,12 +257,12 @@ export default function CityDashboard() {
             <table className="w-full text-xs">
               <thead>
                 <tr className="text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
-                  <th className="text-left py-1 pr-2">{t('demographics.month')}</th>
-                  <th className="text-right py-1 px-2">{t('demographics.population')}</th>
-                  <th className="text-right py-1 px-2">{t('demographics.netMigration')}</th>
-                  <th className="text-right py-1 px-2">{t('demographics.growthRate')}</th>
-                  <th className="text-right py-1 px-2">{t('demographics.avgRent')}</th>
-                  <th className="text-right py-1 pl-2">{t('demographics.economicCondition')}</th>
+                  <th className="text-start py-1 pe-2">{t('demographics.month')}</th>
+                  <th className="text-end py-1 px-2">{t('demographics.population')}</th>
+                  <th className="text-end py-1 px-2">{t('demographics.netMigration')}</th>
+                  <th className="text-end py-1 px-2">{t('demographics.growthRate')}</th>
+                  <th className="text-end py-1 px-2">{t('demographics.avgRent')}</th>
+                  <th className="text-end py-1 ps-2">{t('demographics.economicCondition')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -274,22 +275,22 @@ export default function CityDashboard() {
                       <td className="py-1 pr-2 text-gray-600 dark:text-gray-300">
                         {t('propertyManagement.tick', { number: entry.tick })}
                       </td>
-                      <td className="py-1 px-2 text-right">{formatCompact(entry.population)}</td>
+                      <td className="py-1 px-2 text-end">{formatCompact(entry.population)}</td>
                       <td
-                        className={`py-1 px-2 text-right ${entry.immigration - entry.emigration >= 0 ? 'text-blue-500' : 'text-red-500'}`}
+                        className={`py-1 px-2 text-end ${entry.immigration - entry.emigration >= 0 ? 'text-blue-500' : 'text-red-500'}`}
                       >
                         {entry.immigration - entry.emigration >= 0 ? '+' : ''}
                         {formatCompact(entry.immigration - entry.emigration)}
                       </td>
                       <td
-                        className={`py-1 px-2 text-right ${(entry.growthRate || 0) >= 0 ? 'text-blue-500' : 'text-red-500'}`}
+                        className={`py-1 px-2 text-end ${(entry.growthRate || 0) >= 0 ? 'text-blue-500' : 'text-red-500'}`}
                       >
                         {((entry.growthRate || 0) * 100).toFixed(2)}%
                       </td>
-                      <td className="py-1 px-2 text-right text-blue-600 dark:text-blue-400">
+                      <td className="py-1 px-2 text-end text-blue-600 dark:text-blue-400">
                         <CompactValue value={entry.avgRent || 0} />
                       </td>
-                      <td className="py-1 pl-2 text-right capitalize">
+                      <td className="py-1 pl-2 text-end capitalize">
                         {t(`demographics.economicConditions.${entry.economicCondition}`)}
                       </td>
                     </tr>
@@ -327,7 +328,7 @@ export default function CityDashboard() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">{t('nav.districts', 'Districts')}</h2>
             <Link to={`/districts?city=${id}`} className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-300">
-              {t('common.viewAll', 'View All')} →
+              {t('common.viewAll', 'View All')} {isRtl ? '←' : '→'}
             </Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -400,7 +401,7 @@ export default function CityDashboard() {
           className={`p-3 rounded mb-4 text-sm ${actionMsg.type === 'success' ? 'bg-blue-900 text-blue-300' : 'bg-red-900 text-red-300'}`}
         >
           {actionMsg.text}
-          <button onClick={() => setActionMsg(null)} className="ml-2">
+          <button onClick={() => setActionMsg(null)} className="ms-2">
             &times;
           </button>
         </div>

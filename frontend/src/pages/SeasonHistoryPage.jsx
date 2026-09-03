@@ -98,22 +98,22 @@ export default function SeasonHistoryPage() {
       ) : (
         <div className="space-y-4">
           {data.completedSeasons.map((season) => (
-            <div key={season._id} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+            <div key={season._id} className="border border-gray-200 dark:border-gray-700 rounded-lg">
               <div
-                className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors"
+                className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 p-4 bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors"
                 onClick={() => setSelectedSeason(selectedSeason === season._id ? null : season._id)}
               >
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 min-w-0">
                   <h3 className="text-base font-semibold text-gray-900 dark:text-white">
                     {t('seasons.seasonNumber', { number: season.number })}
                   </h3>
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                  <span className="text-sm text-gray-500 dark:text-gray-400 whitespace-normal">
                     {formatDate(season.startDate)} — {formatDate(season.endDate)}
                   </span>
                 </div>
-                <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500 dark:text-gray-400 min-w-0">
                   {season.archive?.winner && (
-                    <span className="text-yellow-600 dark:text-yellow-400 font-medium">
+                    <span className="text-yellow-600 dark:text-yellow-400 font-medium min-w-0 truncate">
                       🏆 {season.archive.winner.displayName || season.archive.winner.username}
                     </span>
                   )}
@@ -156,13 +156,13 @@ export default function SeasonHistoryPage() {
                         <table className="w-full text-sm">
                           <thead>
                             <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
-                              <th className="text-left px-3 py-2">{t('seasons.rank')}</th>
-                              <th className="text-left px-3 py-2">{t('seasons.username')}</th>
-                              <th className="text-left px-3 py-2">{t('seasons.netWorth')}</th>
-                              <th className="text-left px-3 py-2">{t('seasons.balance')}</th>
-                              <th className="text-left px-3 py-2">{t('seasons.portfolioValue')}</th>
-                              <th className="text-left px-3 py-2">{t('seasons.properties')}</th>
-                              <th className="text-left px-3 py-2">{t('seasons.reward')}</th>
+                              <th className="text-start px-3 py-2">{t('seasons.rank')}</th>
+                              <th className="text-start px-3 py-2">{t('seasons.username')}</th>
+                              <th className="text-start px-3 py-2">{t('seasons.netWorth')}</th>
+                              <th className="text-start px-3 py-2">{t('seasons.balance')}</th>
+                              <th className="text-start px-3 py-2">{t('seasons.portfolioValue')}</th>
+                              <th className="text-start px-3 py-2">{t('seasons.properties')}</th>
+                              <th className="text-start px-3 py-2">{t('seasons.reward')}</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -250,11 +250,11 @@ export default function SeasonHistoryPage() {
                             <table className="w-full text-sm">
                               <thead>
                                 <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
-                                  <th className="text-left px-3 py-2">{t('seasons.cityName')}</th>
-                                  <th className="text-left px-3 py-2">{t('seasons.avgPrice')}</th>
-                                  <th className="text-left px-3 py-2">{t('seasons.demand')}</th>
-                                  <th className="text-left px-3 py-2">{t('seasons.supply')}</th>
-                                  <th className="text-left px-3 py-2">{t('seasons.population')}</th>
+                                  <th className="text-start px-3 py-2">{t('seasons.cityName')}</th>
+                                  <th className="text-start px-3 py-2">{t('seasons.avgPrice')}</th>
+                                  <th className="text-start px-3 py-2">{t('seasons.demand')}</th>
+                                  <th className="text-start px-3 py-2">{t('seasons.supply')}</th>
+                                  <th className="text-start px-3 py-2">{t('seasons.population')}</th>
                                 </tr>
                               </thead>
                               <tbody>

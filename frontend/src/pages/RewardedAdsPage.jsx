@@ -186,7 +186,7 @@ export default function RewardedAdsPage() {
         >
           {message.text}
           {cooldownSeconds > 0 && message.type === 'error' && (
-            <span className="ml-2">({t('rewardedAds.cooldownCountdown', { seconds: cooldownSeconds })})</span>
+            <span className="ms-2">({t('rewardedAds.cooldownCountdown', { seconds: cooldownSeconds })})</span>
           )}
         </div>
       )}

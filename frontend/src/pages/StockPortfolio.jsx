@@ -143,12 +143,12 @@ export default function StockPortfolio() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
-                  <th className="px-4 py-3 text-left">{t('stocks.company')}</th>
-                  <th className="px-4 py-3 text-right">{t('stocks.shares')}</th>
-                  <th className="hidden sm:table-cell px-4 py-3 text-right">{t('stocks.avgBuyPrice')}</th>
-                  <th className="hidden sm:table-cell px-4 py-3 text-right">{t('stocks.currentPrice')}</th>
-                  <th className="px-4 py-3 text-right">{t('stocks.currentValue')}</th>
-                  <th className="px-4 py-3 text-right">{t('stocks.profitLoss')}</th>
+                  <th className="px-4 py-3 text-start">{t('stocks.company')}</th>
+                  <th className="px-4 py-3 text-end">{t('stocks.shares')}</th>
+                  <th className="hidden sm:table-cell px-4 py-3 text-end">{t('stocks.avgBuyPrice')}</th>
+                  <th className="hidden sm:table-cell px-4 py-3 text-end">{t('stocks.currentPrice')}</th>
+                  <th className="px-4 py-3 text-end">{t('stocks.currentValue')}</th>
+                  <th className="px-4 py-3 text-end">{t('stocks.profitLoss')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -166,22 +166,19 @@ export default function StockPortfolio() {
                       </Link>
                       <div className="text-xs text-gray-500 dark:text-gray-400">{h.company?.ticker}</div>
                     </td>
-                    <td
-                      className="px-4 py-3 text-right text-gray-900 dark:text-white"
-                      title={h.shares.toLocaleString()}
-                    >
+                    <td className="px-4 py-3 text-end text-gray-900 dark:text-white" title={h.shares.toLocaleString()}>
                       {formatCount(h.shares)}
                     </td>
-                    <td className="hidden sm:table-cell px-4 py-3 text-right text-gray-500 dark:text-gray-400">
+                    <td className="hidden sm:table-cell px-4 py-3 text-end text-gray-500 dark:text-gray-400">
                       ${h.avgBuyPrice?.toFixed(2)}
                     </td>
-                    <td className="hidden sm:table-cell px-4 py-3 text-right text-gray-900 dark:text-white">
+                    <td className="hidden sm:table-cell px-4 py-3 text-end text-gray-900 dark:text-white">
                       ${h.company?.sharePrice?.toFixed(2)}
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-900 dark:text-white">
+                    <td className="px-4 py-3 text-end text-gray-900 dark:text-white">
                       <span title={formatMoneyExact(h.currentValue)}>{formatMoney(h.currentValue)}</span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-end">
                       <span className={h.profitLoss >= 0 ? 'text-green-500' : 'text-red-500'}>
                         {h.profitLoss >= 0 ? '+' : ''}
                         <span title={formatMoneyExact(h.profitLoss)}>{formatMoney(h.profitLoss)}</span>
@@ -213,12 +210,12 @@ export default function StockPortfolio() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
-                  <th className="px-4 py-3 text-left">{t('indexes.index')}</th>
-                  <th className="px-4 py-3 text-right">{t('indexes.shares')}</th>
-                  <th className="hidden sm:table-cell px-4 py-3 text-right">{t('indexes.avgBuyPrice')}</th>
-                  <th className="hidden sm:table-cell px-4 py-3 text-right">{t('indexes.currentPrice')}</th>
-                  <th className="px-4 py-3 text-right">{t('indexes.currentValue')}</th>
-                  <th className="px-4 py-3 text-right">{t('indexes.profitLoss')}</th>
+                  <th className="px-4 py-3 text-start">{t('indexes.index')}</th>
+                  <th className="px-4 py-3 text-end">{t('indexes.shares')}</th>
+                  <th className="hidden sm:table-cell px-4 py-3 text-end">{t('indexes.avgBuyPrice')}</th>
+                  <th className="hidden sm:table-cell px-4 py-3 text-end">{t('indexes.currentPrice')}</th>
+                  <th className="px-4 py-3 text-end">{t('indexes.currentValue')}</th>
+                  <th className="px-4 py-3 text-end">{t('indexes.profitLoss')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -236,22 +233,19 @@ export default function StockPortfolio() {
                       </Link>
                       <div className="text-xs text-gray-500 dark:text-gray-400">{h.index?.ticker}</div>
                     </td>
-                    <td
-                      className="px-4 py-3 text-right text-gray-900 dark:text-white"
-                      title={h.shares.toLocaleString()}
-                    >
+                    <td className="px-4 py-3 text-end text-gray-900 dark:text-white" title={h.shares.toLocaleString()}>
                       {formatCount(h.shares)}
                     </td>
-                    <td className="hidden sm:table-cell px-4 py-3 text-right text-gray-500 dark:text-gray-400">
+                    <td className="hidden sm:table-cell px-4 py-3 text-end text-gray-500 dark:text-gray-400">
                       ${h.avgBuyPrice?.toFixed(2)}
                     </td>
-                    <td className="hidden sm:table-cell px-4 py-3 text-right text-gray-900 dark:text-white">
+                    <td className="hidden sm:table-cell px-4 py-3 text-end text-gray-900 dark:text-white">
                       <span title={`$${h.index?.value?.toFixed(2)}`}>{formatPrice(h.index?.value)}</span>
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-900 dark:text-white">
+                    <td className="px-4 py-3 text-end text-gray-900 dark:text-white">
                       <span title={formatMoneyExact(h.currentValue)}>{formatMoney(h.currentValue)}</span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-end">
                       <span className={h.profitLoss >= 0 ? 'text-green-500' : 'text-red-500'}>
                         {h.profitLoss >= 0 ? '+' : ''}
                         <span title={formatMoneyExact(h.profitLoss)}>{formatMoney(h.profitLoss)}</span>
@@ -288,10 +282,10 @@ export default function StockPortfolio() {
                 : claimResult.error}
             </div>
           )}
-          <div className="p-4 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
-            <div>
+          <div className="p-4 flex flex-wrap items-center justify-between gap-y-2 gap-x-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="min-w-0">
               <span className="text-sm text-gray-500 dark:text-gray-400">{t('stocks.totalUnclaimed')}: </span>
-              <span className="text-lg font-bold text-gray-900 dark:text-white">
+              <span className="text-lg font-bold text-gray-900 dark:text-white break-words">
                 ${(dividends?.totalUnclaimed || 0).toLocaleString()}
               </span>
             </div>
@@ -307,11 +301,11 @@ export default function StockPortfolio() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
-                  <th className="px-4 py-3 text-left">{t('stocks.company')}</th>
-                  <th className="px-4 py-3 text-right">{t('stocks.shares')}</th>
-                  <th className="px-4 py-3 text-right">{t('stocks.dividendPerShare')}</th>
-                  <th className="px-4 py-3 text-right">{t('stocks.unclaimed')}</th>
-                  <th className="hidden sm:table-cell px-4 py-3 text-right">{t('stocks.dividendYield')}</th>
+                  <th className="px-4 py-3 text-start">{t('stocks.company')}</th>
+                  <th className="px-4 py-3 text-end">{t('stocks.shares')}</th>
+                  <th className="px-4 py-3 text-end">{t('stocks.dividendPerShare')}</th>
+                  <th className="px-4 py-3 text-end">{t('stocks.unclaimed')}</th>
+                  <th className="hidden sm:table-cell px-4 py-3 text-end">{t('stocks.dividendYield')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -324,14 +318,14 @@ export default function StockPortfolio() {
                       <div className="text-gray-900 dark:text-white font-medium">{d.companyName}</div>
                       <div className="text-xs text-gray-500 dark:text-gray-400">{d.ticker}</div>
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-900 dark:text-white">{formatCount(d.shares)}</td>
-                    <td className="px-4 py-3 text-right text-gray-900 dark:text-white">
+                    <td className="px-4 py-3 text-end text-gray-900 dark:text-white">{formatCount(d.shares)}</td>
+                    <td className="px-4 py-3 text-end text-gray-900 dark:text-white">
                       ${d.dividendPerShare?.toFixed(2)}
                     </td>
-                    <td className="px-4 py-3 text-right text-green-600 dark:text-green-400 font-medium">
+                    <td className="px-4 py-3 text-end text-green-600 dark:text-green-400 font-medium">
                       ${d.unclaimed?.toLocaleString()}
                     </td>
-                    <td className="hidden sm:table-cell px-4 py-3 text-right text-gray-500 dark:text-gray-400">
+                    <td className="hidden sm:table-cell px-4 py-3 text-end text-gray-500 dark:text-gray-400">
                       {d.dividendYield?.toFixed(2)}%
                     </td>
                   </tr>

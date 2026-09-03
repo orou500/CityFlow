@@ -60,7 +60,7 @@ function ReportCard({ report, onClick }) {
   return (
     <button
       onClick={() => onClick(report)}
-      className="w-full text-left bg-card border border-border hover:border-gray-500 rounded-lg p-4 transition-colors"
+      className="w-full text-start bg-card border border-border hover:border-gray-500 rounded-lg p-4 transition-colors"
     >
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm font-medium text-primary">{t(`mi.reportTypes.${report.reportType}`)}</span>
@@ -109,7 +109,7 @@ function ReportDetail({ report, onClose }) {
             {data.forecast && (
               <div className="bg-gray-100 dark:bg-gray-900 rounded-lg p-4 space-y-3">
                 <h4 className="text-sm font-medium text-primary">{t('mi.priceForecast')}</h4>
-                <div className="grid grid-cols-3 gap-3 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
                   <div className="text-center">
                     <div className="text-xs text-muted">{t('mi.bestCase')}</div>
                     <div className="text-green-400 font-medium">{data.forecast.bestCase?.change}%</div>
@@ -155,7 +155,7 @@ function ReportDetail({ report, onClose }) {
                       <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                         <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${val}%` }} />
                       </div>
-                      <span className="text-primary w-10 text-right">{val}%</span>
+                      <span className="text-primary w-10 text-end">{val}%</span>
                     </div>
                   ))}
                 </div>
@@ -254,9 +254,9 @@ function ReportDetail({ report, onClose }) {
                     <div key={i} className="flex items-center justify-between text-sm bg-card rounded p-2">
                       <div>
                         <span className="text-primary font-medium">{c.name}</span>
-                        <span className="text-muted ml-2">{c.country}</span>
+                        <span className="text-muted ms-2">{c.country}</span>
                       </div>
-                      <div className="text-right">
+                      <div className="text-end">
                         <div className="text-green-400">+{c.growthRate}%</div>
                         <div className="text-xs text-muted">${c.avgPrice?.toLocaleString()}</div>
                         <div className="text-xs text-muted">{c.reason}</div>
@@ -274,9 +274,9 @@ function ReportDetail({ report, onClose }) {
                     <div key={i} className="flex items-center justify-between text-sm bg-card rounded p-2">
                       <div>
                         <span className="text-primary font-medium">{d.name}</span>
-                        <span className="text-muted ml-2">{d.cityName}</span>
+                        <span className="text-muted ms-2">{d.cityName}</span>
                       </div>
-                      <div className="text-right">
+                      <div className="text-end">
                         <div className="text-green-400">+{d.growthRate}%</div>
                         <div className="text-xs text-muted">{d.reason}</div>
                       </div>
@@ -293,9 +293,9 @@ function ReportDetail({ report, onClose }) {
                     <div key={i} className="flex items-center justify-between text-sm bg-card rounded p-2">
                       <div>
                         <span className="text-primary font-medium">{a.name}</span>
-                        <span className="text-muted ml-2">{a.cityName}</span>
+                        <span className="text-muted ms-2">{a.cityName}</span>
                       </div>
-                      <div className="text-right">
+                      <div className="text-end">
                         <div className="text-green-400">-{a.discountPercent}%</div>
                         <div className="text-xs text-muted">${a.currentPrice?.toLocaleString()}</div>
                       </div>
@@ -312,9 +312,9 @@ function ReportDetail({ report, onClose }) {
                     <div key={i} className="flex items-center justify-between text-sm bg-card rounded p-2">
                       <div>
                         <span className="text-primary font-medium">{e.name}</span>
-                        <span className="text-muted ml-2">{e.cityName}</span>
+                        <span className="text-muted ms-2">{e.cityName}</span>
                       </div>
-                      <div className="text-right">
+                      <div className="text-end">
                         <div className="text-xs text-muted">{e.eventName}</div>
                         <div className="text-green-400">{e.expectedImpact}</div>
                       </div>
@@ -332,7 +332,7 @@ function ReportDetail({ report, onClose }) {
                       <div>
                         <span className="text-primary font-medium">{c.name}</span>
                       </div>
-                      <div className="text-right">
+                      <div className="text-end">
                         <div className="text-green-400">+{c.growthRate}%</div>
                         <div className="text-xs text-muted">{c.reason}</div>
                       </div>
@@ -419,7 +419,7 @@ function PurchaseForm({ reportType, tierInfo, cities, selectedCity, onSelectCity
             <button
               key={tier}
               onClick={() => setSelectedTier(tier)}
-              className={`w-full text-left p-3 rounded-lg border transition-colors ${
+              className={`w-full text-start p-3 rounded-lg border transition-colors ${
                 selectedTier === tier
                   ? `${style.bg} ${style.border} border`
                   : 'bg-gray-100 dark:bg-gray-900 border-border hover:border-gray-500'
@@ -654,7 +654,7 @@ export default function MarketIntelligencePage() {
       {error && (
         <div className="bg-red-900/50 border border-red-800 text-red-300 px-4 py-3 rounded mb-4 text-sm">
           {error}
-          <button onClick={() => setError(null)} className="ml-2 text-red-400 hover:text-red-300">
+          <button onClick={() => setError(null)} className="ms-2 text-red-400 hover:text-red-300">
             {t('mi.dismiss')}
           </button>
         </div>
@@ -698,7 +698,7 @@ export default function MarketIntelligencePage() {
                 </div>
               </div>
               <WhatYouGet reportType={item.reportType} />
-              <div className="grid grid-cols-3 gap-2 mt-3 mb-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3 mb-3">
                 {['basic', 'advanced', 'premium'].map((tier) => (
                   <div
                     key={tier}

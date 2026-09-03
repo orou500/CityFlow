@@ -147,7 +147,7 @@ export default function DiscordSettings() {
             <span className="text-green-500 text-lg">✓</span>
             <div className="flex-1">
               <span className="text-sm text-green-600 dark:text-green-400 font-medium">{t('discord.linked')}</span>
-              <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">ID: {linkStatus.discordId}</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 ms-2">ID: {linkStatus.discordId}</span>
             </div>
             <button
               onClick={unlink}

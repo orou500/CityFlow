@@ -117,7 +117,7 @@ export default function CompaniesListPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6 overflow-hidden">
+    <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate">{t('companies.title')}</h1>
         {user && !user.companyId && (
@@ -187,7 +187,7 @@ export default function CompaniesListPage() {
                   </div>
                 </div>
               </div>
-              <div className="text-right text-sm shrink-0">
+              <div className="text-end text-sm shrink-0">
                 <div className="text-gray-900 dark:text-white font-medium">{formatMoney(c.stats?.netWorth || 0)}</div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">
                   {c.members?.length || 0}/{c.maxMembers} {t('companies.members')}
@@ -316,14 +316,14 @@ export default function CompaniesListPage() {
                   </p>
                 </div>
               </div>
-              <div className="text-right shrink-0">
+              <div className="text-end shrink-0">
                 <div className="text-sm font-medium text-gray-900 dark:text-white">
                   {formatMoney(company.stats?.netWorth || 0)}
                 </div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">{t('companies.netWorth')}</div>
               </div>
             </div>
-            <div className="mt-3 flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
               <span>⭐ {company.reputation}</span>
               <span>📊 Lvl {company.level}</span>
               <span>

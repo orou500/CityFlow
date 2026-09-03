@@ -146,7 +146,7 @@ function PublicCompaniesTab() {
         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700 text-center">
           <span className="text-xs text-gray-500 dark:text-gray-400">Market Avg Yield: </span>
           <span className="text-sm font-semibold text-gray-900 dark:text-white">{stats.avgDividendYield}%</span>
-          <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">Total Volume: </span>
+          <span className="text-xs text-gray-500 dark:text-gray-400 ms-2">Total Volume: </span>
           <span className="text-sm font-semibold text-gray-900 dark:text-white">{formatCount(stats.totalVolume)}</span>
         </div>
       )}
@@ -177,14 +177,14 @@ function PublicCompaniesTab() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
-                <th className="px-4 py-3 text-left">{t('stocks.company')}</th>
-                <th className="px-4 py-3 text-right">{t('stocks.sharePrice')}</th>
-                <th className="hidden sm:table-cell px-4 py-3 text-right">{t('stocks.change')}</th>
-                <th className="hidden sm:table-cell px-4 py-3 text-right">{t('stocks.marketCap')}</th>
-                <th className="hidden md:table-cell px-4 py-3 text-right">{t('stocks.dividendYield')}</th>
-                <th className="hidden md:table-cell px-4 py-3 text-right">{t('stocks.totalReturn')}</th>
-                <th className="hidden lg:table-cell px-4 py-3 text-right">{t('stocks.tradingVolume')}</th>
-                <th className="hidden lg:table-cell px-4 py-3 text-right">{t('stocks.shareholders')}</th>
+                <th className="px-4 py-3 text-start">{t('stocks.company')}</th>
+                <th className="px-4 py-3 text-end">{t('stocks.sharePrice')}</th>
+                <th className="hidden sm:table-cell px-4 py-3 text-end">{t('stocks.change')}</th>
+                <th className="hidden sm:table-cell px-4 py-3 text-end">{t('stocks.marketCap')}</th>
+                <th className="hidden md:table-cell px-4 py-3 text-end">{t('stocks.dividendYield')}</th>
+                <th className="hidden md:table-cell px-4 py-3 text-end">{t('stocks.totalReturn')}</th>
+                <th className="hidden lg:table-cell px-4 py-3 text-end">{t('stocks.tradingVolume')}</th>
+                <th className="hidden lg:table-cell px-4 py-3 text-end">{t('stocks.shareholders')}</th>
               </tr>
             </thead>
             <tbody>
@@ -201,34 +201,34 @@ function PublicCompaniesTab() {
                       </div>
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-right text-gray-900 dark:text-white font-medium">
+                  <td className="px-4 py-3 text-end text-gray-900 dark:text-white font-medium">
                     ${c.sharePrice?.toFixed(2)}
                   </td>
-                  <td className="hidden sm:table-cell px-4 py-3 text-right">
+                  <td className="hidden sm:table-cell px-4 py-3 text-end">
                     <span className={c.dayChangePercent >= 0 ? 'text-green-500' : 'text-red-500'}>
                       {c.dayChangePercent >= 0 ? '+' : ''}
                       {c.dayChangePercent}%
                     </span>
                   </td>
                   <td
-                    className="hidden sm:table-cell px-4 py-3 text-right text-gray-500 dark:text-gray-400"
+                    className="hidden sm:table-cell px-4 py-3 text-end text-gray-500 dark:text-gray-400"
                     title={formatMoneyExact(c.marketCap)}
                   >
                     {formatMoney(c.marketCap)}
                   </td>
-                  <td className="hidden md:table-cell px-4 py-3 text-right text-gray-500 dark:text-gray-400">
+                  <td className="hidden md:table-cell px-4 py-3 text-end text-gray-500 dark:text-gray-400">
                     {c.dividendYield ? `${c.dividendYield}%` : '-'}
                   </td>
-                  <td className="hidden md:table-cell px-4 py-3 text-right">
+                  <td className="hidden md:table-cell px-4 py-3 text-end">
                     <span className={c.totalReturn >= 0 ? 'text-green-500' : 'text-red-500'}>
                       {c.totalReturn >= 0 ? '+' : ''}
                       {c.totalReturn}%
                     </span>
                   </td>
-                  <td className="hidden lg:table-cell px-4 py-3 text-right text-gray-500 dark:text-gray-400">
+                  <td className="hidden lg:table-cell px-4 py-3 text-end text-gray-500 dark:text-gray-400">
                     {formatCount(c.tradingVolume || 0)}
                   </td>
-                  <td className="hidden lg:table-cell px-4 py-3 text-right text-gray-500 dark:text-gray-400">
+                  <td className="hidden lg:table-cell px-4 py-3 text-end text-gray-500 dark:text-gray-400">
                     {c.activeShareholders || 0}
                   </td>
                 </tr>
@@ -391,13 +391,13 @@ function CompaniesTab() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
-                <th className="px-4 py-3 text-left">{t('stocks.company')}</th>
-                <th className="hidden sm:table-cell px-4 py-3 text-left">{t('stocks.industry')}</th>
-                <th className="px-4 py-3 text-right">{t('stocks.sharePrice')}</th>
-                <th className="px-4 py-3 text-right">{t('stocks.change')}</th>
-                <th className="hidden sm:table-cell px-4 py-3 text-right">{t('stocks.marketCap')}</th>
-                <th className="hidden md:table-cell px-4 py-3 text-right">{t('stocks.dividendYield')}</th>
-                <th className="hidden md:table-cell px-4 py-3 text-right">{t('stocks.employees')}</th>
+                <th className="px-4 py-3 text-start">{t('stocks.company')}</th>
+                <th className="hidden sm:table-cell px-4 py-3 text-start">{t('stocks.industry')}</th>
+                <th className="px-4 py-3 text-end">{t('stocks.sharePrice')}</th>
+                <th className="px-4 py-3 text-end">{t('stocks.change')}</th>
+                <th className="hidden sm:table-cell px-4 py-3 text-end">{t('stocks.marketCap')}</th>
+                <th className="hidden md:table-cell px-4 py-3 text-end">{t('stocks.dividendYield')}</th>
+                <th className="hidden md:table-cell px-4 py-3 text-end">{t('stocks.employees')}</th>
               </tr>
             </thead>
             <tbody>
@@ -418,23 +418,23 @@ function CompaniesTab() {
                   <td className="hidden sm:table-cell px-4 py-3">
                     <span className={`text-xs px-2 py-0.5 rounded ${INDUSTRY_COLORS[c.industry]}`}>{c.industry}</span>
                   </td>
-                  <td className="px-4 py-3 text-right text-gray-900 dark:text-white font-medium">
+                  <td className="px-4 py-3 text-end text-gray-900 dark:text-white font-medium">
                     ${c.sharePrice?.toFixed(2)}
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3 text-end">
                     <span className={c.dayChangePercent >= 0 ? 'text-green-500' : 'text-red-500'}>
                       {c.dayChangePercent >= 0 ? '+' : ''}
                       {c.dayChangePercent}%
                     </span>
                   </td>
                   <td
-                    className="hidden sm:table-cell px-4 py-3 text-right text-gray-500 dark:text-gray-400"
+                    className="hidden sm:table-cell px-4 py-3 text-end text-gray-500 dark:text-gray-400"
                     title={formatMoneyExact(c.marketCap)}
                   >
                     {formatMoney(c.marketCap)}
                   </td>
                   <td
-                    className="hidden md:table-cell px-4 py-3 text-right text-gray-500 dark:text-gray-400"
+                    className="hidden md:table-cell px-4 py-3 text-end text-gray-500 dark:text-gray-400"
                     title={
                       c.dividendPerShare
                         ? `$${c.dividendPerShare.toFixed(2)} ${t('stocks.dividendPerShare')}`
@@ -444,7 +444,7 @@ function CompaniesTab() {
                     {c.dividendYield ? `${c.dividendYield}%` : '-'}
                   </td>
                   <td
-                    className="hidden md:table-cell px-4 py-3 text-right text-gray-500 dark:text-gray-400"
+                    className="hidden md:table-cell px-4 py-3 text-end text-gray-500 dark:text-gray-400"
                     title={c.employees?.toLocaleString()}
                   >
                     {formatCount(c.employees)}
@@ -538,7 +538,7 @@ function IndexesTab() {
         </select>
         <Link
           to="/stocks/portfolio"
-          className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-500 sm:ml-auto text-center"
+          className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-500 sm:ms-auto text-center"
         >
           {t('indexes.myPortfolio')}
         </Link>
@@ -549,12 +549,12 @@ function IndexesTab() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
-                <th className="px-4 py-3 text-left">{t('indexes.index')}</th>
-                <th className="hidden sm:table-cell px-4 py-3 text-left">{t('indexes.type')}</th>
-                <th className="px-4 py-3 text-right">{t('indexes.indexValue')}</th>
-                <th className="px-4 py-3 text-right">{t('indexes.change')}</th>
-                <th className="hidden sm:table-cell px-4 py-3 text-right">{t('indexes.totalReturn')}</th>
-                <th className="hidden md:table-cell px-4 py-3 text-right">{t('indexes.constituents')}</th>
+                <th className="px-4 py-3 text-start">{t('indexes.index')}</th>
+                <th className="hidden sm:table-cell px-4 py-3 text-start">{t('indexes.type')}</th>
+                <th className="px-4 py-3 text-end">{t('indexes.indexValue')}</th>
+                <th className="px-4 py-3 text-end">{t('indexes.change')}</th>
+                <th className="hidden sm:table-cell px-4 py-3 text-end">{t('indexes.totalReturn')}</th>
+                <th className="hidden md:table-cell px-4 py-3 text-end">{t('indexes.constituents')}</th>
               </tr>
             </thead>
             <tbody>
@@ -578,24 +578,24 @@ function IndexesTab() {
                     </span>
                   </td>
                   <td
-                    className="px-4 py-3 text-right text-gray-900 dark:text-white font-medium"
+                    className="px-4 py-3 text-end text-gray-900 dark:text-white font-medium"
                     title={`$${idx.value?.toFixed(2)}`}
                   >
                     {formatPrice(idx.value)}
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3 text-end">
                     <span className={idx.dayChangePercent >= 0 ? 'text-green-500' : 'text-red-500'}>
                       {idx.dayChangePercent >= 0 ? '+' : ''}
                       {idx.dayChangePercent}%
                     </span>
                   </td>
-                  <td className="hidden sm:table-cell px-4 py-3 text-right">
+                  <td className="hidden sm:table-cell px-4 py-3 text-end">
                     <span className={idx.totalReturn >= 0 ? 'text-green-500' : 'text-red-500'}>
                       {idx.totalReturn >= 0 ? '+' : ''}
                       {idx.totalReturn}%
                     </span>
                   </td>
-                  <td className="hidden md:table-cell px-4 py-3 text-right text-gray-500 dark:text-gray-400">
+                  <td className="hidden md:table-cell px-4 py-3 text-end text-gray-500 dark:text-gray-400">
                     {idx.constituentCount}
                   </td>
                 </tr>

@@ -119,7 +119,7 @@ export default function SizOpsSettings() {
               <span className="text-sm text-green-600 dark:text-green-400 font-medium">
                 {t('settings.sizops.connected')}
               </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+              <span className="text-xs text-gray-500 dark:text-gray-400 ms-2">
                 {t('settings.sizops.sizopsId')}: {status.sizopsUserId}
               </span>
             </div>

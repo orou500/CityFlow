@@ -96,6 +96,22 @@ describe('LeaderboardPage', () => {
     expect(screen.getByText('\u25B2 +2')).toBeInTheDocument();
   });
 
+  it('renders 3-digit ranks without clipping (no fixed max-width truncation)', () => {
+    lbState.rankings = [
+      ...rankFour().slice(0, 3),
+      makeEntry({ rank: 147, username: 'deep', displayName: 'Deep Rank' }),
+    ];
+    lbState.total = 4;
+
+    render(<LeaderboardPage />);
+
+    const badge = screen.getByText('147').closest('span');
+    expect(badge).toBeTruthy();
+    expect(badge.className).not.toContain('max-w-');
+    expect(badge.className).not.toContain('truncate');
+    expect(screen.getByText('Deep Rank')).toBeInTheDocument();
+  });
+
   it('highlights the current user row', () => {
     lbState.rankings = rankFour().map((e) =>
       e.rank === 4 ? { ...e, userId: 'me', username: 'me', displayName: 'Me' } : e,

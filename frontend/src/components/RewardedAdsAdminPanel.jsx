@@ -284,7 +284,7 @@ export default function RewardedAdsAdminPanel() {
                     <span className="text-gray-600 dark:text-gray-300">{f.stage}</span>
                     <span className="text-gray-900 dark:text-white font-medium">
                       {f.value}
-                      {f.pct !== null && <span className="text-gray-400 dark:text-gray-500 ml-2">{fmtPct(f.pct)}</span>}
+                      {f.pct !== null && <span className="text-gray-400 dark:text-gray-500 ms-2">{fmtPct(f.pct)}</span>}
                     </span>
                   </div>
                   <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -407,7 +407,7 @@ export default function RewardedAdsAdminPanel() {
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
+          <table className="w-full text-sm text-start">
             <thead>
               <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
                 <th className="px-3 py-2 font-medium">{t('rewardedAdsAdmin.thUser')}</th>

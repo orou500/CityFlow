@@ -152,7 +152,7 @@ export default function FriendsPage() {
         {showRemove && (
           <button
             onClick={() => removeFriend(friend._id)}
-            className="text-xs text-red-600 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 ml-2 flex-shrink-0"
+            className="text-xs text-red-600 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 ms-2 flex-shrink-0"
           >
             {t('friends.remove')}
           </button>
@@ -174,7 +174,7 @@ export default function FriendsPage() {
           </div>
         )}
 
-        <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700 pb-2">
+        <div className="flex flex-wrap gap-2 border-b border-gray-200 dark:border-gray-700 pb-2">
           {['friends', 'incoming', 'sent'].map((key) => {
             const count =
               key === 'friends'
@@ -186,7 +186,7 @@ export default function FriendsPage() {
               <button
                 key={key}
                 onClick={() => setTab(key)}
-                className={`text-sm px-4 py-2 rounded-t transition-colors ${tab === key ? 'bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white border-b-2 border-blue-500' : 'text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                className={`text-sm px-4 py-2 rounded-t transition-colors whitespace-nowrap ${tab === key ? 'bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white border-b-2 border-blue-500' : 'text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
               >
                 {t(`friends.tab.${key}`)}{' '}
                 {count > 0 && <span className="text-gray-400 dark:text-gray-500">({count})</span>}
@@ -216,14 +216,14 @@ export default function FriendsPage() {
               .map((r) => (
                 <div
                   key={r._id}
-                  className="bg-gray-50/50 dark:bg-gray-800/50 rounded-lg border border-gray-200/50 dark:border-gray-700/50 p-4 flex items-center justify-between"
+                  className="bg-gray-50/50 dark:bg-gray-800/50 rounded-lg border border-gray-200/50 dark:border-gray-700/50 p-4 flex flex-wrap items-center justify-between gap-2"
                 >
-                  <Link to={`/profile/${r.senderId.username}`} className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+                  <Link to={`/profile/${r.senderId.username}`} className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-sm text-gray-500 dark:text-gray-400 shrink-0">
                       {(r.senderId.displayName || r.senderId.username).charAt(0).toUpperCase()}
                     </div>
-                    <div>
-                      <div className="text-gray-900 dark:text-white text-sm font-medium">
+                    <div className="min-w-0">
+                      <div className="text-gray-900 dark:text-white text-sm font-medium truncate">
                         {r.senderId.displayName || r.senderId.username}
                       </div>
                       <div className="text-xs text-gray-400 dark:text-gray-500">{t('friends.sentYouRequest')}</div>
@@ -258,14 +258,14 @@ export default function FriendsPage() {
               .map((r) => (
                 <div
                   key={r._id}
-                  className="bg-gray-50/50 dark:bg-gray-800/50 rounded-lg border border-gray-200/50 dark:border-gray-700/50 p-4 flex items-center justify-between"
+                  className="bg-gray-50/50 dark:bg-gray-800/50 rounded-lg border border-gray-200/50 dark:border-gray-700/50 p-4 flex flex-wrap items-center justify-between gap-2"
                 >
-                  <Link to={`/profile/${r.receiverId.username}`} className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+                  <Link to={`/profile/${r.receiverId.username}`} className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-sm text-gray-500 dark:text-gray-400 shrink-0">
                       {(r.receiverId.displayName || r.receiverId.username).charAt(0).toUpperCase()}
                     </div>
-                    <div>
-                      <div className="text-gray-900 dark:text-white text-sm font-medium">
+                    <div className="min-w-0">
+                      <div className="text-gray-900 dark:text-white text-sm font-medium truncate">
                         {r.receiverId.displayName || r.receiverId.username}
                       </div>
                       <div className="text-xs text-gray-400 dark:text-gray-500">{t('friends.pending')}</div>

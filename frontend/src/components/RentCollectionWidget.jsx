@@ -121,7 +121,7 @@ export default function RentCollectionWidget({ onCollected }) {
         </div>
         <div className="flex items-center gap-3 shrink-0">
           {status.timeRemainingMs != null && (
-            <div className="text-right">
+            <div className="text-end">
               <p className="text-xs text-gray-400 dark:text-gray-500">{t('rentCollect.expiresIn')}</p>
               <p className="text-sm font-mono font-semibold text-gray-600 dark:text-gray-300 tabular-nums">
                 {countdown}

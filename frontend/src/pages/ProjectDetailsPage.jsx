@@ -116,7 +116,7 @@ export default function ProjectDetailsPage() {
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500 dark:text-gray-400 text-sm">{t('projectDetail.location')}</span>
-              <span className="text-gray-900 dark:text-white text-sm font-medium text-right">
+              <span className="text-gray-900 dark:text-white text-sm font-medium text-end">
                 {[project.cityId?.name, project.cityId?.country].filter(Boolean).join(', ')}
               </span>
             </div>

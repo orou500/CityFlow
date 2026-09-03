@@ -42,7 +42,7 @@ function EventCard({ event, onClick }) {
   return (
     <button
       onClick={() => onClick(event)}
-      className="w-full text-left bg-card border border-border rounded-xl p-3 sm:p-4 hover:shadow-md active:bg-gray-50 dark:active:bg-gray-800/50 transition-all"
+      className="w-full text-start bg-card border border-border rounded-xl p-3 sm:p-4 hover:shadow-md active:bg-gray-50 dark:active:bg-gray-800/50 transition-all"
     >
       <div className="flex items-start gap-3">
         <span className="text-2xl shrink-0 mt-0.5">{EVENT_TYPE_ICONS[event.type] || '\uD83C\uDFAF'}</span>
@@ -185,7 +185,7 @@ function EventDetail({ event, onClose }) {
                 <p className="text-[11px] sm:text-xs text-secondary">{event.description}</p>
               </div>
             </div>
-            <button onClick={onClose} className="text-muted hover:text-primary text-2xl leading-none shrink-0 ml-2">
+            <button onClick={onClose} className="text-muted hover:text-primary text-2xl leading-none shrink-0 ms-2">
               {'\u00D7'}
             </button>
           </div>
@@ -336,12 +336,12 @@ export default function CompetitiveEventsPage() {
           >
             {t(`leaderboard.events.filters.${f}`)}
             {f === 'active' && activeCount > 0 && (
-              <span className="ml-1.5 bg-green-400 text-green-900 text-[10px] px-1 rounded-full font-bold">
+              <span className="ms-1.5 bg-green-400 text-green-900 text-[10px] px-1 rounded-full font-bold">
                 {activeCount}
               </span>
             )}
             {f === 'completed' && completedCount > 0 && (
-              <span className="ml-1.5 bg-gray-400 text-gray-900 text-[10px] px-1 rounded-full font-bold">
+              <span className="ms-1.5 bg-gray-400 text-gray-900 text-[10px] px-1 rounded-full font-bold">
                 {completedCount}
               </span>
             )}
@@ -364,7 +364,7 @@ export default function CompetitiveEventsPage() {
           </div>
 
           {totalEventPages > 1 && (
-            <div className="flex items-center justify-center gap-1 mt-3">
+            <div className="flex flex-wrap items-center justify-center gap-1 mt-3">
               <button
                 onClick={() => setEventsPage((p) => Math.max(1, p - 1))}
                 disabled={eventsPage <= 1}
@@ -372,19 +372,29 @@ export default function CompetitiveEventsPage() {
               >
                 {'\u2190'}
               </button>
-              {Array.from({ length: totalEventPages }, (_, i) => i + 1).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setEventsPage(p)}
-                  className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${
-                    p === eventsPage
-                      ? 'bg-blue-600 text-white'
-                      : 'text-secondary hover:bg-gray-100 dark:hover:bg-gray-800'
-                  }`}
-                >
-                  {p}
-                </button>
-              ))}
+              {(() => {
+                const pages = [];
+                const start = Math.max(1, eventsPage - 2);
+                const end = Math.min(totalEventPages, start + 4);
+                for (let p = 1; p <= totalEventPages; p++) {
+                  if (p === 1 || p === totalEventPages || (p >= start && p <= end)) pages.push(p);
+                }
+                return pages.map((p, idx, arr) => (
+                  <span key={p} className="flex items-center gap-1">
+                    {idx > 0 && arr[idx - 1] !== p - 1 && <span className="px-1 text-muted text-xs">…</span>}
+                    <button
+                      onClick={() => setEventsPage(p)}
+                      className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${
+                        p === eventsPage
+                          ? 'bg-blue-600 text-white'
+                          : 'text-secondary hover:bg-gray-100 dark:hover:bg-gray-800'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  </span>
+                ));
+              })()}
               <button
                 onClick={() => setEventsPage((p) => Math.min(totalEventPages, p + 1))}
                 disabled={eventsPage >= totalEventPages}

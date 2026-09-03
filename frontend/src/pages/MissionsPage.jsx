@@ -234,7 +234,7 @@ function ChainCard({ chain, onClaim, t }) {
                     {t(`missions.chains.${chain.chainId}.step${i + 1}.description`, step.description)}
                   </div>
                   {step.rewards && (
-                    <div className="flex items-center gap-2 mt-1 text-[10px] text-secondary">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-[10px] text-secondary">
                       {step.rewards.xp && <span>⭐ {step.rewards.xp}</span>}
                       {step.rewards.balance && <span>💰 ${step.rewards.balance.toLocaleString()}</span>}
                       {step.rewards.badge && <span className="text-purple-500">🏅</span>}
@@ -265,7 +265,7 @@ function ChainCard({ chain, onClaim, t }) {
                 </div>
               </div>
               {i < steps.length - 1 && (
-                <div className="flex items-center ml-[13px] -my-0.5">
+                <div className="flex items-center ms-[13px] -my-0.5">
                   <div
                     className={`w-0.5 h-4 ${
                       isClaimed ? 'bg-green-400 dark:bg-green-600' : 'bg-gray-300 dark:bg-gray-600'
@@ -370,8 +370,8 @@ export default function MissionsPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-6xl mx-auto px-4 py-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 mb-6">
+          <div className="min-w-0">
             <h1 className="text-2xl font-bold text-primary">{t('missions.title')}</h1>
             <p className="text-sm text-secondary mt-1">{t('missions.subtitle')}</p>
           </div>
@@ -450,12 +450,12 @@ export default function MissionsPage() {
               >
                 {t(`missions.tabs.${tab}`)}
                 {tab === 'active' && activeMissions.length > 0 && (
-                  <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+                  <span className="ms-1.5 text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
                     {activeMissions.length}
                   </span>
                 )}
                 {tab === 'completed' && completedMissions.length > 0 && (
-                  <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
+                  <span className="ms-1.5 text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
                     {completedMissions.length}
                   </span>
                 )}

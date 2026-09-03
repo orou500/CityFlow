@@ -377,7 +377,7 @@ export default function BankPage() {
                         <button
                           key={opt.productId}
                           onClick={() => selectProduct(opt)}
-                          className={`text-left p-2.5 rounded border transition-colors ${
+                          className={`text-start p-2.5 rounded border transition-colors ${
                             active
                               ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20'
                               : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
@@ -414,8 +414,8 @@ export default function BankPage() {
                         className="w-full accent-orange-500 mb-1"
                         aria-label={t('bank.borrowAmount')}
                       />
-                      <div className="flex items-center justify-between mb-4 gap-2">
-                        <span className="text-lg font-bold text-gray-900 dark:text-white">
+                      <div className="flex flex-wrap items-center justify-between mb-4 gap-2">
+                        <span className="text-lg font-bold text-gray-900 dark:text-white min-w-0 break-words">
                           {formatMoney(clampedAmount)}
                         </span>
                         <input
@@ -437,7 +437,7 @@ export default function BankPage() {
                               ),
                             );
                           }}
-                          className="w-32 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm text-gray-900 dark:text-white text-right"
+                          className="w-24 sm:w-32 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm text-gray-900 dark:text-white text-end"
                           aria-label={t('bank.borrowAmount')}
                         />
                       </div>
@@ -670,7 +670,7 @@ export default function BankPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+                  <tr className="text-start text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
                     <th className="pb-2">{t('bank.type')}</th>
                     <th className="pb-2">{t('bank.amount')}</th>
                     <th className="pb-2">{t('bank.interest')}</th>
@@ -720,7 +720,7 @@ export default function BankPage() {
                       {t('bank.tick')} #{entry.tick}
                     </p>
                   </div>
-                  <div className="text-right">
+                  <div className="text-end">
                     <p
                       className={`text-sm font-bold ${entry.change > 0 ? 'text-green-500' : entry.change < 0 ? 'text-red-500' : 'text-gray-400'}`}
                     >

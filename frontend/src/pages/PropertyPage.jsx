@@ -165,7 +165,7 @@ function PriceHistoryChart({ history }) {
         <div
           className={`absolute z-10 min-w-[140px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-xs shadow-lg ${pinned ? 'shadow-2xl ring-1 ring-blue-500/40' : 'pointer-events-none'}`}
           style={{
-            left: `${(activePt.x / w) * 100}%`,
+            left: `${(Math.min(Math.max(activePt.x, 70), Math.max(w - 70, 70)) / w) * 100}%`,
             top: isTopHalf ? `${(activePt.y / h) * 100 + 2}%` : `${(activePt.y / h) * 100}%`,
             transform: isTopHalf ? 'translate(-50%, 10px)' : 'translate(-50%, calc(-100% - 10px))',
           }}
@@ -813,7 +813,7 @@ export default function PropertyPage() {
                             <span className="text-gray-500 dark:text-gray-400">
                               {t('propertyDetail.unitNumber', { number: unit.unitNumber })}
                             </span>
-                            <span className="text-gray-400 dark:text-gray-500 ml-2">
+                            <span className="text-gray-400 dark:text-gray-500 ms-2">
                               {unit.type?.replace('_', ' ')}
                             </span>
                           </div>
@@ -1142,7 +1142,7 @@ export default function PropertyPage() {
                         key={tier.id}
                         onClick={() => handleSetMaintenance(tier.id)}
                         disabled={managementData.maintenanceLevel === tier.id}
-                        className={`w-full text-left px-3 py-2 rounded text-sm transition-colors ${
+                        className={`w-full text-start px-3 py-2 rounded text-sm transition-colors ${
                           managementData.maintenanceLevel === tier.id
                             ? 'bg-blue-600 text-white'
                             : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white'
@@ -1188,12 +1188,12 @@ export default function PropertyPage() {
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
-                          <th className="text-left py-1 pr-2">{t('propertyManagement.month')}</th>
-                          <th className="text-right py-1 px-2">{t('propertyManagement.qualityScore')}</th>
-                          <th className="text-right py-1 px-2">{t('propertyManagement.occupancy')}</th>
-                          <th className="text-right py-1 px-2">{t('propertyManagement.rentIncome')}</th>
-                          <th className="text-right py-1 px-2">{t('propertyManagement.maintenanceCost')}</th>
-                          <th className="text-right py-1 pl-2">{t('propertyManagement.netProfit')}</th>
+                          <th className="text-start py-1 pr-2">{t('propertyManagement.month')}</th>
+                          <th className="text-end py-1 px-2">{t('propertyManagement.qualityScore')}</th>
+                          <th className="text-end py-1 px-2">{t('propertyManagement.occupancy')}</th>
+                          <th className="text-end py-1 px-2">{t('propertyManagement.rentIncome')}</th>
+                          <th className="text-end py-1 px-2">{t('propertyManagement.maintenanceCost')}</th>
+                          <th className="text-end py-1 pl-2">{t('propertyManagement.netProfit')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1206,7 +1206,7 @@ export default function PropertyPage() {
                               <td className="py-1 pr-2 text-gray-600 dark:text-gray-300">
                                 {t('propertyManagement.tick', { number: entry.tick })}
                               </td>
-                              <td className="py-1 px-2 text-right">
+                              <td className="py-1 px-2 text-end">
                                 <span
                                   className={
                                     entry.qualityScore >= 70
@@ -1219,15 +1219,13 @@ export default function PropertyPage() {
                                   {entry.qualityScore}
                                 </span>
                               </td>
-                              <td className="py-1 px-2 text-right text-blue-500">{entry.occupancy}%</td>
-                              <td className="py-1 px-2 text-right text-blue-600 dark:text-blue-400">
+                              <td className="py-1 px-2 text-end text-blue-500">{entry.occupancy}%</td>
+                              <td className="py-1 px-2 text-end text-blue-600 dark:text-blue-400">
                                 {formatMoney(entry.rentIncome)}
                               </td>
-                              <td className="py-1 px-2 text-right text-red-500">
-                                {formatMoney(entry.maintenanceCost)}
-                              </td>
+                              <td className="py-1 px-2 text-end text-red-500">{formatMoney(entry.maintenanceCost)}</td>
                               <td
-                                className={`py-1 pl-2 text-right font-medium ${entry.netProfit >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-500'}`}
+                                className={`py-1 pl-2 text-end font-medium ${entry.netProfit >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-500'}`}
                               >
                                 {formatMoney(entry.netProfit)}
                               </td>
@@ -1374,7 +1372,7 @@ export default function PropertyPage() {
                           <div className="min-w-0 break-words">
                             <span className="text-gray-900 dark:text-white">{inv.description || inv.type}</span>
                             {inv.tick && (
-                              <span className="text-xs text-gray-400 dark:text-gray-500 ml-2">#{inv.tick}</span>
+                              <span className="text-xs text-gray-400 dark:text-gray-500 ms-2">#{inv.tick}</span>
                             )}
                           </div>
                           <span className="font-semibold text-orange-500 dark:text-orange-400 shrink-0 break-words">
@@ -1393,7 +1391,7 @@ export default function PropertyPage() {
               className={`p-3 rounded text-sm ${actionMsg.type === 'success' ? 'bg-blue-900 text-blue-300' : 'bg-red-900 text-red-300'}`}
             >
               {actionMsg.text}
-              <button onClick={() => setActionMsg(null)} className="ml-2">
+              <button onClick={() => setActionMsg(null)} className="ms-2">
                 &times;
               </button>
             </div>
@@ -1606,7 +1604,7 @@ export default function PropertyPage() {
                           <div className="text-xs text-gray-500 dark:text-gray-400">
                             {formatMoney(dr.estimatedCost)}
                             {dr.estimatedValueIncrease > 0 && (
-                              <span className="ml-2 text-green-500">
+                              <span className="ms-2 text-green-500">
                                 +{formatMoney(dr.estimatedValueIncrease)} value
                               </span>
                             )}
@@ -1719,8 +1717,8 @@ export default function PropertyPage() {
       </div>
 
       {showDevModal && devModalData && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 w-full max-w-sm">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 w-full max-w-sm max-h-[90vh] overflow-y-auto">
             <h3 className="text-gray-900 dark:text-white font-semibold mb-2">
               {t('companyDevelopment.confirmProposal')}
             </h3>
@@ -1797,8 +1795,8 @@ export default function PropertyPage() {
       )}
 
       {showOfferModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 w-full max-w-sm">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 w-full max-w-sm max-h-[90vh] overflow-y-auto">
             <h3 className="text-gray-900 dark:text-white font-semibold mb-2">{t('propertyDetail.makeAnOffer')}</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
               {t('propertyDetail.marketValue')}: {formatMoney(property.currentPrice)}
@@ -1832,8 +1830,8 @@ export default function PropertyPage() {
       )}
 
       {showGradeModal && gradeData && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 w-full max-w-sm">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 w-full max-w-sm max-h-[90vh] overflow-y-auto">
             <h3 className="text-gray-900 dark:text-white font-semibold mb-4">{t('propertyDetail.viewImprovements')}</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
               {t('propertyDetail.improvementsDescription')}

@@ -29,28 +29,28 @@ const PRIORITY_CONFIG = {
     label: 'Critical',
     badge: 'bg-red-500',
     dot: 'bg-red-500',
-    border: 'border-l-red-500',
+    border: 'border-s-red-500',
     ring: 'ring-red-500/30',
   },
   high: {
     label: 'High',
     badge: 'bg-orange-500',
     dot: 'bg-orange-500',
-    border: 'border-l-orange-500',
+    border: 'border-s-orange-500',
     ring: 'ring-orange-500/30',
   },
   medium: {
     label: 'Medium',
     badge: 'bg-blue-500',
     dot: 'bg-blue-400',
-    border: 'border-l-blue-500',
+    border: 'border-s-blue-500',
     ring: 'ring-blue-500/30',
   },
   low: {
     label: 'Low',
     badge: 'bg-gray-400',
     dot: 'bg-gray-400',
-    border: 'border-l-gray-400',
+    border: 'border-s-gray-400',
     ring: 'ring-gray-400/30',
   },
 };
@@ -204,7 +204,7 @@ export default function NotificationsPage() {
       <div className="max-w-3xl mx-auto">
         <h1 className="text-2xl font-bold text-primary mb-4">{t('notifications.title')}</h1>
         <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-          <div className="flex gap-1.5">
+          <div className="flex flex-wrap gap-1.5">
             {FILTER_TABS.map((tab) => (
               <button
                 key={tab.key}
@@ -246,7 +246,7 @@ export default function NotificationsPage() {
                 <button
                   key={n._id}
                   onClick={() => handleClick(n)}
-                  className={`w-full text-left flex items-start gap-3 p-4 rounded-lg border-l-4 transition-colors ${
+                  className={`w-full text-start flex items-start gap-3 p-4 rounded-lg border-s-4 transition-colors ${
                     n.read
                       ? 'bg-card border-border'
                       : 'bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800'

@@ -166,7 +166,7 @@ export default function Navbar() {
         </button>
 
         <Link to="/" onClick={closeMobileMenu} className="shrink-0 flex items-center">
-          <img src="/images/logo-text.png" alt="CityFlow" className="h-25" />
+          <img src="/images/logo-text.png" alt="CityFlow" className="h-9 w-auto" />
         </Link>
 
         <div className="hidden md:flex items-center gap-1">

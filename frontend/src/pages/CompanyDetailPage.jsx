@@ -719,7 +719,7 @@ export default function CompanyDetailPage() {
 
   return (
     <div className="w-full min-w-0 max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <Link
             to="/real-estate-companies"
@@ -730,9 +730,9 @@ export default function CompanyDetailPage() {
           <div className="w-9 h-9 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-base sm:text-lg shrink-0">
             {company.name.charAt(0)}
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h1 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate">{company.name}</h1>
-            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 whitespace-normal">
               Lv.{company.level} · {company.xp || 0}/{company.xpToNextLevel || 500} XP · {company.reputation}{' '}
               {t('companies.reputation')} · {company.members?.length || 0}/{company.maxMembers} {t('companies.members')}
             </p>
@@ -823,7 +823,7 @@ export default function CompanyDetailPage() {
               className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2.5 sm:p-4"
             >
               <div className="text-xs sm:text-xs text-gray-500 dark:text-gray-400">{stat.label}</div>
-              <div className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mt-1 truncate">
+              <div className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mt-1 break-words">
                 {stat.value}
               </div>
             </div>
@@ -848,7 +848,7 @@ export default function CompanyDetailPage() {
                           style={{ width: `${s.percentage}%` }}
                         />
                       </div>
-                      <span className="text-xs text-gray-500 dark:text-gray-400 w-12 text-right">{s.percentage}%</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 w-12 text-end">{s.percentage}%</span>
                     </div>
                   </div>
                 ))}
@@ -1166,7 +1166,7 @@ export default function CompanyDetailPage() {
                   <h3 className="text-sm font-semibold text-green-800 dark:text-green-300">
                     {t('companies.publiclyListed')}
                   </h3>
-                  <div className="text-xs text-green-600 dark:text-green-400 mt-1 truncate">
+                  <div className="text-xs text-green-600 dark:text-green-400 mt-1 whitespace-normal">
                     {t('companies.ticker')}: {company.ipo.ticker} · {t('companies.sharePrice')}: $
                     {company.ipo.sharePrice}
                   </div>
@@ -1180,7 +1180,7 @@ export default function CompanyDetailPage() {
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
                     <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('companies.goPublic')}</h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 whitespace-normal">
                       {t('companies.ipoFee')}: {formatMoneyExact(ipoRequirements.fee)} ·{' '}
                       {t('companies.ipoRequirements', { min: ipoRequirements.minLevel })}
                     </p>
@@ -1304,9 +1304,9 @@ export default function CompanyDetailPage() {
               return (
                 <div
                   key={member._id}
-                  className="flex items-center justify-between bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+                  className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center text-sm font-medium text-gray-600 dark:text-gray-300 shrink-0">
                       {typeof memberUser === 'object' && memberUser?.username
                         ? memberUser.username.charAt(0).toUpperCase()
@@ -1317,14 +1317,14 @@ export default function CompanyDetailPage() {
                         {typeof memberUser === 'object' && memberUser?.username ? memberUser.username : 'Unknown'}
                         {isSelf && ' (You)'}
                       </span>
-                      <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 whitespace-normal">
                         {t(`companies.role${member.role.charAt(0).toUpperCase() + member.role.slice(1)}`)} ·{' '}
                         {member.shares} shares
                       </div>
                     </div>
                   </div>
                   {isCEO && !isSelf && (
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-x-2 gap-y-1 justify-end">
                       {member.role === 'recruit' && (
                         <button
                           onClick={() => changeRole(id, uid, 'member')}
@@ -1453,8 +1453,8 @@ export default function CompanyDetailPage() {
                         key={app._id}
                         className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2">
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
                             <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center text-sm font-medium text-gray-600 dark:text-gray-300 shrink-0">
                               {typeof applicant === 'object' && applicant?.username
                                 ? applicant.username.charAt(0).toUpperCase()
@@ -1466,13 +1466,13 @@ export default function CompanyDetailPage() {
                                 {typeof applicant === 'object' && applicant?.level ? ` (Lv.${applicant.level})` : ''}
                               </span>
                               {app.message && (
-                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 break-words">
                                   {app.message}
                                 </div>
                               )}
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2 justify-end">
                             <span
                               className={`text-xs px-2 py-1 rounded-lg ${app.status === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' : app.status === 'approved' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}
                             >
@@ -1542,26 +1542,26 @@ export default function CompanyDetailPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
                 <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2.5 sm:p-4">
                   <div className="text-xs text-gray-500 dark:text-gray-400">{t('companies.treasuryBalance')}</div>
-                  <div className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mt-1 truncate">
+                  <div className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mt-1 break-words">
                     {formatMoney(company.treasury?.balance || 0)}
                   </div>
                 </div>
                 <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2.5 sm:p-4">
                   <div className="text-xs text-gray-500 dark:text-gray-400">{t('companies.totalIncome')}</div>
-                  <div className="text-base sm:text-lg font-bold text-green-600 dark:text-green-400 mt-1 truncate">
+                  <div className="text-base sm:text-lg font-bold text-green-600 dark:text-green-400 mt-1 break-words">
                     {formatMoney(totalIncome)}
                   </div>
                 </div>
                 <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2.5 sm:p-4">
                   <div className="text-xs text-gray-500 dark:text-gray-400">{t('companies.totalExpenses')}</div>
-                  <div className="text-base sm:text-lg font-bold text-red-600 dark:text-red-400 mt-1 truncate">
+                  <div className="text-base sm:text-lg font-bold text-red-600 dark:text-red-400 mt-1 break-words">
                     {formatMoney(totalExpenses)}
                   </div>
                 </div>
                 <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2.5 sm:p-4">
                   <div className="text-xs text-gray-500 dark:text-gray-400">{t('companies.monthlyCashFlow')}</div>
                   <div
-                    className={`text-base sm:text-lg font-bold mt-1 truncate ${cashFlow >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}
+                    className={`text-base sm:text-lg font-bold mt-1 break-words ${cashFlow >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}
                   >
                     {cashFlow >= 0 ? '+' : ''}
                     {formatMoney(cashFlow)}
@@ -1740,7 +1740,7 @@ export default function CompanyDetailPage() {
                   return (
                     <div
                       key={req._id}
-                      className="bg-white dark:bg-gray-800 border-l-4 border-purple-500 border-y border-r border-gray-200 dark:border-gray-700 rounded-lg p-3"
+                      className="bg-white dark:bg-gray-800 border-s-4 border-purple-500 border-y border-e border-gray-200 dark:border-gray-700 rounded-lg p-3"
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div className="min-w-0">
@@ -2002,7 +2002,7 @@ export default function CompanyDetailPage() {
                               {product.description}
                             </div>
                           </div>
-                          <div className="text-right shrink-0">
+                          <div className="text-end shrink-0">
                             <div className="text-sm font-bold text-purple-600 dark:text-purple-400">
                               {(product.interestRate * 100).toFixed(1)}%
                             </div>
@@ -2205,7 +2205,7 @@ export default function CompanyDetailPage() {
                 return (
                   <div
                     key={req._id}
-                    className="bg-white dark:bg-gray-800 border-l-4 border-purple-500 border-y border-r border-gray-200 dark:border-gray-700 rounded-lg p-3"
+                    className="bg-white dark:bg-gray-800 border-s-4 border-purple-500 border-y border-e border-gray-200 dark:border-gray-700 rounded-lg p-3"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div className="min-w-0">
@@ -2323,17 +2323,17 @@ export default function CompanyDetailPage() {
                           key={loan._id}
                           className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2.5 sm:p-3"
                         >
-                          <div className="flex items-center justify-between gap-2 mb-2">
-                            <div className="min-w-0">
+                          <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2 mb-2">
+                            <div className="min-w-0 flex-1">
                               <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white truncate">
                                 {loan.type} {t('companies.loan')}
                               </div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                              <div className="text-xs text-gray-500 dark:text-gray-400 whitespace-normal">
                                 {t('companies.principal')}: ${loan.principal.toLocaleString()} ·{' '}
                                 {t('companies.interest')}: {(loan.interestRate * 100).toFixed(1)}%
                               </div>
                             </div>
-                            <div className="flex items-center gap-2 shrink-0">
+                            <div className="flex flex-wrap items-center gap-2 justify-end">
                               <span
                                 className={`text-xs px-2 py-1 rounded-lg ${loan.active ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-500'}`}
                               >
@@ -2849,7 +2849,7 @@ export default function CompanyDetailPage() {
                           <span>
                             {t('companies.proposedBy')}: {proposer || t('companies.unknown')}
                             {isProposer && (
-                              <span className="ml-1 text-xs px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded">
+                              <span className="ms-1 text-xs px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded">
                                 {t('companies.proposedByYou')}
                               </span>
                             )}
@@ -2857,7 +2857,7 @@ export default function CompanyDetailPage() {
                         </div>
                         <div className="flex items-center gap-1">
                           <span className="inline-block w-4 text-center">🗳️</span>
-                          <span className="whitespace-nowrap">
+                          <span className="whitespace-normal">
                             {t('companies.yes')}: {yesVotes}
                             <span className="mx-1 text-gray-400">·</span>
                             {t('companies.no')}: {noVotes}
@@ -2866,7 +2866,7 @@ export default function CompanyDetailPage() {
                         {proposal.status === 'pending' && votingEndsAt && (
                           <div className="flex items-center gap-1">
                             <span className="inline-block w-4 text-center">⏳</span>
-                            <span className="whitespace-nowrap">
+                            <span className="whitespace-normal">
                               {t('companies.auctionBidExpiresIn')}: {remainingH}h {remainingM}m
                             </span>
                           </div>
@@ -2874,7 +2874,7 @@ export default function CompanyDetailPage() {
                         {proposal.status === 'approved' && proposal.resolution && (
                           <div className="flex items-center gap-1">
                             <span className="inline-block w-4 text-center">✅</span>
-                            <span className="whitespace-nowrap">
+                            <span className="whitespace-normal">
                               {t('companies.yes')}: {proposal.resolution.yes}
                               <span className="mx-1 text-gray-400">·</span>
                               {t('companies.no')}: {proposal.resolution.no}
@@ -2946,16 +2946,16 @@ export default function CompanyDetailPage() {
                   key={log._id}
                   className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
+                  <div className="flex flex-wrap items-start justify-between gap-x-2 gap-y-1">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
                       <span className="text-sm text-gray-900 dark:text-white truncate min-w-0">
                         {typeof log.userId === 'object' && log.userId?.username ? log.userId.username : 'System'}
                       </span>
-                      <span className="text-sm text-gray-500 dark:text-gray-400 shrink-0">
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
                         {auditActionLabel(log.action, t)}
                       </span>
                     </div>
-                    <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">
+                    <span className="text-xs text-gray-400 dark:text-gray-500">
                       {new Date(log.createdAt).toLocaleDateString()}
                     </span>
                   </div>
@@ -3049,7 +3049,7 @@ function ContractAvailableList({
       {proposeError && (
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm text-red-700 dark:text-red-300 flex items-center justify-between">
           <span>{proposeError}</span>
-          <button onClick={() => setProposeError('')} className="text-red-500 hover:text-red-700 font-bold ml-2">
+          <button onClick={() => setProposeError('')} className="text-red-500 hover:text-red-700 font-bold ms-2">
             ×
           </button>
         </div>
@@ -3163,7 +3163,7 @@ function ContractProposalList({
                     {t('companies.votes')}: {yesVotes}/{totalVoters} {t('companies.yes')} · {noVotes}{' '}
                     {t('companies.no')}
                     {proposal.expiresAtTick && (
-                      <span className="ml-2">
+                      <span className="ms-2">
                         · {t('companies.expiresIn')}:{' '}
                         {Math.max(0, proposal.expiresAtTick - (contract.currentTick || 0))} {t('companies.months')}
                       </span>
@@ -3260,7 +3260,7 @@ function ContractActiveList({ contracts, t }) {
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                 <div className="bg-yellow-500 h-2 rounded-full transition-all" style={{ width: `${progress}%` }} />
               </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-right">{progress}%</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-end">{progress}%</div>
             </div>
           );
         })
@@ -3354,7 +3354,7 @@ function InvestmentOpportunitiesList({
                     <div className="text-sm font-medium text-gray-900 dark:text-white truncate">{product.name}</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{product.description}</div>
                   </div>
-                  <div className="text-right shrink-0">
+                  <div className="text-end shrink-0">
                     <div className="text-sm font-bold text-blue-600 dark:text-blue-400">
                       {((product.currentAnnualReturnRate || product.annualReturnRate) * 100).toFixed(1)}%
                     </div>
@@ -3459,7 +3459,7 @@ function InvestmentProposalList({
                     {t('companies.votes')}: {yesVotes}/{totalVoters} {t('companies.yes')} · {noVotes}{' '}
                     {t('companies.no')}
                     {proposal.expiresAtTick && (
-                      <span className="ml-2">
+                      <span className="ms-2">
                         · {t('companies.expiresIn')}: {Math.max(0, proposal.expiresAtTick - (inv.currentTick || 0))}{' '}
                         {t('companies.months')}
                       </span>
@@ -3587,7 +3587,7 @@ function InvestmentActiveList({ investments, t }) {
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                 <div className="bg-blue-500 h-2 rounded-full transition-all" style={{ width: `${progress}%` }} />
               </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-right">{progress}%</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-end">{progress}%</div>
             </div>
           );
         })

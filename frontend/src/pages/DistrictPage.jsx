@@ -95,12 +95,12 @@ export default function DistrictPage() {
   return (
     <div className="flex-1 overflow-y-auto p-4 md:p-8">
       <div className="max-w-6xl mx-auto space-y-6">
-        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-          <Link to="/map" className="hover:text-blue-500">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
+          <Link to="/map" className="hover:text-blue-500 min-w-0 truncate">
             {t('nav.map')}
           </Link>
-          <span>/</span>
-          <Link to={`/city/${district.cityId?._id || ''}`} className="hover:text-blue-500">
+          <span className="shrink-0">/</span>
+          <Link to={`/city/${district.cityId?._id || ''}`} className="hover:text-blue-500 min-w-0 truncate">
             {localizedCityName}
           </Link>
           <span>/</span>
@@ -181,12 +181,12 @@ export default function DistrictPage() {
           />
         </div>
 
-        <div className="flex gap-1 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex gap-1 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${
+              className={`px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap shrink-0 ${
                 activeTab === tab.key
                   ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
@@ -278,7 +278,7 @@ export default function DistrictPage() {
                           <p className="text-xs text-gray-500 dark:text-gray-400">{inv.propertyCount} properties</p>
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-end">
                         <span className={`text-sm font-bold ${tierInfo.color}`}>{(inv.score * 100).toFixed(1)}%</span>
                         <p className={`text-xs ${tierInfo.color}`}>{tierInfo.label}</p>
                       </div>
@@ -324,7 +324,7 @@ export default function DistrictPage() {
                         {prop.companyId && <span className="text-blue-500">· Company</span>}
                       </div>
                     </div>
-                    <div className="text-right shrink-0">
+                    <div className="text-end shrink-0">
                       <div className="text-sm font-semibold text-orange-500">{formatMoney(prop.currentPrice)}</div>
                       {prop.rent > 0 && (
                         <div className="text-xs text-gray-500 dark:text-gray-400">{formatMoney(prop.rent)}/mo</div>
@@ -408,12 +408,12 @@ export default function DistrictPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
-                      <th className="text-left px-3 py-2">{t('districts.historyTick', 'Month')}</th>
-                      <th className="text-left px-3 py-2">{t('districts.avgPrice', 'Avg Price')}</th>
-                      <th className="text-left px-3 py-2">{t('districts.demandIndex', 'Demand')}</th>
-                      <th className="text-left px-3 py-2">{t('districts.supplyIndex', 'Supply')}</th>
-                      <th className="text-left px-3 py-2">{t('districts.growthRate', 'Growth')}</th>
-                      <th className="text-left px-3 py-2">{t('districts.population', 'Population')}</th>
+                      <th className="text-start px-3 py-2">{t('districts.historyTick', 'Month')}</th>
+                      <th className="text-start px-3 py-2">{t('districts.avgPrice', 'Avg Price')}</th>
+                      <th className="text-start px-3 py-2">{t('districts.demandIndex', 'Demand')}</th>
+                      <th className="text-start px-3 py-2">{t('districts.supplyIndex', 'Supply')}</th>
+                      <th className="text-start px-3 py-2">{t('districts.growthRate', 'Growth')}</th>
+                      <th className="text-start px-3 py-2">{t('districts.population', 'Population')}</th>
                     </tr>
                   </thead>
                   <tbody>

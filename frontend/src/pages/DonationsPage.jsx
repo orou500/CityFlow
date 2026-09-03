@@ -226,7 +226,7 @@ export default function DonationsPage() {
             {history.map((d, i) => (
               <div
                 key={i}
-                className="flex justify-between items-center text-sm bg-gray-100 dark:bg-gray-900 rounded p-3"
+                className="flex flex-wrap justify-between items-center gap-x-3 gap-y-1 text-sm bg-gray-100 dark:bg-gray-900 rounded p-3"
               >
                 <span className="text-primary">${d.amount} USD</span>
                 <span
@@ -234,7 +234,7 @@ export default function DonationsPage() {
                 >
                   {t(`donations.status${d.status.charAt(0).toUpperCase() + d.status.slice(1)}`)}
                 </span>
-                <span className="text-muted text-xs">{new Date(d.createdAt).toLocaleDateString()}</span>
+                <span className="text-muted text-xs min-w-0">{new Date(d.createdAt).toLocaleDateString()}</span>
               </div>
             ))}
           </div>

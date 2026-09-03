@@ -159,12 +159,12 @@ export default function IndexMarket() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
-                <th className="px-4 py-3 text-left">{t('indexes.index')}</th>
-                <th className="px-4 py-3 text-left">{t('indexes.type')}</th>
-                <th className="px-4 py-3 text-right">{t('indexes.indexValue')}</th>
-                <th className="px-4 py-3 text-right">{t('indexes.change')}</th>
-                <th className="px-4 py-3 text-right">{t('indexes.totalReturn')}</th>
-                <th className="px-4 py-3 text-right">{t('indexes.constituents')}</th>
+                <th className="px-4 py-3 text-start">{t('indexes.index')}</th>
+                <th className="px-4 py-3 text-start">{t('indexes.type')}</th>
+                <th className="px-4 py-3 text-end">{t('indexes.indexValue')}</th>
+                <th className="px-4 py-3 text-end">{t('indexes.change')}</th>
+                <th className="px-4 py-3 text-end">{t('indexes.totalReturn')}</th>
+                <th className="px-4 py-3 text-end">{t('indexes.constituents')}</th>
               </tr>
             </thead>
             <tbody>
@@ -188,24 +188,24 @@ export default function IndexMarket() {
                     </span>
                   </td>
                   <td
-                    className="px-4 py-3 text-right text-gray-900 dark:text-white font-medium"
+                    className="px-4 py-3 text-end text-gray-900 dark:text-white font-medium"
                     title={`$${idx.value?.toFixed(2)}`}
                   >
                     {formatPrice(idx.value)}
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3 text-end">
                     <span className={idx.dayChangePercent >= 0 ? 'text-green-500' : 'text-red-500'}>
                       {idx.dayChangePercent >= 0 ? '+' : ''}
                       {idx.dayChangePercent}%
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3 text-end">
                     <span className={idx.totalReturn >= 0 ? 'text-green-500' : 'text-red-500'}>
                       {idx.totalReturn >= 0 ? '+' : ''}
                       {idx.totalReturn}%
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400">{idx.constituentCount}</td>
+                  <td className="px-4 py-3 text-end text-gray-500 dark:text-gray-400">{idx.constituentCount}</td>
                 </tr>
               ))}
             </tbody>

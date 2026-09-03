@@ -108,7 +108,7 @@ export default function CareerPage() {
   return (
     <div className="flex-1 p-4 md:p-6 overflow-y-auto">
       <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 mb-6">
           <h1 className="text-2xl font-bold text-primary">{t('career.title')}</h1>
           <div className="flex items-center gap-2 text-sm text-muted">
             <span className="font-semibold text-blue-600 dark:text-blue-400">
@@ -119,8 +119,8 @@ export default function CareerPage() {
 
         {/* Level & XP Card */}
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6 mb-6">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 mb-2">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
               <span className="text-3xl font-bold text-blue-600 dark:text-blue-400">
                 {t('career.level')} {career.level}
               </span>
@@ -130,7 +130,7 @@ export default function CareerPage() {
                 </span>
               )}
               {career.title && (
-                <span className="text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full">
+                <span className="text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full min-w-0 truncate">
                   {career.title}
                 </span>
               )}
@@ -264,7 +264,7 @@ export default function CareerPage() {
                         {ach.earned && <span className="text-green-500 text-xs">✓</span>}
                       </div>
                       <p className="text-xs text-muted mt-0.5">{ach.description}</p>
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
                         <span className="text-xs text-blue-500">+{ach.points} pts</span>
                         {ach.rewardBadge && (
                           <span className="text-xs bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 px-1.5 py-0.5 rounded">

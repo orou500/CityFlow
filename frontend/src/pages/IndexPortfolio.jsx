@@ -106,12 +106,12 @@ export default function IndexPortfolio() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
-                  <th className="px-4 py-3 text-left">{t('indexes.index')}</th>
-                  <th className="px-4 py-3 text-right">{t('indexes.shares')}</th>
-                  <th className="px-4 py-3 text-right">{t('indexes.avgBuyPrice')}</th>
-                  <th className="px-4 py-3 text-right">{t('indexes.currentPrice')}</th>
-                  <th className="px-4 py-3 text-right">{t('indexes.currentValue')}</th>
-                  <th className="px-4 py-3 text-right">{t('indexes.profitLoss')}</th>
+                  <th className="px-4 py-3 text-start">{t('indexes.index')}</th>
+                  <th className="px-4 py-3 text-end">{t('indexes.shares')}</th>
+                  <th className="px-4 py-3 text-end">{t('indexes.avgBuyPrice')}</th>
+                  <th className="px-4 py-3 text-end">{t('indexes.currentPrice')}</th>
+                  <th className="px-4 py-3 text-end">{t('indexes.currentValue')}</th>
+                  <th className="px-4 py-3 text-end">{t('indexes.profitLoss')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -129,22 +129,19 @@ export default function IndexPortfolio() {
                       </Link>
                       <div className="text-xs text-gray-500 dark:text-gray-400">{h.index?.ticker}</div>
                     </td>
-                    <td
-                      className="px-4 py-3 text-right text-gray-900 dark:text-white"
-                      title={h.shares.toLocaleString()}
-                    >
+                    <td className="px-4 py-3 text-end text-gray-900 dark:text-white" title={h.shares.toLocaleString()}>
                       {formatCount(h.shares)}
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400">
+                    <td className="px-4 py-3 text-end text-gray-500 dark:text-gray-400">
                       ${h.avgBuyPrice?.toFixed(2)}
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-900 dark:text-white">
+                    <td className="px-4 py-3 text-end text-gray-900 dark:text-white">
                       <span title={`$${h.index?.value?.toFixed(2)}`}>{formatPrice(h.index?.value)}</span>
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-900 dark:text-white">
+                    <td className="px-4 py-3 text-end text-gray-900 dark:text-white">
                       <span title={formatMoneyExact(h.currentValue)}>{formatMoney(h.currentValue)}</span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-end">
                       <span className={h.profitLoss >= 0 ? 'text-green-500' : 'text-red-500'}>
                         {h.profitLoss >= 0 ? '+' : ''}
                         <span title={formatMoneyExact(h.profitLoss)}>{formatMoney(h.profitLoss)}</span>
@@ -176,12 +173,12 @@ export default function IndexPortfolio() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
-                  <th className="px-4 py-3 text-left">{t('indexes.date')}</th>
-                  <th className="px-4 py-3 text-left">{t('indexes.index')}</th>
-                  <th className="px-4 py-3 text-left">{t('indexes.type')}</th>
-                  <th className="px-4 py-3 text-right">{t('indexes.shares')}</th>
-                  <th className="px-4 py-3 text-right">{t('indexes.price')}</th>
-                  <th className="px-4 py-3 text-right">{t('indexes.total')}</th>
+                  <th className="px-4 py-3 text-start">{t('indexes.date')}</th>
+                  <th className="px-4 py-3 text-start">{t('indexes.index')}</th>
+                  <th className="px-4 py-3 text-start">{t('indexes.type')}</th>
+                  <th className="px-4 py-3 text-end">{t('indexes.shares')}</th>
+                  <th className="px-4 py-3 text-end">{t('indexes.price')}</th>
+                  <th className="px-4 py-3 text-end">{t('indexes.total')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -198,17 +195,11 @@ export default function IndexPortfolio() {
                         {tx.type === 'buy' ? t('indexes.buy') : t('indexes.sell')}
                       </span>
                     </td>
-                    <td
-                      className="px-4 py-3 text-right text-gray-900 dark:text-white"
-                      title={tx.shares.toLocaleString()}
-                    >
+                    <td className="px-4 py-3 text-end text-gray-900 dark:text-white" title={tx.shares.toLocaleString()}>
                       {formatCount(tx.shares)}
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400">${tx.price?.toFixed(2)}</td>
-                    <td
-                      className="px-4 py-3 text-right text-gray-900 dark:text-white"
-                      title={formatMoneyExact(tx.total)}
-                    >
+                    <td className="px-4 py-3 text-end text-gray-500 dark:text-gray-400">${tx.price?.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-end text-gray-900 dark:text-white" title={formatMoneyExact(tx.total)}>
                       {formatMoney(tx.total)}
                     </td>
                   </tr>

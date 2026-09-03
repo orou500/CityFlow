@@ -235,7 +235,7 @@ export default function DevelopmentPage() {
       {error && (
         <div className="bg-red-900 text-red-300 p-3 rounded mb-4 text-sm">
           {translateError(new Error(error), t)}
-          <button onClick={() => setError(null)} className="ml-2">
+          <button onClick={() => setError(null)} className="ms-2">
             &times;
           </button>
         </div>
@@ -243,7 +243,7 @@ export default function DevelopmentPage() {
       {success && (
         <div className="bg-blue-900 text-blue-300 p-3 rounded mb-4 text-sm">
           {success}
-          <button onClick={() => setSuccess(null)} className="ml-2">
+          <button onClick={() => setSuccess(null)} className="ms-2">
             &times;
           </button>
         </div>
@@ -479,11 +479,11 @@ export default function DevelopmentPage() {
                             </div>
                           </div>
 
-                          <div className="flex gap-3">
+                          <div className="flex flex-wrap gap-3">
                             <button
                               onClick={handleStartConstruction}
                               disabled={starting}
-                              className="bg-orange-500 hover:bg-orange-400 disabled:bg-gray-200 dark:disabled:bg-gray-600 text-gray-900 dark:text-white px-6 py-2 rounded text-sm font-semibold transition-colors"
+                              className="flex-1 min-w-[200px] bg-orange-500 hover:bg-orange-400 disabled:bg-gray-200 dark:disabled:bg-gray-600 text-gray-900 dark:text-white px-6 py-2 rounded text-sm font-semibold transition-colors"
                             >
                               {starting
                                 ? t('development.starting')
@@ -709,11 +709,11 @@ export default function DevelopmentPage() {
       {upgradeModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           {confirmUpgrade ? (
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 w-full max-w-sm">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 w-full max-w-sm max-h-[90vh] overflow-y-auto">
               <h3 className="text-gray-900 dark:text-white font-semibold mb-4">
                 {t('development.confirmUpgrade')}
                 {confirmUpgrade.level > 1 && (
-                  <span className="ml-1 text-sm text-gray-400 dark:text-gray-500 font-normal">
+                  <span className="ms-1 text-sm text-gray-400 dark:text-gray-500 font-normal">
                     (Lv.{confirmUpgrade.level})
                   </span>
                 )}
@@ -767,7 +767,7 @@ export default function DevelopmentPage() {
               </div>
             </div>
           ) : (
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 w-full max-w-md">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 w-full max-w-md max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-gray-900 dark:text-white font-semibold">{t('development.buildingUpgrades')}</h3>
                 <button
@@ -799,11 +799,11 @@ export default function DevelopmentPage() {
                             <p className="font-semibold text-gray-900 dark:text-white text-sm">
                               {t(`development.${u.type}`)}
                               {u.level > 1 && (
-                                <span className="ml-1 text-xs text-gray-400 dark:text-gray-500">Lv.{u.level}</span>
+                                <span className="ms-1 text-xs text-gray-400 dark:text-gray-500">Lv.{u.level}</span>
                               )}
                             </p>
                           </div>
-                          <div className="text-right">
+                          <div className="text-end">
                             <p className="font-semibold text-gray-900 dark:text-white text-sm">
                               <CompactValue value={u.cost} />
                             </p>
@@ -901,7 +901,7 @@ export default function DevelopmentPage() {
                       {Math.round(improvementStatus.activeImprovement.progress || 0)}%
                       {improvementStatus.activeImprovement.completionPeriod &&
                         improvementStatus.currentPeriod != null && (
-                          <span className="ml-1 text-yellow-500 dark:text-yellow-500 font-normal">
+                          <span className="ms-1 text-yellow-500 dark:text-yellow-500 font-normal">
                             (
                             {Math.max(
                               0,
@@ -938,7 +938,7 @@ export default function DevelopmentPage() {
                         >
                           {req.label}
                         </span>
-                        {req.detail && <span className="text-gray-400 dark:text-gray-500 ml-1">— {req.detail}</span>}
+                        {req.detail && <span className="text-gray-400 dark:text-gray-500 ms-1">— {req.detail}</span>}
                       </div>
                     </div>
                   ))}
@@ -993,7 +993,7 @@ export default function DevelopmentPage() {
                             {t(`development.improvement.${improvement.id}.description`, improvement.description)}
                           </p>
                         </div>
-                        <div className="text-right">
+                        <div className="text-end">
                           {isCompleted && (
                             <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 px-2 py-0.5 rounded">
                               {t('development.completed')}

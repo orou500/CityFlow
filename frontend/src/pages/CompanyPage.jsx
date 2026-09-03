@@ -134,13 +134,13 @@ export default function CompanyPage() {
   const displayStats = isIPO && stats ? stats : company;
 
   return (
-    <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6 overflow-hidden">
+    <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex items-center gap-3 min-w-0">
           <span className="text-3xl">{INDUSTRY_ICONS[company.industry]}</span>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{company.name}</h1>
-            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white break-words">{company.name}</h1>
+            <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
               <span>{company.ticker}</span>
               <span className="capitalize">{company.industry}</span>
               <span className="capitalize">{company.size}</span>
@@ -606,10 +606,10 @@ export default function CompanyPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
-                    <th className="px-3 py-2 text-left">{t('stocks.tick')}</th>
-                    <th className="px-3 py-2 text-right">{t('stocks.dividendPerShare')}</th>
-                    <th className="px-3 py-2 text-right">{t('stocks.dividendYield')}</th>
-                    <th className="px-3 py-2 text-right">{t('stocks.total')}</th>
+                    <th className="px-3 py-2 text-start">{t('stocks.tick')}</th>
+                    <th className="px-3 py-2 text-end">{t('stocks.dividendPerShare')}</th>
+                    <th className="px-3 py-2 text-end">{t('stocks.dividendYield')}</th>
+                    <th className="px-3 py-2 text-end">{t('stocks.total')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -619,16 +619,14 @@ export default function CompanyPage() {
                     .map((d, i) => (
                       <tr key={i} className="border-b border-gray-100 dark:border-gray-800">
                         <td className="px-3 py-2 text-gray-900 dark:text-white">{d.tick}</td>
-                        <td className="px-3 py-2 text-right text-gray-900 dark:text-white">
+                        <td className="px-3 py-2 text-end text-gray-900 dark:text-white">
                           ${(d.perShare || 0).toFixed(2)}
                           {d.type === 'exceptional' && (
-                            <span className="ml-1 text-xs text-purple-500">{t('stocks.exceptional')}</span>
+                            <span className="ms-1 text-xs text-purple-500">{t('stocks.exceptional')}</span>
                           )}
                         </td>
-                        <td className="px-3 py-2 text-right text-gray-500 dark:text-gray-400">{d.yield || 0}%</td>
-                        <td className="px-3 py-2 text-right text-gray-500 dark:text-gray-400">
-                          {formatMoney(d.total)}
-                        </td>
+                        <td className="px-3 py-2 text-end text-gray-500 dark:text-gray-400">{d.yield || 0}%</td>
+                        <td className="px-3 py-2 text-end text-gray-500 dark:text-gray-400">{formatMoney(d.total)}</td>
                       </tr>
                     ))}
                 </tbody>
@@ -644,11 +642,11 @@ export default function CompanyPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
-                  <th className="px-3 py-2 text-left">{t('stocks.tick')}</th>
-                  <th className="px-3 py-2 text-right">{t('stocks.sharePrice')}</th>
-                  <th className="hidden sm:table-cell px-3 py-2 text-right">{t('stocks.employees')}</th>
-                  <th className="hidden sm:table-cell px-3 py-2 text-right">{t('stocks.revenue')}</th>
-                  <th className="hidden md:table-cell px-3 py-2 text-right">{t('stocks.marketCap')}</th>
+                  <th className="px-3 py-2 text-start">{t('stocks.tick')}</th>
+                  <th className="px-3 py-2 text-end">{t('stocks.sharePrice')}</th>
+                  <th className="hidden sm:table-cell px-3 py-2 text-end">{t('stocks.employees')}</th>
+                  <th className="hidden sm:table-cell px-3 py-2 text-end">{t('stocks.revenue')}</th>
+                  <th className="hidden md:table-cell px-3 py-2 text-end">{t('stocks.marketCap')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -658,21 +656,21 @@ export default function CompanyPage() {
                   .map((h, i) => (
                     <tr key={i} className="border-b border-gray-100 dark:border-gray-800">
                       <td className="px-3 py-2 text-gray-900 dark:text-white">{h.tick}</td>
-                      <td className="px-3 py-2 text-right text-gray-900 dark:text-white">${h.price?.toFixed(2)}</td>
+                      <td className="px-3 py-2 text-end text-gray-900 dark:text-white">${h.price?.toFixed(2)}</td>
                       <td
-                        className="hidden sm:table-cell px-3 py-2 text-right text-gray-500 dark:text-gray-400"
+                        className="hidden sm:table-cell px-3 py-2 text-end text-gray-500 dark:text-gray-400"
                         title={h.employees?.toLocaleString()}
                       >
                         {formatCount(h.employees)}
                       </td>
                       <td
-                        className="hidden sm:table-cell px-3 py-2 text-right text-gray-500 dark:text-gray-400"
+                        className="hidden sm:table-cell px-3 py-2 text-end text-gray-500 dark:text-gray-400"
                         title={formatMoneyExact(h.revenue)}
                       >
                         {formatMoney(h.revenue)}
                       </td>
                       <td
-                        className="hidden md:table-cell px-3 py-2 text-right text-gray-500 dark:text-gray-400"
+                        className="hidden md:table-cell px-3 py-2 text-end text-gray-500 dark:text-gray-400"
                         title={formatMoneyExact(h.marketCap)}
                       >
                         {formatMoney(h.marketCap)}

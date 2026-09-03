@@ -31,14 +31,14 @@ function RankBadge({ rank }) {
   if (rank === 2) return <span className="text-lg">{'\uD83E\uDD48'}</span>;
   if (rank === 3) return <span className="text-lg">{'\uD83E\uDD49'}</span>;
   return (
-    <span className="inline-flex items-center justify-center min-w-7 h-7 max-w-12 px-1.5 rounded-full bg-gray-100 dark:bg-gray-800 text-xs font-semibold text-secondary whitespace-nowrap truncate">
+    <span className="inline-flex items-center justify-center min-w-7 h-7 px-2 rounded-full bg-gray-100 dark:bg-gray-800 text-xs font-semibold text-secondary whitespace-nowrap">
       {rank}
     </span>
   );
 }
 
 function MovementIndicator({ change }) {
-  const base = 'inline-block max-w-14 overflow-hidden text-ellipsis whitespace-nowrap align-top';
+  const base = 'inline-block max-w-20 overflow-hidden text-ellipsis whitespace-nowrap align-top';
   if (!change || change === 0) return <span className={`text-xs text-muted ${base}`}>{'\u25AC'}</span>;
   if (change > 0)
     return (
@@ -238,7 +238,7 @@ function PlayerProfile({ profile, onClose }) {
                     <>
                       <span className="text-sm font-semibold text-primary">#{data.rank}</span>
                       <span className="text-xs text-muted">{'\u00B7'}</span>
-                      <span className="text-sm text-secondary max-w-24 truncate">
+                      <span className="text-sm text-secondary min-w-0 break-words">
                         {CATEGORY_FORMATTERS[cat](data.value)}
                       </span>
                     </>

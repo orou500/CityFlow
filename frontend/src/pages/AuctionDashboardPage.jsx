@@ -100,7 +100,7 @@ function FeaturedCard({ auction, onClick }) {
   return (
     <button
       onClick={() => onClick(auction)}
-      className="relative w-full text-left bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:via-gray-850 dark:to-gray-900 border-2 border-amber-300/50 dark:border-amber-700/50 hover:border-amber-500 rounded-xl p-4 transition-all hover:scale-[1.02] hover:shadow-lg hover:shadow-amber-200/30 dark:hover:shadow-amber-900/30"
+      className="relative w-full text-start bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:via-gray-850 dark:to-gray-900 border-2 border-amber-300/50 dark:border-amber-700/50 hover:border-amber-500 rounded-xl p-4 transition-all hover:scale-[1.02] hover:shadow-lg hover:shadow-amber-200/30 dark:hover:shadow-amber-900/30"
     >
       <div className="absolute top-2 right-2 flex gap-1">
         {isEndingSoon && (
@@ -120,7 +120,7 @@ function FeaturedCard({ auction, onClick }) {
         {SELLER_ICONS[auction.sellerType]}{' '}
         {auction.sellerId?.username || t(`auctions.sellerTypes.${auction.sellerType}`)}
         {property?.propertyRating && (
-          <span className={`ml-2 ${RARITY_STYLES[property.propertyRating]?.text || ''}`}>
+          <span className={`ms-2 ${RARITY_STYLES[property.propertyRating]?.text || ''}`}>
             💎 {t(`auctions.ratings.${property.propertyRating}`)}
           </span>
         )}
@@ -132,7 +132,7 @@ function FeaturedCard({ auction, onClick }) {
             {formatMoney(auction.currentBid || auction.startingBid)}
           </div>
         </div>
-        <div className="text-right">
+        <div className="text-end">
           <div className="text-xs text-muted">{t('auctions.timeLeft')}</div>
           <AuctionTimeLeft
             startTick={auction.startTick}
@@ -218,7 +218,7 @@ function AuctionCard({ auction, onClick, onWatch, isWatched, user }) {
   return (
     <button
       onClick={() => onClick(auction)}
-      className={`w-full text-left bg-card/80 border-l-4 ${statusStyle.border} border-border hover:border-border hover:border-l-4 rounded-lg p-4 transition-all hover:bg-card`}
+      className={`w-full text-start bg-card/80 border-s-4 ${statusStyle.border} border-border hover:border-border hover:border-s-4 rounded-lg p-4 transition-all hover:bg-card`}
     >
       <PropertyImage property={property} alt={property?.name} className="w-full h-28 object-cover rounded-md mb-2" />
       <div className="flex items-start justify-between mb-2">
@@ -235,13 +235,13 @@ function AuctionCard({ auction, onClick, onWatch, isWatched, user }) {
           <div className="text-xs text-muted mt-0.5">
             {property?.type && t(`auctions.propertyTypes.${property.type}`)}
             {property?.propertyRating && (
-              <span className={`ml-2 ${RARITY_STYLES[property.propertyRating]?.text || ''}`}>
+              <span className={`ms-2 ${RARITY_STYLES[property.propertyRating]?.text || ''}`}>
                 {t(`auctions.ratings.${property.propertyRating}`)}
               </span>
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2 ml-2">
+        <div className="flex items-center gap-2 ms-2">
           {user && auction.status === 'active' && (
             <span
               onClick={(e) => {
@@ -358,8 +358,8 @@ function ActivityFeed({ activities }) {
             <span>{icons[act.type] || '📌'}</span>
             <div className="flex-1 min-w-0">
               {renderActor(act)}
-              {act.amount ? <span className="text-primary ml-1">{formatMoney(act.amount)}</span> : null}
-              {act.message && <span className="text-muted ml-1 text-xs">— {act.message}</span>}
+              {act.amount ? <span className="text-primary ms-1">{formatMoney(act.amount)}</span> : null}
+              {act.message && <span className="text-muted ms-1 text-xs">— {act.message}</span>}
             </div>
             <span className="text-xs text-muted whitespace-nowrap">M{act.tick}</span>
           </div>
@@ -778,14 +778,14 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
           )}
           <div className="flex items-center gap-2">
             <div className="flex-1 relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">$</span>
+              <span className="absolute start-3 top-1/2 -translate-y-1/2 text-muted">$</span>
               <input
                 type="number"
                 value={bidAmount}
                 onChange={(e) => setBidAmount(e.target.value)}
                 placeholder={minNextBid.toLocaleString()}
                 min={minNextBid}
-                className="w-full bg-gray-100 dark:bg-gray-900 border border-border text-primary rounded pl-7 pr-3 py-2 text-sm"
+                className="w-full bg-gray-100 dark:bg-gray-900 border border-border text-primary rounded ps-7 pe-3 py-2 text-sm"
               />
             </div>
             <button
@@ -849,7 +849,7 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
                 <span className="text-muted">
                   {bid.username || bid.bidderId?.username || t('auctions.unknownBidder')}
                   {user && bid.bidderId?._id === user._id && (
-                    <span className="text-blue-400 ml-1">({t('auctions.you')})</span>
+                    <span className="text-blue-400 ms-1">({t('auctions.you')})</span>
                   )}
                 </span>
                 <div className="flex items-center gap-3">
@@ -918,7 +918,7 @@ function CompanyBidModal({ auctionId, minBid, onClose, onSubmit }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-card border border-border rounded-lg p-6 w-full max-w-md">
+      <div className="bg-card border border-border rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
         <h3 className="text-lg font-bold text-primary mb-4">🏢 {t('auctions.companyBid')}</h3>
         {error && (
           <div className="bg-red-900/50 border border-red-800 text-red-300 px-3 py-2 rounded mb-3 text-sm">{error}</div>
@@ -1022,7 +1022,7 @@ function SellPropertyModal({ onClose, onSubmit }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-card border border-border rounded-lg p-6 w-full max-w-md">
+      <div className="bg-card border border-border rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
         <h3 className="text-lg font-bold text-primary mb-4">🏷️ {t('auctions.sellProperty')}</h3>
         {error && (
           <div className="bg-red-900/50 border border-red-800 text-red-300 px-3 py-2 rounded mb-3 text-sm">{error}</div>
@@ -1338,7 +1338,7 @@ export default function AuctionDashboardPage() {
       {error && (
         <div className="bg-red-900/50 border border-red-800 text-red-300 px-4 py-3 rounded mb-4 text-sm flex items-center justify-between">
           <span>{error}</span>
-          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-300 ml-2">
+          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-300 ms-2">
             {t('auctions.dismiss')}
           </button>
         </div>

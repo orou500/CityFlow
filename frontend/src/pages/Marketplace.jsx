@@ -37,7 +37,7 @@ function PropertyCard({ p, cities, propertyTypes, onBuy, t, user, navigate }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <h3
-              className="font-semibold cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate"
+              className="font-semibold cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate min-w-0"
               onClick={() => navigate(`/property/${p._id}`)}
             >
               {p.name}
@@ -66,8 +66,10 @@ function PropertyCard({ p, cities, propertyTypes, onBuy, t, user, navigate }) {
             )}
           </div>
         </div>
-        <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800">
-          <p className="text-lg font-bold text-orange-500 dark:text-orange-400">{formatMoney(p.currentPrice)}</p>
+        <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+          <p className="text-lg font-bold text-orange-500 dark:text-orange-400 min-w-0 break-words">
+            {formatMoney(p.currentPrice)}
+          </p>
           {user ? (
             <button
               onClick={() => onBuy(p._id)}
@@ -222,7 +224,7 @@ export default function Marketplace() {
           className={`p-3 rounded mb-4 text-sm flex items-center justify-between ${actionMsg.type === 'success' ? 'bg-blue-900 text-blue-300' : 'bg-red-900 text-red-300'}`}
         >
           <span>{actionMsg.text}</span>
-          <button onClick={() => setActionMsg(null)} className="ml-2 text-lg leading-none">
+          <button onClick={() => setActionMsg(null)} className="ms-2 text-lg leading-none shrink-0">
             &times;
           </button>
         </div>

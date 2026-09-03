@@ -343,7 +343,7 @@ export default function UserProfilePage() {
                 </>
               )}
             </div>
-            <div className="text-center md:text-left flex-1">
+            <div className="text-center md:text-start flex-1 min-w-0">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{displayName}</h1>
               <p className="text-sm text-gray-500 dark:text-gray-400">@{profileUser.username}</p>
               {profileUser.supporter?.badge && profileUser.supporter.badge !== 'none' && (
@@ -418,7 +418,7 @@ export default function UserProfilePage() {
               )}
             </div>
             {isOwner && (
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setEditing(!editing)}
                   className="text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white px-4 py-2 rounded-lg transition-colors"
@@ -648,8 +648,8 @@ export default function UserProfilePage() {
         </div>
 
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 mb-3">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
               <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                 {t('profile.level')} {profileUser.level || 1}
               </span>
@@ -659,7 +659,7 @@ export default function UserProfilePage() {
                 </span>
               )}
               {profileUser.title && (
-                <span className="text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full">
+                <span className="text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full min-w-0 truncate">
                   {profileUser.title}
                 </span>
               )}
@@ -681,7 +681,7 @@ export default function UserProfilePage() {
             />
           </div>
           {profileUser.lifetimeStats && (
-            <div className="grid grid-cols-3 md:grid-cols-5 gap-3 mt-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mt-4">
               {[
                 { label: t('profile.transactions'), value: profileUser.lifetimeStats.totalTransactions || 0 },
                 { label: t('profile.propertiesOwned'), value: profileUser.lifetimeStats.totalPropertiesOwned || 0 },
@@ -708,7 +708,7 @@ export default function UserProfilePage() {
           )}
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard
             label={t('profile.netWorth')}
             value={formatMoney(netWorth || 0)}
@@ -743,13 +743,13 @@ export default function UserProfilePage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
-                    <th className="text-left px-3 py-2">{t('seasons.seasonNumber', { number: '' }).trim()}</th>
-                    <th className="text-left px-3 py-2">{t('profile.seasonRank')}</th>
-                    <th className="text-left px-3 py-2">{t('seasons.netWorth')}</th>
-                    <th className="text-left px-3 py-2">{t('seasons.portfolioValue')}</th>
-                    <th className="text-left px-3 py-2">{t('seasons.properties')}</th>
-                    <th className="text-left px-3 py-2">{t('profile.seasonPlayers')}</th>
-                    <th className="text-left px-3 py-2">{t('seasons.months')}</th>
+                    <th className="text-start px-3 py-2">{t('seasons.seasonNumber', { number: '' }).trim()}</th>
+                    <th className="text-start px-3 py-2">{t('profile.seasonRank')}</th>
+                    <th className="text-start px-3 py-2">{t('seasons.netWorth')}</th>
+                    <th className="text-start px-3 py-2">{t('seasons.portfolioValue')}</th>
+                    <th className="text-start px-3 py-2">{t('seasons.properties')}</th>
+                    <th className="text-start px-3 py-2">{t('profile.seasonPlayers')}</th>
+                    <th className="text-start px-3 py-2">{t('seasons.months')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -832,7 +832,7 @@ export default function UserProfilePage() {
                       {p.cityId?.name || ''} - {p.type}
                     </div>
                   </div>
-                  <div className="text-right shrink-0">
+                  <div className="text-end shrink-0">
                     <div className="text-orange-500 dark:text-orange-400 text-sm font-semibold">
                       {formatMoney(p.currentPrice)}
                     </div>

@@ -72,7 +72,7 @@ export default function UserSearch() {
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-300 truncate">
                 {u.displayName || u.username}
-                {u.displayName && <span className="text-gray-400 dark:text-gray-500 text-xs ml-1">@{u.username}</span>}
+                {u.displayName && <span className="text-gray-400 dark:text-gray-500 text-xs ms-1">@{u.username}</span>}
               </div>
             </Link>
           ))}
