@@ -118,4 +118,52 @@ describe('RewardedAdPlayer', () => {
     render(<RewardedAdPlayer sessionId="s1" onComplete={onComplete} onError={onError} />);
     await waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
   });
+
+  it('does not mount an empty-src <video> while the VAST is still loading', async () => {
+    // Regression: the ad used to render a <video src=""> immediately and fire a
+    // spurious MEDIA_ERR_SRC_NOT_SUPPORTED before the async VAST resolved,
+    // which failed the flow with NO_AD and showed the user nothing. The video
+    // must only appear once a real media src is assigned.
+    let resolveFetch;
+    globalThis.fetch = vi.fn(() => new Promise((resolve) => (resolveFetch = resolve)));
+    const { container } = render(<RewardedAdPlayer sessionId="s1" onComplete={onComplete} onError={onError} />);
+
+    // While still loading there must be no <video> element to emit an error.
+    expect(container.querySelector('video')).toBeNull();
+    expect(onError).not.toHaveBeenCalled();
+
+    resolveFetch({ ok: true, status: 200, text: async () => TWO_AD_VAST });
+    const video = await waitFor(() => {
+      const v = container.querySelector('video');
+      if (!v) throw new Error('waiting for ad video');
+      return v;
+    });
+    expect(video.getAttribute('src')).toContain('https://cdn.example/one.mp4');
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it('degrades across a realistic multi-media InLine VAST and completes once', async () => {
+    const multiMediaVast = `
+      <VAST version="3.0"><Ad id="one"><InLine><AdSystem>x</AdSystem>
+        <Creatives><Creative><Linear>
+          <Duration>00:00:41</Duration>
+          <MediaFiles>
+            <MediaFile delivery="progressive" type="video/webm">https://cdn.example/one.webm</MediaFile>
+            <MediaFile delivery="progressive" type="video/mp4">https://cdn.example/one.mp4</MediaFile>
+            <MediaFile delivery="progressive" type="video/flv">https://cdn.example/one.flv</MediaFile>
+          </MediaFiles>
+        </Linear></Creative></Creatives>
+      </InLine></Ad></VAST>`;
+    globalThis.fetch = stubFetch(multiMediaVast);
+    const { container } = render(<RewardedAdPlayer sessionId="s1" onComplete={onComplete} onError={onError} />);
+    let video = await waitFor(() => {
+      const v = container.querySelector('video');
+      if (!v || !v.getAttribute('src')) throw new Error('waiting for ad');
+      return v;
+    });
+    expect(video.getAttribute('src')).toContain('https://cdn.example/');
+    fireEvent.ended(video);
+    await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
+    expect(onError).not.toHaveBeenCalled();
+  });
 });

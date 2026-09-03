@@ -54,7 +54,10 @@
     "earned": "You earned {{amount}} — credited to your balance.",
     "dismiss": "Dismiss",
     "unmute": "Unmute",
-    "mute": "Mute"
+    "mute": "Mute",
+    "errorNoMedia": "No playable ad media was found. Please try again.",
+    "errorNoAd": "Could not start the ad. Please try again.",
+    "errorMedia": "The ad could not play. Please try again."
   },
   "rewardedAdsAdmin": {
     "overviewTitle": "Rewarded Ads Overview",

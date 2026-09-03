@@ -21,6 +21,9 @@ vi.mock('react-i18next', () => ({
         'onboarding.tour.steps.welcome.title': 'Welcome to CityFlow!',
         'onboarding.tour.steps.welcome.description': 'Build your real estate empire.',
         'onboarding.tour.steps.buy_property.title': 'Buy Your First Property',
+        'onboarding.tour.steps.companies.title': 'Real Estate Companies',
+        'onboarding.tour.steps.companies.description': 'Join a company and develop properties together.',
+        'onboarding.tour.minimize': 'Minimize',
         'onboarding.tour.buttons.getStarted': 'Get Started',
         'onboarding.tour.buttons.explore': 'Explore',
         'onboarding.tour.buttons.next': 'Next',
@@ -135,6 +138,39 @@ describe('OnboardingTour', () => {
     // Tapping the pill expands the full card with the waiting indicator.
     fireEvent.click(screen.getByText('Buy Your First Property'));
     expect(screen.getByText('onboarding.tour.waitingAction')).toBeInTheDocument();
+  });
+
+  it('informational steps can be minimized so the card never covers unrelated controls', async () => {
+    global.fetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        ...ACTIVE_STATE,
+        currentStep: 'companies',
+        currentIndex: 9,
+        steps: [{ id: 'companies', route: '/real-estate-companies', eventGated: false }],
+      }),
+    });
+
+    render(<OnboardingTour />);
+
+    // Informational (non-event) card shows with a minimize control.
+    expect(await screen.findByText('Real Estate Companies')).toBeInTheDocument();
+    const minimize = screen.getByTitle('Minimize');
+    expect(minimize.textContent.trim()).toBe('⌄');
+
+    // Collapsing the card leaves only the expand pill, so the page beneath
+    // (e.g. the Rewarded Ads button) is reachable again.
+    fireEvent.click(minimize);
+    await waitFor(() => {
+      expect(screen.queryByText('Join a company and develop properties together.')).not.toBeInTheDocument();
+    });
+    expect(screen.getByText('Real Estate Companies')).toBeInTheDocument();
+
+    // Tapping the pill expands the full card again.
+    fireEvent.click(screen.getByText('Real Estate Companies'));
+    await waitFor(() => {
+      expect(screen.getByText('Join a company and develop properties together.')).toBeInTheDocument();
+    });
   });
 
   it('Explore on an informational step advances the step so the modal does not linger', async () => {

@@ -118,11 +118,23 @@ export default function RewardedAdsPage() {
     }
   }, [session, refreshUser, loadStatus, t]);
 
-  const handleAbort = useCallback(() => {
-    setPhase('idle');
-    setSession(null);
-    setMessage(null);
-  }, []);
+  const handleAbort = useCallback(
+    (reason) => {
+      const known = {
+        NO_MEDIA: 'rewardedAds.errorNoMedia',
+        NO_AD: 'rewardedAds.errorNoAd',
+        MEDIA_ERROR: 'rewardedAds.errorMedia',
+      };
+      let text = null;
+      if (typeof reason === 'string') {
+        text = known[reason] ? t(known[reason]) : reason;
+      }
+      setPhase('idle');
+      setSession(null);
+      setMessage(text ? { type: 'error', text } : null);
+    },
+    [t],
+  );
 
   if (enabled === null) {
     return (

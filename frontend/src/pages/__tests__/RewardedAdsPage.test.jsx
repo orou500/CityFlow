@@ -27,6 +27,9 @@ const DICT = vi.hoisted(() => ({
     'rewardedAds.loadFailed': 'Could not load the ad.',
     'rewardedAds.unmute': 'Unmute',
     'rewardedAds.mute': 'Mute',
+    'rewardedAds.errorNoMedia': 'No playable ad media was found.',
+    'rewardedAds.errorNoAd': 'Could not start the ad.',
+    'rewardedAds.errorMedia': 'The ad could not play.',
   },
 }));
 
@@ -150,5 +153,26 @@ describe('RewardedAdsPage', () => {
       expect(button.textContent).toContain('90');
     });
     expect(getByText('Wait 90 s', { exact: false })).toBeInTheDocument();
+  });
+
+  it('shows a localized error instead of silently resetting when the ad fails to load', async () => {
+    // Regression: a failed ad used to call the page's onError which cleared
+    // everything with no feedback — the user saw "nothing happened". The page
+    // must surface a localized error message and let the player retry.
+    globalThis.fetch = routeFetch({ vast: { ok: false, status: 500 } });
+    const { getByTestId, container, queryByTestId } = render(<RewardedAdsPage />);
+
+    const startButton = await waitFor(() => getByTestId('start-ad-button'));
+    fireEvent.click(startButton);
+
+    const msg = await waitFor(() => {
+      const el = container.querySelector('[data-testid="page-message"]');
+      if (!el) throw new Error('waiting for error message');
+      return el;
+    });
+    expect(msg).toHaveTextContent('Could not load the ad.');
+
+    await waitFor(() => expect(queryByTestId('player-slot')).toBeNull());
+    await waitFor(() => expect(getByTestId('start-ad-button')).toBeInTheDocument());
   });
 });

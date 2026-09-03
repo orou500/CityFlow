@@ -96,7 +96,10 @@ export default function OnboardingTour() {
 
   // On phones, event-step cards start minimized so they never cover the
   // button the player needs to press (e.g. Buy / Collect Rent). Tapping the
-  // pill expands the card.
+  // pill expands the card. Informational steps start expanded so the player
+  // reads the guidance, but can be collapsed with the same pill whenever the
+  // step is not coaching a specific on-page control (e.g. so they can reach
+  // an unrelated feature like Rewarded Ads).
   useEffect(() => {
     if (!state || state.status !== 'active' || !state.eventGated) return undefined;
     if (typeof window !== 'undefined' && window.innerWidth < 640) {
@@ -116,9 +119,13 @@ export default function OnboardingTour() {
   const isCompleteStep = step.id === 'complete';
   const isWelcome = step.id === 'welcome';
 
-  // Event steps can be minimized so the card never covers the UI the player
-  // needs to interact with (e.g. the marketplace Buy button).
-  if (minimized && isEventStep) {
+  // A step card can be minimized (collapsed to a small pill) so it never
+  // covers the page — event steps do this so the player can actually perform
+  // the coached action (e.g. Buy / Collect Rent), and informational steps can
+  // do it too so the card can never silently cover an unrelated control (e.g.
+  // the Rewarded Ads button). The welcome and complete modals stay expanded:
+  // they are focused intro/outro moments.
+  if (minimized && !isWelcome && !isCompleteStep) {
     return (
       <div
         className={`pointer-events-none fixed inset-0 z-[9999] flex items-end sm:items-start justify-center sm:justify-start ${
@@ -233,7 +240,7 @@ export default function OnboardingTour() {
                 {t('onboarding.tour.progress', { current: (state.currentIndex || 0) + 1, total: state.totalSteps })}
               </span>
             )}
-            {isEventStep && (
+            {!isWelcome && !isCompleteStep && (
               <button
                 onClick={() => setMinimized(true)}
                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-lg leading-none px-1"
