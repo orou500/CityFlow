@@ -220,7 +220,14 @@ describe('Auction settlement integrity', () => {
     expect((await Auction.findById(auction._id)).status).toBe('active');
 
     const activeAuction = await Auction.findById(auction._id);
-    const bidAmount = activeAuction.startingBid + activeAuction.bidIncrement;
+    // The bank-generation path randomly creates 'reserve' (legendary) auctions
+    // whose reserve can exceed a `startingBid + bidIncrement` bid. Guarantee the
+    // bid clears any reserve so the winner is always a real player (the point of
+    // this test) regardless of the randomly-chosen auction type.
+    const bidAmount = Math.max(
+      activeAuction.startingBid + activeAuction.bidIncrement,
+      activeAuction.reservePrice || 0,
+    );
 
     const bidRes = await request(app)
       .post(`/auctions/${auction._id}/bid`)
