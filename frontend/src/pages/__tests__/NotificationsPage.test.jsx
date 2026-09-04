@@ -163,4 +163,28 @@ describe('NotificationsPage navigation', () => {
       expect(navigateMock).toHaveBeenCalledWith('/real-estate-companies/c1?from=list&tab=auctions&proposalId=prop2');
     });
   });
+
+  it('contract notification deep-links to Company → Contracts → Offered sub-view with the contract id', async () => {
+    const { useGameStore } = await import('../../store/useGameStore');
+    useGameStore.getState().notifications = [
+      makeNotification({
+        route: '/real-estate-companies/c1',
+        tab: 'contracts',
+        subTab: 'proposed',
+        contractId: 'ct9',
+        entityType: 'company',
+        entityId: 'c1',
+        read: true,
+      }),
+    ];
+    renderPage();
+    const item = await screen.findByText('M');
+    fireEvent.click(item);
+
+    await waitFor(() => {
+      expect(navigateMock).toHaveBeenCalledWith(
+        '/real-estate-companies/c1?tab=contracts&subTab=proposed&contractId=ct9',
+      );
+    });
+  });
 });

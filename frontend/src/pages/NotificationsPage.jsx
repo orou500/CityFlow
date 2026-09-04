@@ -132,7 +132,9 @@ export default function NotificationsPage() {
     if (notification.route) {
       const url = new URL(notification.route, window.location.origin);
       if (notification.tab) url.searchParams.set('tab', notification.tab);
+      if (notification.subTab) url.searchParams.set('subTab', notification.subTab);
       if (notification.proposalId) url.searchParams.set('proposalId', notification.proposalId);
+      if (notification.contractId) url.searchParams.set('contractId', notification.contractId);
       navigate(`${url.pathname}${url.search}`);
       return;
     }

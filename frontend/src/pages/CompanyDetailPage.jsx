@@ -309,7 +309,7 @@ export default function CompanyDetailPage() {
   const [selectedInvestmentProduct, setSelectedInvestmentProduct] = useState('');
   const [investmentError, setInvestmentError] = useState('');
   const [investmentLoading, setInvestmentLoading] = useState(false);
-  const [contractSubTab, setContractSubTab] = useState('active');
+  const [contractSubTab, setContractSubTab] = useState(searchParams.get('subTab') || 'active');
   const [investmentSubTab, setInvestmentSubTab] = useState('active');
   const [propertiesPage, setPropertiesPage] = useState(1);
   const [auditPage, setAuditPage] = useState(1);
@@ -472,6 +472,7 @@ export default function CompanyDetailPage() {
   });
 
   const proposalIdParam = searchParams.get('proposalId');
+  const contractIdParam = searchParams.get('contractId');
 
   useEffect(() => {
     if (!proposalIdParam) return;
@@ -483,6 +484,17 @@ export default function CompanyDetailPage() {
     }, 150);
     return () => clearTimeout(timer);
   }, [proposalIdParam, auctionProposals, tab]);
+
+  useEffect(() => {
+    if (!contractIdParam || tab !== 'contracts') return;
+    const timer = setTimeout(() => {
+      const el = document.getElementById(`company-contract-${contractIdParam}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [contractIdParam, contracts, contractHistory, contractSubTab, tab]);
 
   if (loading || !company) {
     return <div className="max-w-6xl mx-auto px-4 py-8 text-center text-gray-500">{t('common.loading')}</div>;
@@ -2636,6 +2648,7 @@ export default function CompanyDetailPage() {
               isDirector={isDirector}
               t={t}
               id={id}
+              highlightId={contractIdParam}
               setContracts={setContracts}
               fetchContracts={fetchContracts}
               proposeContract={proposeContract}
@@ -2648,14 +2661,19 @@ export default function CompanyDetailPage() {
               user={user}
               t={t}
               id={id}
+              highlightId={contractIdParam}
               setContracts={setContracts}
               fetchContracts={fetchContracts}
               voteContractProposal={voteContractProposal}
               fetchCompany={fetchCompany}
             />
           )}
-          {contractSubTab === 'active' && <ContractActiveList contracts={contracts} t={t} />}
-          {contractSubTab === 'history' && <ContractHistoryList contracts={contractHistory} t={t} />}
+          {contractSubTab === 'active' && (
+            <ContractActiveList contracts={contracts} t={t} highlightId={contractIdParam} />
+          )}
+          {contractSubTab === 'history' && (
+            <ContractHistoryList contracts={contractHistory} t={t} highlightId={contractIdParam} />
+          )}
         </div>
       )}
 
@@ -3038,6 +3056,7 @@ function ContractAvailableList({
   isDirector,
   t,
   id,
+  highlightId,
   setContracts,
   fetchContracts,
   proposeContract,
@@ -3063,10 +3082,16 @@ function ContractAvailableList({
         available.map((contract) => {
           const hasInsufficientFunds = company.treasury?.balance < (contract.requiredTreasury || 0);
           const canPropose = company.level >= contract.requiredLevel && isDirector && !hasInsufficientFunds;
+          const isDeepLinked = highlightId && contract._id?.toString() === highlightId.toString();
           return (
             <div
               key={contract._id}
-              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+              id={`company-contract-${contract._id}`}
+              className={`bg-white dark:bg-gray-800 border rounded-lg p-3 ${
+                isDeepLinked
+                  ? 'border-blue-500 ring-2 ring-blue-500/40 shadow-lg'
+                  : 'border-gray-200 dark:border-gray-700'
+              }`}
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
@@ -3122,6 +3147,7 @@ function ContractProposalList({
   user,
   t,
   id,
+  highlightId,
   setContracts,
   fetchContracts,
   voteContractProposal,
@@ -3145,10 +3171,16 @@ function ContractProposalList({
             (v) => (v.userId?._id || v.userId)?.toString() === user?._id?.toString(),
           );
           const isProposer = (proposal.proposedBy?._id || proposal.proposedBy)?.toString() === user?._id?.toString();
+          const isDeepLinked = highlightId && contract._id?.toString() === highlightId.toString();
           return (
             <div
               key={contract._id}
-              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+              id={`company-contract-${contract._id}`}
+              className={`bg-white dark:bg-gray-800 border rounded-lg p-3 ${
+                isDeepLinked
+                  ? 'border-blue-500 ring-2 ring-blue-500/40 shadow-lg'
+                  : 'border-gray-200 dark:border-gray-700'
+              }`}
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
@@ -3216,7 +3248,7 @@ function ContractProposalList({
   );
 }
 
-function ContractActiveList({ contracts, t }) {
+function ContractActiveList({ contracts, t, highlightId }) {
   const active = contracts.filter((c) => c.status === 'active');
   return (
     <div className="space-y-2">
@@ -3241,7 +3273,12 @@ function ContractActiveList({ contracts, t }) {
           return (
             <div
               key={contract._id}
-              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+              id={`company-contract-${contract._id}`}
+              className={`bg-white dark:bg-gray-800 border rounded-lg p-3 ${
+                highlightId && contract._id?.toString() === highlightId.toString()
+                  ? 'border-blue-500 ring-2 ring-blue-500/40 shadow-lg'
+                  : 'border-gray-200 dark:border-gray-700'
+              }`}
             >
               <div className="flex items-center justify-between gap-2 mb-2">
                 <div className="min-w-0">
@@ -3269,7 +3306,7 @@ function ContractActiveList({ contracts, t }) {
   );
 }
 
-function ContractHistoryList({ contracts, t }) {
+function ContractHistoryList({ contracts, t, highlightId }) {
   return (
     <div className="space-y-2">
       {contracts.length === 0 ? (
@@ -3281,7 +3318,12 @@ function ContractHistoryList({ contracts, t }) {
         contracts.map((contract) => (
           <div
             key={contract._id}
-            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+            id={`company-contract-${contract._id}`}
+            className={`bg-white dark:bg-gray-800 border rounded-lg p-3 ${
+              highlightId && contract._id?.toString() === highlightId.toString()
+                ? 'border-blue-500 ring-2 ring-blue-500/40 shadow-lg'
+                : 'border-gray-200 dark:border-gray-700'
+            }`}
           >
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">

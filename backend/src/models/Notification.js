@@ -40,6 +40,12 @@ const notificationSchema = new mongoose.Schema(
     // title/message text.
     proposalId: { type: mongoose.Schema.Types.ObjectId, default: null },
     auctionId: { type: mongoose.Schema.Types.ObjectId, default: null },
+    // Structured deep-link metadata for company contract notifications: the
+    // canonical contract id and the contracts sub-view it lives in
+    // (available/proposed/active/history). Never derive navigation from
+    // title/message text.
+    contractId: { type: mongoose.Schema.Types.ObjectId, default: null },
+    subTab: { type: String, default: null },
     // Structured metadata for dividend notifications so the frontend can
     // resolve localized text instead of displaying stored (English) text.
     amount: { type: Number, default: null },

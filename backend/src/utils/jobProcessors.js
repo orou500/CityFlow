@@ -199,6 +199,8 @@ async function handleVoteExpiration(data) {
             eventKey: `company:${companyId}:contract:${proposalId}:expired:${member.userId}`,
             route: `/real-estate-companies/${companyId}`,
             tab: 'contracts',
+            subTab: 'available',
+            contractId: proposalId,
             entityType: 'company',
             entityId: company._id,
             relatedId: company._id,

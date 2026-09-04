@@ -5,6 +5,7 @@ import { createAuthenticatedUser, createTestCity, createTestProperty, authHeader
 import RealEstateCompany from '../../models/RealEstateCompany.js';
 import CityContract from '../../models/CityContract.js';
 import GameState from '../../models/GameState.js';
+import Notification from '../../models/Notification.js';
 
 const app = createApp();
 
@@ -104,5 +105,53 @@ describe('City Contracts — treasury budget reservation', () => {
     const tx = companyAfter.treasury.transactions.find((t) => t.type === 'contract_reward');
     expect(tx).toBeTruthy();
     expect(tx.amount).toBe(500_000);
+  });
+
+  it('contract proposal notifications carry deep-link metadata (tab, subTab, contractId)', async () => {
+    const founder = await createFounder();
+    const memberData = await createFounder({ username: 'member_dl', email: 'memberdl@test.com' });
+    const { company, token, city } = await createTestCompany(founder);
+    await addMemberToCompany(company._id, token, memberData);
+
+    const contract = await CityContract.create({
+      companyId: company._id,
+      cityId: city._id,
+      contractType: 'renovation',
+      name: 'Deep Link Contract',
+      cost: 500_000,
+      reward: 750_000,
+      durationTicks: 10,
+      requiredLevel: 1,
+      requiredTreasury: 0,
+      status: 'available',
+    });
+
+    company.treasury.balance = 10_000_000;
+    await company.save();
+
+    const proposeRes = await request(app)
+      .post(`/city-contracts/${company._id}/contracts/${contract._id}/propose`)
+      .set(authHeader(token))
+      .send({});
+    expect(proposeRes.status).toBe(200);
+
+    const voteRequest = await Notification.findOne({
+      userId: memberData.user._id,
+      eventKey: `company:${company._id}:contract:${contract._id}:vote_request:${memberData.user._id}`,
+    });
+    expect(voteRequest).toBeTruthy();
+    expect(voteRequest.route).toBe(`/real-estate-companies/${company._id}`);
+    expect(voteRequest.tab).toBe('contracts');
+    expect(voteRequest.subTab).toBe('proposed');
+    expect(voteRequest.contractId.toString()).toBe(contract._id.toString());
+    expect(voteRequest.entityId.toString()).toBe(company._id.toString());
+
+    const submitted = await Notification.findOne({
+      userId: founder.user._id,
+      eventKey: `company:${company._id}:contract:${contract._id}:submitted`,
+    });
+    expect(submitted).toBeTruthy();
+    expect(submitted.subTab).toBe('proposed');
+    expect(submitted.contractId.toString()).toBe(contract._id.toString());
   });
 });

@@ -322,6 +322,38 @@ describe('CompanyDetailPage — Auction Proposals tab & deep-link', () => {
     expect(card.className).toContain('ring-blue-500');
   });
 
+  it('contract notification deep-link opens Contracts → Proposed and highlights the offered contract', async () => {
+    companyState.fetchContracts = vi.fn().mockResolvedValue([
+      {
+        _id: 'ct1',
+        name: 'Harbor Bridge',
+        status: 'proposed',
+        description: 'Build the harbor bridge',
+        reward: 100000,
+        cost: 50000,
+        durationTicks: 4,
+        proposal: { status: 'pending', votes: [], proposedBy: { _id: 'user2', username: 'other' } },
+      },
+    ]);
+    renderPage('/real-estate-companies/c1?tab=contracts&subTab=proposed&contractId=ct1');
+
+    // Contracts tab + Proposed sub-view open automatically; the offered
+    // contract is visible with the deep-link highlight ring.
+    expect(await screen.findByText('Harbor Bridge')).toBeInTheDocument();
+    const card = document.getElementById('company-contract-ct1');
+    expect(card).not.toBeNull();
+    expect(card.className).toContain('ring-blue-500');
+  });
+
+  it('contract deep-link falls back gracefully when the contract no longer exists', async () => {
+    companyState.fetchContracts = vi.fn().mockResolvedValue([]);
+    renderPage('/real-estate-companies/c1?tab=contracts&subTab=proposed&contractId=ct9');
+
+    // No crash: the empty proposed-contracts state renders instead.
+    expect(await screen.findByText('companies.noProposedContracts')).toBeInTheDocument();
+    expect(document.getElementById('company-contract-ct9')).toBeNull();
+  });
+
   it('clicking Approve Bid calls voteAuctionProposal with (auctionId, proposalId, vote, companyId)', async () => {
     companyState.voteAuctionProposal.mockResolvedValue();
     renderPage('/real-estate-companies/c1?tab=auctions');
