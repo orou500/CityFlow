@@ -12,6 +12,7 @@ import CompactValue from './CompactValue';
 import Avatar from './Avatar';
 import { isNativePlatform, getApiBaseUrl } from '../utils/capacitor';
 import { useSocketEvent } from '../hooks/useSocket';
+import logoText from '../assets/logo-text.png';
 
 export default function Navbar() {
   const { t, i18n } = useTranslation();
@@ -166,7 +167,7 @@ export default function Navbar() {
         </button>
 
         <Link to="/" onClick={closeMobileMenu} className="shrink-0 flex items-center">
-          <img src="/images/logo-text.png" alt="CityFlow" className="h-9 w-auto" />
+          <img src={logoText} alt="CityFlow" className="h-9 w-auto" />
         </Link>
 
         <div className="hidden md:flex items-center gap-1">

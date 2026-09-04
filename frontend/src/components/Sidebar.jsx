@@ -10,6 +10,7 @@ import CompactValue from './CompactValue';
 import Avatar from './Avatar';
 import { getApiBaseUrl } from '../utils/capacitor';
 import AudioPlayer from './AudioPlayer';
+import logoText from '../assets/logo-text.png';
 
 export default function Sidebar({ collapsed, onToggleCollapse }) {
   const { t, i18n } = useTranslation();
@@ -181,7 +182,7 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
               className={`h-8 w-8 object-contain transition-all duration-300 ${collapsed ? '' : 'hidden'}`}
             />
             <img
-              src="/images/logo-text.png"
+              src={logoText}
               alt="CityFlow"
               className={`h-9 w-auto object-contain transition-all duration-300 ${collapsed ? 'hidden' : ''}`}
             />
