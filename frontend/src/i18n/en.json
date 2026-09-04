@@ -57,7 +57,8 @@
     "mute": "Mute",
     "errorNoMedia": "No playable ad media was found. Please try again.",
     "errorNoAd": "Could not start the ad. Please try again.",
-    "errorMedia": "The ad could not play. Please try again."
+    "errorMedia": "The ad could not play. Please try again.",
+    "timeRemaining": "{{seconds}}s remaining"
   },
   "rewardedAdsAdmin": {
     "overviewTitle": "Rewarded Ads Overview",

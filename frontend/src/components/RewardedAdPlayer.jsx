@@ -54,6 +54,7 @@ export default function RewardedAdPlayer({ sessionId, onComplete, onError }) {
   const [adIndex, setAdIndex] = useState(0);
   const [muted, setMuted] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
+  const [remaining, setRemaining] = useState(null); // null = duration unknown
 
   const completeFlow = useCallback(() => {
     if (settledRef.current) return;
@@ -74,6 +75,9 @@ export default function RewardedAdPlayer({ sessionId, onComplete, onError }) {
   const applySrc = useCallback((url) => {
     srcRef.current = url;
     setSrc(url);
+    // Each media source owns its own duration/position — never show the
+    // previous source's remaining time after a media fallback.
+    setRemaining(null);
   }, []);
 
   const startAd = useCallback(
@@ -155,6 +159,20 @@ export default function RewardedAdPlayer({ sessionId, onComplete, onError }) {
     setIsMuted(next);
   }, []);
 
+  const syncRemaining = useCallback(() => {
+    // Presentation-only: derived from the REAL media position (duration /
+    // currentTime) on every timeupdate — never an independent timer, so the
+    // countdown pauses/resumes/falls-back exactly with the video.
+    const video = videoRef.current;
+    if (!video) return;
+    const duration = video.duration;
+    if (!Number.isFinite(duration) || duration <= 0) {
+      setRemaining(null);
+      return;
+    }
+    setRemaining(Math.max(0, Math.ceil(duration - video.currentTime)));
+  }, []);
+
   useEffect(() => {
     // Idempotent per session: under React StrictMode (dev) this effect runs,
     // cleans up, then runs again. We only want ONE fetch and ONE success path,
@@ -227,9 +245,18 @@ export default function RewardedAdPlayer({ sessionId, onComplete, onError }) {
             controls={false}
             disablePictureInPicture
             onLoadedData={handleLoadedData}
+            onLoadedMetadata={syncRemaining}
+            onDurationChange={syncRemaining}
+            onTimeUpdate={syncRemaining}
             onEnded={handleEnded}
             onError={handleVideoError}
           />
+          {remaining != null && (
+            <div className="absolute end-3 top-3 flex items-center gap-1 rounded bg-black/60 px-2 py-1 text-xs text-white">
+              <span aria-hidden="true">⏱</span>
+              <span>{t('rewardedAds.timeRemaining', { seconds: remaining })}</span>
+            </div>
+          )}
           {adsRef.current.length > 1 && (
             <div className="absolute left-3 top-3 rounded bg-black/60 px-2 py-1 text-xs text-white">
               {adIndex + 1} / {adsRef.current.length}

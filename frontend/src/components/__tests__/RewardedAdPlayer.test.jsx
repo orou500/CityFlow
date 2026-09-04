@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import RewardedAdPlayer from '../RewardedAdPlayer';
 
@@ -11,6 +11,7 @@ const DICT = vi.hoisted(() => ({
     'rewardedAds.loadFailed': 'Could not load the ad. Please try again.',
     'rewardedAds.unmute': 'Unmute',
     'rewardedAds.mute': 'Mute',
+    'rewardedAds.timeRemaining': '{{seconds}}s remaining',
   },
 }));
 
@@ -257,5 +258,121 @@ describe('RewardedAdPlayer', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('shows the remaining-time countdown from the real media position', async () => {
+    globalThis.fetch = stubFetch(TWO_AD_VAST);
+    const { container } = render(<RewardedAdPlayer sessionId="s1" onComplete={onComplete} onError={onError} />);
+    const video = await waitFor(() => {
+      const v = container.querySelector('video');
+      if (!v || !v.getAttribute('src')) throw new Error('waiting for ad');
+      return v;
+    });
+
+    // Unknown duration -> no countdown (duration is NaN in jsdom by default).
+    expect(screen.queryByText(/remaining/)).toBeNull();
+
+    Object.defineProperty(video, 'duration', { value: 15, configurable: true });
+    Object.defineProperty(video, 'currentTime', { value: 0, configurable: true });
+    fireEvent.timeUpdate(video);
+    expect(screen.getByText('15s remaining')).toBeInTheDocument();
+
+    Object.defineProperty(video, 'currentTime', { value: 4.2, configurable: true });
+    fireEvent.timeUpdate(video);
+    expect(screen.getByText('11s remaining')).toBeInTheDocument();
+
+    Object.defineProperty(video, 'currentTime', { value: 14.1, configurable: true });
+    fireEvent.timeUpdate(video);
+    expect(screen.getByText('1s remaining')).toBeInTheDocument();
+
+    Object.defineProperty(video, 'currentTime', { value: 15, configurable: true });
+    fireEvent.timeUpdate(video);
+    expect(screen.getByText('0s remaining')).toBeInTheDocument();
+  });
+
+  it('hides the countdown for an unknown/infinite duration and shows it once known', async () => {
+    globalThis.fetch = stubFetch(TWO_AD_VAST);
+    const { container } = render(<RewardedAdPlayer sessionId="s1" onComplete={onComplete} onError={onError} />);
+    const video = await waitFor(() => {
+      const v = container.querySelector('video');
+      if (!v || !v.getAttribute('src')) throw new Error('waiting for ad');
+      return v;
+    });
+
+    Object.defineProperty(video, 'duration', { value: Infinity, configurable: true });
+    Object.defineProperty(video, 'currentTime', { value: 3, configurable: true });
+    fireEvent.timeUpdate(video);
+    expect(screen.queryByText(/remaining/)).toBeNull();
+
+    Object.defineProperty(video, 'duration', { value: 30, configurable: true });
+    fireEvent.timeUpdate(video);
+    expect(screen.getByText('27s remaining')).toBeInTheDocument();
+  });
+
+  it('resets the countdown when media falls back to another source', async () => {
+    const fallbackVast = `<VAST version="3.0"><Ad id="one"><InLine><AdSystem>x</AdSystem>
+      <Creatives><Creative><Linear>
+        <Duration>00:00:10</Duration>
+        <MediaFiles>
+          <MediaFile delivery="progressive" type="video/webm">https://cdn.example/one.webm</MediaFile>
+          <MediaFile delivery="progressive" type="video/mp4">https://cdn.example/one.mp4</MediaFile>
+        </MediaFiles>
+      </Linear></Creative></Creatives>
+    </InLine></Ad></VAST>`;
+    globalThis.fetch = stubFetch(fallbackVast);
+    const { container } = render(<RewardedAdPlayer sessionId="s1" onComplete={onComplete} onError={onError} />);
+    const firstVideo = await waitFor(() => {
+      const v = container.querySelector('video');
+      if (!v || !v.getAttribute('src')) throw new Error('waiting for ad');
+      return v;
+    });
+    expect(firstVideo.getAttribute('src')).toContain('one.mp4');
+
+    Object.defineProperty(firstVideo, 'duration', { value: 20, configurable: true });
+    Object.defineProperty(firstVideo, 'currentTime', { value: 5, configurable: true });
+    fireEvent.timeUpdate(firstVideo);
+    expect(screen.getByText('15s remaining')).toBeInTheDocument();
+
+    // Media #1 fails -> fall back to media #2: the countdown must reset and
+    // reflect only the new source's position.
+    fireEvent.error(firstVideo);
+    const secondVideo = await waitFor(() => {
+      const v = container.querySelector('video');
+      if (!v || !v.getAttribute('src')?.includes('one.webm')) throw new Error('waiting for fallback media');
+      return v;
+    });
+    expect(secondVideo).not.toBe(firstVideo);
+    expect(screen.queryByText(/remaining/)).toBeNull();
+
+    Object.defineProperty(secondVideo, 'duration', { value: 20, configurable: true });
+    Object.defineProperty(secondVideo, 'currentTime', { value: 2, configurable: true });
+    fireEvent.timeUpdate(secondVideo);
+    expect(screen.getByText('18s remaining')).toBeInTheDocument();
+  });
+
+  it('countdown is pure presentation: paused video keeps its value, completion fires once', async () => {
+    globalThis.fetch = stubFetch(TWO_AD_VAST);
+    const { container } = render(<RewardedAdPlayer sessionId="s1" onComplete={onComplete} onError={onError} />);
+    let video = await waitFor(() => {
+      const v = container.querySelector('video');
+      if (!v || !v.getAttribute('src')) throw new Error('waiting for ad');
+      return v;
+    });
+
+    Object.defineProperty(video, 'duration', { value: 15, configurable: true });
+    Object.defineProperty(video, 'currentTime', { value: 10, configurable: true });
+    fireEvent.timeUpdate(video);
+    expect(screen.getByText('5s remaining')).toBeInTheDocument();
+
+    // No timeupdate while paused -> countdown does not drift.
+    fireEvent.ended(video);
+    video = await waitFor(() => {
+      const v = container.querySelector('video');
+      if (!v || !v.getAttribute('src')?.includes('two.webm')) throw new Error('waiting for ad 2');
+      return v;
+    });
+    fireEvent.ended(video);
+    fireEvent.ended(video);
+    await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
   });
 });

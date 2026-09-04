@@ -30,6 +30,7 @@ const DICT = vi.hoisted(() => ({
     'rewardedAds.errorNoMedia': 'No playable ad media was found.',
     'rewardedAds.errorNoAd': 'Could not start the ad.',
     'rewardedAds.errorMedia': 'The ad could not play.',
+    'rewardedAds.timeRemaining': '{{seconds}}s remaining',
   },
 }));
 
@@ -241,5 +242,44 @@ describe('RewardedAdsPage', () => {
 
     startResolve({ sessionId: 's1', status: 'pending', rewardAmount: 2000, expiresAt: '2026-09-02T12:00:00Z' });
     await waitFor(() => expect(queryByTestId('start-ad-button')).toBeNull());
+  });
+
+  it('never shows more than one loading UI and none while the video plays', async () => {
+    // Regression: the page's spinner placeholder rendered during BOTH 'loading'
+    // and 'playing' with "Loading…" text, so the video played with a stuck
+    // loading layer on screen (and two loading texts existed while the VAST
+    // was fetching). Exactly one loading UI may exist at any moment, and it
+    // must disappear completely once the video is on screen.
+    let startResolve;
+    globalThis.fetch = routeFetch({
+      start: new Promise((resolve) => {
+        startResolve = resolve;
+      }),
+    });
+    const { getByTestId, container } = render(<RewardedAdsPage />);
+
+    const startButton = await waitFor(() => getByTestId('start-ad-button'));
+    fireEvent.click(startButton);
+
+    // While the start request is in flight: the page spinner is the only
+    // loading UI (no player exists yet).
+    const loadingDuringStart = Array.from(container.querySelectorAll('*')).filter(
+      (el) => el.textContent === 'Loading…',
+    );
+    expect(loadingDuringStart.length).toBe(1);
+
+    startResolve({ sessionId: 's1', status: 'pending', rewardAmount: 2000, expiresAt: '2026-09-02T12:00:00Z' });
+
+    // Once the video is playing, no loading UI may remain anywhere.
+    const video = await waitFor(() => {
+      const v = container.querySelector('video');
+      if (!v || !v.getAttribute('src')) throw new Error('waiting for ad');
+      return v;
+    });
+    expect(video).toBeTruthy();
+    const loadingWhilePlaying = Array.from(container.querySelectorAll('*')).filter(
+      (el) => el.textContent === 'Loading…',
+    );
+    expect(loadingWhilePlaying.length).toBe(0);
   });
 });

@@ -214,7 +214,14 @@ export default function RewardedAdsPage() {
         </div>
       )}
 
-      {phase === 'idle' || phase === 'done' || phase === 'error' ? (
+      {phase === 'loading' && (
+        <div className="flex items-center justify-center gap-2 rounded-lg bg-gray-100 py-3 text-sm text-muted dark:bg-gray-800">
+          <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-muted border-t-transparent" />
+          {t('rewardedAds.loading')}
+        </div>
+      )}
+
+      {(phase === 'idle' || phase === 'done' || phase === 'error') && (
         <button
           type="button"
           onClick={handleStart}
@@ -228,11 +235,6 @@ export default function RewardedAdsPage() {
               ? t('rewardedAds.dailyLimitReached')
               : t('rewardedAds.watchAd')}
         </button>
-      ) : (
-        <div className="flex items-center justify-center gap-2 rounded-lg bg-gray-100 py-3 text-sm text-muted dark:bg-gray-800">
-          <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-muted border-t-transparent" />
-          {t('rewardedAds.loading')}
-        </div>
       )}
 
       <div className="mt-8">
