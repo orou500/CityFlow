@@ -1,4 +1,4 @@
-﻿import { Router } from 'express';
+import { Router } from 'express';
 import LeaderboardSnapshot from '../models/LeaderboardSnapshot.js';
 import CompetitiveEvent from '../models/CompetitiveEvent.js';
 import User from '../models/User.js';
@@ -7,6 +7,7 @@ import { authenticate } from '../middleware/auth.js';
 import { optionalAuth } from '../middleware/auth.js';
 import { requireAdmin } from '../middleware/admin.js';
 import { cacheGet, cacheSet, cacheDelPattern } from '../utils/cache.js';
+import { resolveCurrentUsers } from '../utils/userIdentity.js';
 import { ACHIEVEMENT_DEFINITIONS } from '../config/achievements.js';
 import { MISSION_DEFINITIONS } from '../config/missions.js';
 import { LEADERBOARD_REWARD_TIERS } from '../config/leaderboardRewards.js';
@@ -17,39 +18,19 @@ const LEADERBOARD_TTL = 180;
 const LEADERBOARD_SUMMARY_TTL = 120;
 
 /**
- * Overrides username/displayName/avatar on a collection of ranking-like
- * entries with the CURRENT User values, using ONE bulk User query (no N+1).
- * Deleted/missing users keep their snapshot value so historical rows remain
- * readable. Pure snapshot data (rank, value, tick numbers) is untouched.
+ * For a list of competitive events, replaces participant presentation data
+ * (username/displayName/avatar/cosmetics) with CURRENT identity values using
+ * one bulk User query per event. Historical snapshots of rank/value are
+ * untouched; cosmetics always come from authoritative current user data.
  */
-async function resolveCurrentUsers(entries, idField = 'userId') {
-  if (!entries || entries.length === 0) return entries;
-  const ids = [...new Set(entries.map((e) => e[idField]?.toString()).filter(Boolean))];
-  if (ids.length === 0) return entries;
-
-  const users = await User.find({ _id: { $in: ids } }).select('_id username displayName avatar');
-  const byId = new Map(users.map((u) => [u._id.toString(), u]));
-
-  for (const entry of entries) {
-    const id = entry[idField]?.toString();
-    const user = id ? byId.get(id) : null;
-    if (!user) continue;
-    entry.username = user.username;
-    if (user.displayName) entry.displayName = user.displayName;
-    if (user.avatar) entry.avatar = user.avatar;
-  }
-  return entries;
-}
-
-/**
- * For a list of competitive events, replaces participant usernames with
- * CURRENT values ONLY for events that are still live (status 'active').
- * Completed/upcoming events keep their historical participants snapshot.
- */
-async function resolveActiveEventParticipants(events) {
-  const active = events.filter((e) => e.status === 'active');
-  for (const event of active) {
-    await resolveCurrentUsers(event.participants || [], 'userId');
+async function resolveEventParticipants(events) {
+  for (const event of events) {
+    // Completed events preserve their historical snapshot presentation
+    // (username/displayName/avatar) and only gain CURRENT cosmetics; active
+    // events resolve the full current identity.
+    event.participants = await resolveCurrentUsers(event.participants || [], 'userId', {
+      preservePresentation: event.status !== 'active',
+    });
   }
   return events;
 }
@@ -237,7 +218,7 @@ router.get('/player/:userId', optionalAuth, async (req, res) => {
     if (cached) return res.json(cached);
 
     const user = await User.findById(userId).select(
-      'username displayName avatar level xp balance ownedProperties achievements bio title prestigeLevel achievementPoints',
+      'username displayName avatar level xp balance ownedProperties achievements bio title prestigeLevel achievementPoints cosmetics supporter.badge donationStats.donorSince',
     );
     if (!user) return res.status(404).json({ error: 'User not found' });
 
@@ -278,7 +259,7 @@ router.get('/player/:userId', optionalAuth, async (req, res) => {
           id: m.rewards.badge,
           name: m.name,
           description: m.description,
-          icon: m.icon || 'ðŸŽ–ï¸',
+          icon: m.icon || '🎖️',
         };
       }
     });
@@ -301,6 +282,9 @@ router.get('/player/:userId', optionalAuth, async (req, res) => {
         username: user.username,
         displayName: user.displayName,
         avatar: user.avatar,
+        cosmetics: user.cosmetics || undefined,
+        supporterBadge: user.supporter?.badge && user.supporter.badge !== 'none' ? user.supporter.badge : undefined,
+        supporterSince: user.donationStats?.donorSince || undefined,
         level: user.level,
         xp: user.xp,
         bio: user.bio,
@@ -328,8 +312,8 @@ router.get('/events', async (req, res) => {
       filter.status = status;
     }
 
-    const events = await CompetitiveEvent.find(filter).sort({ startDate: -1 }).limit(50);
-    await resolveActiveEventParticipants(events);
+    const events = await CompetitiveEvent.find(filter).sort({ startDate: -1 }).limit(50).lean();
+    await resolveEventParticipants(events);
     res.json({ events });
   } catch (err) {
     res.serverError(err);
@@ -338,11 +322,9 @@ router.get('/events', async (req, res) => {
 
 router.get('/events/:id', async (req, res) => {
   try {
-    const event = await CompetitiveEvent.findById(req.params.id);
+    const event = await CompetitiveEvent.findById(req.params.id).lean();
     if (!event) return res.status(404).json({ error: 'Event not found' });
-    if (event.status === 'active') {
-      await resolveActiveEventParticipants([event]);
-    }
+    await resolveEventParticipants([event]);
     res.json({ event });
   } catch (err) {
     res.serverError(err);
@@ -419,7 +401,16 @@ router.get('/summary', async (req, res) => {
         continue;
       }
       const topPlayer = snapshot.rankings[0] || null;
-      if (topPlayer) await resolveCurrentUsers([topPlayer], 'userId');
+      if (topPlayer) {
+        const [resolved] = await resolveCurrentUsers([topPlayer], 'userId');
+        summary[cat] = {
+          topPlayer: resolved || topPlayer,
+          totalPlayers: snapshot.rankings.length,
+          tickNumber: snapshot.tickNumber,
+          computedAt: snapshot.computedAt,
+        };
+        continue;
+      }
       summary[cat] = {
         topPlayer,
         totalPlayers: snapshot.rankings.length,
@@ -428,8 +419,8 @@ router.get('/summary', async (req, res) => {
       };
     }
 
-    const activeEvents = await CompetitiveEvent.find({ status: 'active' }).sort({ startDate: -1 }).limit(5);
-    await resolveActiveEventParticipants(activeEvents);
+    const activeEvents = await CompetitiveEvent.find({ status: 'active' }).sort({ startDate: -1 }).limit(5).lean();
+    await resolveEventParticipants(activeEvents);
 
     const result = { summary, activeEvents, seasonNumber };
     await cacheSet(cacheKey, result, LEADERBOARD_SUMMARY_TTL);

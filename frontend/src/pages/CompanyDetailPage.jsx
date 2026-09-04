@@ -5,8 +5,16 @@ import { useCompanyStore } from '../store/useCompanyStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { formatMoney, formatMoneyExact } from '../utils/format';
 import PropertyImage from '../components/PropertyImage';
+import Avatar from '../components/Avatar';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useCompanySocket, useSocketEvent } from '../hooks/useSocket';
+import {
+  usernameTextStyle,
+  usernameGradientClassName,
+  isAnimatedUsername,
+  USERNAME_ANIMATED_CLASS,
+  USERNAME_EFFECT_CLASS,
+} from '../config/supporterCosmetics';
 
 const TABS = [
   'overview',
@@ -1313,20 +1321,37 @@ export default function CompanyDetailPage() {
               const memberUser = member.userId;
               const uid = memberUser?._id || memberUser;
               const isSelf = uid?.toString() === user?._id?.toString();
+              const cos = typeof memberUser === 'object' && memberUser?.cosmetics ? memberUser.cosmetics : null;
+              const us = cos?.usernameStyle;
+              const memberNameStyle = usernameTextStyle(us);
+              const memberNameClass = [
+                usernameGradientClassName(us),
+                isAnimatedUsername(us) ? USERNAME_ANIMATED_CLASS : '',
+                cos?.usernameEffect ? USERNAME_EFFECT_CLASS[cos.usernameEffect] : '',
+              ]
+                .filter(Boolean)
+                .join(' ');
               return (
                 <div
                   key={member._id}
                   className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
                 >
                   <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center text-sm font-medium text-gray-600 dark:text-gray-300 shrink-0">
-                      {typeof memberUser === 'object' && memberUser?.username
-                        ? memberUser.username.charAt(0).toUpperCase()
-                        : '?'}
-                    </div>
+                    <Avatar
+                      avatar={typeof memberUser === 'object' ? memberUser?.avatar : undefined}
+                      name={typeof memberUser === 'object' && memberUser?.username ? memberUser.username : '?'}
+                      className="w-8 h-8"
+                      textClassName="text-sm font-medium"
+                      frame={cos?.avatarFrame}
+                    />
                     <div className="min-w-0">
-                      <span className="text-sm font-medium text-gray-900 dark:text-white truncate block">
-                        {typeof memberUser === 'object' && memberUser?.username ? memberUser.username : 'Unknown'}
+                      <span
+                        className="text-sm font-medium text-gray-900 dark:text-white truncate block"
+                        style={memberNameStyle}
+                      >
+                        <span className={memberNameClass}>
+                          {typeof memberUser === 'object' && memberUser?.username ? memberUser.username : 'Unknown'}
+                        </span>
                         {isSelf && ' (You)'}
                       </span>
                       <div className="text-xs text-gray-500 dark:text-gray-400 whitespace-normal">

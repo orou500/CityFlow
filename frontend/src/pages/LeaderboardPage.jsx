@@ -6,6 +6,14 @@ import { formatCount, formatMoneyExact } from '../utils/format';
 import CompactValue from '../components/CompactValue';
 import Avatar from '../components/Avatar';
 import useIsMobile from '../hooks/useIsMobile';
+import {
+  usernameTextStyle,
+  usernameGradientClassName,
+  isAnimatedUsername,
+  USERNAME_ANIMATED_CLASS,
+  USERNAME_EFFECT_CLASS,
+  resolveOptionLabel,
+} from '../config/supporterCosmetics';
 
 const CATEGORIES = ['netWorth', 'properties', 'passiveIncome', 'dealVolume', 'cityInfluence'];
 const PAGE_SIZE = 20;
@@ -53,13 +61,25 @@ function MovementIndicator({ change }) {
   );
 }
 
-function PlayerAvatar({ avatar, username, size = 'md' }) {
-  const cls = size === 'lg' ? 'w-10 h-10' : 'w-7 h-7';
-  const textCls = size === 'lg' ? 'text-base font-bold' : 'text-[10px] font-medium';
-  return <Avatar avatar={avatar} name={username} className={cls} textClassName={textCls} />;
+function PlayerAvatar({ avatar, username, size = 'md', frame }) {
+  const cls = size === 'lg' ? 'w-12 h-12 sm:w-16 sm:h-16' : 'w-9 h-9 sm:w-10 sm:h-10';
+  const textCls = size === 'lg' ? 'text-lg' : 'text-sm';
+  return <Avatar avatar={avatar} name={username} frame={frame} className={cls} textClassName={textCls} />;
 }
 
 function PlayerRow({ entry, onClick, formatValue, isCurrentUser }) {
+  const { t, i18n } = useTranslation();
+  const cos = entry.cosmetics || null;
+  const us = cos?.usernameStyle;
+  const nameStyle = usernameTextStyle(us);
+  const nameClass = [
+    usernameGradientClassName(us),
+    isAnimatedUsername(us) ? USERNAME_ANIMATED_CLASS : '',
+    cos?.usernameEffect ? USERNAME_EFFECT_CLASS[cos.usernameEffect] : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <button
       onClick={() => onClick(entry.userId)}
@@ -69,10 +89,17 @@ function PlayerRow({ entry, onClick, formatValue, isCurrentUser }) {
         <RankBadge rank={entry.rank} />
       </div>
 
-      <PlayerAvatar avatar={entry.avatar} username={entry.username} />
+      <PlayerAvatar avatar={entry.avatar} username={entry.username} frame={cos?.avatarFrame} />
 
       <div className="flex-1 text-start min-w-0">
-        <div className="text-sm font-medium text-primary truncate">{entry.displayName || entry.username}</div>
+        <div className="text-sm font-medium text-primary truncate" style={nameStyle}>
+          <span className={nameClass}>{entry.displayName || entry.username}</span>
+          {cos?.usernameEffect === 'glow' && entry.supporterBadge && (
+            <span className="text-[11px] text-muted ms-1.5 hidden sm:inline">
+              {resolveOptionLabel(t, 'badge', entry.supporterBadge, i18n)}
+            </span>
+          )}
+        </div>
         <div className="text-[11px] text-muted truncate sm:hidden">
           {CATEGORY_FORMATTERS[entry._cat]?.(entry.value)}
         </div>
@@ -97,7 +124,7 @@ function Podium({ topThree, activeCategory, isMobile }) {
     const [first, second, third] = topThree;
     const medalCard = (entry, medal) => (
       <div className="flex flex-col items-center flex-1 min-w-0 rounded-lg bg-gray-50 dark:bg-gray-800/50 px-2 py-2.5">
-        <PlayerAvatar avatar={entry.avatar} username={entry.username} size="lg" />
+        <PlayerAvatar avatar={entry.avatar} username={entry.username} frame={entry.cosmetics?.avatarFrame} size="lg" />
         <div className="mt-1.5 w-full text-center min-w-0">
           <div className="text-[11px] font-medium text-primary truncate">{nameOf(entry)}</div>
           <div className="text-xs font-bold text-secondary mt-0.5 truncate">{formatter(entry.value)}</div>
@@ -136,7 +163,12 @@ function Podium({ topThree, activeCategory, isMobile }) {
       <div className="flex items-end justify-center gap-4 sm:gap-8">
         {topThree.length >= 2 && (
           <div className="flex flex-col items-center flex-1 min-w-0 max-w-[110px]">
-            <PlayerAvatar avatar={topThree[1].avatar} username={topThree[1].username} size="lg" />
+            <PlayerAvatar
+              avatar={topThree[1].avatar}
+              username={topThree[1].username}
+              frame={topThree[1].cosmetics?.avatarFrame}
+              size="lg"
+            />
             <div className="mt-1.5 text-center w-full min-w-0">
               <div className="text-[11px] font-medium text-primary truncate">{nameOf(topThree[1])}</div>
               <div className="text-xs sm:text-sm font-bold text-secondary mt-0.5 truncate">
@@ -149,7 +181,12 @@ function Podium({ topThree, activeCategory, isMobile }) {
         {topThree.length >= 1 && (
           <div className="flex flex-col items-center flex-1 min-w-0 max-w-[110px]">
             <div className="mb-0.5 text-base">{'\uD83E\uDD47'}</div>
-            <PlayerAvatar avatar={topThree[0].avatar} username={topThree[0].username} size="lg" />
+            <PlayerAvatar
+              avatar={topThree[0].avatar}
+              username={topThree[0].username}
+              frame={topThree[0].cosmetics?.avatarFrame}
+              size="lg"
+            />
             <div className="mt-1.5 text-center w-full min-w-0">
               <div className="text-[11px] font-medium text-primary truncate">{nameOf(topThree[0])}</div>
               <div className="text-xs sm:text-sm font-bold text-green-600 dark:text-green-400 mt-0.5 truncate">
@@ -160,7 +197,12 @@ function Podium({ topThree, activeCategory, isMobile }) {
         )}
         {topThree.length >= 3 && (
           <div className="flex flex-col items-center flex-1 min-w-0 max-w-[110px]">
-            <PlayerAvatar avatar={topThree[2].avatar} username={topThree[2].username} size="lg" />
+            <PlayerAvatar
+              avatar={topThree[2].avatar}
+              username={topThree[2].username}
+              frame={topThree[2].cosmetics?.avatarFrame}
+              size="lg"
+            />
             <div className="mt-1.5 text-center w-full min-w-0">
               <div className="text-[11px] font-medium text-primary truncate">{nameOf(topThree[2])}</div>
               <div className="text-xs sm:text-sm font-bold text-secondary mt-0.5 truncate">
@@ -177,6 +219,17 @@ function Podium({ topThree, activeCategory, isMobile }) {
 
 function PlayerProfile({ profile, onClose }) {
   const { t } = useTranslation();
+
+  const cos = profile.user.cosmetics || null;
+  const us = cos?.usernameStyle;
+  const nameStyle = usernameTextStyle(us);
+  const nameClass = [
+    usernameGradientClassName(us),
+    isAnimatedUsername(us) ? USERNAME_ANIMATED_CLASS : '',
+    cos?.usernameEffect ? USERNAME_EFFECT_CLASS[cos.usernameEffect] : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   const CATEGORY_LABELS = {
     netWorth: t('leaderboard.categories.netWorth'),
@@ -207,12 +260,13 @@ function PlayerProfile({ profile, onClose }) {
             <Avatar
               avatar={profile.user.avatar}
               name={profile.user.displayName || profile.user.username}
+              frame={profile.user.cosmetics?.avatarFrame}
               className="w-14 h-14"
               textClassName="text-xl font-bold"
             />
             <div className="min-w-0">
-              <div className="text-lg font-bold text-primary truncate">
-                {profile.user.displayName || profile.user.username}
+              <div className="text-lg font-bold text-primary truncate" style={cos ? nameStyle : undefined}>
+                <span className={cos ? nameClass : undefined}>{profile.user.displayName || profile.user.username}</span>
               </div>
               <div className="text-sm text-muted">@{profile.user.username}</div>
               {profile.user.bio && <div className="text-xs text-secondary mt-1 line-clamp-2">{profile.user.bio}</div>}

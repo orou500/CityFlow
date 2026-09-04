@@ -40,6 +40,7 @@ import marketIntelligenceRoutes from '../routes/marketIntelligence.js';
 import rewardedAdRoutes from '../routes/rewardedAds.js';
 import adminRewardedAdsRoutes from '../routes/adminRewardedAds.js';
 import oauthRoutes from '../routes/oauth.js';
+import supporterIdentityRoutes from '../routes/supporterIdentity.js';
 
 export function createApp() {
   const app = express();
@@ -117,6 +118,7 @@ export function createApp() {
   app.use('/market-intelligence', marketIntelligenceRoutes);
   app.use('/rewarded-ads', rewardedAdRoutes);
   app.use('/admin/rewarded-ads', adminRewardedAdsRoutes);
+  app.use('/supporter-identity', supporterIdentityRoutes);
 
   app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });

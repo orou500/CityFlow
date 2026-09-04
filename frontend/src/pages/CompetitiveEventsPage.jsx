@@ -3,6 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { useLeaderboardStore } from '../store/useLeaderboardStore';
 import CompactValue from '../components/CompactValue';
 import Avatar from '../components/Avatar';
+import {
+  usernameTextStyle,
+  usernameGradientClassName,
+  isAnimatedUsername,
+  USERNAME_ANIMATED_CLASS,
+  USERNAME_EFFECT_CLASS,
+} from '../config/supporterCosmetics';
 
 const EVENT_TYPE_ICONS = {
   wealth: '\uD83D\uDCB0',
@@ -30,6 +37,18 @@ function EventCard({ event, onClick }) {
   const { t } = useTranslation();
   const isActive = event.status === 'active';
   const isCompleted = event.status === 'completed';
+
+  const winner = event.participants?.[0] || null;
+  const winnerCos = winner?.cosmetics || null;
+  const winnerUs = winnerCos?.usernameStyle;
+  const winnerNameStyle = usernameTextStyle(winnerUs);
+  const winnerNameClass = [
+    usernameGradientClassName(winnerUs),
+    isAnimatedUsername(winnerUs) ? USERNAME_ANIMATED_CLASS : '',
+    winnerCos?.usernameEffect ? USERNAME_EFFECT_CLASS[winnerCos.usernameEffect] : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   const formatDate = (d) => {
     try {
@@ -68,9 +87,15 @@ function EventCard({ event, onClick }) {
                 {t('leaderboard.events.participants')}: {event.participants?.length || 0}
               </span>
             )}
-            {isCompleted && event.participants?.[0] && (
+            {isCompleted && winner && (
               <span className="text-[10px] sm:text-xs text-secondary">
-                {t('leaderboard.events.winner')}: {event.participants[0].displayName || event.participants[0].username}
+                {t('leaderboard.events.winner')}:{' '}
+                <span
+                  style={winnerCos ? winnerNameStyle : undefined}
+                  className={winnerCos ? winnerNameClass : undefined}
+                >
+                  {winner.displayName || winner.username}
+                </span>
               </span>
             )}
             {!isActive && !isCompleted && (
@@ -248,13 +273,29 @@ function EventDetail({ event, onClose }) {
 }
 
 function EventPodiumItem({ participant, medal, formatValue, highlight = false }) {
+  const cos = participant.cosmetics || null;
+  const us = cos?.usernameStyle;
+  const nameStyle = usernameTextStyle(us);
+  const nameClass = [
+    usernameGradientClassName(us),
+    isAnimatedUsername(us) ? USERNAME_ANIMATED_CLASS : '',
+    cos?.usernameEffect ? USERNAME_EFFECT_CLASS[cos.usernameEffect] : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <div className="flex flex-col items-center flex-1 min-w-0 max-w-[100px]">
       {medal === '\uD83E\uDD47' && <div className="text-sm mb-0.5">{medal}</div>}
-      <Avatar avatar={participant.avatar} name={participant.displayName || participant.username} className="w-9 h-9" />
+      <Avatar
+        avatar={participant.avatar}
+        name={participant.displayName || participant.username}
+        frame={cos?.avatarFrame}
+        className="w-9 h-9"
+      />
       <div className="mt-1 text-center w-full">
-        <div className="text-[10px] font-medium text-primary truncate">
-          {participant.displayName || participant.username}
+        <div className="text-[10px] font-medium text-primary truncate" style={cos ? nameStyle : undefined}>
+          <span className={cos ? nameClass : undefined}>{participant.displayName || participant.username}</span>
         </div>
         <div
           className={`text-[11px] sm:text-xs font-bold mt-0.5 ${highlight ? 'text-green-600 dark:text-green-400' : 'text-secondary'}`}
@@ -268,18 +309,33 @@ function EventPodiumItem({ participant, medal, formatValue, highlight = false })
 }
 
 function EventParticipantRow({ participant, formatValue }) {
+  const cos = participant.cosmetics || null;
+  const us = cos?.usernameStyle;
+  const nameStyle = usernameTextStyle(us);
+  const nameClass = [
+    usernameGradientClassName(us),
+    isAnimatedUsername(us) ? USERNAME_ANIMATED_CLASS : '',
+    cos?.usernameEffect ? USERNAME_EFFECT_CLASS[cos.usernameEffect] : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <div className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50">
       <span className="w-6 text-center text-[11px] font-semibold text-muted shrink-0">#{participant.rank}</span>
       <Avatar
         avatar={participant.avatar}
         name={participant.displayName || participant.username}
+        frame={cos?.avatarFrame}
         className="w-6 h-6"
         textClassName="text-[9px]"
       />
       <div className="flex-1 min-w-0">
-        <span className="text-xs sm:text-sm font-medium text-primary truncate block">
-          {participant.displayName || participant.username}
+        <span
+          className="text-xs sm:text-sm font-medium text-primary truncate block"
+          style={cos ? nameStyle : undefined}
+        >
+          <span className={cos ? nameClass : undefined}>{participant.displayName || participant.username}</span>
         </span>
       </div>
       <span className="text-xs sm:text-sm font-semibold text-primary shrink-0">{formatValue(participant.value)}</span>

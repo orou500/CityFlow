@@ -1,4 +1,4 @@
-﻿{
+{
   "app": {
     "title": "CityFlow",
     "subtitle": "סימולציית נדל\"ן עולמית"
@@ -32,7 +32,10 @@
     "auctions": "מכרזים",
     "missions": "משימות",
     "career": "קריירה",
-    "watchAd": "צפה בפרסומת והרווח"
+    "watchAd": "צפה בפרסומת והרווח",
+    "newNotifications_one": "התראה חדשה אחת",
+    "newNotifications_two": "{{count}} התראות חדשות",
+    "newNotifications_other": "{{count}} התראות חדשות"
   },
   "rewardedAds": {
     "title": "צפה בפרסומת והרווח",
@@ -362,7 +365,8 @@
     "na": "לא זמין",
     "remaining": "נותר",
     "accept": "אשר",
-    "decline": "דחה"
+    "decline": "דחה",
+    "reset": "איפוס"
   },
   "property": {
     "apartment": "דירה",
@@ -1484,7 +1488,8 @@
     "deleteAccountConfirm": "האם אתה בטוח שברצונך למחוק את החשבון? ניתן לבטל פעולה זו תוך 24 שעות.",
     "deleteAccountWarning": "נתוני החשבון ישמרו למשך 24 שעות. תוכל לשחזר את החשבון על ידי כניסה שוב במהלך הזמן הזה.",
     "deleteAccountPlaceholder": "הקלד DELETE לאישור",
-    "confirmDelete": "מחק את החשבון שלי"
+    "confirmDelete": "מחק את החשבון שלי",
+    "changeAvatar": "החלף אווטאר"
   },
   "friends": {
     "title": "חברים",
@@ -3333,5 +3338,172 @@
     "india": "הודו",
     "china": "סין",
     "turkey": "טורקיה"
+  },
+  "supporterIdentity": {
+    "pageTitle": "סגנון התומך",
+    "subtitle": "התאם אישית את הזהות שלך ב-CityFlow עם סגנונות ויזואליים ייחודיים הזמינים לתומכים.",
+    "aboutTitle": "הזהות שלך, בסגנון שלך",
+    "aboutDescription": "סגנון התומך מאפשר לך להתאים אישית את המראה שלך ברחבי CityFlow — שם המשתמש, הפרופיל, האווטאר ותג התומך — הכל במקום אחד.",
+    "aboutItems": "אפשרויות התאמה אישית:",
+    "itemUsername": "מראה שם המשתמש — צבע, שיפוע וזוהר",
+    "itemProfile": "רקע, אפקט ומסגרת לפרופיל",
+    "itemAvatar": "מסגרת ואפקטים לאווטאר",
+    "itemIdentity": "תג תומך ותואר",
+    "visualOnlyNote": "הקוסמטיקה של התומכים היא ויזואלית בלבד ולעולם אינה משפיעה על המשחק, הכלכלה, הדירוגים או יתרונות תחרותיים.",
+    "learnSupport": "הפוך לתומך",
+    "donateAgain": "תמוך שוב ב-CityFlow",
+    "tourReplay": "מדריך התומך",
+    "lockedTitle": "סגנון התומך הוא הטבה לתומכים",
+    "lockedDescription": "תמוך ב-CityFlow בתרומה מאושרת כדי לפתוח דרכים ייחודיות להתאים אישית את הזהות שלך.",
+    "donateCta": "תמוך ב-CityFlow",
+    "livePreview": "תצוגה חיה",
+    "saved": "הסגנון שלך נשמר ונראה כעת ברחבי CityFlow.",
+    "saving": "שומר...",
+    "resetDone": "הסגנון שלך אופס לברירת המחדל.",
+    "save": "שמור",
+    "reset": "איפוס",
+    "locked": "נעול",
+    "presets": "ערכות מוכנות",
+    "customize": "התאם אישית",
+    "customizeProfile": "התאם אישית את הפרופיל",
+    "supportCityFlow": "תמוך ב-CityFlow",
+    "username": "שם משתמש",
+    "profile": "פרופיל",
+    "identity": "תג ותואר",
+    "tierLabel": "דרגה",
+    "supporterSince": "תומך מאז",
+    "badgeLabel": "תג תומך",
+    "badgeTitle": "תומך",
+    "titleHeading": "תואר",
+    "tier": {
+      "none": "ללא",
+      "supporter": "תומך",
+      "early_supporter": "תומך ארד",
+      "founding_supporter": "תומך פלטינה"
+    },
+    "color": {
+      "cityflow_blue": "כחול CityFlow",
+      "cityflow_cyan": "ציאן CityFlow",
+      "cityflow_orange": "כתום CityFlow",
+      "purple": "סגול",
+      "red": "אדום",
+      "green": "ירוק",
+      "gold": "זהב",
+      "white": "לבן"
+    },
+    "colorHeading": "צבע",
+    "gradient": {
+      "none": "סטטי",
+      "cityflow_ocean": "אוקיינוס CityFlow",
+      "ocean_dream": "חלום אוקיינוס",
+      "sunset": "שקיעה",
+      "royal": "מלכותי",
+      "neon": "ניאון",
+      "empyrean": "קיסרי"
+    },
+    "gradientHeading": "שיפוע",
+    "animation": "אנימציה",
+    "animationStatic": "סטטי",
+    "animationAnimated": "מונפש",
+    "usernameEffect": "אפקט שם משתמש",
+    "effect": {
+      "none": "ללא",
+      "soft_glow": "זוהר עדין",
+      "glow": "זוהר",
+      "shimmer": "נצנוץ",
+      "pulse": "פעימה",
+      "gradient_flow": "זרימת שיפוע"
+    },
+    "profileBackground": "רקע",
+    "background": {
+      "none": "ללא",
+      "midnight_city": "עיר חצות",
+      "blue_horizon": "אופק כחול",
+      "financial_district": "רובע פיננסי",
+      "neon_metro": "מטרו ניאון",
+      "sunset_skyline": "קו רקיע של שקיעה",
+      "ocean_city": "עיר אוקיינוס",
+      "corporate_black": "שחור עסקי",
+      "global_empire": "אימפריה גלובלית",
+      "golden_hour": "שעת זהב",
+      "deep_space": "חלל עמוק"
+    },
+    "backgroundEffect": {
+      "none": "ללא",
+      "gradient": "שיפוע",
+      "animated_gradient": "שיפוע מונפש",
+      "city_lights": "אורות עיר",
+      "particles": "חלקיקים",
+      "grid": "רשת",
+      "light_streaks": "פסי אור",
+      "skyline": "קו רקיע",
+      "glass": "זכוכית"
+    },
+    "backgroundEffectHeading": "אפקט רקע",
+    "profileBorder": "מסגרת",
+    "border": {
+      "none": "ללא",
+      "cityflow_blue": "כחול CityFlow",
+      "cyan": "ציאן",
+      "purple": "סגול",
+      "gold": "זהב",
+      "platinum": "פלטינה",
+      "animated_gradient": "שיפוע מונפש"
+    },
+    "avatarFrame": {
+      "none": "ללא",
+      "blue_glow": "זוהר כחול",
+      "cyan_ring": "טבעת ציאן",
+      "gold_ring": "טבעת זהב",
+      "gradient_ring": "טבעת שיפוע",
+      "animated_ring": "טבעת מונפשת",
+      "premium_frame": "מסגרת פרימיום"
+    },
+    "avatarFrameHeading": "מסגרת אווטאר",
+    "badge": {
+      "none": "ללא",
+      "supporter": "תומך",
+      "early_supporter": "תומך ארד",
+      "founding_supporter": "תומך פלטינה"
+    },
+    "badgeHeading": "תג",
+    "title": {
+      "none": "ללא",
+      "supporter": "תומך",
+      "city_builder": "בונה ערים",
+      "urban_investor": "משקיע עירוני",
+      "empire_builder": "בונה אימפריות",
+      "global_developer": "מפתח גלובלי",
+      "market_mogul": "טייקון שוק",
+      "cityflow_founder": "מייסד CityFlow"
+    },
+    "preset": {
+      "cityflow": "CityFlow",
+      "executive": "מנהל",
+      "ocean": "אוקיינוס",
+      "sunset": "שקיעה",
+      "royal": "מלכותי",
+      "neon": "ניאון",
+      "empire": "אימפריה"
+    },
+    "onboarding": {
+      "welcomeTitle": "מזל טוב — עכשיו אתה תומך CityFlow!",
+      "welcomeDescription": "סטטוס התומך פותח לך דרכים ייחודיות להתאים אישית את הזהות שלך ב-CityFlow.",
+      "welcomeCta": "התאם אישית את הפרופיל שלי",
+      "notNow": "לא עכשיו",
+      "skip": "דלג",
+      "next": "הבא",
+      "done": "סיום",
+      "step1Title": "התאם אישית את שם המשתמש",
+      "step1Description": "בחר צבע, שיפוע או זוהר לשם המשתמש שלך — הוא יופיע בפרופיל ובדירוגים.",
+      "step2Title": "התאם אישית את רקע הפרופיל",
+      "step2Description": "בחר רקע, אפקט ומסגרת לדף הפרופיל שלך.",
+      "step3Title": "התאם אישית את האווטאר",
+      "step3Description": "הוסף מסגרת או טבעת סביב האווטאר שלך כדי שיבלוט.",
+      "step4Title": "בחר תג תומך ותואר",
+      "step4Description": "הצג את דרגת התמיכה שלך ובחר תואר שמתאים לך.",
+      "step5Title": "שמור את הסגנון",
+      "step5Description": "כשתסיים, שמור — הזהות שלך תתעדכן מיד ברחבי CityFlow."
+    }
   }
 }

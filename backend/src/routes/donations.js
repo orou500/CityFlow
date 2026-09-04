@@ -94,8 +94,12 @@ router.post('/capture', authenticate, async (req, res) => {
     else if (totalDonated >= 25) title = 'Real Estate Backer';
     else title = 'Community Supporter';
 
+    const wasSupporter = (user.supporter?.badge || 'none') !== 'none';
     user.supporter = { badge, title, isAnonymous: !!isAnonymous };
     user.donationStats = { totalDonated, donorSince: user.donationStats?.donorSince || new Date(), donationCount };
+    if (!wasSupporter && user.supporterOnboarding?.status === 'none') {
+      user.supporterOnboarding = { status: 'pending', startedAt: new Date() };
+    }
     await user.save();
 
     res.json({
@@ -130,7 +134,7 @@ router.get('/top-supporters', optionalAuth, async (req, res) => {
     })
       .sort({ 'donationStats.totalDonated': -1 })
       .limit(20)
-      .select('username displayName avatar supporter donationStats.totalDonated donationStats.donorSince');
+      .select('username displayName avatar cosmetics supporter donationStats.totalDonated donationStats.donorSince');
 
     const total = await getTotalDonations();
 
@@ -139,6 +143,7 @@ router.get('/top-supporters', optionalAuth, async (req, res) => {
         username: s.username,
         displayName: s.displayName,
         avatar: s.avatar,
+        cosmetics: s.cosmetics || undefined,
         badge: s.supporter?.badge || 'supporter',
         title: s.supporter?.title || '',
         totalDonated: s.donationStats?.totalDonated || 0,
@@ -241,8 +246,13 @@ async function updateUserSupporterTier(userId, donationAmount, isAnonymous) {
   else if (totalDonated >= 25) title = 'Real Estate Backer';
   else title = 'Community Supporter';
 
+  const wasSupporter = (user.supporter?.badge || 'none') !== 'none';
+
   user.supporter = { badge, title, isAnonymous: !!isAnonymous };
   user.donationStats = { totalDonated, donorSince: user.donationStats?.donorSince || new Date(), donationCount };
+  if (!wasSupporter && user.supporterOnboarding?.status === 'none') {
+    user.supporterOnboarding = { status: 'pending', startedAt: new Date() };
+  }
   await user.save();
 }
 

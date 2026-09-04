@@ -1,4 +1,4 @@
-﻿{
+{
   "app": {
     "title": "CityFlow",
     "subtitle": "Global Real Estate Simulation"
@@ -32,7 +32,10 @@
     "auctions": "Auctions",
     "missions": "Missions",
     "career": "Career",
-    "watchAd": "Watch Ad & Earn"
+    "watchAd": "Watch Ad & Earn",
+    "newNotifications_one": "{{count}} new notification",
+    "newNotifications_two": "{{count}} new notifications",
+    "newNotifications_other": "{{count}} new notifications"
   },
   "rewardedAds": {
     "title": "Watch Ad & Earn",
@@ -362,7 +365,8 @@
     "na": "N/A",
     "remaining": "Remaining",
     "accept": "Accept",
-    "decline": "Decline"
+    "decline": "Decline",
+    "reset": "Reset"
   },
   "property": {
     "apartment": "Apartment",
@@ -1484,7 +1488,8 @@
     "deleteAccountConfirm": "Are you sure you want to delete your account? This action can be undone within 24 hours.",
     "deleteAccountWarning": "Your account data will be preserved for 24 hours. You can restore it by logging in again during that time.",
     "deleteAccountPlaceholder": "Type DELETE to confirm",
-    "confirmDelete": "Delete My Account"
+    "confirmDelete": "Delete My Account",
+    "changeAvatar": "Change avatar"
   },
   "friends": {
     "title": "Friends",
@@ -3329,5 +3334,172 @@
     "india": "India",
     "china": "China",
     "turkey": "Turkey"
+  },
+  "supporterIdentity": {
+    "pageTitle": "Supporter Style",
+    "subtitle": "Customize your CityFlow identity with exclusive visual styles available to supporters.",
+    "aboutTitle": "Your identity, your style",
+    "aboutDescription": "Supporter Style lets you personalize how you appear across CityFlow — your username, your profile, your avatar and your supporter badge — all in one place.",
+    "aboutItems": "You can customize:",
+    "itemUsername": "Username appearance — color, gradient and glow",
+    "itemProfile": "Profile background, effect and border",
+    "itemAvatar": "Avatar frame and effects",
+    "itemIdentity": "Supporter badge and title",
+    "visualOnlyNote": "Supporter cosmetics are visual only and never affect gameplay, economy, rankings, or competitive advantages.",
+    "learnSupport": "Become a supporter",
+    "donateAgain": "Support CityFlow again",
+    "tourReplay": "Supporter guide",
+    "lockedTitle": "Supporter Style is a supporter perk",
+    "lockedDescription": "Support CityFlow with a confirmed donation to unlock exclusive ways to personalize your identity.",
+    "donateCta": "Support CityFlow",
+    "livePreview": "Live Preview",
+    "saved": "Your style has been saved and is now visible across CityFlow.",
+    "saving": "Saving...",
+    "resetDone": "Your style has been reset to the default.",
+    "save": "Save",
+    "reset": "Reset",
+    "locked": "Locked",
+    "presets": "Presets",
+    "customize": "Customize",
+    "customizeProfile": "Customize Profile",
+    "supportCityFlow": "Support CityFlow",
+    "username": "Username",
+    "profile": "Profile",
+    "identity": "Badge & Title",
+    "tierLabel": "Tier",
+    "supporterSince": "Supporter since",
+    "badgeLabel": "Supporter badge",
+    "badgeTitle": "Supporter",
+    "tier": {
+      "none": "None",
+      "supporter": "Supporter",
+      "early_supporter": "Bronze Supporter",
+      "founding_supporter": "Platinum Supporter"
+    },
+    "color": {
+      "cityflow_blue": "CityFlow Blue",
+      "cityflow_cyan": "CityFlow Cyan",
+      "cityflow_orange": "CityFlow Orange",
+      "purple": "Purple",
+      "red": "Red",
+      "green": "Green",
+      "gold": "Gold",
+      "white": "White"
+    },
+    "gradient": {
+      "none": "Static",
+      "cityflow_ocean": "CityFlow Ocean",
+      "ocean_dream": "Ocean Dream",
+      "sunset": "Sunset",
+      "royal": "Royal",
+      "neon": "Neon",
+      "empyrean": "Empyrean"
+    },
+    "animation": "Animation",
+    "animationStatic": "Static",
+    "animationAnimated": "Animated",
+    "usernameEffect": "Username Effect",
+    "effect": {
+      "none": "None",
+      "soft_glow": "Soft Glow",
+      "glow": "Glow",
+      "shimmer": "Shimmer",
+      "pulse": "Pulse",
+      "gradient_flow": "Gradient Flow"
+    },
+    "profileBackground": "Background",
+    "background": {
+      "none": "None",
+      "midnight_city": "Midnight City",
+      "blue_horizon": "Blue Horizon",
+      "financial_district": "Financial District",
+      "neon_metro": "Neon Metro",
+      "sunset_skyline": "Sunset Skyline",
+      "ocean_city": "Ocean City",
+      "corporate_black": "Corporate Black",
+      "global_empire": "Global Empire",
+      "golden_hour": "Golden Hour",
+      "deep_space": "Deep Space"
+    },
+    "backgroundEffect": {
+      "none": "None",
+      "gradient": "Gradient",
+      "animated_gradient": "Animated Gradient",
+      "city_lights": "City Lights",
+      "particles": "Particles",
+      "grid": "Grid",
+      "light_streaks": "Light Streaks",
+      "skyline": "Skyline",
+      "glass": "Glass"
+    },
+    "backgroundEffectHeading": "Background Effect",
+    "profileBorder": "Border",
+    "border": {
+      "none": "None",
+      "cityflow_blue": "CityFlow Blue",
+      "cyan": "Cyan",
+      "purple": "Purple",
+      "gold": "Gold",
+      "platinum": "Platinum",
+      "animated_gradient": "Animated Gradient"
+    },
+    "avatarFrame": {
+      "none": "None",
+      "blue_glow": "Blue Glow",
+      "cyan_ring": "Cyan Ring",
+      "gold_ring": "Gold Ring",
+      "gradient_ring": "Gradient Ring",
+      "animated_ring": "Animated Ring",
+      "premium_frame": "Premium Frame"
+    },
+    "avatarFrameHeading": "Avatar Frame",
+    "badge": {
+      "none": "None",
+      "supporter": "Supporter",
+      "early_supporter": "Bronze Supporter",
+      "founding_supporter": "Platinum Supporter"
+    },
+    "badgeHeading": "Badge",
+    "colorHeading": "Color",
+    "gradientHeading": "Gradient",
+    "title": {
+      "none": "None",
+      "supporter": "Supporter",
+      "city_builder": "City Builder",
+      "urban_investor": "Urban Investor",
+      "empire_builder": "Empire Builder",
+      "global_developer": "Global Developer",
+      "market_mogul": "Market Mogul",
+      "cityflow_founder": "CityFlow Founder"
+    },
+    "preset": {
+      "cityflow": "CityFlow",
+      "executive": "Executive",
+      "ocean": "Ocean",
+      "sunset": "Sunset",
+      "royal": "Royal",
+      "neon": "Neon",
+      "empire": "Empire"
+    },
+    "onboarding": {
+      "welcomeTitle": "You're now a CityFlow Supporter!",
+      "welcomeDescription": "Your supporter status unlocks exclusive ways to customize your CityFlow identity.",
+      "welcomeCta": "Customize My Profile",
+      "notNow": "Not now",
+      "skip": "Skip",
+      "next": "Next",
+      "done": "Done",
+      "step1Title": "Customize your username",
+      "step1Description": "Pick a color, gradient or glow for your username — it appears on your profile and across leaderboards.",
+      "step2Title": "Customize your profile background",
+      "step2Description": "Choose a background, effect and border for your profile page.",
+      "step3Title": "Customize your avatar",
+      "step3Description": "Add a frame or ring around your avatar to make it stand out.",
+      "step4Title": "Choose your supporter badge and title",
+      "step4Description": "Show off your supporter tier and pick the title that fits you.",
+      "step5Title": "Save your style",
+      "step5Description": "When you're happy, save — your identity updates across CityFlow immediately."
+    },
+    "titleHeading": "Title"
   }
 }

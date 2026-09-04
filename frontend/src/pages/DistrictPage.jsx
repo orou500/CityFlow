@@ -6,6 +6,13 @@ import { formatMoney, formatCompact } from '../utils/format';
 import { localizeCityName, localizeCountryName } from '../utils/cityNames';
 import PropertyImage from '../components/PropertyImage';
 import Avatar from '../components/Avatar';
+import {
+  usernameTextStyle,
+  usernameGradientClassName,
+  isAnimatedUsername,
+  USERNAME_ANIMATED_CLASS,
+  USERNAME_EFFECT_CLASS,
+} from '../config/supporterCosmetics';
 
 const TIER_STYLES = {
   premium: { bg: 'bg-purple-100 dark:bg-purple-900/50', text: 'text-purple-700 dark:text-purple-300', icon: '👑' },
@@ -260,6 +267,16 @@ export default function DistrictPage() {
               <div className="space-y-2">
                 {topInvestors.map((inv, i) => {
                   const tierInfo = INFLUENCE_TIER_STYLES[inv.tier] || INFLUENCE_TIER_STYLES.observer;
+                  const cos = inv.cosmetics || null;
+                  const us = cos?.usernameStyle;
+                  const nameStyle = usernameTextStyle(us);
+                  const nameClass = [
+                    usernameGradientClassName(us),
+                    isAnimatedUsername(us) ? USERNAME_ANIMATED_CLASS : '',
+                    cos?.usernameEffect ? USERNAME_EFFECT_CLASS[cos.usernameEffect] : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ');
                   return (
                     <div
                       key={inv.userId}
@@ -267,13 +284,19 @@ export default function DistrictPage() {
                     >
                       <div className="flex items-center gap-3">
                         <span className="text-sm font-bold text-gray-400 w-6">#{i + 1}</span>
-                        <Avatar avatar={inv.avatar} name={inv.displayName} className="w-8 h-8" />
+                        <Avatar
+                          avatar={inv.avatar}
+                          name={inv.displayName}
+                          frame={cos?.avatarFrame}
+                          className="w-8 h-8"
+                        />
                         <div>
                           <Link
                             to={`/profile/${inv.username}`}
                             className="text-sm font-medium text-gray-900 dark:text-white hover:text-blue-500"
+                            style={cos ? nameStyle : undefined}
                           >
-                            {inv.displayName}
+                            <span className={cos ? nameClass : undefined}>{inv.displayName}</span>
                           </Link>
                           <p className="text-xs text-gray-500 dark:text-gray-400">{inv.propertyCount} properties</p>
                         </div>

@@ -135,6 +135,14 @@ body[dir='rtl'] {
   animation: badge-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
+/* Notification badges must always paint ABOVE supporter avatar frames/glows
+   (independent DOM element + class; cosmetics never share these). */
+.animate-badge-pop,
+.animate-badge-glow {
+  z-index: 2;
+  pointer-events: none;
+}
+
 .animate-avatar-pulse {
   animation: avatar-pulse 2.4s ease-in-out infinite;
 }
@@ -305,4 +313,347 @@ input[type='range']::-moz-range-thumb {
   background: var(--color-brand);
   cursor: pointer;
   border: 2px solid var(--color-card);
+}
+
+/* ============================================================
+   Supporter Identity System — cosmetic rendering (see
+   src/config/supporterCosmetics.js). Only whitelisted named
+   presets map to these classes; raw user CSS/HTML is never used.
+   All animation honors prefers-reduced-motion.
+   ============================================================ */
+
+/* Username gradients (text gradient via background-clip) */
+.si-gradient-cityflow-ocean {
+  background-image: linear-gradient(90deg, #22d3ee, #1e90ff, #3b82f6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.si-gradient-ocean-dream {
+  background-image: linear-gradient(90deg, #38bdf8, #818cf8);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.si-gradient-sunset {
+  background-image: linear-gradient(90deg, #fb923c, #ef4444, #a855f7);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.si-gradient-royal {
+  background-image: linear-gradient(90deg, #a855f7, #f5b301);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.si-gradient-neon {
+  background-image: linear-gradient(90deg, #22d3ee, #a855f7);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.si-gradient-empyrean {
+  background-image: linear-gradient(90deg, #f5b301, #1e90ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Animated gradient — background-position loop, GPU-light (transform/bg-pos
+   only); paused under reduced motion. */
+.si-username-animated {
+  background-size: 200% auto;
+  animation: si-hue-shift 6s linear infinite;
+}
+@keyframes si-hue-shift {
+  0% {
+    background-position: 0% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+/* Username effects (subtle, lightweight) */
+.si-effect-soft-glow {
+  text-shadow: 0 0 8px rgba(30, 144, 255, 0.45);
+}
+.si-effect-glow {
+  text-shadow:
+    0 0 12px var(--color-brand),
+    0 0 24px rgba(30, 144, 255, 0.4);
+}
+.si-effect-shimmer {
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  background-image: linear-gradient(100deg, #38bdf8 20%, #f8fafc 40%, #38bdf8 60%);
+  background-size: 200% auto;
+  animation: si-shimmer 3.5s linear infinite;
+}
+@keyframes si-shimmer {
+  to {
+    background-position: -200% center;
+  }
+}
+.si-effect-pulse {
+  animation: si-pulse 3s ease-in-out infinite;
+}
+@keyframes si-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+/* gradient-flow reuses the hue-shift with a background-size */
+.si-effect-gradient-flow {
+  background-size: 200% auto;
+  animation: si-hue-shift 8s linear infinite;
+}
+
+/* ============================================================
+   Profile card backgrounds + effects + borders
+   ============================================================ */
+.si-bg-card {
+  position: relative;
+  overflow: hidden;
+}
+.si-bg-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+.si-bg-content {
+  position: relative;
+  z-index: 1;
+}
+
+.si-bg-midnight-city {
+  background: linear-gradient(180deg, #0b1220 0%, #1e3a5f 55%, #0f172a 100%);
+}
+.si-bg-blue-horizon {
+  background: linear-gradient(180deg, #0b3b6b 0%, #1e90ff 70%, #7fd1ff 100%);
+}
+.si-bg-financial-district {
+  background: linear-gradient(160deg, #0d1b2a 0%, #1b3a5b 60%, #274a6d 100%);
+}
+.si-bg-neon-metro {
+  background: linear-gradient(180deg, #0f172a 0%, #2b0f4a 60%, #3b0764 100%);
+}
+.si-bg-sunset-skyline {
+  background: linear-gradient(180deg, #431407 0%, #c2410c 55%, #f59e0b 100%);
+}
+.si-bg-ocean-city {
+  background: linear-gradient(180deg, #083344 0%, #0e7490 60%, #22d3ee 100%);
+}
+.si-bg-corporate-black {
+  background: linear-gradient(180deg, #050505 0%, #111827 55%, #0b1220 100%);
+}
+.si-bg-global-empire {
+  background: linear-gradient(120deg, #1c1917 0%, #7c2d12 45%, #f5b301 100%);
+}
+.si-bg-golden-hour {
+  background: linear-gradient(180deg, #451a03 0%, #b45309 55%, #fde68a 100%);
+}
+.si-bg-deep-space {
+  background: linear-gradient(180deg, #020617 0%, #1e1b4b 55%, #312e81 100%);
+}
+
+/* Background sub-effects (stacked above the base gradient) */
+.si-bgfx-gradient {
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.08), transparent 40%, rgba(30, 144, 255, 0.12));
+}
+.si-bgfx-animated-gradient {
+  background: linear-gradient(120deg, rgba(34, 211, 238, 0.15), rgba(168, 85, 247, 0.12), rgba(34, 211, 238, 0.15));
+  background-size: 300% 300%;
+  animation: si-bg-grad 12s ease infinite;
+}
+@keyframes si-bg-grad {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+.si-bgfx-city-lights {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.35) 1px, transparent 1.5px);
+  background-size: 22px 22px;
+  opacity: 0.5;
+}
+.si-bgfx-particles {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.25) 1px, transparent 1px);
+  background-size: 28px 28px;
+  opacity: 0.4;
+}
+.si-bgfx-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 34px 34px;
+}
+.si-bgfx-light-streaks {
+  background-image: linear-gradient(
+    115deg,
+    transparent 20%,
+    rgba(245, 179, 1, 0.12) 38%,
+    transparent 55%,
+    rgba(34, 211, 238, 0.1) 72%,
+    transparent 90%
+  );
+  background-size: 350% 100%;
+  animation: si-streaks 9s linear infinite;
+}
+@keyframes si-streaks {
+  to {
+    background-position: -350% center;
+  }
+}
+.si-bgfx-skyline {
+  background-image: linear-gradient(rgba(255, 255, 255, 0.12) 2px, transparent 2px);
+  background-size: 100% 18px;
+  background-position: 0 100%;
+  transform: translateY(0);
+}
+.si-bgfx-glass {
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* Profile borders */
+.si-border {
+  border: 2px solid transparent;
+}
+.si-border-cityflow-blue {
+  border-color: #1e90ff;
+}
+.si-border-cyan {
+  border-color: #22d3ee;
+}
+.si-border-purple {
+  border-color: #a855f7;
+}
+.si-border-gold {
+  border-color: #f5b301;
+}
+.si-border-platinum {
+  border-color: linear-gradient(90deg, #e2e8f0, #f8fafc, #94a3b8);
+  border-image: linear-gradient(90deg, #cbd5e1, #f8fafc, #94a3b8) 1;
+}
+.si-border-animated-gradient {
+  border-image: linear-gradient(90deg, #22d3ee, #a855f7, #f5b301, #22d3ee) 1;
+  animation: si-border-spin 6s linear infinite;
+}
+@keyframes si-border-spin {
+  0% {
+    filter: hue-rotate(0deg);
+  }
+  100% {
+    filter: hue-rotate(360deg);
+  }
+}
+
+/* ============================================================
+   Avatar frames/rings — rendered AROUND the unmodified avatar.
+   ============================================================ */
+.si-avatar {
+  position: relative;
+  display: inline-flex;
+  border-radius: 9999px;
+  padding: 2px;
+}
+.si-avatar > .si-avatar-inner {
+  border-radius: 9999px;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+}
+.si-avatar-blue-glow {
+  box-shadow: 0 0 12px rgba(30, 144, 255, 0.6);
+}
+.si-avatar-cyan-ring {
+  box-shadow: 0 0 0 3px #22d3ee;
+}
+.si-avatar-gold-ring {
+  box-shadow:
+    0 0 0 3px #f5b301,
+    0 0 12px rgba(245, 179, 1, 0.55);
+}
+.si-avatar-gradient-ring {
+  box-shadow:
+    0 0 0 3px var(--color-brand),
+    0 0 12px rgba(168, 85, 247, 0.5);
+}
+.si-avatar-animated-ring {
+  animation: si-avatar-ring-spin 5s linear infinite;
+}
+@keyframes si-avatar-ring-spin {
+  0% {
+    box-shadow: 0 0 0 3px #22d3ee;
+  }
+  33% {
+    box-shadow: 0 0 0 3px #a855f7;
+  }
+  66% {
+    box-shadow: 0 0 0 3px #f5b301;
+  }
+  100% {
+    box-shadow: 0 0 0 3px #22d3ee;
+  }
+}
+.si-avatar-premium-frame {
+  background: linear-gradient(135deg, #1e90ff, #a855f7, #f5b301);
+  box-shadow: 0 0 14px rgba(168, 85, 247, 0.55);
+}
+
+/* Supporter badge pill */
+.si-badge {
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+.si-badge-supporter {
+  color: #dcfce7;
+  background: rgba(16, 185, 129, 0.22);
+  border: 1px solid rgba(16, 185, 129, 0.5);
+}
+.si-badge-early_supporter {
+  color: #fef3c7;
+  background: rgba(245, 179, 1, 0.22);
+  border: 1px solid rgba(245, 179, 1, 0.55);
+}
+.si-badge-founding_supporter {
+  color: #fdf4ff;
+  background: rgba(168, 85, 247, 0.24);
+  border: 1px solid rgba(168, 85, 247, 0.6);
+}
+
+/* Reduced motion: disable all animated cosmetics; the static version stays
+   attractive. Notification badges keep their static red appearance — they
+   only lose the pop/glow animation, NEVER their visibility. */
+@media (prefers-reduced-motion: reduce) {
+  .si-username-animated,
+  .si-effect-shimmer,
+  .si-effect-pulse,
+  .si-effect-gradient-flow,
+  .si-bgfx-animated-gradient,
+  .si-bgfx-light-streaks,
+  .si-border-animated-gradient,
+  .si-avatar-animated-ring {
+    animation: none !important;
+  }
+  .animate-badge-pop,
+  .animate-badge-glow {
+    animation: none !important;
+  }
 }

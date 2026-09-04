@@ -5,6 +5,14 @@ import { useAuthStore } from '../store/useAuthStore';
 import { useTheme } from '../components/ThemeProvider';
 import { getApiBaseUrl } from '../utils/capacitor';
 import Footer from '../components/Footer';
+import Avatar from '../components/Avatar';
+import {
+  usernameTextStyle,
+  usernameGradientClassName,
+  isAnimatedUsername,
+  USERNAME_ANIMATED_CLASS,
+  USERNAME_EFFECT_CLASS,
+} from '../config/supporterCosmetics';
 import { formatMoney } from '../utils/format';
 import CompactValue from '../components/CompactValue';
 import WorldResetCountdown from '../components/WorldResetCountdown';
@@ -345,30 +353,45 @@ export default function LandingPage() {
           <div className="max-w-3xl mx-auto">
             <SectionHeading title={t('landing.leaderboard.title')} description={t('landing.leaderboard.description')} />
             <div className="bg-surface rounded-xl border border-border overflow-hidden">
-              {leaderboard.map((player, i) => (
-                <Link
-                  key={player._id}
-                  to={`/profile/${player.username}`}
-                  className={`flex items-center justify-between px-6 py-4 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors ${i < leaderboard.length - 1 ? 'border-b border-border' : ''}`}
-                >
-                  <div className="flex items-center gap-4 min-w-0">
-                    <span
-                      className={`text-lg font-bold w-8 shrink-0 ${i === 0 ? 'text-yellow-600 dark:text-yellow-400' : i === 1 ? 'text-gray-500 dark:text-gray-300' : i === 2 ? 'text-amber-600 dark:text-amber-500' : 'text-muted'}`}
-                    >
-                      {i + 1}
-                    </span>
-                    <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-sm text-muted shrink-0">
-                      {(player.displayName || player.username).charAt(0).toUpperCase()}
+              {leaderboard.map((player, i) => {
+                const cos = player.cosmetics || null;
+                const us = cos?.usernameStyle;
+                const nameStyle = usernameTextStyle(us);
+                const nameClass = [
+                  usernameGradientClassName(us),
+                  isAnimatedUsername(us) ? USERNAME_ANIMATED_CLASS : '',
+                  cos?.usernameEffect ? USERNAME_EFFECT_CLASS[cos.usernameEffect] : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ');
+                return (
+                  <Link
+                    key={player._id}
+                    to={`/profile/${player.username}`}
+                    className={`flex items-center justify-between px-6 py-4 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors ${i < leaderboard.length - 1 ? 'border-b border-border' : ''}`}
+                  >
+                    <div className="flex items-center gap-4 min-w-0">
+                      <span
+                        className={`text-lg font-bold w-8 shrink-0 ${i === 0 ? 'text-yellow-600 dark:text-yellow-400' : i === 1 ? 'text-gray-500 dark:text-gray-300' : i === 2 ? 'text-amber-600 dark:text-amber-500' : 'text-muted'}`}
+                      >
+                        {i + 1}
+                      </span>
+                      <Avatar
+                        avatar={player.avatar}
+                        name={player.displayName || player.username}
+                        frame={cos?.avatarFrame}
+                        className="w-8 h-8"
+                      />
+                      <span className="text-primary font-medium min-w-0 truncate" style={cos ? nameStyle : undefined}>
+                        <span className={cos ? nameClass : undefined}>{player.displayName || player.username}</span>
+                      </span>
                     </div>
-                    <span className="text-primary font-medium min-w-0 truncate">
-                      {player.displayName || player.username}
+                    <span className="text-blue-600 dark:text-blue-400 font-semibold shrink-0">
+                      <CompactValue value={player.netWorth || 0} />
                     </span>
-                  </div>
-                  <span className="text-blue-600 dark:text-blue-400 font-semibold shrink-0">
-                    <CompactValue value={player.netWorth || 0} />
-                  </span>
-                </Link>
-              ))}
+                  </Link>
+                );
+              })}
             </div>
           </div>
         </section>

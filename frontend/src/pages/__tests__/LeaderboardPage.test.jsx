@@ -276,4 +276,43 @@ describe('LeaderboardPage', () => {
       expect(screen.getAllByText('\u2014').length).toBeGreaterThan(0);
     });
   });
+
+  it('renders supporter cosmetics on rows without changing rank or score', () => {
+    lbState.rankings = [
+      ...rankFour().slice(0, 3),
+      makeEntry({
+        rank: 4,
+        value: 987654,
+        username: 'sup',
+        displayName: 'Supporter',
+        cosmetics: {
+          usernameStyle: { type: 'gradient', color: 'cityflow_cyan', gradient: 'neon', animated: true },
+          usernameEffect: 'glow',
+          avatarFrame: 'gold_ring',
+          badge: 'supporter',
+        },
+        supporterBadge: 'supporter',
+      }),
+    ];
+    lbState.total = 4;
+
+    const { container } = render(<LeaderboardPage />);
+    // Cosmetic classes applied to the row.
+    expect(container.querySelector('.si-username-animated')).toBeTruthy();
+    expect(container.querySelector('.si-effect-glow')).toBeTruthy();
+    expect(container.querySelector('.si-avatar-gold-ring')).toBeTruthy();
+    // The row's rank badge and name still render (rank/value are untouched —
+    // exact rank/value equality is asserted by the backend payload tests).
+    expect(screen.getByText('Supporter')).toBeInTheDocument();
+    expect(container.querySelector('.bg-gray-100.dark\\:bg-gray-800')).toBeTruthy();
+  });
+
+  it('renders plain rows when no cosmetics exist (rank and score intact)', () => {
+    lbState.rankings = [makeEntry({ rank: 4, value: 100 })];
+    lbState.total = 1;
+    const { container } = render(<LeaderboardPage />);
+    expect(container.querySelector('.si-username')).toBeNull();
+    expect(screen.getByText('Player One')).toBeInTheDocument();
+    expect(container.querySelector('.bg-gray-100.dark\\:bg-gray-800')).toBeTruthy();
+  });
 });

@@ -60,7 +60,17 @@ router.get('/', async (req, res) => {
           { $addFields: { netWorth: { $add: ['$balance', '$portfolioValue'] } } },
           { $sort: { netWorth: -1 } },
           { $limit: 10 },
-          { $project: { username: 1, displayName: 1, avatar: 1, netWorth: 1, balance: 1 } },
+          {
+            $project: {
+              username: 1,
+              displayName: 1,
+              avatar: 1,
+              netWorth: 1,
+              balance: 1,
+              cosmetics: 1,
+              supporterBadge: '$supporter.badge',
+            },
+          },
         ]);
 
         // â”€â”€ Global Activity: real players only â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

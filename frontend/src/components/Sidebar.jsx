@@ -11,6 +11,13 @@ import Avatar from './Avatar';
 import { getApiBaseUrl } from '../utils/capacitor';
 import AudioPlayer from './AudioPlayer';
 import logoText from '../assets/logo-text.png';
+import {
+  usernameTextStyle,
+  usernameGradientClassName,
+  isAnimatedUsername,
+  USERNAME_ANIMATED_CLASS,
+  USERNAME_EFFECT_CLASS,
+} from '../config/supporterCosmetics';
 
 export default function Sidebar({ collapsed, onToggleCollapse }) {
   const { t, i18n } = useTranslation();
@@ -28,6 +35,17 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
 
   const hasUnread = unreadCount > 0;
   const avatarClassName = useMemo(() => `w-7 h-7 ${hasUnread ? 'animate-avatar-pulse' : ''}`, [hasUnread]);
+
+  const cos = user?.cosmetics || null;
+  const us = cos?.usernameStyle;
+  const nameStyle = usernameTextStyle(us);
+  const nameClass = [
+    usernameGradientClassName(us),
+    isAnimatedUsername(us) ? USERNAME_ANIMATED_CLASS : '',
+    cos?.usernameEffect ? USERNAME_EFFECT_CLASS[cos.usernameEffect] : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   const handleLogout = () => {
     logout();
@@ -252,7 +270,7 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
               className="flex items-center justify-center w-full px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors relative"
             >
               <div className="relative shrink-0">
-                <Avatar avatar={user?.avatar} name={userInitial} className={avatarClassName} />
+                <Avatar avatar={user?.avatar} name={userInitial} className={avatarClassName} frame={cos?.avatarFrame} />
                 {unreadCount > 0 && (
                   <span className="absolute -top-1.5 -end-1.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-card leading-none">
                     {unreadCount > 9 ? '9+' : unreadCount}
@@ -261,7 +279,9 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
               </div>
               {!collapsed && (
                 <>
-                  <span className="ms-2.5 text-sm text-primary truncate">{user.displayName || user.username}</span>
+                  <span className="ms-2.5 text-sm text-primary truncate" style={nameStyle}>
+                    <span className={nameClass}>{user.displayName || user.username}</span>
+                  </span>
                   <span className="text-xs text-green-600 dark:text-green-400 font-semibold bg-green-50 dark:bg-green-900/30 px-1.5 py-0.5 rounded ms-1">
                     <CompactValue value={user.balance} />
                   </span>

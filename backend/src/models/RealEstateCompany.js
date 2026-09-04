@@ -328,7 +328,17 @@ realEstateCompanySchema.set('toJSON', {
       );
     }
     if (ret.founderId && typeof ret.founderId === 'object' && ret.founderId._id) {
-      ret.founderId = { _id: ret.founderId._id.toString(), username: ret.founderId.username };
+      ret.founderId = {
+        _id: ret.founderId._id.toString(),
+        username: ret.founderId.username,
+        avatar: ret.founderId.avatar,
+        displayName: ret.founderId.displayName,
+        cosmetics: ret.founderId.cosmetics || undefined,
+        supporterBadge:
+          ret.founderId.supporter?.badge && ret.founderId.supporter.badge !== 'none'
+            ? ret.founderId.supporter.badge
+            : undefined,
+      };
     } else if (ret.founderId && typeof ret.founderId === 'object' && ret.founderId.toString) {
       ret.founderId = ret.founderId.toString();
     }
@@ -338,7 +348,17 @@ realEstateCompanySchema.set('toJSON', {
         _id: m._id?.toString(),
         userId:
           m.userId && typeof m.userId === 'object' && m.userId._id
-            ? { _id: m.userId._id.toString(), username: m.userId.username, avatar: m.userId.avatar }
+            ? {
+                _id: m.userId._id.toString(),
+                username: m.userId.username,
+                avatar: m.userId.avatar,
+                displayName: m.userId.displayName,
+                cosmetics: m.userId.cosmetics || undefined,
+                supporterBadge:
+                  m.userId.supporter?.badge && m.userId.supporter.badge !== 'none'
+                    ? m.userId.supporter.badge
+                    : undefined,
+              }
             : m.userId?.toString?.() || m.userId,
         invitedBy: m.invitedBy?.toString?.() || m.invitedBy,
       }));

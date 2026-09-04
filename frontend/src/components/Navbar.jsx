@@ -11,6 +11,13 @@ import { formatMoney } from '../utils/format';
 import CompactValue from './CompactValue';
 import Avatar from './Avatar';
 import { isNativePlatform, getApiBaseUrl } from '../utils/capacitor';
+import {
+  usernameTextStyle,
+  usernameGradientClassName,
+  isAnimatedUsername,
+  USERNAME_ANIMATED_CLASS,
+  USERNAME_EFFECT_CLASS,
+} from '../config/supporterCosmetics';
 import { useSocketEvent } from '../hooks/useSocket';
 import logoText from '../assets/logo-text.png';
 
@@ -36,6 +43,17 @@ export default function Navbar() {
     [hasUnread],
   );
   const avatarClassName = useMemo(() => `w-6 h-6 ${hasUnread ? 'animate-avatar-pulse' : ''}`, [hasUnread]);
+
+  const cos = user?.cosmetics || null;
+  const us = cos?.usernameStyle;
+  const nameStyle = usernameTextStyle(us);
+  const nameClass = [
+    usernameGradientClassName(us),
+    isAnimatedUsername(us) ? USERNAME_ANIMATED_CLASS : '',
+    cos?.usernameEffect ? USERNAME_EFFECT_CLASS[cos.usernameEffect] : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   const handleLogout = () => {
     logout();
@@ -226,7 +244,11 @@ export default function Navbar() {
                 />
               </svg>
               {unreadCount > 0 && (
-                <span className="absolute -top-1.5 -end-1.5 bg-red-500 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold animate-badge-pop">
+                <span
+                  className="absolute -top-1.5 -end-1.5 bg-red-500 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold animate-badge-pop"
+                  aria-label={t('nav.newNotifications', { count: unreadCount })}
+                  role="status"
+                >
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
@@ -259,15 +281,24 @@ export default function Navbar() {
                 className="flex items-center gap-3 px-2 py-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               >
                 <div className="relative shrink-0">
-                  <Avatar avatar={user?.avatar} name={userInitial} className={avatarClassName} />
+                  <Avatar
+                    avatar={user?.avatar}
+                    name={userInitial}
+                    className={avatarClassName}
+                    frame={cos?.avatarFrame}
+                  />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1.5 -end-1.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-card leading-none animate-badge-glow">
+                    <span
+                      className="absolute -top-1.5 -end-1.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-card leading-none animate-badge-glow"
+                      aria-label={t('nav.newNotifications', { count: unreadCount })}
+                      role="status"
+                    >
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                   )}
                 </div>
-                <span className="text-sm text-secondary hidden sm:inline max-w-[100px] truncate">
-                  {user.displayName || user.username}
+                <span className="text-sm text-secondary hidden sm:inline max-w-[100px] truncate" style={nameStyle}>
+                  <span className={nameClass}>{user.displayName || user.username}</span>
                 </span>
                 <svg
                   className={`w-3 h-3 text-muted shrink-0 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`}

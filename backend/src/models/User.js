@@ -126,6 +126,34 @@ const userSchema = new mongoose.Schema(
       donorSince: { type: Date, default: null },
       donationCount: { type: Number, default: 0 },
     },
+    // Supporter Identity cosmetics — cosmetic-only, server-validated against
+    // the whitelist in config/supporterCosmetics.js. Never stores raw CSS,
+    // HTML or URLs; only named preset IDs. See AGENTS.md.
+    cosmetics: {
+      usernameStyle: {
+        type: { type: String, default: 'static' },
+        color: { type: String, default: 'cityflow_blue' },
+        gradient: { type: String, default: 'cityflow_ocean' },
+        animated: { type: Boolean, default: false },
+      },
+      usernameEffect: { type: String, default: 'none' },
+      profileBackground: { type: String, default: 'none' },
+      profileBackgroundEffect: { type: String, default: 'none' },
+      profileBorder: { type: String, default: 'none' },
+      avatarFrame: { type: String, default: 'none' },
+      badge: { type: String, default: 'supporter' },
+      title: { type: String, default: 'supporter' },
+    },
+    // One-time supporter onboarding: set to 'pending' when a donation is
+    // CONFIRMED (first time the player becomes a supporter) and flipped to
+    // 'completed'/'skipped' by the supporter-identity routes. Never set by
+    // client input — the server arms it only after a verified donation.
+    supporterOnboarding: {
+      status: { type: String, enum: ['none', 'pending', 'completed', 'skipped'], default: 'none' },
+      startedAt: { type: Date, default: null },
+      completedAt: { type: Date, default: null },
+      skippedAt: { type: Date, default: null },
+    },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } },
 );

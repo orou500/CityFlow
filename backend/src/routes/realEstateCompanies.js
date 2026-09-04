@@ -1,4 +1,4 @@
-﻿import { Router } from 'express';
+import { Router } from 'express';
 import RealEstateCompany from '../models/RealEstateCompany.js';
 import CompanyAuditLog from '../models/CompanyAuditLog.js';
 import User from '../models/User.js';
@@ -160,8 +160,8 @@ router.get('/', async (req, res) => {
     const [total, companies] = await Promise.all([
       RealEstateCompany.countDocuments(filter),
       RealEstateCompany.find(filter)
-        .populate('founderId', 'username avatar')
-        .populate('members.userId', 'username avatar')
+        .populate('founderId', 'username avatar displayName cosmetics supporter.badge')
+        .populate('members.userId', 'username avatar displayName cosmetics supporter.badge')
         .sort(sortOpts)
         .skip(skip)
         .limit(limitNum)
@@ -180,8 +180,8 @@ router.get('/my', async (req, res) => {
       'members.userId': req.user._id,
       active: true,
     })
-      .populate('founderId', 'username avatar')
-      .populate('members.userId', 'username avatar')
+      .populate('founderId', 'username avatar displayName cosmetics supporter.badge')
+      .populate('members.userId', 'username avatar displayName cosmetics supporter.badge')
       .select('-treasury.transactions -invitations');
 
     res.json(companies);
@@ -197,7 +197,7 @@ router.get('/invitations', async (req, res) => {
       'invitations.status': 'pending',
       active: true,
     })
-      .populate('founderId', 'username avatar')
+      .populate('founderId', 'username avatar displayName cosmetics supporter.badge')
       .select('name description logo founderId members level reputation stats');
 
     const invitations = [];
@@ -370,8 +370,8 @@ router.get('/:id', async (req, res) => {
       cacheKeys.company(req.params.id),
       async () => {
         const company = await RealEstateCompany.findById(req.params.id)
-          .populate('founderId', 'username avatar level')
-          .populate('members.userId', 'username avatar level')
+          .populate('founderId', 'username avatar level displayName cosmetics supporter.badge')
+          .populate('members.userId', 'username avatar level displayName cosmetics supporter.badge')
           .populate('invitations.userId', 'username avatar')
           .populate('invitations.invitedBy', 'username')
           .populate('hqCityId', 'name country');
@@ -623,7 +623,7 @@ router.post('/:id/invite/:invitationId/accept', async (req, res) => {
   }
 });
 
-// â”€â”€â”€ Employee Management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Employee Management ───────────────────────────────────────────────
 
 router.post('/:id/employees/hire', async (req, res) => {
   try {
@@ -831,7 +831,7 @@ router.post('/:id/leadership/transfer', async (req, res) => {
     // Enforce the single-CEO invariant: exactly one CEO must always exist.
     // The caller (current CEO) becomes director, and any other legacy CEO is
     // also demoted to director so the company can never end up with two CEOs.
-    // founderId is never touched â€” the Founder is a permanent ownership identity.
+    // founderId is never touched — the Founder is a permanent ownership identity.
     const demotedCeos = [];
     for (const m of company.members) {
       if (m.userId?.toString() === target.userId?.toString()) {
@@ -2984,7 +2984,7 @@ router.post('/:id/development-requests/:reqId/vote', async (req, res) => {
             type: 'upgrade',
             amount: cost,
             tick: currentPeriod,
-            description: `${upgradeDef.name} (Level ${currentLevel + 1}) â€” Company Vote`,
+            description: `${upgradeDef.name} (Level ${currentLevel + 1}) — Company Vote`,
           });
 
           company.treasury.balance -= cost;
@@ -2994,7 +2994,7 @@ router.post('/:id/development-requests/:reqId/vote', async (req, res) => {
               type: 'development',
               amount: cost,
               userId: req.user._id,
-              description: `Upgrade: ${upgradeDef.name} on "${property.name}" â€” $${cost.toLocaleString()} (member approved)`,
+              description: `Upgrade: ${upgradeDef.name} on "${property.name}" — $${cost.toLocaleString()} (member approved)`,
             },
             currentPeriod,
           );
@@ -3017,7 +3017,7 @@ router.post('/:id/development-requests/:reqId/vote', async (req, res) => {
             type: 'improvement',
             amount: cost,
             tick: currentPeriod,
-            description: `${improvement.name} â€” Company Vote`,
+            description: `${improvement.name} — Company Vote`,
           });
 
           company.treasury.balance -= cost;
@@ -3027,7 +3027,7 @@ router.post('/:id/development-requests/:reqId/vote', async (req, res) => {
               type: 'development',
               amount: cost,
               userId: req.user._id,
-              description: `Improvement: ${improvement.name} on "${property.name}" â€” $${cost.toLocaleString()} (member approved)`,
+              description: `Improvement: ${improvement.name} on "${property.name}" — $${cost.toLocaleString()} (member approved)`,
             },
             currentPeriod,
           );
@@ -3064,7 +3064,7 @@ router.post('/:id/development-requests/:reqId/vote', async (req, res) => {
               type: 'development',
               amount: totalCost,
               userId: req.user._id,
-              description: `Construction: ${project.name} on "${property.name}" â€” $${totalCost.toLocaleString()} (member approved)`,
+              description: `Construction: ${project.name} on "${property.name}" — $${totalCost.toLocaleString()} (member approved)`,
             },
             currentPeriod,
           );
@@ -3335,7 +3335,7 @@ router.post('/:id/investments', authenticate, async (req, res) => {
           userId,
           type: 'company_vote',
           title: 'Investment Vote',
-          message: `${caller.role} proposed investment: ${product.name} â€”" $${amount.toLocaleString()}. Vote to approve or reject.`,
+          message: `${caller.role} proposed investment: ${product.name} —" $${amount.toLocaleString()}. Vote to approve or reject.`,
           eventKey: `company:${company._id}:investment:${investment._id}:vote_request:${userId}`,
           route: `/real-estate-companies/${company._id}`,
           tab: 'investments',
@@ -3657,7 +3657,7 @@ router.post('/:id/ipo', async (req, res) => {
       expansionHistory: [],
       active: true,
       foundedTick: company.foundedTick || 0,
-      description: `${company.name} â€” Real Estate Investment Company`,
+      description: `${company.name} — Real Estate Investment Company`,
       totalReturn: 0,
       dayChange: 0,
       dayChangePercent: 0,
@@ -3782,7 +3782,7 @@ router.post('/:id/ipo', async (req, res) => {
   }
 });
 
-// â”€â”€â”€ Secondary Offering (Controlled Share Issuance) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Secondary Offering (Controlled Share Issuance) ───────────────────
 
 router.post('/:id/secondary-offering', async (req, res) => {
   try {

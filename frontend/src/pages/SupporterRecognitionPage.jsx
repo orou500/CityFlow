@@ -2,6 +2,14 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getApiBaseUrl } from '../utils/capacitor';
 import Avatar from '../components/Avatar';
+import {
+  usernameTextStyle,
+  usernameGradientClassName,
+  isAnimatedUsername,
+  USERNAME_ANIMATED_CLASS,
+  USERNAME_EFFECT_CLASS,
+  resolveOptionLabel,
+} from '../config/supporterCosmetics';
 
 const API = getApiBaseUrl();
 
@@ -12,7 +20,7 @@ const BADGE_COLORS = {
 };
 
 export default function SupporterRecognitionPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [data, setData] = useState(null);
 
   useEffect(() => {
@@ -37,35 +45,50 @@ export default function SupporterRecognitionPage() {
       )}
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {data?.supporters?.map((s, i) => (
-          <div
-            key={i}
-            className="bg-card border border-border rounded-lg p-4 hover:border-gray-400 dark:hover:border-gray-600 transition"
-          >
-            <div className="flex items-center gap-3 mb-2">
-              <Avatar
-                avatar={s.avatar}
-                name={s.displayName || s.username}
-                className="w-10 h-10"
-                textClassName="text-lg font-bold"
-              />
-              <div className="flex-1 min-w-0">
-                <div className="text-primary font-semibold truncate">{s.displayName || s.username}</div>
-                <div className="text-xs text-muted">#{i + 1}</div>
+        {data?.supporters?.map((s, i) => {
+          const cos = s.cosmetics || null;
+          const us = cos?.usernameStyle;
+          const nameStyle = usernameTextStyle(us);
+          const nameClass = [
+            usernameGradientClassName(us),
+            isAnimatedUsername(us) ? USERNAME_ANIMATED_CLASS : '',
+            cos?.usernameEffect ? USERNAME_EFFECT_CLASS[cos.usernameEffect] : '',
+          ]
+            .filter(Boolean)
+            .join(' ');
+          return (
+            <div
+              key={i}
+              className="bg-card border border-border rounded-lg p-4 hover:border-gray-400 dark:hover:border-gray-600 transition"
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <Avatar
+                  avatar={s.avatar}
+                  name={s.displayName || s.username}
+                  className="w-10 h-10"
+                  textClassName="text-lg font-bold"
+                  frame={cos?.avatarFrame}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="text-primary font-semibold truncate" style={nameStyle}>
+                    <span className={nameClass}>{s.displayName || s.username}</span>
+                  </div>
+                  <div className="text-xs text-muted">#{i + 1}</div>
+                </div>
+              </div>
+
+              <div
+                className={`text-xs font-bold px-2 py-1 rounded bg-gradient-to-r ${BADGE_COLORS[s.badge] || 'from-gray-500 to-gray-600'} text-white inline-block mb-2`}
+              >
+                {s.title || resolveOptionLabel(t, 'badge', s.badge, i18n)}
+              </div>
+
+              <div className="text-sm text-muted">
+                <span className="text-yellow-400 font-semibold">${s.totalDonated?.toLocaleString()}</span> donated
               </div>
             </div>
-
-            <div
-              className={`text-xs font-bold px-2 py-1 rounded bg-gradient-to-r ${BADGE_COLORS[s.badge] || 'from-gray-500 to-gray-600'} text-white inline-block mb-2`}
-            >
-              {s.title || s.badge}
-            </div>
-
-            <div className="text-sm text-muted">
-              <span className="text-yellow-400 font-semibold">${s.totalDonated?.toLocaleString()}</span> donated
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {data?.supporters?.length === 0 && (

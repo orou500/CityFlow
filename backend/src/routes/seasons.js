@@ -4,6 +4,7 @@ import Season from '../models/Season.js';
 import { getCurrentSeason } from '../engine/seasonReset.js';
 import { cacheGetOrSet } from '../utils/cache.js';
 import { cacheTTL } from '../utils/cacheKeys.js';
+import { resolveCurrentUsers, resolveUserIdentity } from '../utils/userIdentity.js';
 
 const router = Router();
 
@@ -16,7 +17,21 @@ router.get('/', async (req, res) => {
           .sort({ number: -1 })
           .select(
             'number name startDate endDate archive.winner archive.totalPlayers archive.totalTransactions archive.economicStatistics archive.marketStatistics archive.summary archive.playerRankings archive.cityStatistics',
-          );
+          )
+          .lean();
+
+        // Identity for season archives comes from CURRENT user data (one bulk
+        // query) — cosmetics are never baked into historical snapshots.
+        // Resolved onto plain objects so the ObjectId-typed archive.winner
+        // subdoc field cannot re-cast the identity object.
+        for (const season of seasons) {
+          if (season.archive?.winner) {
+            season.archive.winner = (await resolveUserIdentity(season.archive.winner)) || season.archive.winner;
+          }
+          if (Array.isArray(season.archive?.playerRankings)) {
+            await resolveCurrentUsers(season.archive.playerRankings, 'userId');
+          }
+        }
 
         const active = await getCurrentSeason();
         const activeInfo = active

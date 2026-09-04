@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from
 import Layout from './components/Layout';
 import OnboardingWrapper from './components/OnboardingWrapper';
 import OnboardingTour from './components/OnboardingTour';
+import SupporterOnboarding from './components/SupporterOnboarding';
 import ProtectedRoute from './components/ProtectedRoute';
 import GuestRoute from './components/GuestRoute';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -53,6 +54,7 @@ import AuctionDashboardPage from './pages/AuctionDashboardPage';
 import MissionsPage from './pages/MissionsPage';
 import CareerPage from './pages/CareerPage';
 import RewardedAdsPage from './pages/RewardedAdsPage';
+import SupporterStylePage from './pages/SupporterStylePage';
 import { useEffect } from 'react';
 import { useAuthStore } from './store/useAuthStore';
 import { useGameStore } from './store/useGameStore';
@@ -289,6 +291,16 @@ function AppRoutes() {
       <Route path="/contributors" element={<ContributorsPage />} />
       <Route path="/donate" element={<DonationsPage />} />
       <Route path="/supporters" element={<SupporterRecognitionPage />} />
+      <Route
+        path="/supporter-style"
+        element={
+          <ErrorBoundary>
+            <ProtectedRoute>
+              <SupporterStylePage />
+            </ProtectedRoute>
+          </ErrorBoundary>
+        }
+      />
       <Route path="/districts" element={<DistrictListPage />} />
       <Route
         path="/market-intelligence"
@@ -459,6 +471,7 @@ export default function App() {
                 <AppRoutes />
               </OnboardingWrapper>
               <OnboardingTour />
+              <SupporterOnboarding />
             </Layout>
           )}
         </BrowserRouter>

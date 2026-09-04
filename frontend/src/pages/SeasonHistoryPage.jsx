@@ -4,6 +4,14 @@ import { useTranslation } from 'react-i18next';
 import { useGameStore } from '../store/useGameStore';
 import { formatMoney, formatMoneyExact } from '../utils/format';
 import CompactValue from '../components/CompactValue';
+import Avatar from '../components/Avatar';
+import {
+  usernameTextStyle,
+  usernameGradientClassName,
+  isAnimatedUsername,
+  USERNAME_ANIMATED_CLASS,
+  USERNAME_EFFECT_CLASS,
+} from '../config/supporterCosmetics';
 
 function StatCard({ label, value }) {
   return (
@@ -97,225 +105,276 @@ export default function SeasonHistoryPage() {
         <p className="text-gray-500 dark:text-gray-400">{t('seasons.noSeasons')}</p>
       ) : (
         <div className="space-y-4">
-          {data.completedSeasons.map((season) => (
-            <div key={season._id} className="border border-gray-200 dark:border-gray-700 rounded-lg">
-              <div
-                className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 p-4 bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors"
-                onClick={() => setSelectedSeason(selectedSeason === season._id ? null : season._id)}
-              >
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 min-w-0">
-                  <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-                    {t('seasons.seasonNumber', { number: season.number })}
-                  </h3>
-                  <span className="text-sm text-gray-500 dark:text-gray-400 whitespace-normal">
-                    {formatDate(season.startDate)} — {formatDate(season.endDate)}
-                  </span>
-                </div>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500 dark:text-gray-400 min-w-0">
-                  {season.archive?.winner && (
-                    <span className="text-yellow-600 dark:text-yellow-400 font-medium min-w-0 truncate">
-                      🏆 {season.archive.winner.displayName || season.archive.winner.username}
+          {data.completedSeasons.map((season) => {
+            const winner = season.archive?.winner || null;
+            const winnerCos = winner?.cosmetics || null;
+            const winnerUs = winnerCos?.usernameStyle;
+            const winnerNameStyle = usernameTextStyle(winnerUs);
+            const winnerNameClass = [
+              usernameGradientClassName(winnerUs),
+              isAnimatedUsername(winnerUs) ? USERNAME_ANIMATED_CLASS : '',
+              winnerCos?.usernameEffect ? USERNAME_EFFECT_CLASS[winnerCos.usernameEffect] : '',
+            ]
+              .filter(Boolean)
+              .join(' ');
+            return (
+              <div key={season._id} className="border border-gray-200 dark:border-gray-700 rounded-lg">
+                <div
+                  className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 p-4 bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors"
+                  onClick={() => setSelectedSeason(selectedSeason === season._id ? null : season._id)}
+                >
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 min-w-0">
+                    <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                      {t('seasons.seasonNumber', { number: season.number })}
+                    </h3>
+                    <span className="text-sm text-gray-500 dark:text-gray-400 whitespace-normal">
+                      {formatDate(season.startDate)} — {formatDate(season.endDate)}
                     </span>
-                  )}
-                  <span>
-                    {season.archive?.totalPlayers || 0} {t('seasons.players')}
-                  </span>
-                  <span>
-                    {season.archive?.economicStatistics?.tickCount || 0} {t('seasons.months')}
-                  </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500 dark:text-gray-400 min-w-0">
+                    {winner && (
+                      <span className="text-yellow-600 dark:text-yellow-400 font-medium min-w-0 truncate">
+                        🏆{' '}
+                        <span
+                          style={winnerCos ? winnerNameStyle : undefined}
+                          className={winnerCos ? winnerNameClass : undefined}
+                        >
+                          {winner.displayName || winner.username}
+                        </span>
+                      </span>
+                    )}
+                    <span>
+                      {season.archive?.totalPlayers || 0} {t('seasons.players')}
+                    </span>
+                    <span>
+                      {season.archive?.economicStatistics?.tickCount || 0} {t('seasons.months')}
+                    </span>
+                  </div>
                 </div>
-              </div>
 
-              {selectedSeason === season._id && (
-                <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-6">
-                  {season.archive?.winner && (
-                    <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 flex items-center gap-4">
-                      <span className="text-3xl">🏆</span>
-                      <div>
-                        <div className="text-sm font-semibold text-yellow-800 dark:text-yellow-200">
-                          {t('seasons.champion')}
-                        </div>
-                        <div className="text-lg font-bold text-yellow-700 dark:text-yellow-300">
-                          {season.archive.winner.displayName || season.archive.winner.username}
-                        </div>
-                        {season.archive.winner.netWorth != null && (
-                          <div className="text-sm text-yellow-600 dark:text-yellow-400">
-                            {t('seasons.netWorth')}: <CompactValue value={season.archive.winner.netWorth} />
-                          </div>
+                {selectedSeason === season._id && (
+                  <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-6">
+                    {winner && (
+                      <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 flex items-center gap-4">
+                        {winnerCos ? (
+                          <Avatar
+                            avatar={winner.avatar}
+                            name={winner.displayName || winner.username}
+                            frame={winnerCos.avatarFrame}
+                            className="w-12 h-12"
+                            textClassName="text-lg font-bold"
+                          />
+                        ) : (
+                          <span className="text-3xl">🏆</span>
                         )}
-                      </div>
-                    </div>
-                  )}
-
-                  {season.archive?.playerRankings?.length > 0 && (
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                        {t('seasons.rankings')}
-                      </h4>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
-                              <th className="text-start px-3 py-2">{t('seasons.rank')}</th>
-                              <th className="text-start px-3 py-2">{t('seasons.username')}</th>
-                              <th className="text-start px-3 py-2">{t('seasons.netWorth')}</th>
-                              <th className="text-start px-3 py-2">{t('seasons.balance')}</th>
-                              <th className="text-start px-3 py-2">{t('seasons.portfolioValue')}</th>
-                              <th className="text-start px-3 py-2">{t('seasons.properties')}</th>
-                              <th className="text-start px-3 py-2">{t('seasons.reward')}</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {season.archive.playerRankings.slice(0, 20).map((player) => (
-                              <tr
-                                key={player._id || player.rank}
-                                className={`border-b border-gray-100 dark:border-gray-800 ${
-                                  player.rank <= 3 ? 'bg-yellow-50/50 dark:bg-yellow-900/10' : ''
-                                }`}
-                              >
-                                <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">
-                                  <RankBadge rank={player.rank} />
-                                </td>
-                                <td className="px-3 py-2">
-                                  <Link
-                                    to={`/profile/${player.username}`}
-                                    className="text-blue-600 dark:text-blue-400 hover:underline"
-                                  >
-                                    {player.displayName || player.username}
-                                  </Link>
-                                </td>
-                                <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">
-                                  <CompactValue value={player.netWorth} />
-                                </td>
-                                <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
-                                  <CompactValue value={player.balance} />
-                                </td>
-                                <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
-                                  <CompactValue value={player.portfolioValue} />
-                                </td>
-                                <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
-                                  {player.propertiesOwned || 0}
-                                </td>
-                                <td className="px-3 py-2 text-yellow-600 dark:text-yellow-400 font-medium">
-                                  {player.reward ? formatMoneyExact(player.reward) : '\u2014'}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-
-                  {season.archive?.cityStatistics?.length > 0 &&
-                    (() => {
-                      const page = cityPages[season._id] || 0;
-                      const totalCities = season.archive.cityStatistics.length;
-                      const totalPages = Math.ceil(totalCities / CITIES_PER_PAGE);
-                      const paged = season.archive.cityStatistics.slice(
-                        page * CITIES_PER_PAGE,
-                        (page + 1) * CITIES_PER_PAGE,
-                      );
-                      return (
                         <div>
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
-                              {t('seasons.cityStats')}
-                            </h4>
-                            {totalPages > 1 && (
-                              <div className="flex items-center gap-2 text-sm">
-                                <button
-                                  onClick={() => setCityPages({ ...cityPages, [season._id]: Math.max(0, page - 1) })}
-                                  disabled={page === 0}
-                                  className="px-2 py-0.5 text-xs rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 disabled:opacity-40"
-                                >
-                                  ←
-                                </button>
-                                <span className="text-gray-500 dark:text-gray-400 text-xs">
-                                  {page + 1}/{totalPages}
-                                </span>
-                                <button
-                                  onClick={() =>
-                                    setCityPages({ ...cityPages, [season._id]: Math.min(totalPages - 1, page + 1) })
-                                  }
-                                  disabled={page >= totalPages - 1}
-                                  className="px-2 py-0.5 text-xs rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 disabled:opacity-40"
-                                >
-                                  →
-                                </button>
-                              </div>
-                            )}
+                          <div className="text-sm font-semibold text-yellow-800 dark:text-yellow-200">
+                            {t('seasons.champion')}
                           </div>
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                              <thead>
-                                <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
-                                  <th className="text-start px-3 py-2">{t('seasons.cityName')}</th>
-                                  <th className="text-start px-3 py-2">{t('seasons.avgPrice')}</th>
-                                  <th className="text-start px-3 py-2">{t('seasons.demand')}</th>
-                                  <th className="text-start px-3 py-2">{t('seasons.supply')}</th>
-                                  <th className="text-start px-3 py-2">{t('seasons.population')}</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {paged.map((city) => (
+                          <div
+                            className="text-lg font-bold text-yellow-700 dark:text-yellow-300"
+                            style={winnerCos ? winnerNameStyle : undefined}
+                          >
+                            <span className={winnerCos ? winnerNameClass : undefined}>
+                              {winner.displayName || winner.username}
+                            </span>
+                          </div>
+                          {season.archive.winner.netWorth != null && (
+                            <div className="text-sm text-yellow-600 dark:text-yellow-400">
+                              {t('seasons.netWorth')}: <CompactValue value={season.archive.winner.netWorth} />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {season.archive?.playerRankings?.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                          {t('seasons.rankings')}
+                        </h4>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
+                                <th className="text-start px-3 py-2">{t('seasons.rank')}</th>
+                                <th className="text-start px-3 py-2">{t('seasons.username')}</th>
+                                <th className="text-start px-3 py-2">{t('seasons.netWorth')}</th>
+                                <th className="text-start px-3 py-2">{t('seasons.balance')}</th>
+                                <th className="text-start px-3 py-2">{t('seasons.portfolioValue')}</th>
+                                <th className="text-start px-3 py-2">{t('seasons.properties')}</th>
+                                <th className="text-start px-3 py-2">{t('seasons.reward')}</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {season.archive.playerRankings.slice(0, 20).map((player) => {
+                                const playerCos = player.cosmetics || null;
+                                const playerUs = playerCos?.usernameStyle;
+                                const playerNameStyle = usernameTextStyle(playerUs);
+                                const playerNameClass = [
+                                  usernameGradientClassName(playerUs),
+                                  isAnimatedUsername(playerUs) ? USERNAME_ANIMATED_CLASS : '',
+                                  playerCos?.usernameEffect ? USERNAME_EFFECT_CLASS[playerCos.usernameEffect] : '',
+                                ]
+                                  .filter(Boolean)
+                                  .join(' ');
+                                return (
                                   <tr
-                                    key={city._id || city.name}
-                                    className="border-b border-gray-100 dark:border-gray-800"
+                                    key={player._id || player.rank}
+                                    className={`border-b border-gray-100 dark:border-gray-800 ${
+                                      player.rank <= 3 ? 'bg-yellow-50/50 dark:bg-yellow-900/10' : ''
+                                    }`}
                                   >
-                                    <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">{city.name}</td>
-                                    <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
-                                      <CompactValue value={city.finalAvgPrice} />
+                                    <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">
+                                      <RankBadge rank={player.rank} />
+                                    </td>
+                                    <td className="px-3 py-2">
+                                      <Link
+                                        to={`/profile/${player.username}`}
+                                        className="text-blue-600 dark:text-blue-400 hover:underline"
+                                        style={playerCos ? playerNameStyle : undefined}
+                                      >
+                                        <span className={playerCos ? playerNameClass : undefined}>
+                                          {player.displayName || player.username}
+                                        </span>
+                                      </Link>
+                                    </td>
+                                    <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">
+                                      <CompactValue value={player.netWorth} />
                                     </td>
                                     <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
-                                      {city.finalDemandIndex?.toFixed(2)}
+                                      <CompactValue value={player.balance} />
                                     </td>
                                     <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
-                                      {city.finalSupplyIndex?.toFixed(2)}
+                                      <CompactValue value={player.portfolioValue} />
                                     </td>
                                     <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
-                                      {(city.population || 0).toLocaleString()}
+                                      {player.propertiesOwned || 0}
+                                    </td>
+                                    <td className="px-3 py-2 text-yellow-600 dark:text-yellow-400 font-medium">
+                                      {player.reward ? formatMoneyExact(player.reward) : '\u2014'}
                                     </td>
                                   </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
+                                );
+                              })}
+                            </tbody>
+                          </table>
                         </div>
-                      );
-                    })()}
+                      </div>
+                    )}
 
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    <StatCard
-                      label={t('seasons.totalCash')}
-                      value={<CompactValue value={season.archive?.economicStatistics?.totalCashInCirculation} />}
-                    />
-                    <StatCard
-                      label={t('seasons.totalProperties')}
-                      value={season.archive?.economicStatistics?.totalProperties || 0}
-                    />
-                    <StatCard
-                      label={t('seasons.activeLoans')}
-                      value={season.archive?.economicStatistics?.totalActiveLoans || 0}
-                    />
-                    <StatCard
-                      label={t('seasons.totalVolume')}
-                      value={<CompactValue value={season.archive?.marketStatistics?.totalVolume} />}
-                    />
-                    <StatCard
-                      label={t('seasons.avgPropertyPrice')}
-                      value={formatMoney(season.archive?.marketStatistics?.avgPropertyPrice)}
-                    />
-                    <StatCard label={t('seasons.transactions')} value={season.archive?.totalTransactions || 0} />
+                    {season.archive?.cityStatistics?.length > 0 &&
+                      (() => {
+                        const page = cityPages[season._id] || 0;
+                        const totalCities = season.archive.cityStatistics.length;
+                        const totalPages = Math.ceil(totalCities / CITIES_PER_PAGE);
+                        const paged = season.archive.cityStatistics.slice(
+                          page * CITIES_PER_PAGE,
+                          (page + 1) * CITIES_PER_PAGE,
+                        );
+                        return (
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                                {t('seasons.cityStats')}
+                              </h4>
+                              {totalPages > 1 && (
+                                <div className="flex items-center gap-2 text-sm">
+                                  <button
+                                    onClick={() => setCityPages({ ...cityPages, [season._id]: Math.max(0, page - 1) })}
+                                    disabled={page === 0}
+                                    className="px-2 py-0.5 text-xs rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 disabled:opacity-40"
+                                  >
+                                    ←
+                                  </button>
+                                  <span className="text-gray-500 dark:text-gray-400 text-xs">
+                                    {page + 1}/{totalPages}
+                                  </span>
+                                  <button
+                                    onClick={() =>
+                                      setCityPages({ ...cityPages, [season._id]: Math.min(totalPages - 1, page + 1) })
+                                    }
+                                    disabled={page >= totalPages - 1}
+                                    className="px-2 py-0.5 text-xs rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 disabled:opacity-40"
+                                  >
+                                    →
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 uppercase text-xs">
+                                    <th className="text-start px-3 py-2">{t('seasons.cityName')}</th>
+                                    <th className="text-start px-3 py-2">{t('seasons.avgPrice')}</th>
+                                    <th className="text-start px-3 py-2">{t('seasons.demand')}</th>
+                                    <th className="text-start px-3 py-2">{t('seasons.supply')}</th>
+                                    <th className="text-start px-3 py-2">{t('seasons.population')}</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {paged.map((city) => (
+                                    <tr
+                                      key={city._id || city.name}
+                                      className="border-b border-gray-100 dark:border-gray-800"
+                                    >
+                                      <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">
+                                        {city.name}
+                                      </td>
+                                      <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
+                                        <CompactValue value={city.finalAvgPrice} />
+                                      </td>
+                                      <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
+                                        {city.finalDemandIndex?.toFixed(2)}
+                                      </td>
+                                      <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
+                                        {city.finalSupplyIndex?.toFixed(2)}
+                                      </td>
+                                      <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
+                                        {(city.population || 0).toLocaleString()}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      <StatCard
+                        label={t('seasons.totalCash')}
+                        value={<CompactValue value={season.archive?.economicStatistics?.totalCashInCirculation} />}
+                      />
+                      <StatCard
+                        label={t('seasons.totalProperties')}
+                        value={season.archive?.economicStatistics?.totalProperties || 0}
+                      />
+                      <StatCard
+                        label={t('seasons.activeLoans')}
+                        value={season.archive?.economicStatistics?.totalActiveLoans || 0}
+                      />
+                      <StatCard
+                        label={t('seasons.totalVolume')}
+                        value={<CompactValue value={season.archive?.marketStatistics?.totalVolume} />}
+                      />
+                      <StatCard
+                        label={t('seasons.avgPropertyPrice')}
+                        value={formatMoney(season.archive?.marketStatistics?.avgPropertyPrice)}
+                      />
+                      <StatCard label={t('seasons.transactions')} value={season.archive?.totalTransactions || 0} />
+                    </div>
+
+                    {season.archive?.summary && (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 italic">{season.archive.summary}</p>
+                    )}
                   </div>
-
-                  {season.archive?.summary && (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 italic">{season.archive.summary}</p>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

@@ -1,11 +1,11 @@
 ﻿import { Router } from 'express';
 import District from '../models/District.js';
 import Property from '../models/Property.js';
-import User from '../models/User.js';
 import { optionalAuth } from '../middleware/auth.js';
 import { cacheGetOrSet } from '../utils/cache.js';
 import { cacheKeys, cacheTTL } from '../utils/cacheKeys.js';
 import { recordVisit } from '../utils/visitTracking.js';
+import { resolveCurrentUsers } from '../utils/userIdentity.js';
 
 const router = Router();
 
@@ -62,17 +62,12 @@ router.get('/:id', optionalAuth, async (req, res) => {
     );
     if (!district) return res.status(404).json({ error: 'District not found' });
 
-    const topInvestors = await Promise.all(
-      district.influence.slice(0, 10).map(async (inf) => {
-        const user = await User.findById(inf.userId).select('username displayName avatar');
-        return {
-          ...inf,
-          userId: inf.userId?.toString?.() || inf.userId,
-          username: user?.username || 'Unknown',
-          displayName: user?.displayName || user?.username || 'Unknown',
-          avatar: user?.avatar || null,
-        };
-      }),
+    const topInvestors = await resolveCurrentUsers(
+      district.influence.slice(0, 10).map((inf) => ({
+        ...(typeof inf.toObject === 'function' ? inf.toObject() : inf),
+        userId: inf.userId?.toString?.() || inf.userId,
+      })),
+      'userId',
     );
 
     const properties = await Property.find({ districtId: district._id })
@@ -143,17 +138,12 @@ router.get('/:id/influence', async (req, res) => {
     const district = await District.findById(req.params.id).select('name influence totalInfluencePoints');
     if (!district) return res.status(404).json({ error: 'District not found' });
 
-    const enriched = await Promise.all(
-      district.influence.map(async (inf) => {
-        const user = await User.findById(inf.userId).select('username displayName avatar');
-        return {
-          ...inf,
-          userId: inf.userId?.toString?.() || inf.userId,
-          username: user?.username || 'Unknown',
-          displayName: user?.displayName || user?.username || 'Unknown',
-          avatar: user?.avatar || null,
-        };
-      }),
+    const enriched = await resolveCurrentUsers(
+      district.influence.map((inf) => ({
+        ...(typeof inf.toObject === 'function' ? inf.toObject() : inf),
+        userId: inf.userId?.toString?.() || inf.userId,
+      })),
+      'userId',
     );
 
     res.json({

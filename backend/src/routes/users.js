@@ -128,7 +128,7 @@ router.get('/:username', authenticate, async (req, res) => {
           id: m.rewards.badge,
           name: m.name,
           description: m.description,
-          icon: m.icon || 'ðŸŽ–ï¸',
+          icon: m.icon || '🎖️',
         };
       }
     });
