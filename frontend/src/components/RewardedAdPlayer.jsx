@@ -5,6 +5,8 @@ import { parseVast, fireUrl } from '../utils/vastParser';
 
 const API = getApiBaseUrl();
 
+const VAST_FETCH_TIMEOUT_MS = 15_000;
+
 /**
  * RewardedAdPlayer — plays a server-issued rewarded-ad session.
  *
@@ -15,7 +17,15 @@ const API = getApiBaseUrl();
  * once every ad has ended. Seeks/skips are not offered; the reward is
  * validated and granted atomically by the backend on completion.
  *
- * Lifecycle safety:
+ * Single-instance lifecycle (phase machine):
+ *   loading -> playing -> (settled: onComplete/onError, no further events)
+ *   loading -> error    -> (settled)
+ *
+ * - Exactly ONE loading block is ever rendered, and ONLY while `phase` is
+ *   `loading`. It is removed the moment the first media src is assigned — the
+ *   previous bug rendered a second independent "Loading…" block gated on an
+ *   empty src while `phase` never left `loading`, so one black loading screen
+ *   stayed stuck on screen for the entire ad.
  * - The <video> element is only mounted once a real media src is available, so
  *   it never fires a spurious MEDIA_ERR_SRC_NOT_SUPPORTED on an empty src while
  *   the (async) VAST fetch is still in flight.
@@ -23,6 +33,8 @@ const API = getApiBaseUrl();
  *   component twice, but only the first run actually starts the fetch so the
  *   VAST is never requested twice and the successful result is never cancelled
  *   by a stale cleanup closure.
+ * - A hard timeout fails the flow instead of leaving the user staring at
+ *   "Loading…" forever.
  */
 export default function RewardedAdPlayer({ sessionId, onComplete, onError }) {
   const { t } = useTranslation();
@@ -37,7 +49,7 @@ export default function RewardedAdPlayer({ sessionId, onComplete, onError }) {
   const tRef = useRef(t);
   tRef.current = t;
 
-  const [phase, setPhase] = useState('loading');
+  const [phase, setPhase] = useState('loading'); // loading | playing | error
   const [src, setSrc] = useState('');
   const [adIndex, setAdIndex] = useState(0);
   const [muted, setMuted] = useState(true);
@@ -74,6 +86,7 @@ export default function RewardedAdPlayer({ sessionId, onComplete, onError }) {
         return;
       }
       applySrc(media.url);
+      setPhase('playing');
       ad.impressions.forEach(fireUrl);
       (ad.tracking.start || []).forEach(fireUrl);
     },
@@ -157,12 +170,18 @@ export default function RewardedAdPlayer({ sessionId, onComplete, onError }) {
     setAdIndex(0);
     setSrc('');
 
+    const timer = setTimeout(() => {
+      if (settledRef.current) return;
+      failFlow(tRef.current('rewardedAds.loadFailed'));
+    }, VAST_FETCH_TIMEOUT_MS);
+
     const token = localStorage.getItem('token');
     const headers = { Accept: 'application/xml, text/xml;q=0.9, */*;q=0.1' };
     if (token) headers.Authorization = `Bearer ${token}`;
 
     fetch(`${API}/rewarded-ads/session/${sessionId}/vast`, { headers })
       .then(async (res) => {
+        clearTimeout(timer);
         if (!res.ok) throw new Error(`VAST status ${res.status}`);
         const xml = await res.text();
         if (settledRef.current) return;
@@ -172,58 +191,58 @@ export default function RewardedAdPlayer({ sessionId, onComplete, onError }) {
         startAd(ads[0]);
       })
       .catch((err) => {
+        clearTimeout(timer);
         if (settledRef.current) return;
         failFlow(tRef.current('rewardedAds.loadFailed'));
       });
-    // No cleanup that cancels the in-flight request: the idempotent guard above
-    // means the fetch started here is the only one, and finishing it (or never
-    // finishing) is safe; a stale success is ignored via settledRef.
+    // Only the timeout timer is cleaned up — never the in-flight request: the
+    // idempotent guard above means the fetch started here is the only one, and
+    // finishing it (or never finishing) is safe; a stale success is ignored
+    // via settledRef.
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, startAd, failFlow]);
 
-  const renderedPhase = settledRef.current && phase === 'error' ? 'error' : phase;
-
   return (
-    <div
-      className="relative w-full overflow-hidden rounded-xl bg-black"
-      data-testid="ad-player"
-      data-phase={renderedPhase}
-    >
+    <div className="relative w-full overflow-hidden rounded-xl bg-black" data-testid="ad-player" data-phase={phase}>
       {phase === 'loading' && (
         <div className="flex h-52 items-center justify-center text-sm text-white/70">{t('rewardedAds.loading')}</div>
       )}
-      {src ? (
-        <video
-          key={src}
-          ref={videoRef}
-          className="w-full"
-          style={{ aspectRatio: '16 / 9' }}
-          src={src}
-          playsInline
-          autoPlay
-          muted={muted}
-          controls={false}
-          disablePictureInPicture
-          onLoadedData={handleLoadedData}
-          onEnded={handleEnded}
-          onError={handleVideoError}
-        />
-      ) : (
-        <div className="flex h-52 items-center justify-center text-sm text-white/70">{t('rewardedAds.loading')}</div>
-      )}
-      {src && adsRef.current.length > 1 && (
-        <div className="absolute left-3 top-3 rounded bg-black/60 px-2 py-1 text-xs text-white">
-          {adIndex + 1} / {adsRef.current.length}
+      {phase === 'error' && (
+        <div className="flex h-52 items-center justify-center px-4 text-center text-sm text-red-400">
+          {t('rewardedAds.loadFailed')}
         </div>
       )}
-      {src && (
-        <button
-          type="button"
-          className="absolute bottom-3 right-3 rounded-full bg-black/60 px-3 py-1.5 text-xs text-white"
-          onClick={toggleMuted}
-        >
-          {isMuted ? t('rewardedAds.unmute') : t('rewardedAds.mute')}
-        </button>
+      {phase === 'playing' && src && (
+        <>
+          <video
+            key={src}
+            ref={videoRef}
+            className="w-full"
+            style={{ aspectRatio: '16 / 9' }}
+            src={src}
+            playsInline
+            autoPlay
+            muted={muted}
+            controls={false}
+            disablePictureInPicture
+            onLoadedData={handleLoadedData}
+            onEnded={handleEnded}
+            onError={handleVideoError}
+          />
+          {adsRef.current.length > 1 && (
+            <div className="absolute left-3 top-3 rounded bg-black/60 px-2 py-1 text-xs text-white">
+              {adIndex + 1} / {adsRef.current.length}
+            </div>
+          )}
+          <button
+            type="button"
+            className="absolute bottom-3 right-3 rounded-full bg-black/60 px-3 py-1.5 text-xs text-white"
+            onClick={toggleMuted}
+          >
+            {isMuted ? t('rewardedAds.unmute') : t('rewardedAds.mute')}
+          </button>
+        </>
       )}
     </div>
   );

@@ -39,6 +39,7 @@ export default function RewardedAdsPage() {
   const [cooldownLeft, setCooldownLeft] = useState(0);
   const [lastReward, setLastReward] = useState(null);
   const cooldownTimer = useRef(null);
+  const startInFlightRef = useRef(false);
 
   const loadStatus = useCallback(async () => {
     try {
@@ -71,6 +72,8 @@ export default function RewardedAdsPage() {
   const dailyLeft = status != null ? Math.max(0, status.dailyLimit - (status.dailyUsed || 0)) : null;
 
   const handleStart = async () => {
+    if (startInFlightRef.current) return;
+    startInFlightRef.current = true;
     setMessage(null);
     setPhase('loading');
     try {
@@ -83,6 +86,8 @@ export default function RewardedAdsPage() {
         setCooldownLeft(err.body.cooldownRemainingMs);
       }
       setMessage({ type: 'error', text: err.message });
+    } finally {
+      startInFlightRef.current = false;
     }
   };
 
@@ -209,7 +214,7 @@ export default function RewardedAdsPage() {
         </div>
       )}
 
-      {phase !== 'playing' && (
+      {phase === 'idle' || phase === 'done' || phase === 'error' ? (
         <button
           type="button"
           onClick={handleStart}
@@ -223,6 +228,11 @@ export default function RewardedAdsPage() {
               ? t('rewardedAds.dailyLimitReached')
               : t('rewardedAds.watchAd')}
         </button>
+      ) : (
+        <div className="flex items-center justify-center gap-2 rounded-lg bg-gray-100 py-3 text-sm text-muted dark:bg-gray-800">
+          <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-muted border-t-transparent" />
+          {t('rewardedAds.loading')}
+        </div>
       )}
 
       <div className="mt-8">

@@ -166,4 +166,96 @@ describe('RewardedAdPlayer', () => {
     await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
     expect(onError).not.toHaveBeenCalled();
   });
+
+  it('renders exactly ONE loading block and removes it when the video plays', async () => {
+    // Regression: the player rendered two independent "Loading…" blocks at
+    // mount (one gated on phase==='loading' which never left 'loading', one on
+    // an empty src) — one click produced two black loading screens and the
+    // first stayed stuck forever while the video played.
+    let resolveFetch;
+    globalThis.fetch = vi.fn(() => new Promise((resolve) => (resolveFetch = resolve)));
+    const { container } = render(<RewardedAdPlayer sessionId="s1" onComplete={onComplete} onError={onError} />);
+
+    const loadingBlocks = container.querySelectorAll('div');
+    const loadingText = Array.from(loadingBlocks).filter(
+      (el) => el.textContent === 'Loading…' && el.className.includes('flex'),
+    );
+    expect(loadingText.length).toBe(1);
+
+    resolveFetch({ ok: true, status: 200, text: async () => TWO_AD_VAST });
+    await waitFor(() => {
+      const video = container.querySelector('video');
+      if (!video || !video.getAttribute('src')) throw new Error('waiting for ad');
+    });
+
+    const remainingLoading = Array.from(container.querySelectorAll('div')).filter(
+      (el) => el.textContent === 'Loading…' && el.className.includes('flex'),
+    );
+    expect(remainingLoading.length).toBe(0);
+    expect(container.querySelector('video')).toBeTruthy();
+  });
+
+  it('shows an error block (no stuck loading block) when the VAST fetch fails', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('network'));
+    const { container } = render(<RewardedAdPlayer sessionId="s1" onComplete={onComplete} onError={onError} />);
+
+    await waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
+
+    const loadingBlocks = Array.from(container.querySelectorAll('div')).filter(
+      (el) => el.textContent === 'Loading…' && el.className.includes('flex'),
+    );
+    expect(loadingBlocks.length).toBe(0);
+    expect(container.querySelector('[data-phase="error"]')).toBeTruthy();
+    expect(container.querySelector('video')).toBeNull();
+  });
+
+  it('reports completion exactly once for duplicate ended callbacks', async () => {
+    globalThis.fetch = stubFetch(TWO_AD_VAST);
+    const { container } = render(<RewardedAdPlayer sessionId="s1" onComplete={onComplete} onError={onError} />);
+    let video = await waitFor(() => {
+      const v = container.querySelector('video');
+      if (!v || !v.getAttribute('src')) throw new Error('waiting for ad');
+      return v;
+    });
+
+    // Ad 1 ends -> moves to ad 2 (video remounts with the new src).
+    fireEvent.ended(video);
+    video = await waitFor(() => {
+      const v = container.querySelector('video');
+      if (!v || !v.getAttribute('src')?.includes('two.webm')) throw new Error('waiting for ad 2');
+      return v;
+    });
+
+    // Ad 2 ends -> completion. Duplicate ended events on the settled flow must
+    // be absorbed by the settled guard — exactly one onComplete.
+    fireEvent.ended(video);
+    fireEvent.ended(video);
+    fireEvent.ended(video);
+    await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it('does not refetch or restart when the component rerenders with the same session', async () => {
+    const fetchMock = stubFetch(TWO_AD_VAST);
+    globalThis.fetch = fetchMock;
+    const { rerender } = render(<RewardedAdPlayer sessionId="s1" onComplete={onComplete} onError={onError} />);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    rerender(<RewardedAdPlayer sessionId="s1" onComplete={onComplete} onError={onError} />);
+    rerender(<RewardedAdPlayer sessionId="s1" onComplete={onComplete} onError={onError} />);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('times out and reports a failure instead of loading forever', async () => {
+    vi.useFakeTimers();
+    try {
+      globalThis.fetch = vi.fn(() => new Promise(() => {}));
+      render(<RewardedAdPlayer sessionId="s1" onComplete={onComplete} onError={onError} />);
+      vi.advanceTimersByTime(16_000);
+      await vi.waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
+      expect(onComplete).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

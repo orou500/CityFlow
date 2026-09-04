@@ -175,4 +175,71 @@ describe('RewardedAdsPage', () => {
     await waitFor(() => expect(queryByTestId('player-slot')).toBeNull());
     await waitFor(() => expect(getByTestId('start-ad-button')).toBeInTheDocument());
   });
+
+  it('a single click issues exactly one start request and one player', async () => {
+    const fetchMock = routeFetch();
+    globalThis.fetch = fetchMock;
+    const { getByTestId, container } = render(<RewardedAdsPage />);
+
+    const startButton = await waitFor(() => getByTestId('start-ad-button'));
+    fireEvent.click(startButton);
+
+    await waitFor(() => {
+      const video = container.querySelector('video');
+      if (!video || !video.getAttribute('src')) throw new Error('waiting for ad');
+    });
+
+    const startCalls = fetchMock.mock.calls.filter(
+      ([url, opts = {}]) => String(url).endsWith('/rewarded-ads/start') && (opts.method || 'GET') === 'POST',
+    );
+    expect(startCalls.length).toBe(1);
+    expect(container.querySelectorAll('[data-testid="ad-player"]').length).toBe(1);
+  });
+
+  it('rapid double-click issues exactly one start request (single session per action)', async () => {
+    let startResolve;
+    globalThis.fetch = routeFetch({
+      start: new Promise((resolve) => {
+        startResolve = resolve;
+      }),
+    });
+    const { getByTestId } = render(<RewardedAdsPage />);
+
+    const startButton = await waitFor(() => getByTestId('start-ad-button'));
+    fireEvent.click(startButton);
+    // The button disappears immediately once the session starts, but a second
+    // click may race the state update — the in-flight guard must absorb it.
+    fireEvent.click(startButton);
+    fireEvent.click(startButton);
+
+    startResolve({ sessionId: 's1', status: 'pending', rewardAmount: 2000, expiresAt: '2026-09-02T12:00:00Z' });
+
+    const fetchMock = globalThis.fetch;
+    await waitFor(() => {
+      const calls = fetchMock.mock.calls.filter(
+        ([url, opts = {}]) => String(url).endsWith('/rewarded-ads/start') && (opts.method || 'GET') === 'POST',
+      );
+      expect(calls.length).toBe(1);
+    });
+  });
+
+  it('hides the start button while a session is loading or playing', async () => {
+    let startResolve;
+    globalThis.fetch = routeFetch({
+      start: new Promise((resolve) => {
+        startResolve = resolve;
+      }),
+    });
+    const { getByTestId, queryByTestId } = render(<RewardedAdsPage />);
+
+    const startButton = await waitFor(() => getByTestId('start-ad-button'));
+    fireEvent.click(startButton);
+
+    // While the start request is in flight the button must not be available,
+    // so a second session can never be started from the same page state.
+    await waitFor(() => expect(queryByTestId('start-ad-button')).toBeNull());
+
+    startResolve({ sessionId: 's1', status: 'pending', rewardAmount: 2000, expiresAt: '2026-09-02T12:00:00Z' });
+    await waitFor(() => expect(queryByTestId('start-ad-button')).toBeNull());
+  });
 });

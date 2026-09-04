@@ -640,8 +640,15 @@ source and reward are server-controlled; the frontend only ever watches.
 - `frontend/src/utils/vastParser.js` — dependency-free VAST 3.0 InLine parser.
 - `frontend/src/components/RewardedAdPlayer.jsx` — plays each Linear creative
   sequentially, falls back through MediaFiles, fires Impression/TrackingEvent
-  beacons, reports `onComplete` only when the last ad `ended`.
-- `frontend/src/pages/RewardedAdsPage.jsx` — `/rewards`, protected route.
+  beacons, reports `onComplete` only when the last ad `ended`. Single-instance
+  lifecycle: an explicit `loading → playing → error` phase machine renders
+  EXACTLY ONE loading block (removed as soon as the first media src is assigned)
+  and a 15s VAST-fetch timeout fails the flow instead of leaving a stuck
+  "Loading…" screen; `settledRef` absorbs duplicate completion callbacks.
+- `frontend/src/pages/RewardedAdsPage.jsx` — `/rewards`, protected route. The
+  start button is hidden while a session is loading/playing and an in-flight
+  guard absorbs rapid double-clicks, so one click can never create two
+  sessions/players.
 - `frontend/nginx.conf` — CSP `media-src 'self' https:` (ad media comes from the
   ad network's HTTPS CDN and the host rotates; the VAST itself is same-origin
   through `/api`).
