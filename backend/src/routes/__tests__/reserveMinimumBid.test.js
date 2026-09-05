@@ -58,9 +58,12 @@ describe('Reserve auction minimum winning bid', () => {
     const auction = await makeActiveReserveAuction();
     const { token } = await createAuthenticatedUser({ balance: 1000000 });
 
-    const res = await request(app).post(`/auctions/${auction._id}/bid`).set('Authorization', `Bearer ${token}`).send({
-      amount: RESERVE - 1,
-    });
+    const res = await request(app)
+      .post(`/auctions/${auction._id}/bid`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        amount: RESERVE - 1,
+      });
 
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/Minimum bid to win this reserve auction is \$5,000/);

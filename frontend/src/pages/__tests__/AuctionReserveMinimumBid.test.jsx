@@ -91,8 +91,10 @@ function routeFetch(overrides = {}) {
     let path = String(url);
     if (path.includes('/api')) path = path.slice(path.lastIndexOf('/api') + '/api'.length);
     if (!path.startsWith('/')) path = `/${path}`;
-    if (path === '/auctions/auction1') return jsonResponse({ success: true, auction: overrides.detail ?? RESERVE_AUCTION });
-    if (path.includes('/auctions/reputation/')) return jsonResponse({ reputation: overrides.reputation ?? { score: 3 } });
+    if (path === '/auctions/auction1')
+      return jsonResponse({ success: true, auction: overrides.detail ?? RESERVE_AUCTION });
+    if (path.includes('/auctions/reputation/'))
+      return jsonResponse({ reputation: overrides.reputation ?? { score: 3 } });
     if (path.includes('/auctions/featured')) return jsonResponse({ auctions: [] });
     return jsonResponse({ error: 'not found' }, false, 404);
   });

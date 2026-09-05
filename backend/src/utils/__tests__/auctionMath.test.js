@@ -48,9 +48,9 @@ describe('isReserveMet', () => {
   });
 
   it('true when currentBid >= reservePrice even if the persisted flag is stale', () => {
-    expect(isReserveMet({ auctionType: 'reserve', currentBid: 4488890, reservePrice: 4488890, reserveMet: false })).toBe(
-      true,
-    );
+    expect(
+      isReserveMet({ auctionType: 'reserve', currentBid: 4488890, reservePrice: 4488890, reserveMet: false }),
+    ).toBe(true);
   });
 
   it('true when the persisted flag says met', () => {
@@ -77,31 +77,38 @@ describe('calculateMinimumWinningBid', () => {
   });
 
   it('for a fresh reserve auction with no bids, the floor is max(startingBid, reserve)', () => {
-    expect(calculateMinimumWinningBid({ auctionType: 'reserve', startingBid: 5000, currentBid: 0, reservePrice: 8000 })).toBe(
-      8000,
-    );
+    expect(
+      calculateMinimumWinningBid({ auctionType: 'reserve', startingBid: 5000, currentBid: 0, reservePrice: 8000 }),
+    ).toBe(8000);
     // Reserve below the starting bid -> the starting bid governs.
-    expect(calculateMinimumWinningBid({ auctionType: 'reserve', startingBid: 5000, currentBid: 0, reservePrice: 2000 })).toBe(
-      5000,
-    );
+    expect(
+      calculateMinimumWinningBid({ auctionType: 'reserve', startingBid: 5000, currentBid: 0, reservePrice: 2000 }),
+    ).toBe(5000);
   });
 
   it('once the reserve is met, the floor drops back to the normal next-bid rule', () => {
-    expect(
-      calculateMinimumWinningBid(ecoLuxuryAuction({ reserveMet: true, currentBid: 4488890 })),
-    ).toBe(4488890 + 196388);
+    expect(calculateMinimumWinningBid(ecoLuxuryAuction({ reserveMet: true, currentBid: 4488890 }))).toBe(
+      4488890 + 196388,
+    );
   });
 
   it('never allows a bid below what the current winner would need to outbid', () => {
     expect(
-      calculateMinimumWinningBid({ auctionType: 'reserve', startingBid: 1000, currentBid: 4400000, bidIncrement: 200000, reservePrice: 4500000, reserveMet: false }),
+      calculateMinimumWinningBid({
+        auctionType: 'reserve',
+        startingBid: 1000,
+        currentBid: 4400000,
+        bidIncrement: 200000,
+        reservePrice: 4500000,
+        reserveMet: false,
+      }),
     ).toBe(4600000);
   });
 
   it('standard auctions use the plain next-bid rule', () => {
-    expect(calculateMinimumWinningBid({ auctionType: 'standard', startingBid: 1000, currentBid: 0, bidIncrement: 250 })).toBe(
-      1000,
-    );
+    expect(
+      calculateMinimumWinningBid({ auctionType: 'standard', startingBid: 1000, currentBid: 0, bidIncrement: 250 }),
+    ).toBe(1000);
     expect(
       calculateMinimumWinningBid({ auctionType: 'standard', startingBid: 1000, currentBid: 5000, bidIncrement: 250 }),
     ).toBe(5250);

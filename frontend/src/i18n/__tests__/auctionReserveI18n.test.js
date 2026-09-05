@@ -15,7 +15,8 @@ const NEW_AUCTION_KEYS = [
   'errors.reserveMinimumBid',
 ];
 
-const MOJI_RE = /[\u0080-\u00FF\u0152\u0153\u0160\u0161\u017D\u017E\u20AC\u2018\u2019\u201C\u201D\u2026\u2013\u2014]{2,}|[\uFFFD]/;
+const MOJI_RE =
+  /[\u0080-\u00FF\u0152\u0153\u0160\u0161\u017D\u017E\u20AC\u2018\u2019\u201C\u201D\u2026\u2013\u2014]{2,}|[\uFFFD]/;
 
 function lookup(dict, key) {
   return key.split('.').reduce((acc, part) => (acc == null ? undefined : acc[part]), dict);
@@ -44,7 +45,9 @@ describe('reserve minimum-bid i18n key coverage', () => {
   });
 
   it('no new value contains mojibake or replacement characters', () => {
-    const all = JSON.stringify(NEW_AUCTION_KEYS.map((k) => lookup(en, k)).concat(NEW_AUCTION_KEYS.map((k) => lookup(he, k))));
+    const all = JSON.stringify(
+      NEW_AUCTION_KEYS.map((k) => lookup(en, k)).concat(NEW_AUCTION_KEYS.map((k) => lookup(he, k))),
+    );
     expect(all).not.toMatch(MOJI_RE);
   });
 });
