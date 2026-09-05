@@ -811,21 +811,26 @@ export default function UserProfilePage() {
         {properties?.length > 0 && (
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">{t('profile.portfolio')}</h2>
-            <div className="grid gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 min-w-0">
               {properties.map((p) => (
                 <Link
                   key={p._id}
                   to={`/property/${p._id}`}
-                  className="flex justify-between items-center gap-3 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-750 rounded-lg p-4 transition-colors"
+                  className="flex items-center gap-3 min-w-0 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-750 rounded-lg p-4 transition-colors"
                 >
-                  <PropertyImage property={p} alt={p.name} className="w-16 h-16 object-cover rounded-lg shrink-0" />
+                  <PropertyImage
+                    property={p}
+                    alt={p.name}
+                    className="w-16 h-16 max-w-full object-cover rounded-lg shrink-0"
+                  />
                   <div className="flex-1 min-w-0">
-                    <div className="text-gray-900 dark:text-white font-medium truncate">{p.name}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      {p.cityId?.name || ''} - {p.type}
+                    <div className="text-gray-900 dark:text-white font-medium break-words">{p.name}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 break-words">
+                      {p.cityId?.name ? `${p.cityId.name} - ` : ''}
+                      {t(`property.${p.type}`, { defaultValue: p.type })}
                     </div>
                   </div>
-                  <div className="text-end shrink-0">
+                  <div className="text-end min-w-0 break-words">
                     <div className="text-orange-500 dark:text-orange-400 text-sm font-semibold">
                       {formatMoney(p.currentPrice)}
                     </div>
