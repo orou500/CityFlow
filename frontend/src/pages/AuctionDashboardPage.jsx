@@ -294,14 +294,21 @@ function AuctionCard({ auction, onClick, onWatch, isWatched, user }) {
       )}
 
       <div className="flex items-center justify-between mt-2">
-        <span className="text-xs text-muted">
-          {t('auctions.minNextBid')}:{' '}
-          {formatMoney(
-            (auction.currentBid || 0) > 0
-              ? (auction.currentBid || 0) + (auction.bidIncrement || 0)
-              : auction.startingBid,
-          )}
-        </span>
+        {auction.auctionType === 'reserve' && !auction.reserveMet ? (
+          <span className="text-xs text-amber-500 dark:text-amber-400 font-medium">
+            💎 {t('auctions.reserveNotMet')} — {t('auctions.minimumWinningBid')}:{' '}
+            {formatMoney(auction.minimumWinningBid ?? auction.reservePrice)}
+          </span>
+        ) : (
+          <span className="text-xs text-muted">
+            {t('auctions.minNextBid')}:{' '}
+            {formatMoney(
+              (auction.currentBid || 0) > 0
+                ? (auction.currentBid || 0) + (auction.bidIncrement || 0)
+                : auction.startingBid,
+            )}
+          </span>
+        )}
         <div className="flex items-center gap-2">
           {isEndingSoon && auction.status === 'active' && (
             <span className="text-xs text-red-400 animate-pulse">⚡ {t('auctions.endingSoon')}</span>
@@ -443,6 +450,16 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
   const availableBalance = Math.max(0, (user?.balance || 0) - (user?.reservedAuctionFunds || 0));
   const minNextBid =
     (detail.currentBid || 0) > 0 ? (detail.currentBid || 0) + (detail.bidIncrement || 0) : detail.startingBid;
+  // Authoritative "smallest bid that wins if the auction ended now". The
+  // backend computes this server-side (auctionMath) — the frontend never
+  // invents it. Fall back to the local next-bid rule only for pre-deploy rows
+  // that lack the field.
+  const minToWin =
+    detail.minimumWinningBid ??
+    (detail.auctionType === 'reserve' && !detail.reserveMet
+      ? Math.max(minNextBid, detail.reservePrice || 0)
+      : minNextBid);
+  const reserveGap = detail.auctionType === 'reserve' && !detail.reserveMet ? Math.max(0, minToWin - minNextBid) : 0;
   const canCancel = isOwner && detail.totalBids === 0 && (detail.status === 'upcoming' || detail.status === 'active');
 
   const refreshDetail = useCallback(async () => {
@@ -486,6 +503,8 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
             endTick: data.endTick,
             currentTick: data.currentTick,
             remainingMonths: data.remainingMonths,
+            reserveMet: data.reserveMet ?? prev.reserveMet,
+            minimumWinningBid: data.minimumWinningBid ?? prev.minimumWinningBid,
           }));
           activityRef.current = [
             {
@@ -558,8 +577,12 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
 
   async function handleBid() {
     const amount = parseFloat(bidAmount);
-    if (!amount || amount < minNextBid) {
-      setError(t('auctions.bidTooLow', { min: formatMoney(minNextBid) }));
+    if (!amount || amount < minToWin) {
+      setError(
+        reserveGap > 0
+          ? t('errors.reserveMinimumBid', { amount: minToWin.toLocaleString() })
+          : t('auctions.bidTooLow', { min: formatMoney(minToWin) }),
+      );
       return;
     }
     setBidding(true);
@@ -651,7 +674,12 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
         </div>
       </div>
 
-      {displayStatus === 'ended' && !detail.winnerId && (
+      {displayStatus === 'ended' && !detail.winnerId && detail.auctionType === 'reserve' && (
+        <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-300 dark:border-orange-700 rounded-lg p-3 text-sm text-orange-800 dark:text-orange-200">
+          ⚠️ {t('auctions.endedReserveNotMet')}
+        </div>
+      )}
+      {displayStatus === 'ended' && !detail.winnerId && detail.auctionType !== 'reserve' && (
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-lg p-3 text-sm text-amber-800 dark:text-amber-200">
           ⚠️ {t('auctions.endedNoWinner')}
         </div>
@@ -741,8 +769,20 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
             <div>
               <span className="text-muted">{t('auctions.reservePrice')}: </span>
               <span className={detail.reserveMet ? 'text-green-400' : 'text-orange-400'}>
-                {formatMoney(detail.reservePrice)} {detail.reserveMet ? '✅' : ''}
+                {formatMoney(detail.reservePrice)}
+                {' · '}
+                {detail.reserveMet ? `✅ ${t('auctions.reserveMet')}` : `⛔ ${t('auctions.reserveNotMet')}`}
               </span>
+              {!detail.reserveMet && (
+                <div className="mt-1 text-xs text-orange-400">
+                  💎 {t('auctions.minimumWinningBid')}: {formatMoney(minToWin)}
+                  {reserveGap > 0 && (
+                    <div className="text-muted">
+                      ▲ {t('auctions.gapToReserve', { amount: formatMoney(reserveGap) })}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
           {detail.winnerId && (
@@ -783,8 +823,8 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
                 type="number"
                 value={bidAmount}
                 onChange={(e) => setBidAmount(e.target.value)}
-                placeholder={minNextBid.toLocaleString()}
-                min={minNextBid}
+                placeholder={minToWin.toLocaleString()}
+                min={minToWin}
                 className="w-full bg-gray-100 dark:bg-gray-900 border border-border text-primary rounded ps-7 pe-3 py-2 text-sm"
               />
             </div>
@@ -796,8 +836,21 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
               {bidding ? t('auctions.bidding') : t('auctions.placeBid')}
             </button>
           </div>
-          <div className="text-xs text-muted mt-2">
-            {t('auctions.minNextBid')}: {formatMoney(minNextBid)}
+          <div className="text-xs mt-2">
+            {detail.auctionType === 'reserve' && reserveGap > 0 ? (
+              <>
+                <span className="text-orange-400 font-medium">
+                  {t('auctions.minimumWinningBid')}: {formatMoney(minToWin)}
+                </span>{' '}
+                <span className="text-muted">
+                  — {t('auctions.needMoreToReserve', { amount: formatMoney(reserveGap) })}
+                </span>
+              </>
+            ) : (
+              <span className="text-muted">
+                {t('auctions.minNextBid')}: {formatMoney(minToWin)}
+              </span>
+            )}
           </div>
           {user && (
             <div className="text-xs text-muted mt-1">
@@ -869,7 +922,8 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
       {showCompanyBid && (
         <CompanyBidModal
           auctionId={detail._id}
-          minBid={minNextBid}
+          minBid={minToWin}
+          reserveNotMet={detail.auctionType === 'reserve' && reserveGap > 0}
           onClose={() => setShowCompanyBid(false)}
           onSubmit={() => {
             setShowCompanyBid(false);
@@ -881,7 +935,7 @@ function AuctionDetail({ auction, onClose, onBid, onWatch, isWatched }) {
   );
 }
 
-function CompanyBidModal({ auctionId, minBid, onClose, onSubmit }) {
+function CompanyBidModal({ auctionId, minBid, reserveNotMet, onClose, onSubmit }) {
   const { t } = useTranslation();
   const [companies, setCompanies] = useState([]);
   const [selectedCompany, setSelectedCompany] = useState('');
@@ -955,7 +1009,7 @@ function CompanyBidModal({ auctionId, minBid, onClose, onSubmit }) {
                 className="w-full bg-gray-100 dark:bg-gray-900 border border-border text-primary rounded p-2 text-sm"
               />
               <div className="text-xs text-muted mt-1">
-                {t('auctions.minNextBid')}: {formatMoney(minBid)}
+                {reserveNotMet ? t('auctions.minimumWinningBid') : t('auctions.minNextBid')}: {formatMoney(minBid)}
               </div>
             </div>
             <div className="text-xs text-yellow-400">⚠️ {t('auctions.companyBidWarning')}</div>
@@ -1216,6 +1270,8 @@ export default function AuctionDashboardPage() {
                 endTick: data.endTick,
                 currentTick: data.currentTick,
                 remainingMonths: data.remainingMonths,
+                reserveMet: data.reserveMet ?? a.reserveMet,
+                minimumWinningBid: data.minimumWinningBid ?? a.minimumWinningBid,
               }
             : a,
         ),

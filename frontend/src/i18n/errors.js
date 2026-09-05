@@ -50,6 +50,11 @@ export function translateError(err, t) {
       params: (m) => ({ amount: m[1] }),
     },
     {
+      regex: /^Minimum bid to win this reserve auction is \$([\d,]+)$/,
+      key: 'errors.reserveMinimumBid',
+      params: (m) => ({ amount: m[1] }),
+    },
+    {
       regex: /^You already control the maximum number of properties allowed in (.+)$/,
       key: 'errors.alreadyAtCityLimit',
       params: (m) => ({ cityName: m[1] }),

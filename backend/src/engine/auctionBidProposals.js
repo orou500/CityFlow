@@ -5,6 +5,7 @@ import { enqueueNotification } from '../utils/notificationQueue.js';
 import { onCompanyVoteCompleted } from '../utils/cacheInvalidation.js';
 import { emitAuctionBid } from './auctionProcessing.js';
 import { computeAuctionRemaining } from '../utils/auctionTime.js';
+import { calculateMinimumWinningBid } from '../utils/auctionMath.js';
 import { getGameState, getTickNumber } from '../models/GameState.js';
 import { AUCTION_CONFIG } from '../config/auctions.js';
 import { addTreasuryTransaction } from './companyProcessing.js';
@@ -81,6 +82,20 @@ function applyAuctionBid(auction, company, proposal, bidderId, currentTick) {
     tick: currentTick,
   });
 
+  // A company bid that crosses the reserve must be recorded exactly like a
+  // personal bid: reserveMet flips and stays flipped, and the activity feed
+  // gets the reserve_met entry so the UI shows the transition live.
+  const reserveMetNow =
+    auction.auctionType === 'reserve' && !auction.reserveMet && proposal.amount >= auction.reservePrice;
+  if (reserveMetNow) {
+    auction.reserveMet = true;
+    auction.activity.push({
+      type: 'reserve_met',
+      message: `Reserve price reached at $${proposal.amount.toLocaleString()}`,
+      tick: currentTick,
+    });
+  }
+
   return previousBidderId;
 }
 
@@ -123,8 +138,8 @@ export async function executeCompanyAuctionBid(company, proposal, _actorUserId) 
     return { executed: false, reason: 'auction_ended' };
   }
 
-  const minBid = auction.currentBid > 0 ? auction.currentBid + auction.bidIncrement : auction.startingBid;
-  if (proposal.amount < minBid) {
+  const minWinningBid = calculateMinimumWinningBid(auction);
+  if (proposal.amount < minWinningBid) {
     return { executed: false, reason: 'below_min_bid' };
   }
 
@@ -168,6 +183,9 @@ export async function executeCompanyAuctionBid(company, proposal, _actorUserId) 
     endTick: auction.endTick,
     currentTick: timing.currentTick,
     remainingMonths: timing.remainingMonths,
+    reservePrice: auction.reservePrice,
+    reserveMet: auction.reserveMet,
+    minimumWinningBid: calculateMinimumWinningBid(auction),
   });
 
   return { executed: true };

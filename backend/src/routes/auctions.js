@@ -24,6 +24,7 @@ import { enqueueNotification } from '../utils/notificationQueue.js';
 import { cacheGet, cacheSet, cacheDel } from '../utils/cache.js';
 import { cacheKeys } from '../utils/cacheKeys.js';
 import { computeAuctionRemaining } from '../utils/auctionTime.js';
+import { calculateMinimumWinningBid, isReserveMet } from '../utils/auctionMath.js';
 import { buildPropertySnapshot, ensureAuctionProperty, ensureLookupProperty } from '../utils/auctionProperty.js';
 import { getTickNumber, getGameState } from '../models/GameState.js';
 import { reserveAuctionFunds, releaseAuctionFunds, setAuctionReservation } from '../utils/auctionMoney.js';
@@ -80,6 +81,17 @@ function hasPermission(member, permission) {
 }
 
 const router = express.Router();
+
+/**
+ * Guarantees every auction row exposed by an endpoint carries the single
+ * authoritative `minimumWinningBid`. Computed from the row's own persisted
+ * fields (startingBid/currentBid/bidIncrement/auctionType/reservePrice/
+ * reserveMet) via auctionMath — the same function used for bid validation.
+ */
+function attachMinimumWinningBid(row) {
+  if (row && typeof row === 'object') row.minimumWinningBid = calculateMinimumWinningBid(row);
+  return row;
+}
 
 const bidRateLimit = rateLimit({
   windowMs: 1 * 60 * 1000,
@@ -153,7 +165,7 @@ router.get('/featured', async (req, res) => {
         },
         a,
       );
-      return item;
+      return attachMinimumWinningBid(item);
     });
 
     scored.sort((a, b) => b.featuredScore - a.featuredScore);
@@ -278,10 +290,12 @@ router.get(
       });
 
       const auctions = (await Auction.aggregate(pipeline)).map((a) =>
-        ensureLookupProperty({
-          ...a,
-          ...computeAuctionRemaining(a, currentTick),
-        }),
+        attachMinimumWinningBid(
+          ensureLookupProperty({
+            ...a,
+            ...computeAuctionRemaining(a, currentTick),
+          }),
+        ),
       );
 
       return res.json({
@@ -343,6 +357,7 @@ router.get(
       }
 
       ensureAuctionProperty(auctionObj, auction);
+      attachMinimumWinningBid(auctionObj);
 
       const property = auctionObj.propertyId;
       if (property && typeof property === 'object') {
@@ -481,13 +496,17 @@ router.post(
 
       return res.status(201).json({
         success: true,
-        auction: {
+        auction: attachMinimumWinningBid({
           _id: auction._id,
           propertyId: auction.propertyId,
           auctionType: auction.auctionType,
           startingBid: auction.startingBid,
+          currentBid: auction.currentBid,
+          bidIncrement: auction.bidIncrement,
+          reservePrice: auction.reservePrice,
+          reserveMet: auction.reserveMet,
           ...computeAuctionRemaining(auction, currentTick),
-        },
+        }),
         listingFee,
         balance: user.balance,
       });
@@ -519,9 +538,13 @@ async function tryPlaceBid({ id, amount, userId, currentTick }) {
     return { status: 400, body: { success: false, error: 'You cannot bid on your own property' } };
   }
 
-  const minBid = auction.currentBid > 0 ? auction.currentBid + auction.bidIncrement : auction.startingBid;
-  if (amount < minBid) {
-    return { status: 400, body: { success: false, error: `Minimum bid is $${minBid.toLocaleString()}` } };
+  const minWinningBid = calculateMinimumWinningBid(auction);
+  const reserveNotYetMet = !isReserveMet(auction);
+  if (amount < minWinningBid) {
+    const error = reserveNotYetMet
+      ? `Minimum bid to win this reserve auction is $${minWinningBid.toLocaleString()}`
+      : `Minimum bid is $${minWinningBid.toLocaleString()}`;
+    return { status: 400, body: { success: false, error } };
   }
 
   const user = await User.findById(userId);
@@ -734,6 +757,9 @@ async function tryPlaceBid({ id, amount, userId, currentTick }) {
     endTick: updated.endTick,
     currentTick: timing.currentTick,
     remainingMonths: timing.remainingMonths,
+    reservePrice: updated.reservePrice,
+    reserveMet: updated.reserveMet,
+    minimumWinningBid: calculateMinimumWinningBid(updated),
   });
 
   emitAuctionActivity(updated._id.toString(), {
@@ -759,10 +785,14 @@ async function tryPlaceBid({ id, amount, userId, currentTick }) {
     status: 200,
     body: {
       success: true,
-      auction: {
+      auction: attachMinimumWinningBid({
         _id: updated._id,
+        auctionType: updated.auctionType,
         currentBid: updated.currentBid,
         currentBidderId: userId.toString(),
+        startingBid: updated.startingBid,
+        bidIncrement: updated.bidIncrement,
+        reservePrice: updated.reservePrice,
         totalBids: updated.totalBids,
         uniqueBidders: uniqueAfter.size,
         endTick: updated.endTick,
@@ -770,7 +800,7 @@ async function tryPlaceBid({ id, amount, userId, currentTick }) {
         reserveMet: updated.reserveMet,
         currentTick: timing.currentTick,
         remainingMonths: timing.remainingMonths,
-      },
+      }),
       balance: reservedUser.balance,
       reservedAuctionFunds: reservedUser.reservedAuctionFunds || 0,
       availableBalance: (reservedUser.balance || 0) - (reservedUser.reservedAuctionFunds || 0),
@@ -945,12 +975,13 @@ router.post(
         return res.status(400).json({ success: false, error: 'Auction has ended' });
       }
 
-      const minBid = auction.currentBid > 0 ? auction.currentBid + auction.bidIncrement : auction.startingBid;
-      if (amount < minBid) {
-        return res.status(400).json({
-          success: false,
-          error: `Minimum bid is $${minBid.toLocaleString()}`,
-        });
+      const minWinningBid = calculateMinimumWinningBid(auction);
+      const reserveNotYetMet = !isReserveMet(auction);
+      if (amount < minWinningBid) {
+        const error = reserveNotYetMet
+          ? `Minimum bid to win this reserve auction is $${minWinningBid.toLocaleString()}`
+          : `Minimum bid is $${minWinningBid.toLocaleString()}`;
+        return res.status(400).json({ success: false, error });
       }
 
       if (company.treasury.balance < amount) {
@@ -1182,7 +1213,7 @@ router.get(
         Auction.countDocuments({ status: { $in: ['ended', 'ending'] } }),
       ]);
 
-      const enriched = auctions.map((a) => ensureAuctionProperty(a, a));
+      const enriched = auctions.map((a) => attachMinimumWinningBid(ensureAuctionProperty(a, a)));
 
       return res.json({ success: true, auctions: enriched, total });
     } catch (error) {
@@ -1216,19 +1247,21 @@ router.get(
         .lean();
 
       const enriched = auctions.map((a) =>
-        ensureAuctionProperty(
-          {
-            ...a,
-            ...computeAuctionRemaining(a, currentTick),
-            isWinning:
-              a.status === 'ended'
-                ? a.winnerId?.toString() === userId.toString()
-                : a.currentBidderId?.toString() === userId.toString(),
-            myMaxBid: Math.max(
-              ...a.bids.filter((b) => b.bidderId.toString() === userId.toString()).map((b) => b.amount),
-            ),
-          },
-          a,
+        attachMinimumWinningBid(
+          ensureAuctionProperty(
+            {
+              ...a,
+              ...computeAuctionRemaining(a, currentTick),
+              isWinning:
+                a.status === 'ended'
+                  ? a.winnerId?.toString() === userId.toString()
+                  : a.currentBidderId?.toString() === userId.toString(),
+              myMaxBid: Math.max(
+                ...a.bids.filter((b) => b.bidderId.toString() === userId.toString()).map((b) => b.amount),
+              ),
+            },
+            a,
+          ),
         ),
       );
 
@@ -1316,13 +1349,15 @@ router.get('/my/watchlist', authenticate, async (req, res) => {
       .lean();
 
     const enriched = auctions.map((a) =>
-      ensureAuctionProperty(
-        {
-          ...a,
-          ...computeAuctionRemaining(a, currentTick),
-          isWinning: a.currentBidderId?._id?.toString() === userId.toString(),
-        },
-        a,
+      attachMinimumWinningBid(
+        ensureAuctionProperty(
+          {
+            ...a,
+            ...computeAuctionRemaining(a, currentTick),
+            isWinning: a.currentBidderId?._id?.toString() === userId.toString(),
+          },
+          a,
+        ),
       ),
     );
 

@@ -614,6 +614,32 @@ describe('Property lifecycle after auction settlement', () => {
     expect(prop.ownerId?.toString()).toBe(user._id.toString());
   });
 
+  it('bank reserve auction, bid EXACTLY equals reserve -> winner', async () => {
+    const city = await createTestCity({ propertyCount: 200 });
+    const { user } = await makeBidder('exact_reserve_winner');
+    const { property, auction } = await makeLifecycleAuction({
+      city,
+      auctionType: 'reserve',
+      reservePrice: 50000,
+      currentBid: 50000,
+      currentBidderId: user._id,
+      bids: [bidEntry(user, 50000)],
+      endTick: 10,
+    });
+
+    const propId = property._id;
+    await processAuctions();
+
+    const settled = await Auction.findById(auction._id);
+    expect(settled.winnerId?.toString()).toBe(user._id.toString());
+    expect(settled.winningBid).toBe(50000);
+    expect(settled.reserveMet).toBe(true);
+
+    const prop = await Property.findById(propId);
+    expect(prop).not.toBeNull();
+    expect(prop.ownerId?.toString()).toBe(user._id.toString());
+  });
+
   it('player auction, no bids -> property restored to marketplace', async () => {
     const city = await createTestCity({ propertyCount: 200 });
     const seller = await makeBidder('player_seller');
