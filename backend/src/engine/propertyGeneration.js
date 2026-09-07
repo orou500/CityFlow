@@ -2,7 +2,7 @@ import City from '../models/City.js';
 import Property from '../models/Property.js';
 import User from '../models/User.js';
 import District from '../models/District.js';
-import { clampMonthlyRent } from '../config/propertyManagement.js';
+import { clampMonthlyRent, calculateMaximumRent } from '../config/propertyManagement.js';
 
 const PROPERTY_TYPES = ['apartment', 'house', 'commercial', 'land'];
 const PROPERTY_NAMES = [
@@ -157,7 +157,7 @@ export async function generateProperties() {
         name: `${PROPERTY_NAMES[nameIndex]} - ${city.name}`,
         basePrice: price,
         currentPrice: price,
-        rent: clampMonthlyRent(price * 0.0055),
+        rent: clampMonthlyRent(price * 0.0055, calculateMaximumRent({ currentPrice: price })),
         volatility: 0.05 + Math.random() * 0.15,
         forSale: true,
         location,

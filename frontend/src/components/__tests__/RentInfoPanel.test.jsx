@@ -20,6 +20,7 @@ describe('RentInfoPanel', () => {
           currentMaxPerUnit: 13056,
           maxValidatedRentPerUnit: 13072,
           effectiveMaxPerUnit: 13072,
+          maximumRentPerUnit: 13100,
           nextAvailableIncrease: 0,
           netIncome: 7000,
         }}
@@ -39,6 +40,7 @@ describe('RentInfoPanel', () => {
 
     expect(screen.getByText('propertyManagement.grandfatheredRentNote:$13.1K')).toBeInTheDocument();
     expect(screen.getByText('propertyManagement.noIncreaseAvailable')).toBeInTheDocument();
+    expect(screen.getByText('propertyManagement.maxRentBasedOnValue')).toBeInTheDocument();
   });
 
   it('shows the next available increase when there is headroom', () => {

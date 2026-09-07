@@ -6,7 +6,7 @@ import User from '../models/User.js';
 import RealEstateCompany from '../models/RealEstateCompany.js';
 import CompanyAuditLog from '../models/CompanyAuditLog.js';
 import { AUCTION_CONFIG, AUCTION_PROPERTY_POOL, RARITY_WEIGHTS } from '../config/auctions.js';
-import { clampMonthlyRent } from '../config/propertyManagement.js';
+import { clampMonthlyRent, calculateMaximumRent } from '../config/propertyManagement.js';
 import { enqueueNotification } from '../utils/notificationQueue.js';
 import { emitToAll } from '../socket/index.js';
 import { cacheDel } from '../utils/cache.js';
@@ -775,7 +775,7 @@ export async function generateBankAuctions() {
       basePrice: price,
       currentPrice: price,
       intrinsicValue: Math.floor(price * 0.85),
-      rent: clampMonthlyRent(price * 0.004),
+      rent: clampMonthlyRent(price * 0.004, calculateMaximumRent({ currentPrice: price })),
       condition: 100,
       occupancy: rarity === 'legendary' ? 95 : 80,
       forSale: false,

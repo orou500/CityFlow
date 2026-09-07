@@ -10,6 +10,8 @@ const RENT_PANEL_KEYS = [
   'nextAvailableIncrease',
   'noIncreaseAvailable',
   'netMonthlyIncome',
+  'maxRentValueHint',
+  'maxRentBasedOnValue',
 ];
 
 describe('Rent panel translations', () => {
@@ -22,8 +24,10 @@ describe('Rent panel translations', () => {
     }
   });
 
-  it('grandfatheredRentNote and noIncreaseAvailable have the required interpolation/placeholders', () => {
+  it('grandfatheredRentNote, noIncreaseAvailable and maxRentValueHint have the required interpolation/placeholders', () => {
     expect(en.propertyManagement.grandfatheredRentNote).toContain('{{amount}}');
     expect(he.propertyManagement.grandfatheredRentNote).toContain('{{amount}}');
+    expect(en.propertyManagement.maxRentValueHint).toContain('{{amount}}');
+    expect(he.propertyManagement.maxRentValueHint).toContain('{{amount}}');
   });
 });

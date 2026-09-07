@@ -119,7 +119,10 @@ describe('Development upgrade endpoints', () => {
       const updated = await Property.findById(property._id);
       expect(updated.currentPrice).toBe(102000);
       expect(updated.basePrice).toBe(101000);
-      expect(updated.rent).toBe(5250);
+      // Renovation +5% rent would be 5250, but the value-based cap
+      // (floor(102000 x 3%)) clamps it — no hard $50k ceiling, rent now
+      // scales with value.
+      expect(updated.rent).toBe(Math.floor(102000 * 0.03));
       expect(updated.condition).toBe(75);
       expect(updated.upgradeLevel).toBe(1);
       expect(updated.upgrades).toHaveLength(1);
@@ -147,8 +150,12 @@ describe('Development upgrade endpoints', () => {
 
       expect(applyRes.status).toBe(200);
       const updated = await Property.findById(property._id);
-      expect(updated.currentPrice).toBe(Math.round(100000 * (1 + expectedEffects.valueBoost)));
-      expect(updated.rent).toBe(Math.round(5000 * (1 + expectedEffects.rentBoost)));
+      const projectedValue = Math.round(100000 * (1 + expectedEffects.valueBoost));
+      expect(updated.currentPrice).toBe(projectedValue);
+      // Cap-bounded: the raw +rentBoost projection is clamped to the
+      // value-based maximum (floor(value x 3%)).
+      const rawRent = Math.round(5000 * (1 + expectedEffects.rentBoost));
+      expect(updated.rent).toBe(Math.min(rawRent, Math.floor(projectedValue * 0.03)));
       expect(updated.condition).toBe(70 + expectedEffects.conditionBoost);
       expect(preview.projectedValue).toBe(updated.currentPrice);
     });

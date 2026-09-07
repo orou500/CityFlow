@@ -6,9 +6,9 @@ import { processRentGrowth } from '../rentGrowth.js';
 import { processRent } from '../rentProcessing.js';
 import { calculateNetRentIncome } from '../../config/propertyManagement.js';
 import {
-  MAX_MONTHLY_RENT,
   RENT_SYSTEM,
   clampMonthlyRent,
+  calculateMaximumRent,
   calculateRentPotential,
   calculateMonthlyRentGrowth,
 } from '../../config/propertyManagement.js';
@@ -61,8 +61,11 @@ describe('calculateRentPotential', () => {
     expect(high).toBe(mid * 4); // linear in value
   });
 
-  it('is capped at $50,000/month for premium real estate', () => {
-    expect(calculateRentPotential(baseProperty(50000000), STABLE_CITY)).toBe(MAX_MONTHLY_RENT);
+  it('does not exceed the value-based maximum for premium real estate', () => {
+    const prop = baseProperty(50000000);
+    const max = calculateMaximumRent(prop);
+    expect(calculateRentPotential(prop, STABLE_CITY)).toBeLessThanOrEqual(max);
+    expect(calculateRentPotential(prop, STABLE_CITY)).toBeGreaterThan(50000);
   });
 
   it('weights property types (house < apartment < commercial)', () => {
@@ -159,7 +162,7 @@ describe('calculateMonthlyRentGrowth', () => {
   it('never overshoots the rent potential and stays within the cap', () => {
     const growth = calculateMonthlyRentGrowth(baseProperty(1000000, { rent: 8000, rentHistory: [{}] }), STABLE_CITY);
     expect(growth.newRent).toBeLessThanOrEqual(growth.rentPotential);
-    expect(growth.newRent).toBeLessThanOrEqual(MAX_MONTHLY_RENT);
+    expect(growth.newRent).toBeLessThanOrEqual(calculateMaximumRent(baseProperty(1000000)));
   });
 
   it('bootstraps properties that have units but no rent baseline', () => {
@@ -291,7 +294,7 @@ describe('processRentGrowth (engine)', () => {
     expect(doc.rent).toBe(doc.rentPotential); // converged to potential
   });
 
-  it('never exceeds the $50,000 cap across 60 months, even in a boom', async () => {
+  it('never exceeds the value-based maximum across 60 months, even in a boom', async () => {
     const user = await createTestUser({ balance: 0, uncollectedRent: 0 });
     const city = await createTestCity();
     city.demandIndex = 3.0;
@@ -299,13 +302,16 @@ describe('processRentGrowth (engine)', () => {
     city.economicCondition = 'boom';
     await city.save();
 
+    const propValue = 50000000;
+    const maxRent = Math.floor(propValue * RENT_SYSTEM.MAXIMUM_RENT_YIELD);
+
     const p = await makeProperty({
       ownerId: user._id,
       cityId: city._id,
       type: 'commercial',
       rent: 40000,
-      currentPrice: 50000000,
-      basePrice: 50000000,
+      currentPrice: propValue,
+      basePrice: propValue,
       qualityScore: 95,
       condition: 100,
     });
@@ -313,10 +319,10 @@ describe('processRentGrowth (engine)', () => {
     for (let t = 1; t <= 60; t += 1) {
       await processRentGrowth(t);
       const doc = await Property.findById(p._id);
-      expect(doc.rent).toBeLessThanOrEqual(MAX_MONTHLY_RENT);
+      expect(doc.rent).toBeLessThanOrEqual(maxRent);
     }
     const doc = await Property.findById(p._id);
-    expect(doc.rent).toBe(MAX_MONTHLY_RENT);
+    expect(doc.rent).toBe(maxRent);
   });
 
   it('holds rent steady once a property has reached its potential', async () => {
@@ -381,7 +387,7 @@ describe('long-term economy simulation', () => {
     for (let m = 1; m <= 60; m += 1) {
       const g = calculateMonthlyRentGrowth(p, STABLE_CITY);
       expect(g.newRent).toBeGreaterThanOrEqual(g.previousMonthRent); // no runaway decline
-      expect(g.newRent).toBeLessThanOrEqual(MAX_MONTHLY_RENT);
+      expect(g.newRent).toBeLessThanOrEqual(calculateMaximumRent(p));
       expect(g.newRent).toBeLessThanOrEqual(g.rentPotential); // no overshoot
       p = { ...p, rent: g.newRent, rentHistory: (p.rentHistory || []).concat([{}]) };
     }
@@ -393,9 +399,9 @@ describe('long-term economy simulation', () => {
       { value: 100000, rent: 550, convergesBelow: 5000 },
       { value: 250000, rent: 1375, convergesBelow: 10000 },
       { value: 500000, rent: 2750, convergesBelow: 20000 },
-      { value: 1000000, rent: 5500, convergesBelow: 30000 },
-      { value: 5000000, rent: 27500, convergesBelow: 51000 },
-      { value: 10000000, rent: 40000, convergesBelow: 51000 },
+      { value: 1000000, rent: 5500, convergesBelow: 35000 },
+      { value: 5000000, rent: 27500, convergesBelow: 160000 },
+      { value: 10000000, rent: 40000, convergesBelow: 320000 },
     ];
     for (const { value, rent, convergesBelow } of cases) {
       const final = simulate(value, rent);
@@ -410,9 +416,26 @@ describe('long-term economy simulation', () => {
     expect(high).toBeGreaterThan(low);
   });
 
-  it('the cap binds only for the most expensive properties', () => {
-    expect(simulate(100000, 550)).toBeLessThan(MAX_MONTHLY_RENT);
-    expect(simulate(5000000, 27500)).toBe(MAX_MONTHLY_RENT);
+  it('the value-based cap binds only when the potential would exceed it', () => {
+    // In a stable city the realistic potential (~1.2%) never reaches the 3%
+    // cap, so rent converges to potential below the cap.
+    expect(simulate(5000000, 27500)).toBeLessThan(calculateMaximumRent({ currentPrice: 5000000 }));
+
+    // At extreme boosts (boom economics, elite commercial) potential exceeds
+    // the 3% cap, so rent is pinned exactly at the cap.
+    const BOOM_CITY = { demandIndex: 3.0, supplyIndex: 0.5, economicCondition: 'boom' };
+    let p = baseProperty(10000000, {
+      type: 'commercial',
+      qualityScore: 95,
+      propertyRating: 'elite',
+      investmentHistory: [{ type: 'upgrade', amount: 100000000, tick: 1 }],
+      rent: 100000,
+    });
+    for (let m = 1; m <= 60; m += 1) {
+      const g = calculateMonthlyRentGrowth(p, BOOM_CITY);
+      p = { ...p, rent: g.newRent, rentHistory: (p.rentHistory || []).concat([{}]) };
+    }
+    expect(p.rent).toBe(calculateMaximumRent(p));
   });
 });
 
@@ -438,6 +461,8 @@ describe('rent growth + collection integration', () => {
 
     const persisted = await Property.findById(p._id);
     expect(persisted.rent).toBe(2000); // occupancy never overwrites rent
-    expect(clampMonthlyRent(persisted.rent)).toBeLessThanOrEqual(MAX_MONTHLY_RENT);
+    expect(clampMonthlyRent(persisted.rent, calculateMaximumRent(persisted))).toBeLessThanOrEqual(
+      calculateMaximumRent({ currentPrice: 200000 }),
+    );
   });
 });

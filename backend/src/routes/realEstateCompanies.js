@@ -26,7 +26,7 @@ import {
   countUpgradesByType,
 } from '../config/upgradeProjects.js';
 import { IMPROVEMENT_PROJECTS, calculateImprovementCost } from '../config/improvementProjects.js';
-import { clampMonthlyRent } from '../config/propertyManagement.js';
+import { clampMonthlyRent, calculateMaximumRent } from '../config/propertyManagement.js';
 import { getAllProjects, calculateProjectCost, calculateUnitRent } from '../config/developmentProjects.js';
 import { trackEvent, EVENTS } from '../utils/analytics.js';
 import ConstructionProject from '../models/ConstructionProject.js';
@@ -2950,7 +2950,7 @@ router.post('/:id/development-requests/:reqId/vote', async (req, res) => {
           }
           if (effects.rentBoost) {
             const oldRent = property.rent || 0;
-            property.rent = clampMonthlyRent(oldRent * (1 + effects.rentBoost));
+            property.rent = clampMonthlyRent(oldRent * (1 + effects.rentBoost), calculateMaximumRent(property));
             if (property.units && property.units.length > 0) {
               for (const unit of property.units) {
                 unit.rentPrice = Math.round(unit.rentPrice * (1 + effects.rentBoost));

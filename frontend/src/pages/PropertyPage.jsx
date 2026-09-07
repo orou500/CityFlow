@@ -1022,7 +1022,7 @@ export default function PropertyPage() {
                     <div className="flex justify-between items-center">
                       <span className="text-gray-500 dark:text-gray-400">{t('propertyManagement.maximum')}</span>
                       <span className="font-semibold text-gray-900 dark:text-white">
-                        {formatMoney(managementData.maxMonthlyRent)}
+                        {formatMoney(managementData.maximumRent ?? managementData.maxMonthlyRent)}
                         <span className="text-xs text-gray-400 font-normal"> {t('propertyManagement.perMonth')}</span>
                       </span>
                     </div>
@@ -1110,6 +1110,8 @@ export default function PropertyPage() {
                     <input
                       type="number"
                       value={rentInput}
+                      min={1}
+                      max={managementData.maximumRentPerUnit || undefined}
                       onChange={(e) => setRentInput(e.target.value)}
                       placeholder={t('propertyManagement.rentInputPlaceholder')}
                       className="flex-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-3 py-2 text-gray-900 dark:text-white text-sm"
@@ -1122,6 +1124,13 @@ export default function PropertyPage() {
                       {t('common.save')}
                     </button>
                   </div>
+                  {managementData.maximumRentPerUnit > 0 && (
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                      {t('propertyManagement.maxRentValueHint', {
+                        amount: formatMoney(managementData.maximumRentPerUnit),
+                      })}
+                    </p>
+                  )}
                   {rentMsg && (
                     <p className={`text-xs mt-2 ${rentMsg.type === 'success' ? 'text-blue-500' : 'text-red-500'}`}>
                       {rentMsg.text}

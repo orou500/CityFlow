@@ -6,7 +6,7 @@ import RealEstateCompany from '../models/RealEstateCompany.js';
 import {
   MAINTENANCE_TIERS,
   RENT_BOUNDS,
-  MAX_MONTHLY_RENT,
+  calculateMaximumRent,
   calculateMonthlyProfit,
   calculatePropertyRentIncome,
   calculateQualityScore,
@@ -35,15 +35,17 @@ async function isAuthorizedForProperty(property, userId) {
 function computeRentValidation(property) {
   const unitCount = property.units?.length || 1;
   const marketRate = unitCount > 0 ? property.rent / unitCount : 0;
-  const maxPerUnit = Math.floor(MAX_MONTHLY_RENT / unitCount);
-  const currentMaxPerUnit = marketRate > 0 ? Math.round(marketRate * RENT_BOUNDS.maxMultiplier) : maxPerUnit;
+  const maximumRent = calculateMaximumRent(property);
+  const maximumRentPerUnit = unitCount > 0 ? Math.floor(maximumRent / unitCount) : maximumRent;
+  const currentMaxPerUnit = marketRate > 0 ? Math.round(marketRate * RENT_BOUNDS.maxMultiplier) : maximumRentPerUnit;
   const grandfathered = Math.max(property.maxValidatedRentPerUnit || 0, property.rentPerUnit || 0);
-  const effectiveMaxPerUnit = Math.max(currentMaxPerUnit, grandfathered);
+  const effectiveMaxPerUnit = Math.min(currentMaxPerUnit, maximumRentPerUnit);
   const currentRentPerUnit = property.rentPerUnit || 0;
   return {
     unitCount,
     marketRate,
-    maxPerUnit,
+    maximumRent,
+    maximumRentPerUnit,
     currentMaxPerUnit,
     grandfathered,
     effectiveMaxPerUnit,
@@ -105,7 +107,9 @@ router.get('/:propertyId', authenticate, async (req, res) => {
       netProfit: profit.netProfit,
       netIncome: profit.netProfit,
       rentPotential: calculateRentPotential(property, property.cityId),
-      maxMonthlyRent: MAX_MONTHLY_RENT,
+      maxMonthlyRent: rentValidation.maximumRent,
+      maximumRent: rentValidation.maximumRent,
+      maximumRentPerUnit: rentValidation.maximumRentPerUnit,
       previousMonthRent,
       monthlyIncrease,
       monthlyIncreasePct: Math.round(monthlyIncreasePct * 100) / 100,
@@ -119,16 +123,10 @@ router.get('/:propertyId', authenticate, async (req, res) => {
       currentMaxPerUnit: rentValidation.currentMaxPerUnit,
       maxValidatedRentPerUnit: property.maxValidatedRentPerUnit || 0,
       effectiveMaxPerUnit: rentValidation.effectiveMaxPerUnit,
-      nextAvailableIncrease: Math.max(
-        0,
-        Math.min(rentValidation.effectiveMaxPerUnit, rentValidation.maxPerUnit) - rentValidation.currentRentPerUnit,
-      ),
+      nextAvailableIncrease: Math.max(0, rentValidation.effectiveMaxPerUnit - rentValidation.currentRentPerUnit),
       canIncreaseRent:
         rentValidation.currentRentPerUnit > 0 &&
-        Math.max(
-          0,
-          Math.min(rentValidation.effectiveMaxPerUnit, rentValidation.maxPerUnit) - rentValidation.currentRentPerUnit,
-        ) > 0,
+        Math.max(0, rentValidation.effectiveMaxPerUnit - rentValidation.currentRentPerUnit) > 0,
       city: property.cityId
         ? {
             name: property.cityId.name,
@@ -195,11 +193,11 @@ router.post('/:propertyId/rent', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Rent change cooldown active. Try again next month.' });
     }
 
-    const { marketRate, maxPerUnit, effectiveMaxPerUnit } = computeRentValidation(property);
+    const { marketRate, maximumRentPerUnit, effectiveMaxPerUnit } = computeRentValidation(property);
 
-    if (rentPerUnit > maxPerUnit) {
+    if (rentPerUnit > maximumRentPerUnit) {
       return res.status(400).json({
-        error: `Rent per unit cannot exceed $${maxPerUnit.toLocaleString()} (maximum $${MAX_MONTHLY_RENT.toLocaleString()}/month)`,
+        error: `Rent per unit cannot exceed $${maximumRentPerUnit.toLocaleString()} (value-based maximum)`,
       });
     }
 

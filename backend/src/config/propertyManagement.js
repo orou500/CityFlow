@@ -2,10 +2,12 @@ import { ECONOMIC_CONDITIONS } from './demographics.js';
 import { getRatingBonuses } from './improvementProjects.js';
 import { getInvestmentFactors } from '../engine/propertyValuation.js';
 
-export const MAX_MONTHLY_RENT = 50000;
-
 export const RENT_SYSTEM = {
-  MAX_MONTHLY_RENT,
+  // Hard ceiling for monthly rent: maximumRent = value x MAXIMUM_RENT_YIELD.
+  // Scales with property value instead of a flat $50k cap so expensive
+  // properties can charge proportionally more. Deliberately sits just above
+  // the realistic rent-potential band (~POTENTIAL_YIELD_BASE x max factors).
+  MAXIMUM_RENT_YIELD: 0.03,
   // Rent potential is derived from the property's market value.
   POTENTIAL_YIELD_BASE: 0.012,
   TYPE_YIELD: { apartment: 1.0, house: 0.85, commercial: 1.2, land: 0 },
@@ -108,11 +110,24 @@ export function calculateMonthlyProfit(rentIncome, maintenanceLevel, _propertyVa
 }
 
 /**
- * Global server-side cap — no property may ever exceed $50,000/month.
- * Apply this to every code path that writes a property's rent.
+ * Server-authoritative rent ceiling for a single property.
+ * Derived from the property's market value so expensive properties can charge
+ * proportionally more rent — replaces the old flat $50,000 cap.
  */
-export function clampMonthlyRent(rent) {
-  return Math.max(0, Math.min(MAX_MONTHLY_RENT, Math.round(rent || 0)));
+export function calculateMaximumRent(property) {
+  const value = Math.max(0, Number(property?.currentPrice) || Number(property?.basePrice) || 0);
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  return Math.floor(value * RENT_SYSTEM.MAXIMUM_RENT_YIELD);
+}
+
+/**
+ * Clamp a rent value to [0, maxRent]. Every code path that writes a property's
+ * rent must pass an explicit value-based maxRent (via calculateMaximumRent).
+ * Omitting maxRent is intentionally forbidden — defaults to 0 (fail-closed).
+ */
+export function clampMonthlyRent(rent, maxRent) {
+  const upper = Number.isFinite(maxRent) && maxRent > 0 ? Math.floor(maxRent) : 0;
+  return Math.max(0, Math.min(upper, Math.round(rent || 0)));
 }
 
 export function calculateMaintenanceCost(property, rentIncome) {
@@ -139,7 +154,7 @@ export function calculateNetRentIncome(property) {
 }
 
 /**
- * Value-based monthly rent potential, capped at MAX_MONTHLY_RENT.
+ * Value-based monthly rent potential, capped at calculateMaximumRent.
  *
  * Market value -> base yield -> property type -> quality -> condition ->
  * city demand/supply/economy -> rating -> invested capital.
@@ -187,7 +202,7 @@ export function calculateRentPotential(property, city) {
     ratingFactor *
     investmentFactor;
 
-  return clampMonthlyRent(potential);
+  return clampMonthlyRent(potential, calculateMaximumRent(property));
 }
 
 /**
@@ -231,7 +246,7 @@ export function calculateMonthlyRentGrowth(property, city) {
   } else {
     newRent = Math.max(newRent, rentPotential);
   }
-  newRent = clampMonthlyRent(newRent);
+  newRent = clampMonthlyRent(newRent, calculateMaximumRent(property));
 
   const increase = newRent - previousMonthRent;
   const increasePct = previousMonthRent > 0 ? (increase / previousMonthRent) * 100 : 0;

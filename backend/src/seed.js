@@ -3,7 +3,7 @@ import { config } from './config/index.js';
 import City from './models/City.js';
 import Property from './models/Property.js';
 import User from './models/User.js';
-import { clampMonthlyRent } from './config/propertyManagement.js';
+import { clampMonthlyRent, calculateMaximumRent } from './config/propertyManagement.js';
 import { resetCities } from './engine/citySeeding.js';
 
 const propertyTypes = ['apartment', 'house', 'commercial', 'land'];
@@ -57,7 +57,7 @@ async function seed() {
           name: `${propertyNames[nameIndex]} - ${city.name}`,
           basePrice: Math.round(baseP),
           currentPrice: Math.round(baseP),
-          rent: clampMonthlyRent(baseP * 0.004),
+          rent: clampMonthlyRent(baseP * 0.004, calculateMaximumRent({ currentPrice: Math.round(baseP) })),
           volatility: 0.05 + Math.random() * 0.15,
           forSale: true,
           ...(type === 'land'
