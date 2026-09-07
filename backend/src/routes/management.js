@@ -193,18 +193,19 @@ router.post('/:propertyId/rent', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Rent change cooldown active. Try again next month.' });
     }
 
-    const { marketRate, maximumRentPerUnit, effectiveMaxPerUnit } = computeRentValidation(property);
-
-    if (rentPerUnit > maximumRentPerUnit) {
-      return res.status(400).json({
-        error: `Rent per unit cannot exceed $${maximumRentPerUnit.toLocaleString()} (value-based maximum)`,
-      });
-    }
+    // ONE authoritative ceiling: effectiveMaxPerUnit = min(currentMaxPerUnit,
+    // maximumRentPerUnit). The market step-limit (2x current rent/unit) and the
+    // value cap (3% of value) both bind through it, so the number the client
+    // displays (effectiveMaxPerUnit) is exactly the number the server accepts.
+    const { marketRate, effectiveMaxPerUnit } = computeRentValidation(property);
 
     const minPerUnit = marketRate > 0 ? Math.round(marketRate * RENT_BOUNDS.minMultiplier) : 0;
     if (rentPerUnit < minPerUnit || rentPerUnit > effectiveMaxPerUnit) {
       return res.status(400).json({
         error: `Rent must be between ${minPerUnit} and ${effectiveMaxPerUnit} per unit`,
+        minPerUnit,
+        maxPerUnit: effectiveMaxPerUnit,
+        effectiveMaxPerUnit,
       });
     }
 

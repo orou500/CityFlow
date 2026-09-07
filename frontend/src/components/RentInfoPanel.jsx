@@ -25,7 +25,7 @@ export default function RentInfoPanel({ data }) {
           <span className="text-gray-500 dark:text-gray-400">{t('propertyManagement.maximumRentPerUnit')}</span>
           <span className="font-semibold text-gray-900 dark:text-white">{formatMoney(data.effectiveMaxPerUnit)}</span>
         </div>
-        {data.maximumRentPerUnit > 0 && (
+        {data.maximumRentPerUnit > 0 && data.effectiveMaxPerUnit === data.maximumRentPerUnit && (
           <p className="text-xs text-gray-400 dark:text-gray-500">{t('propertyManagement.maxRentBasedOnValue')}</p>
         )}
         {grandfathered && (

@@ -17,10 +17,10 @@ describe('RentInfoPanel', () => {
         data={{
           perUnitRent: 13072,
           marketRate: 6528,
-          currentMaxPerUnit: 13056,
-          maxValidatedRentPerUnit: 13072,
+          currentMaxPerUnit: 20000,
+          maxValidatedRentPerUnit: 0,
           effectiveMaxPerUnit: 13072,
-          maximumRentPerUnit: 13100,
+          maximumRentPerUnit: 13072,
           nextAvailableIncrease: 0,
           netIncome: 7000,
         }}
@@ -38,9 +38,34 @@ describe('RentInfoPanel', () => {
     expect(screen.getByText('$6.5K')).toBeInTheDocument();
     expect(screen.getByText('$7K')).toBeInTheDocument();
 
-    expect(screen.getByText('propertyManagement.grandfatheredRentNote:$13.1K')).toBeInTheDocument();
     expect(screen.getByText('propertyManagement.noIncreaseAvailable')).toBeInTheDocument();
     expect(screen.getByText('propertyManagement.maxRentBasedOnValue')).toBeInTheDocument();
+  });
+
+  it('shows the effective maximum even when the market step-limit binds below the value cap', () => {
+    render(
+      <RentInfoPanel
+        data={{
+          perUnitRent: 9000,
+          marketRate: 8000,
+          currentMaxPerUnit: 16000,
+          maxValidatedRentPerUnit: 9000,
+          effectiveMaxPerUnit: 16000,
+          maximumRentPerUnit: 50000,
+          nextAvailableIncrease: 7000,
+          netIncome: 5000,
+        }}
+      />,
+    );
+
+    // The displayed maximum is the server-authoritative effective max, not the
+    // raw value cap — and no "based on value" caption when the market limit
+    // is the binding constraint.
+    expect(screen.getAllByText('$16K').length).toBeGreaterThan(0);
+    expect(screen.queryByText('propertyManagement.maxRentBasedOnValue')).not.toBeInTheDocument();
+    expect(screen.getByText('+$7K')).toBeInTheDocument();
+    expect(screen.queryByText('propertyManagement.noIncreaseAvailable')).not.toBeInTheDocument();
+    expect(screen.queryByText(/grandfatheredRentNote/)).not.toBeInTheDocument();
   });
 
   it('shows the next available increase when there is headroom', () => {

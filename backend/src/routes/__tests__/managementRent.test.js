@@ -6,6 +6,7 @@ import Property from '../../models/Property.js';
 import GameState from '../../models/GameState.js';
 import User from '../../models/User.js';
 import City from '../../models/City.js';
+import RealEstateCompany from '../../models/RealEstateCompany.js';
 import { RENT_BOUNDS, RENT_SYSTEM, calculateMaximumRent } from '../../config/propertyManagement.js';
 
 const app = createApp();
@@ -38,6 +39,7 @@ describe('Management rent caps (grandfathering)', () => {
     await GameState.deleteMany({});
     await User.deleteMany({});
     await City.deleteMany({});
+    await RealEstateCompany.deleteMany({});
     await GameState.create({ key: 'global', tickNumber: TICK });
 
     city = await createTestCity();
@@ -118,7 +120,8 @@ describe('Management rent caps (grandfathering)', () => {
       .set(authHeader(token))
       .send({ rentPerUnit: maxRent + 1 });
     expect(tooHigh.status).toBe(400);
-    expect(tooHigh.body.error).toMatch(/cannot exceed/);
+    expect(tooHigh.body.error).toMatch(/Rent must be between/);
+    expect(tooHigh.body.maxPerUnit).toBe(maxRent);
 
     const exact = await request(app)
       .post(`/management/${low._id}/rent`)
@@ -354,5 +357,161 @@ describe('Management rent caps (grandfathering)', () => {
         expect(max).toBeGreaterThan(50000); // no artificial $50k ceiling
       }
     }
+  });
+
+  describe('single authoritative maximum (GET == POST)', () => {
+    it('the GET effectiveMaxPerUnit is exactly the maximum the POST accepts', async () => {
+      await GameState.updateOne({ key: 'global' }, { $set: { tickNumber: TICK + 1 } });
+
+      const get = await request(app).get(`/management/${property._id}`).set(authHeader(token));
+      expect(get.status).toBe(200);
+
+      const max = get.body.effectiveMaxPerUnit;
+      expect(max).toBeGreaterThan(0);
+      expect(max).toBeLessThanOrEqual(get.body.maximumRentPerUnit);
+
+      const exact = await request(app)
+        .post(`/management/${property._id}/rent`)
+        .set(authHeader(token))
+        .send({ rentPerUnit: max });
+      expect(exact.status).toBe(200);
+      expect((await Property.findById(property._id)).rentPerUnit).toBe(max);
+    });
+
+    it('GET maximum + $1 is rejected and the error body carries the authoritative max', async () => {
+      await GameState.updateOne({ key: 'global' }, { $set: { tickNumber: TICK + 1 } });
+
+      const get = await request(app).get(`/management/${property._id}`).set(authHeader(token));
+      const max = get.body.effectiveMaxPerUnit;
+
+      await GameState.updateOne({ key: 'global' }, { $set: { tickNumber: TICK + 2 } });
+      const over = await request(app)
+        .post(`/management/${property._id}/rent`)
+        .set(authHeader(token))
+        .send({ rentPerUnit: max + 1 });
+      expect(over.status).toBe(400);
+      expect(over.body.error).toMatch(/Rent must be between/);
+      expect(over.body.maxPerUnit).toBe(max);
+      expect(over.body.effectiveMaxPerUnit).toBe(max);
+    });
+
+    it('a property with no units array behaves as a single-unit property', async () => {
+      const single = await makeProperty({
+        ownerId: owner._id,
+        cityId: city._id,
+        basePrice: 2000000,
+        currentPrice: 2000000,
+        rent: 6528,
+        units: undefined,
+      });
+      await GameState.updateOne({ key: 'global' }, { $set: { tickNumber: TICK + 1 } });
+
+      const get = await request(app).get(`/management/${single._id}`).set(authHeader(token));
+      expect(get.body.unitCount).toBe(1);
+      expect(get.body.maximumRentPerUnit).toBe(get.body.maximumRent);
+      expect(get.body.effectiveMaxPerUnit).toBe(Math.min(get.body.currentMaxPerUnit, get.body.maximumRentPerUnit));
+
+      const exact = await request(app)
+        .post(`/management/${single._id}/rent`)
+        .set(authHeader(token))
+        .send({ rentPerUnit: get.body.effectiveMaxPerUnit });
+      expect(exact.status).toBe(200);
+    });
+
+    it('a multi-unit property reports the per-unit maximum consistently', async () => {
+      const multi = await makeProperty({
+        ownerId: owner._id,
+        cityId: city._id,
+        basePrice: 100000,
+        currentPrice: 100000,
+        rent: 3000,
+        units: [
+          { unitNumber: 1, type: 'apartment', rentPrice: 1500 },
+          { unitNumber: 2, type: 'apartment', rentPrice: 1500 },
+        ],
+      });
+      await GameState.updateOne({ key: 'global' }, { $set: { tickNumber: TICK + 1 } });
+
+      const get = await request(app).get(`/management/${multi._id}`).set(authHeader(token));
+      expect(get.body.unitCount).toBe(2);
+      expect(get.body.maximumRentPerUnit).toBe(Math.floor(calculateMaximumRent(multi) / 2));
+
+      const exact = await request(app)
+        .post(`/management/${multi._id}/rent`)
+        .set(authHeader(token))
+        .send({ rentPerUnit: get.body.effectiveMaxPerUnit });
+      expect(exact.status).toBe(200);
+    });
+
+    it('a currentPrice change is reflected in both GET and POST immediately', async () => {
+      await GameState.updateOne({ key: 'global' }, { $set: { tickNumber: TICK + 1 } });
+
+      const before = await request(app).get(`/management/${property._id}`).set(authHeader(token));
+
+      // Value rises 4x AND the market baseline rises 10x → both ceilings rise,
+      // so the effective max must rise too.
+      await Property.findByIdAndUpdate(property._id, { currentPrice: 8000000, basePrice: 8000000, rent: 65280 });
+      const after = await request(app).get(`/management/${property._id}`).set(authHeader(token));
+      expect(after.body.maximumRent).toBe(calculateMaximumRent({ currentPrice: 8000000 }));
+      expect(after.body.maximumRent).toBeGreaterThan(before.body.maximumRent);
+      expect(after.body.effectiveMaxPerUnit).toBeGreaterThan(before.body.effectiveMaxPerUnit);
+
+      const accepted = await request(app)
+        .post(`/management/${property._id}/rent`)
+        .set(authHeader(token))
+        .send({ rentPerUnit: after.body.effectiveMaxPerUnit });
+      expect(accepted.status).toBe(200);
+    });
+
+    it('company-owned properties use the same authoritative rule for directors', async () => {
+      const company = await RealEstateCompany.create({
+        name: `RentCapCo_${Date.now()}`,
+        founderId: owner._id,
+        members: [{ userId: owner._id, role: 'director' }],
+        treasury: { balance: 0, transactions: [] },
+        active: true,
+      });
+      const companyProp = await makeProperty({
+        cityId: city._id,
+        basePrice: 2000000,
+        currentPrice: 2000000,
+        rent: 6528,
+        companyId: company._id,
+        ownerId: null,
+      });
+      await GameState.updateOne({ key: 'global' }, { $set: { tickNumber: TICK + 1 } });
+
+      const get = await request(app).get(`/management/${companyProp._id}`).set(authHeader(token));
+      expect(get.status).toBe(200);
+
+      const exact = await request(app)
+        .post(`/management/${companyProp._id}/rent`)
+        .set(authHeader(token))
+        .send({ rentPerUnit: get.body.effectiveMaxPerUnit });
+      expect(exact.status).toBe(200);
+
+      // A plain member without director rights is still denied.
+      const memberUser = await createAuthenticatedUser({});
+      const company2 = await RealEstateCompany.create({
+        name: `RentCapCo2_${Date.now()}`,
+        founderId: owner._id,
+        members: [{ userId: memberUser.user._id, role: 'member' }],
+        treasury: { balance: 0, transactions: [] },
+        active: true,
+      });
+      const memberProp = await makeProperty({
+        cityId: city._id,
+        basePrice: 2000000,
+        currentPrice: 2000000,
+        rent: 6528,
+        companyId: company2._id,
+        ownerId: null,
+      });
+      const denied = await request(app)
+        .post(`/management/${memberProp._id}/rent`)
+        .set(authHeader(memberUser.token))
+        .send({ rentPerUnit: 10000 });
+      expect(denied.status).toBe(403);
+    });
   });
 });

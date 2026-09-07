@@ -544,6 +544,15 @@ export default function PropertyPage() {
       await load();
     } catch (err) {
       setRentMsg({ type: 'error', text: err.message });
+      // The server is authoritative — the displayed maximum must resync to the
+      // value the POST endpoint currently accepts (currentPrice may have moved
+      // between the GET and the POST).
+      try {
+        const mgmtRes = await api(`/management/${id}`);
+        setManagementData(mgmtRes);
+      } catch {
+        /* keep stale display; next load() will refresh */
+      }
     }
   };
 
@@ -1111,7 +1120,7 @@ export default function PropertyPage() {
                       type="number"
                       value={rentInput}
                       min={1}
-                      max={managementData.maximumRentPerUnit || undefined}
+                      max={(managementData.effectiveMaxPerUnit ?? managementData.maximumRentPerUnit) || undefined}
                       onChange={(e) => setRentInput(e.target.value)}
                       placeholder={t('propertyManagement.rentInputPlaceholder')}
                       className="flex-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-3 py-2 text-gray-900 dark:text-white text-sm"
@@ -1124,10 +1133,10 @@ export default function PropertyPage() {
                       {t('common.save')}
                     </button>
                   </div>
-                  {managementData.maximumRentPerUnit > 0 && (
+                  {(managementData.effectiveMaxPerUnit ?? managementData.maximumRentPerUnit) > 0 && (
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
                       {t('propertyManagement.maxRentValueHint', {
-                        amount: formatMoney(managementData.maximumRentPerUnit),
+                        amount: formatMoney(managementData.effectiveMaxPerUnit ?? managementData.maximumRentPerUnit),
                       })}
                     </p>
                   )}

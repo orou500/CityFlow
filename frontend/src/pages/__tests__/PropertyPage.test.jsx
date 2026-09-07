@@ -322,3 +322,83 @@ describe('PropertyPage — Sell property confirmation', () => {
     expect(onSell).not.toHaveBeenCalled();
   });
 });
+
+describe('PropertyPage — authoritative rent maximum (GET == POST)', () => {
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+    i18nState.language = 'en';
+    gameState.fetchSentOffers.mockResolvedValue([]);
+    authState.user = { _id: 'owner1', username: 'owner', balance: 1000000 };
+  });
+
+  function managementFetchMock({ rentPost, managementData }) {
+    return vi.fn((url, options) => {
+      const u = String(url);
+      const method = options?.method || 'GET';
+      if (u.includes('/management/p123/rent')) {
+        return rentPost
+          ? rentPost(method)
+          : jsonResponse({ error: 'Rent must be between 100 and 67524 per unit' }, false);
+      }
+      if (u.includes('/properties/p123/detail')) {
+        return jsonResponse({ property: makePropertyDoc({ ownerId: { _id: 'owner1', username: 'owner' } }) });
+      }
+      if (u.includes('/offers/property/')) return jsonResponse([]);
+      if (u.includes('/management/')) return jsonResponse(managementData);
+      if (u.includes('/world/status')) return jsonResponse({ currentCycle: 42 });
+      if (u.includes('/development/improvements/status/')) return jsonResponse({});
+      return jsonResponse({});
+    });
+  }
+
+  const fullManagementData = {
+    perUnitRent: 100,
+    rent: 5000,
+    rentChangeAvailable: true,
+    effectiveMaxPerUnit: 67524,
+    maximumRentPerUnit: 75000,
+  };
+
+  it('the rent input max equals the server effectiveMaxPerUnit, not the raw value cap', async () => {
+    renderPage(managementFetchMock({ managementData: fullManagementData }));
+
+    const input = await screen.findByRole('spinbutton');
+    expect(input).toHaveAttribute('max', '67524');
+  });
+
+  it('after a rejected POST the displayed maximum resyncs to the server value', async () => {
+    const postCalls = [];
+    const fetchMock = vi.fn((url, options) => {
+      const u = String(url);
+      const method = options?.method || 'GET';
+      if (u.includes('/management/p123/rent') && method === 'POST') {
+        postCalls.push(1);
+        return jsonResponse({ error: 'Rent must be between 100 and 67524 per unit' }, false);
+      }
+      if (u.includes('/properties/p123/detail')) {
+        return jsonResponse({ property: makePropertyDoc({ ownerId: { _id: 'owner1', username: 'owner' } }) });
+      }
+      if (u.includes('/offers/property/')) return jsonResponse([]);
+      // First GET returns the stale high max; after the failed POST the page
+      // must refetch and adopt the server's current authoritative max.
+      if (u.includes('/management/')) {
+        return jsonResponse(
+          postCalls.length > 0 ? { ...fullManagementData, effectiveMaxPerUnit: 50000 } : fullManagementData,
+        );
+      }
+      if (u.includes('/world/status')) return jsonResponse({ currentCycle: 42 });
+      if (u.includes('/development/improvements/status/')) return jsonResponse({});
+      return jsonResponse({});
+    });
+    renderPage(fetchMock);
+
+    const input = await screen.findByRole('spinbutton');
+    expect(input).toHaveAttribute('max', '67524');
+
+    fireEvent.change(input, { target: { value: '67524' } });
+    fireEvent.click(screen.getByRole('button', { name: 'common.save' }));
+
+    await waitFor(() => expect(postCalls.length).toBe(1));
+    await waitFor(() => expect(input).toHaveAttribute('max', '50000'));
+  });
+});
