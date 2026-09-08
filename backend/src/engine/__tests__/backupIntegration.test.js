@@ -82,6 +82,11 @@ describe('Backup — full audit & restore', () => {
 
   beforeAll(async () => {
     await registerAllModels();
+    // Await every model's index build (unique/sparse/partial) before any
+    // backup is captured: Mongoose autoIndex builds are async, and a backup
+    // taken mid-build would miss indexes (e.g. sizopsUserId_1) — which the
+    // restore would then never recreate. Deterministic under coverage load.
+    await Promise.all(mongoose.modelNames().map((name) => mongoose.model(name).init()));
     // Point backups at a temp dir so the test never touches real backups
     config.backupDir = path.join(tmpdir(), `cf-backup-test-${Date.now()}`);
     await fs.mkdir(config.backupDir, { recursive: true });

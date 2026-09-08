@@ -26,6 +26,12 @@ import { createTestUser } from '../../test/helpers.js';
  */
 describe('Notification idempotency — one logical event, one notification', () => {
   beforeAll(async () => {
+    // Await the (userId, eventKey) unique partial index build before the
+    // concurrency test: Mongoose autoIndex is async, and on a fresh DB under
+    // coverage load the inserts can otherwise race the index creation, making
+    // duplicates pass through.
+    await Notification.init();
+    await User.init();
     await Notification.deleteMany({});
   });
 
