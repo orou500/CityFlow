@@ -401,4 +401,14 @@ describe('PropertyPage — authoritative rent maximum (GET == POST)', () => {
     await waitFor(() => expect(postCalls.length).toBe(1));
     await waitFor(() => expect(input).toHaveAttribute('max', '50000'));
   });
+
+  it('displays the server occupancy verbatim — no floor/min/rounding on the frontend', async () => {
+    renderPage(
+      managementFetchMock({
+        managementData: { ...fullManagementData, occupancy: 100, perUnitRent: 100 },
+      }),
+    );
+
+    expect(await screen.findAllByText('100%').then((els) => els.length)).toBeGreaterThan(0);
+  });
 });

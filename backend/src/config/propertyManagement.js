@@ -348,8 +348,28 @@ export function simulateOccupancy(property, cityDemandIndex, citySupplyIndex) {
     Math.min(OCCUPANCY_FACTORS.maxOccupancy, targetOccupancy * 100),
   );
 
-  const currentOccupancy = property.occupancy || 50;
+  const currentOccupancy = Number(property.occupancy) || 50;
   const change = (clampedTarget - currentOccupancy) * OCCUPANCY_FACTORS.occupancyChangeRate;
 
-  return Math.round(Math.max(0, Math.min(100, currentOccupancy + change)));
+  // NaN/Infinity safety — never propagate a broken occupancy into the world.
+  if (!Number.isFinite(change)) return currentOccupancy;
+
+  const next = currentOccupancy + change;
+  const rounded = Math.round(next);
+
+  // The 0.1 step + integer rounding creates a dead zone: any integer within 5
+  // of the target rounds back to itself, so a property climbing from below
+  // permanently stalls at target - 4 (e.g. 96% for a fully-desirable property
+  // whose target is the configured maximum of 100). When a step would round
+  // to no movement and the property is still more than 1 point from the
+  // target, force one point of progress toward it so the occupancy genuinely
+  // converges to the intended maximum (100% is reachable). Never force once
+  // within 1 point of the target — that would ping-pong around fractional
+  // targets.
+  const progress =
+    rounded === currentOccupancy && Math.abs(clampedTarget - currentOccupancy) >= 1
+      ? currentOccupancy + Math.sign(clampedTarget - currentOccupancy)
+      : rounded;
+
+  return Math.max(OCCUPANCY_FACTORS.minOccupancy, Math.min(OCCUPANCY_FACTORS.maxOccupancy, progress));
 }
