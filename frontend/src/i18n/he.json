@@ -855,6 +855,9 @@
       }
     }
   },
+  "construction": {
+    "finalMonth": "החודש האחרון — הכנה לאכלוס"
+  },
   "projectDetail": {
     "title": "פרטי פרויקט",
     "backToDevelopment": "← חזרה לפיתוח",

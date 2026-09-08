@@ -855,6 +855,9 @@
       }
     }
   },
+  "construction": {
+    "finalMonth": "Final Month — Preparing for Occupancy"
+  },
   "projectDetail": {
     "title": "Project Details",
     "backToDevelopment": "← Back to Development",

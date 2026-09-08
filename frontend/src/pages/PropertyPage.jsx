@@ -11,6 +11,7 @@ import RiskDashboard from '../components/RiskDashboard';
 import PropertyImage from '../components/PropertyImage';
 import RentInfoPanel from '../components/RentInfoPanel';
 import ConfirmDialog from '../components/ConfirmDialog';
+import ConstructionTimeRemaining from '../components/ConstructionTimeRemaining';
 import { getApiBaseUrl } from '../utils/capacitor';
 
 const API = getApiBaseUrl();
@@ -1705,8 +1706,10 @@ export default function PropertyPage() {
                             {dr.constructionProjectId.completionPeriod &&
                               dr.constructionProjectId.startPeriod != null && (
                                 <span className="text-gray-400 dark:text-gray-500">
-                                  {Math.max(0, dr.constructionProjectId.completionPeriod - (currentPeriod || 0))}{' '}
-                                  {t('companyDevelopment.months') || 'mo'} {t('development.left') || 'left'}
+                                  <ConstructionTimeRemaining
+                                    completionPeriod={dr.constructionProjectId.completionPeriod}
+                                    currentPeriod={currentPeriod}
+                                  />
                                 </span>
                               )}
                           </div>
