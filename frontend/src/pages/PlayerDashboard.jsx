@@ -5,6 +5,8 @@ import { useGameStore } from '../store/useGameStore';
 import { useAuthStore } from '../store/useAuthStore';
 import PeriodBonusWidget from '../components/PeriodBonusWidget';
 import RentCollectionWidget from '../components/RentCollectionWidget';
+import RentalIncomeBreakdown from '../components/RentalIncomeBreakdown';
+import { onSocketEvent } from '../utils/socket';
 import { formatMoney } from '../utils/format';
 import CompactValue from '../components/CompactValue';
 import PropertyImage from '../components/PropertyImage';
@@ -16,6 +18,8 @@ export default function PlayerDashboard() {
   const {
     userData,
     fetchUserData,
+    rentalIncome,
+    fetchRentalIncome,
     loans,
     sentOffers,
     receivedOffers,
@@ -38,9 +42,19 @@ export default function PlayerDashboard() {
   useEffect(() => {
     fetchMe();
     fetchUserData();
+    fetchRentalIncome();
     fetchSentOffers();
     fetchReceivedOffers();
     fetchUnreadCount();
+
+    // Reuse the existing tick realtime channel: after a rent tick the rental
+    // breakdown (totals, per-property income, shares) refreshes without a
+    // manual page reload.
+    const unsubscribe = onSocketEvent('tick:completed', () => {
+      fetchRentalIncome();
+      fetchUserData();
+    });
+    return unsubscribe;
   }, []);
 
   async function handleAccept(offerId) {
@@ -168,9 +182,12 @@ export default function PlayerDashboard() {
           onCollected={() => {
             fetchMe();
             fetchUserData();
+            fetchRentalIncome();
           }}
         />
       </div>
+
+      <RentalIncomeBreakdown data={rentalIncome} />
 
       <div className="bg-white dark:bg-gray-900 rounded-lg p-6 mb-6">
         <h2 className="text-xl font-bold mb-4">{t('dashboard.properties')}</h2>

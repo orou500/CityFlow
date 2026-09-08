@@ -209,7 +209,20 @@
     "income": "הכנסות משכירות",
     "totalRent": "סה\"כ שכירות שנגבתה",
     "language": "שפה",
-    "showing": "מוצג {{shown}} / {{total}}"
+    "showing": "מוצג {{shown}} / {{total}}",
+    "rentalIncomeTitle": "הכנסות משכירות",
+    "totalRentalIncome": "סה\"כ הכנסות משכירות",
+    "perMonth": "/חודש",
+    "rentProperty": "נכס",
+    "rentCity": "עיר",
+    "rentMonthly": "שכירות / חודש",
+    "rentActual": "הכנסה בפועל",
+    "rentShare": "חלק",
+    "rentTotal": "סה\"כ",
+    "rentGross": "ברוטו",
+    "rentCosts": "הוצאות",
+    "noRentalIncome": "אין עדיין הכנסות משכירות",
+    "noRentalIncomeHint": "קנה נכס והגדר שכירות כדי להתחיל לייצר הכנסה פסיבית."
   },
   "periodBonus": {
     "available": "בונוס חודש זמין",

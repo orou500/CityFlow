@@ -8,6 +8,7 @@ import User from '../models/User.js';
 import Property from '../models/Property.js';
 import Loan from '../models/Loan.js';
 import Transaction from '../models/Transaction.js';
+import GameState from '../models/GameState.js';
 import { authenticate } from '../middleware/auth.js';
 import { validatePassword } from '../utils/validatePassword.js';
 import { invalidateUser } from '../utils/cacheInvalidation.js';
@@ -16,6 +17,11 @@ import { rateLimit } from '../middleware/rateLimit.js';
 import { changeUsername } from '../services/usernameService.js';
 import { ACHIEVEMENT_DEFINITIONS } from '../config/achievements.js';
 import { MISSION_DEFINITIONS } from '../config/missions.js';
+import {
+  calculatePropertyRentIncome,
+  calculateMaintenanceCost,
+  calculateOperatingExpenses,
+} from '../config/propertyManagement.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -50,6 +56,66 @@ router.get('/me', authenticate, async (req, res) => {
     }
     const transactions = await Transaction.find(txFilter).sort({ createdAt: -1 }).limit(50).populate('propertyId');
     res.json({ user, properties, loans, transactions });
+  } catch (err) {
+    res.serverError(err);
+  }
+});
+
+router.get('/me/rental-income', authenticate, async (req, res) => {
+  try {
+    // Identity comes exclusively from the authenticated user — a client can
+    // never ask for another player's rental breakdown.
+    const [properties, gameState] = await Promise.all([
+      Property.find({ ownerId: req.user._id }).populate('cityId', 'name').lean(),
+      GameState.findOne({ key: 'global' }).select('tickNumber').lean(),
+    ]);
+
+    const latestTick = gameState?.tickNumber || 0;
+
+    // Same authoritative per-property income the rent tick credits every
+    // tick (rentProcessing.processRent): occupancy-adjusted gross income
+    // minus maintenance minus operating expenses. No second income model.
+    const items = properties.map((p) => {
+      const grossIncome = calculatePropertyRentIncome(p);
+      const maintenanceCost = calculateMaintenanceCost(p, grossIncome);
+      const operatingExpenses = calculateOperatingExpenses(p, grossIncome);
+      const rentalIncome = Math.max(0, grossIncome - maintenanceCost - operatingExpenses);
+      const unitCount = p.units?.length || 1;
+      const configuredRent = p.rentPerUnit ? p.rentPerUnit * unitCount : p.rent || 0;
+      return {
+        propertyId: p._id,
+        name: p.name,
+        type: p.type,
+        city: p.cityId?.name || null,
+        monthlyRent: configuredRent,
+        grossIncome,
+        maintenanceCost,
+        operatingExpenses,
+        rentalIncome,
+        occupancy: p.occupancy ?? 0,
+        currentPrice: p.currentPrice || 0,
+      };
+    });
+
+    const totalRentalIncome = items.reduce((sum, i) => sum + i.rentalIncome, 0);
+    const totalGrossIncome = items.reduce((sum, i) => sum + i.grossIncome, 0);
+
+    const breakdown = items
+      .map((i) => ({
+        ...i,
+        // Raw share so percentages always sum to exactly 100; the client
+        // formats for display.
+        percentageOfTotal: totalRentalIncome > 0 ? (i.rentalIncome / totalRentalIncome) * 100 : 0,
+      }))
+      .sort((a, b) => b.rentalIncome - a.rentalIncome || b.monthlyRent - a.monthlyRent || a.name.localeCompare(b.name));
+
+    res.json({
+      totalRentalIncome,
+      totalGrossIncome,
+      latestTick,
+      propertyCount: breakdown.length,
+      properties: breakdown,
+    });
   } catch (err) {
     res.serverError(err);
   }

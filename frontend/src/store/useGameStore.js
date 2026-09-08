@@ -31,6 +31,7 @@ export const useGameStore = create((set, get) => ({
   cityDemographics: null,
   activeEvents: [],
   userData: null,
+  rentalIncome: null,
   loading: false,
   error: null,
 
@@ -132,6 +133,16 @@ export const useGameStore = create((set, get) => ({
       return data;
     } catch {
       // not authenticated
+    }
+  },
+
+  fetchRentalIncome: async () => {
+    try {
+      const data = await api('/users/me/rental-income');
+      set({ rentalIncome: data });
+      return data;
+    } catch {
+      return null;
     }
   },
 

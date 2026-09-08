@@ -209,7 +209,20 @@
     "income": "Rent Income",
     "totalRent": "Total Rent Collected",
     "language": "Language",
-    "showing": "Showing {{shown}} / {{total}}"
+    "showing": "Showing {{shown}} / {{total}}",
+    "rentalIncomeTitle": "Rental Income",
+    "totalRentalIncome": "Total Rental Income",
+    "perMonth": "/ month",
+    "rentProperty": "Property",
+    "rentCity": "City",
+    "rentMonthly": "Rent / Month",
+    "rentActual": "Actual Income",
+    "rentShare": "Share",
+    "rentTotal": "Total",
+    "rentGross": "Gross",
+    "rentCosts": "Costs",
+    "noRentalIncome": "No rental income yet",
+    "noRentalIncomeHint": "Buy a property and set a rent to start earning passive income."
   },
   "periodBonus": {
     "available": "Month Bonus Available",
