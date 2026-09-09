@@ -32,6 +32,7 @@ import { requireAdmin } from '../middleware/admin.js';
 import bonusRoutes from '../routes/bonus.js';
 import rentRoutes from '../routes/rent.js';
 import careerRoutes from '../routes/career.js';
+import assistantRoutes from '../routes/assistant.js';
 import companyRoutes from '../routes/companies.js';
 import indexRoutes from '../routes/indexes.js';
 import imageProxyRoutes from '../routes/imageProxy.js';
@@ -111,6 +112,7 @@ export function createApp() {
   app.use('/bonus', bonusRoutes);
   app.use('/rent', rentRoutes);
   app.use('/career', careerRoutes);
+  app.use('/assistant', assistantRoutes);
   app.use('/companies', companyRoutes);
   app.use('/indexes', indexRoutes);
   app.use('/image-proxy', imageProxyRoutes);

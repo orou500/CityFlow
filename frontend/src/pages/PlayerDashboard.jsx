@@ -6,6 +6,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import PeriodBonusWidget from '../components/PeriodBonusWidget';
 import RentCollectionWidget from '../components/RentCollectionWidget';
 import RentalIncomeBreakdown from '../components/RentalIncomeBreakdown';
+import PersonalAssistantCard from '../components/PersonalAssistantCard';
 import { onSocketEvent } from '../utils/socket';
 import { formatMoney } from '../utils/format';
 import CompactValue from '../components/CompactValue';
@@ -19,7 +20,12 @@ export default function PlayerDashboard() {
     userData,
     fetchUserData,
     rentalIncome,
+    rentalIncomeLocked,
     fetchRentalIncome,
+    assistant,
+    fetchAssistant,
+    hireAssistant,
+    fireAssistant,
     loans,
     sentOffers,
     receivedOffers,
@@ -43,6 +49,7 @@ export default function PlayerDashboard() {
     fetchMe();
     fetchUserData();
     fetchRentalIncome();
+    fetchAssistant();
     fetchSentOffers();
     fetchReceivedOffers();
     fetchUnreadCount();
@@ -52,6 +59,7 @@ export default function PlayerDashboard() {
     // manual page reload.
     const unsubscribe = onSocketEvent('tick:completed', () => {
       fetchRentalIncome();
+      fetchAssistant();
       fetchUserData();
     });
     return unsubscribe;
@@ -100,6 +108,38 @@ export default function PlayerDashboard() {
       fetchUserData();
     } catch (e) {
       alert(e.message);
+    }
+  }
+
+  const [assistantHiring, setAssistantHiring] = useState(false);
+  const [assistantFiring, setAssistantFiring] = useState(false);
+  const [assistantMsg, setAssistantMsg] = useState(null);
+
+  async function handleHireAssistant() {
+    if (assistantHiring) return;
+    setAssistantHiring(true);
+    setAssistantMsg(null);
+    try {
+      await hireAssistant();
+      fetchMe();
+    } catch (e) {
+      setAssistantMsg({ type: 'error', text: e.message });
+    } finally {
+      setAssistantHiring(false);
+    }
+  }
+
+  async function handleFireAssistant() {
+    if (assistantFiring) return;
+    setAssistantFiring(true);
+    setAssistantMsg(null);
+    try {
+      await fireAssistant();
+      fetchMe();
+    } catch (e) {
+      setAssistantMsg({ type: 'error', text: e.message });
+    } finally {
+      setAssistantFiring(false);
     }
   }
 
@@ -187,7 +227,25 @@ export default function PlayerDashboard() {
         />
       </div>
 
-      <RentalIncomeBreakdown data={rentalIncome} />
+      <PersonalAssistantCard
+        assistant={assistant}
+        onHire={handleHireAssistant}
+        onFire={handleFireAssistant}
+        hiring={assistantHiring}
+        firing={assistantFiring}
+      />
+      {assistantMsg && (
+        <p className={`text-xs mb-2 ${assistantMsg.type === 'error' ? 'text-red-500' : 'text-blue-500'}`}>
+          {assistantMsg.text}
+        </p>
+      )}
+
+      <RentalIncomeBreakdown
+        data={rentalIncome}
+        locked={rentalIncomeLocked}
+        onHire={handleHireAssistant}
+        hiring={assistantHiring}
+      />
 
       <div className="bg-white dark:bg-gray-900 rounded-lg p-6 mb-6">
         <h2 className="text-xl font-bold mb-4">{t('dashboard.properties')}</h2>

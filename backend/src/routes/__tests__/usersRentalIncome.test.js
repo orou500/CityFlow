@@ -46,12 +46,28 @@ describe('GET /users/me/rental-income', () => {
     token = auth.token;
   });
 
+  // Rental Income is a Personal Assistant-gated feature: every value-bearing
+  // test hires the assistant first through the real endpoint.
+  async function hireAssistant() {
+    const res = await request(app).post('/assistant/hire').set(authHeader(token));
+    expect(res.status).toBe(200);
+  }
+
   it('requires authentication', async () => {
     const res = await request(app).get('/users/me/rental-income');
     expect(res.status).toBe(401);
   });
 
+  it('is locked without an active Personal Assistant (no value leak)', async () => {
+    const res = await request(app).get('/users/me/rental-income').set(authHeader(token));
+    expect(res.status).toBe(200);
+    expect(res.body.locked).toBe(true);
+    expect(res.body.reason).toBe('personal_assistant_required');
+    expect(res.body.totalRentalIncome).toBeUndefined();
+  });
+
   it('returns an empty breakdown for a player with no properties', async () => {
+    await hireAssistant();
     const res = await request(app).get('/users/me/rental-income').set(authHeader(token));
     expect(res.status).toBe(200);
     expect(res.body.totalRentalIncome).toBe(0);
@@ -62,6 +78,7 @@ describe('GET /users/me/rental-income', () => {
   });
 
   it('returns one property with its authoritative income', async () => {
+    await hireAssistant();
     const p = await makeProperty(owner._id, city._id, { rent: 10000, occupancy: 100 });
     const res = await request(app).get('/users/me/rental-income').set(authHeader(token));
     expect(res.status).toBe(200);
@@ -79,6 +96,7 @@ describe('GET /users/me/rental-income', () => {
   });
 
   it('total equals the sum of individual property incomes', async () => {
+    await hireAssistant();
     await makeProperty(owner._id, city._id, { rent: 10000 });
     await makeProperty(owner._id, city._id, { rent: 25000 });
     await makeProperty(owner._id, city._id, { rent: 5000 });
@@ -90,6 +108,7 @@ describe('GET /users/me/rental-income', () => {
   });
 
   it('percentages sum to exactly 100', async () => {
+    await hireAssistant();
     await makeProperty(owner._id, city._id, { rent: 10000 });
     await makeProperty(owner._id, city._id, { rent: 20000 });
     await makeProperty(owner._id, city._id, { rent: 30000 });
@@ -100,6 +119,7 @@ describe('GET /users/me/rental-income', () => {
   });
 
   it('sorts by highest rental income first', async () => {
+    await hireAssistant();
     await makeProperty(owner._id, city._id, { rent: 10000 });
     await makeProperty(owner._id, city._id, { rent: 30000 });
     await makeProperty(owner._id, city._id, { rent: 20000 });
@@ -110,6 +130,7 @@ describe('GET /users/me/rental-income', () => {
   });
 
   it("never returns another player's properties", async () => {
+    await hireAssistant();
     const other = await createAuthenticatedUser({});
     await makeProperty(owner._id, city._id, { rent: 10000 });
     await makeProperty(other.user._id, city._id, { rent: 90000 });
@@ -120,6 +141,7 @@ describe('GET /users/me/rental-income', () => {
   });
 
   it('applies occupancy like the rent tick', async () => {
+    await hireAssistant();
     await makeProperty(owner._id, city._id, { rent: 10000, occupancy: 50 });
     const res = await request(app).get('/users/me/rental-income').set(authHeader(token));
     // occupancy-adjusted gross = 10000 * 50% = 5000; no maintenance (none), apartment operating 2%
@@ -129,6 +151,7 @@ describe('GET /users/me/rental-income', () => {
   });
 
   it('applies maintenance and type-based operating costs', async () => {
+    await hireAssistant();
     // Standard maintenance: 25% of gross; commercial: 5% operating.
     const p = await makeProperty(owner._id, city._id, {
       type: 'commercial',
@@ -147,6 +170,7 @@ describe('GET /users/me/rental-income', () => {
   });
 
   it('handles zero-income land properties without dropping them', async () => {
+    await hireAssistant();
     await makeProperty(owner._id, city._id, { type: 'land', rent: 0, developmentLevel: 0 });
     await makeProperty(owner._id, city._id, { rent: 15000 });
 
@@ -160,6 +184,7 @@ describe('GET /users/me/rental-income', () => {
   });
 
   it('uses rentPerUnit x units as the configured monthly rent when set', async () => {
+    await hireAssistant();
     await makeProperty(owner._id, city._id, {
       rent: 5000,
       rentPerUnit: 1000,
@@ -174,12 +199,14 @@ describe('GET /users/me/rental-income', () => {
   });
 
   it('reports the latest completed tick from game state', async () => {
+    await hireAssistant();
     await GameState.updateOne({ key: 'global' }, { $set: { tickNumber: 123 } });
     const res = await request(app).get('/users/me/rental-income').set(authHeader(token));
     expect(res.body.latestTick).toBe(123);
   });
 
   it('handles a large portfolio in a single response', async () => {
+    await hireAssistant();
     for (let i = 0; i < 40; i += 1) {
       await makeProperty(owner._id, city._id, { rent: 1000 + i * 100 });
     }

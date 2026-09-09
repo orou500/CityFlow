@@ -154,6 +154,21 @@ const userSchema = new mongoose.Schema(
       completedAt: { type: Date, default: null },
       skippedAt: { type: Date, default: null },
     },
+    // Personal Assistant employment. Server-authoritative; the assistant is a
+    // real monthly employee whose active status unlocks the Rental Income
+    // dashboard feature. Hiring prepays the first month (paidThroughMonth =
+    // hire month), the tick engine charges later months, firing is immediate
+    // and blocks rehire until the next game month (firedMonth < current tick).
+    // Defaults are safe for existing users: no assistant, Rental Income locked.
+    personalAssistant: {
+      status: { type: String, enum: ['none', 'active', 'fired'], default: 'none' },
+      hiredAt: { type: Date, default: null },
+      hiredMonth: { type: Number, default: null },
+      firedAt: { type: Date, default: null },
+      firedMonth: { type: Number, default: null },
+      salary: { type: Number, default: 0 },
+      paidThroughMonth: { type: Number, default: 0 },
+    },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } },
 );

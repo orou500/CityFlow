@@ -48,6 +48,7 @@ import auctionRoutes from './routes/auctions.js';
 import missionRoutes from './routes/missions.js';
 import onboardingRoutes from './routes/onboarding.js';
 import careerRoutes from './routes/career.js';
+import assistantRoutes from './routes/assistant.js';
 import { maintenanceCheck } from './middleware/maintenance.js';
 import { requireAdmin } from './middleware/admin.js';
 import { getMaintenanceInfo, getTickNumber } from './models/GameState.js';
@@ -236,6 +237,7 @@ app.use('/auctions', auctionRoutes);
 app.use('/missions', missionRoutes);
 app.use('/onboarding', onboardingRoutes);
 app.use('/career', careerRoutes);
+app.use('/assistant', assistantRoutes);
 
 app.use((req, res) => {
   console.warn(`404 API Route: ${req.method} ${req.originalUrl}`);

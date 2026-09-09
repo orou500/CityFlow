@@ -9,11 +9,27 @@ function PropertyTypeLabel({ type }) {
   return <span className="capitalize text-xs text-gray-500 dark:text-gray-400">{label}</span>;
 }
 
-export default function RentalIncomeBreakdown({ data }) {
+export default function RentalIncomeBreakdown({ data, locked, onHire, hiring }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  if (!data) return null;
+  if (!data && !locked) return null;
+
+  if (locked) {
+    return (
+      <div className="bg-white dark:bg-gray-900 rounded-lg p-6 mb-6">
+        <h2 className="text-xl font-bold mb-2">{t('dashboard.rentalIncomeTitle')}</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{t('dashboard.rentalIncomeLockedHint')}</p>
+        <button
+          onClick={onHire}
+          disabled={hiring}
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white text-sm rounded transition-colors"
+        >
+          {hiring ? t('assistant.hiring') : t('assistant.hireButton')}
+        </button>
+      </div>
+    );
+  }
 
   const { totalRentalIncome, totalGrossIncome, properties } = data;
   const totalCosts = (properties || []).reduce(

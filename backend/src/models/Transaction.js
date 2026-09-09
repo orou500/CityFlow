@@ -28,6 +28,7 @@ const transactionSchema = new mongoose.Schema(
         'season_reward',
         'sizops_welcome',
         'rewarded_ad',
+        'assistant_salary',
       ],
       required: true,
     },

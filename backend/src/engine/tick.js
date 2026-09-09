@@ -55,6 +55,7 @@ import {
   expireAvailableContracts,
 } from './cityContracts.js';
 import { generateInvestmentOpportunities, processCompanyInvestments } from './treasuryInvestments.js';
+import { processPersonalAssistantPayroll } from './assistantPayroll.js';
 import { simulateDistricts } from './districtSimulation.js';
 import { evaluateExpiredReports } from './marketIntelligence.js';
 import { processAuctions, generateBankAuctions } from './auctionProcessing.js';
@@ -154,6 +155,8 @@ export async function executeTick() {
 
     await processCompanyPayroll(tickNumber);
 
+    const assistantPayrollResults = await processPersonalAssistantPayroll(tickNumber);
+
     const companyLoanResults = await processCompanyLoans(tickNumber);
 
     await processCompanyLoanRequests(tickNumber);
@@ -232,6 +235,7 @@ export async function executeTick() {
     console.log(`  New properties generated: ${propertyGeneration.reduce((s, r) => s + r.generated, 0)}`);
     console.log(`  Construction: ${constructionResults.length}, Improvements: ${improvementResults.length}`);
     console.log(`  Company rent/loans: ${companyRentResults.length}/${companyLoanResults.length}`);
+    console.log(`  Personal assistant payroll: ${assistantPayrollResults.length} charged`);
     console.log(`  Company level ups: ${companyLevelUps}, Treasury pruned: ${prunedTransactions}`);
     console.log(`  Contracts: ${newContracts} new, ${contractResults.length} processed`);
     console.log(`  Events: ${newEvents.length} new, ${expiredEvents.length} expired`);

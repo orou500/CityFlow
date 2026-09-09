@@ -88,6 +88,40 @@ function renderPanel(props = {}) {
 }
 
 describe('RentalIncomeBreakdown', () => {
+  it('renders the locked state with a hire CTA and never any income value', () => {
+    const onHire = vi.fn();
+    render(
+      <MemoryRouter>
+        <RentalIncomeBreakdown locked onHire={onHire} hiring={false} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('dashboard.rentalIncomeTitle')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.rentalIncomeLockedHint')).toBeInTheDocument();
+    expect(screen.getByText('assistant.hireButton')).toBeInTheDocument();
+    expect(screen.queryByText(/\$287\.4K/)).not.toBeInTheDocument();
+    expect(screen.queryByText('dashboard.rentTotal')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('assistant.hireButton'));
+    expect(onHire).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the hiring label while a hire is in flight', () => {
+    render(
+      <MemoryRouter>
+        <RentalIncomeBreakdown locked onHire={vi.fn()} hiring />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('assistant.hiring')).toBeInTheDocument();
+  });
+
+  it('renders nothing when neither data nor locked is provided', () => {
+    const { container } = render(
+      <MemoryRouter>
+        <RentalIncomeBreakdown />
+      </MemoryRouter>,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
   it('renders the total rental income with the per-month suffix', () => {
     renderPanel();
     expect(screen.getByText('dashboard.rentalIncomeTitle')).toBeInTheDocument();

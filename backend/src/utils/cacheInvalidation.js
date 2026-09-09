@@ -99,6 +99,15 @@ export async function onLoanAction(userId) {
   await Promise.all([invalidateUser(userId), invalidateLeaderboards(), invalidateStats()]);
 }
 
+/**
+ * Personal Assistant hire/fire changes the Rental Income authorization and
+ * the user's balance. Invalidate the user's caches so a stale cached value
+ * can never outlive an employment transition.
+ */
+export async function onAssistantChanged(userId) {
+  await Promise.all([invalidateUser(userId), invalidateStats()]);
+}
+
 export async function onCompanyCreated(companyId, founderId) {
   await Promise.all([
     invalidateCompany(companyId),

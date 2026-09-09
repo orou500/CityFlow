@@ -32,6 +32,8 @@ export const useGameStore = create((set, get) => ({
   activeEvents: [],
   userData: null,
   rentalIncome: null,
+  rentalIncomeLocked: false,
+  assistant: null,
   loading: false,
   error: null,
 
@@ -139,11 +141,41 @@ export const useGameStore = create((set, get) => ({
   fetchRentalIncome: async () => {
     try {
       const data = await api('/users/me/rental-income');
-      set({ rentalIncome: data });
+      if (data && data.locked) {
+        // Server-authoritative lock: no income values are ever returned.
+        set({ rentalIncome: null, rentalIncomeLocked: true });
+        return data;
+      }
+      set({ rentalIncome: data, rentalIncomeLocked: false });
       return data;
     } catch {
       return null;
     }
+  },
+
+  fetchAssistant: async () => {
+    try {
+      const data = await api('/assistant/status');
+      set({ assistant: data });
+      return data;
+    } catch {
+      return null;
+    }
+  },
+
+  hireAssistant: async () => {
+    const data = await api('/assistant/hire', { method: 'POST' });
+    set({ assistant: data });
+    await get().fetchRentalIncome();
+    await get().fetchUserData();
+    return data;
+  },
+
+  fireAssistant: async () => {
+    const data = await api('/assistant/fire', { method: 'POST' });
+    set({ assistant: data, rentalIncome: null, rentalIncomeLocked: true });
+    await get().fetchUserData();
+    return data;
   },
 
   loans: [],

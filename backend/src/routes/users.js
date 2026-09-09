@@ -65,6 +65,16 @@ router.get('/me/rental-income', authenticate, async (req, res) => {
   try {
     // Identity comes exclusively from the authenticated user — a client can
     // never ask for another player's rental breakdown.
+    //
+    // Feature gate: Rental Income is only viewable while a Personal Assistant
+    // is actively employed. While locked, NO income value leaves the server —
+    // not even a zero, so a locked UI cannot be scraped into a real number.
+    const assistantUser = await User.findById(req.user._id).select('personalAssistant').lean();
+    const assistant = assistantUser?.personalAssistant || {};
+    if (assistant.status !== 'active') {
+      return res.json({ locked: true, reason: 'personal_assistant_required' });
+    }
+
     const [properties, gameState] = await Promise.all([
       Property.find({ ownerId: req.user._id }).populate('cityId', 'name').lean(),
       GameState.findOne({ key: 'global' }).select('tickNumber').lean(),

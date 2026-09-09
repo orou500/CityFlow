@@ -192,6 +192,9 @@ export function getNotificationMeta(eventKey = '', type = 'system') {
   } else if (key.startsWith('onboarding:')) {
     category = CATEGORY.ONBOARDING;
     priority = PRIORITY.LOW;
+  } else if (key.startsWith('assistant:')) {
+    category = CATEGORY.SYSTEM;
+    priority = key.includes(':salary:') || key.includes(':auto_fired:') ? PRIORITY.LOW : PRIORITY.MEDIUM;
   } else if (key.startsWith('rewardedad:')) {
     category = CATEGORY.SYSTEM;
     priority = PRIORITY.LOW;
