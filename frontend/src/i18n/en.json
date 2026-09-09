@@ -2110,7 +2110,7 @@
   "leaderboard": {
     "title": "Leaderboards",
     "subtitle": "See how you rank against other players",
-    "noRankings": "No rankings available yet. Rankings update every game month.",
+    "noRankings": "No rankings available yet. Rankings are recalculated every 6 game months.",
     "errorLoad": "Could not load the leaderboard",
     "retry": "Retry",
     "player": "Player",
@@ -2138,6 +2138,26 @@
       "title": "Player Profile",
       "level": "Level",
       "achievements": "Achievements"
+    },
+    "info": {
+      "how": "How is this calculated?",
+      "higher": "Higher is better",
+      "improveLabel": "How to improve",
+      "updates": "Rankings are recalculated every 6 game months (every 36 hours); the page refreshes after every game month.",
+      "desc": {
+        "netWorth": "Your cash balance, plus the current market value of every property you own, minus your remaining loan debt.",
+        "properties": "The number of properties you currently own — land and buildings both count.",
+        "passiveIncome": "The income your properties generate per month after occupancy, maintenance and operating costs — minus your loan payments.",
+        "dealVolume": "The total value of all properties you bought and sold this season.",
+        "cityInfluence": "A score based on your share of city property value, property count, occupancy, development and rent."
+      },
+      "improve": {
+        "netWorth": "Buy properties, let them grow in value, and pay down your loans.",
+        "properties": "Buy more properties and develop your land into buildings.",
+        "passiveIncome": "Set competitive rents, raise occupancy with maintenance, and pay off your loans.",
+        "dealVolume": "Buy and sell more properties.",
+        "cityInfluence": "Own valuable, developed, well-occupied properties."
+      }
     },
     "widget": {
       "title": "Leaderboard",

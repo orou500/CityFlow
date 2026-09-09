@@ -8,6 +8,11 @@ import Season from '../models/Season.js';
 import RealEstateCompany from '../models/RealEstateCompany.js';
 import Company from '../models/Company.js';
 import { sendDiscordNotification } from '../services/discordBot.js';
+import {
+  calculatePropertyRentIncome,
+  calculateMaintenanceCost,
+  calculateOperatingExpenses,
+} from '../config/propertyManagement.js';
 
 const CATEGORIES = ['netWorth', 'properties', 'passiveIncome', 'dealVolume', 'cityInfluence'];
 const COMPANY_CATEGORIES = [
@@ -19,11 +24,17 @@ const COMPANY_CATEGORIES = [
 ];
 const IPO_CATEGORIES = ['ipoMarketCap', 'ipoDividendYield', 'ipoPriceGrowth'];
 
+/**
+ * Identity key for a ranking entry. Player entries carry `userId`, company and
+ * IPO entries carry only `companyId` — both must survive rank-change handling.
+ */
+export function entryKey(entry) {
+  return (entry?.userId || entry?.companyId || '').toString();
+}
+
 function rankCompare(a, b) {
   if (b.value !== a.value) return b.value - a.value;
-  const aKey = (a.userId || a.companyId || '').toString();
-  const bKey = (b.userId || b.companyId || '').toString();
-  return aKey.localeCompare(bKey);
+  return entryKey(a).localeCompare(entryKey(b));
 }
 
 const UPCOMING_LEAD_TICKS = 12;
@@ -242,7 +253,7 @@ export async function activateUpcomingEvents(tickNumber) {
 }
 
 async function computeNetWorthRankings() {
-  const users = await User.find({ banned: false, role: 'user' }).select(
+  const users = await User.find({ banned: false, role: 'user', deletedAt: null }).select(
     'username displayName avatar balance ownedProperties',
   );
 
@@ -289,7 +300,7 @@ async function computeNetWorthRankings() {
 
 async function computePropertyRankings() {
   const results = await User.aggregate([
-    { $match: { banned: false, role: 'user' } },
+    { $match: { banned: false, role: 'user', deletedAt: null } },
     {
       $lookup: {
         from: 'properties',
@@ -318,23 +329,28 @@ async function computePropertyRankings() {
 }
 
 async function computePassiveIncomeRankings() {
-  const results = await Property.aggregate([
-    { $match: { ownerId: { $ne: null } } },
-    {
-      $group: {
-        _id: '$ownerId',
-        totalRent: { $sum: '$rent' },
-        totalMaintenance: { $sum: '$maintenanceCost' },
-      },
-    },
-    {
-      $addFields: {
-        netIncome: { $subtract: ['$totalRent', '$totalMaintenance'] },
-      },
-    },
-    { $match: { netIncome: { $gt: 0 } } },
-    { $sort: { netIncome: -1, _id: 1 } },
-  ]);
+  // Authoritative passive income = the exact per-tick net income the rent
+  // engine credits (rentProcessing.processRent): occupancy-adjusted gross
+  // income minus maintenance (maintenance-tier percentage) minus operating
+  // expenses (type-based) — computed with the same functions the engine uses.
+  // The old formula (property.rent - property.maintenanceCost) ignored
+  // occupancy, operating expenses, and used a stale maintenanceCost field.
+  const properties = await Property.find({ ownerId: { $ne: null } })
+    .select('ownerId type rent rentPerUnit units occupancy maintenanceLevel')
+    .lean();
+
+  const netIncomeMap = new Map();
+  for (const p of properties) {
+    const uid = p.ownerId?.toString();
+    if (!uid) continue;
+    const net = Math.max(
+      0,
+      calculatePropertyRentIncome(p) -
+        calculateMaintenanceCost(p, calculatePropertyRentIncome(p)) -
+        calculateOperatingExpenses(p, calculatePropertyRentIncome(p)),
+    );
+    netIncomeMap.set(uid, (netIncomeMap.get(uid) || 0) + net);
+  }
 
   const loanPaymentMap = new Map();
   const activeLoans = await Loan.find({ active: true }).select('userId paymentPerTick');
@@ -343,22 +359,28 @@ async function computePassiveIncomeRankings() {
     loanPaymentMap.set(key, (loanPaymentMap.get(key) || 0) + (l.paymentPerTick || 0));
   }
 
-  const userIds = results.map((r) => r._id);
+  const entries = [...netIncomeMap.entries()]
+    .map(([uid, netIncome]) => {
+      const loanPayments = loanPaymentMap.get(uid) || 0;
+      const passiveIncome = Math.max(0, netIncome - loanPayments);
+      return { userId: uid, netIncome: passiveIncome };
+    })
+    .filter((r) => r.netIncome > 0)
+    .sort((a, b) => b.netIncome - a.netIncome || a.userId.localeCompare(b.userId));
+
+  const userIds = entries.map((r) => r.userId);
   const users =
     userIds.length > 0 ? await User.find({ _id: { $in: userIds } }).select('username displayName avatar') : [];
   const userMap = new Map(users.map((u) => [u._id.toString(), u]));
 
-  return results.map((r) => {
-    const uid = r._id.toString();
-    const user = userMap.get(uid);
-    const loanPayments = loanPaymentMap.get(uid) || 0;
-    const passiveIncome = Math.max(0, r.netIncome - loanPayments);
+  return entries.map((r) => {
+    const user = userMap.get(r.userId);
     return {
-      userId: r._id,
+      userId: r.userId,
       username: user?.username || 'Unknown',
       displayName: user?.displayName || '',
       avatar: user?.avatar || '',
-      value: passiveIncome,
+      value: r.netIncome,
     };
   });
 }
@@ -388,6 +410,10 @@ async function computeDealVolumeRankings() {
 
   const volumeMap = new Map();
   for (const r of buyResults) {
+    // Company/system transactions can carry a null buyerId — never crash the
+    // whole leaderboard on them (production had dealVolume frozen for ~24 days
+    // because of exactly this).
+    if (!r._id) continue;
     const key = r._id.toString();
     const existing = volumeMap.get(key) || { totalVolume: 0, dealCount: 0 };
     existing.totalVolume += r.totalVolume;
@@ -395,6 +421,7 @@ async function computeDealVolumeRankings() {
     volumeMap.set(key, existing);
   }
   for (const r of sellResults) {
+    if (!r._id) continue;
     const key = r._id.toString();
     const existing = volumeMap.get(key) || { totalVolume: 0, dealCount: 0 };
     existing.totalVolume += r.totalVolume;
@@ -404,8 +431,7 @@ async function computeDealVolumeRankings() {
 
   const entries = [...volumeMap.entries()]
     .filter(([, v]) => v.totalVolume > 0)
-    .sort((a, b) => b[1].totalVolume - a[1].totalVolume || a[0].localeCompare(b[0]))
-    .slice(0, 200);
+    .sort((a, b) => b[1].totalVolume - a[1].totalVolume || a[0].localeCompare(b[0]));
 
   if (entries.length === 0) return [];
 
@@ -481,7 +507,7 @@ async function computeCityInfluenceRankings() {
 async function computeCompanyNetWorth() {
   const companies = await RealEstateCompany.find({ active: true })
     .populate('founderId', 'username displayName avatar')
-    .select('name logo founderId stats reputation level');
+    .select('name logo founderId stats reputation level treasury');
 
   const companyIds = companies.map((c) => c._id);
   const properties =
@@ -628,17 +654,114 @@ async function computeIpoPriceGrowth() {
     .select('name ticker sharePrice dayChangePercent totalReturn realEstateCompanyId')
     .lean();
 
-  return companies
-    .map((c) => ({
-      companyId: c._id,
-      username: c.ticker,
-      displayName: `${c.name} (${c.ticker})`,
-      avatar: '',
-      value: c.totalReturn || c.dayChangePercent || 0,
-      metadata: { ticker: c.ticker, sharePrice: c.sharePrice, dayChangePercent: c.dayChangePercent },
-    }))
-    .filter((r) => r.value > 0)
-    .sort(rankCompare);
+  return (
+    companies
+      .map((c) => ({
+        companyId: c._id,
+        username: c.ticker,
+        displayName: `${c.name} (${c.ticker})`,
+        avatar: '',
+        // Cumulative total return since IPO is the stable metric; fall back to
+        // the latest tick change only when no total return has been recorded.
+        value: c.totalReturn || c.dayChangePercent || 0,
+        metadata: { ticker: c.ticker, sharePrice: c.sharePrice, dayChangePercent: c.dayChangePercent },
+      }))
+      // Negative growth is a valid ranking position — a declining stock ranks
+      // at the bottom, it must never disappear from the board.
+      .sort(rankCompare)
+  );
+}
+
+/**
+ * Authoritative current value for a single player in a player category, using
+ * the exact same formulas as the snapshot computation. Used by the my-rank
+ * endpoint when the player is missing from the latest snapshot (e.g. new
+ * player, or a zero-value entry excluded from a category).
+ */
+export async function computeCategoryValue(category, userId) {
+  const uid = userId?.toString();
+  if (!uid) return 0;
+  const user = await User.findById(uid).select('balance ownedProperties deletedAt').lean();
+  if (!user || user.deletedAt) return 0;
+
+  switch (category) {
+    case 'netWorth': {
+      // Mirror computeNetWorthRankings exactly: value is derived from the
+      // user's ownedProperties array (the same source the snapshot uses).
+      const propertyIds = user.ownedProperties || [];
+      const props =
+        propertyIds.length > 0
+          ? await Property.find({ _id: { $in: propertyIds } })
+              .select('currentPrice')
+              .lean()
+          : [];
+      const portfolioValue = props.reduce((sum, p) => sum + (p.currentPrice || 0), 0);
+      const loans = await Loan.find({ userId: user._id, active: true }).select('remainingBalance').lean();
+      const debt = loans.reduce((sum, l) => sum + (l.remainingBalance || 0), 0);
+      return Math.max(0, (user.balance || 0) + portfolioValue - debt);
+    }
+    case 'properties': {
+      return Property.countDocuments({ ownerId: user._id });
+    }
+    case 'passiveIncome': {
+      const props = await Property.find({ ownerId: user._id })
+        .select('type rent rentPerUnit units occupancy maintenanceLevel')
+        .lean();
+      let net = 0;
+      for (const p of props) {
+        net += Math.max(
+          0,
+          calculatePropertyRentIncome(p) -
+            calculateMaintenanceCost(p, calculatePropertyRentIncome(p)) -
+            calculateOperatingExpenses(p, calculatePropertyRentIncome(p)),
+        );
+      }
+      const loans = await Loan.find({ userId: user._id, active: true }).select('paymentPerTick').lean();
+      const loanPayments = loans.reduce((sum, l) => sum + (l.paymentPerTick || 0), 0);
+      return Math.max(0, net - loanPayments);
+    }
+    case 'dealVolume': {
+      const [buys, sells] = await Promise.all([
+        Transaction.aggregate([
+          { $match: { type: 'buy', buyerId: user._id } },
+          { $group: { _id: null, total: { $sum: '$price' } } },
+        ]),
+        Transaction.aggregate([
+          { $match: { type: 'sell', sellerId: user._id } },
+          { $group: { _id: null, total: { $sum: '$price' } } },
+        ]),
+      ]);
+      return (buys[0]?.total || 0) + (sells[0]?.total || 0);
+    }
+    case 'cityInfluence': {
+      // Mirrors computeCityInfluenceRankings for a single user's properties.
+      const props = await Property.find({ ownerId: user._id }).lean();
+      if (props.length === 0) return 0;
+      const totalValue = props.reduce((sum, p) => sum + (p.currentPrice || 0), 0);
+      const allValue = await Property.aggregate([
+        { $match: { ownerId: { $ne: null } } },
+        { $group: { _id: null, total: { $sum: '$currentPrice' } } },
+      ]);
+      const totalMarketValue = allValue[0]?.total || 0;
+      const propertyCount = props.length;
+      const avgOccupancy = props.reduce((sum, p) => sum + (p.occupancy || 0), 0) / props.length;
+      const totalDevelopment = props.reduce((sum, p) => sum + (p.developmentLevel || 0), 0);
+      const totalRent = props.reduce((sum, p) => sum + (p.rent || 0), 0);
+      const types = new Set(props.map((p) => p.type));
+      const marketShare = totalMarketValue > 0 ? (totalValue / totalMarketValue) * 100 : 0;
+      const score = Math.round(
+        marketShare * 15 +
+          propertyCount * 8 +
+          (avgOccupancy / 100) * 20 +
+          totalDevelopment * 30 +
+          Math.min(totalRent * 0.5, 200) +
+          Math.min(types.size * 5, 25),
+      );
+      return Math.max(0, score);
+    }
+    default:
+      return 0;
+  }
 }
 
 async function getPreviousSnapshot(category, currentTick) {
@@ -652,13 +775,13 @@ function applyRankChanges(rankings, previousSnapshot) {
   const prevRankMap = new Map();
   if (previousSnapshot) {
     for (const entry of previousSnapshot.rankings) {
-      prevRankMap.set(entry.userId.toString(), entry.rank);
+      prevRankMap.set(entryKey(entry), entry.rank);
     }
   }
 
   return rankings.map((entry, index) => {
     const rank = index + 1;
-    const prevRank = prevRankMap.get(entry.userId.toString()) || null;
+    const prevRank = prevRankMap.get(entryKey(entry)) || null;
     const rankChange = prevRank !== null ? prevRank - rank : 0;
     return { ...entry, rank, previousRank: prevRank, rankChange };
   });
@@ -691,30 +814,49 @@ export async function computeLeaderboards(currentTick) {
   };
 
   const allCategories = [...CATEGORIES, ...COMPANY_CATEGORIES, ...IPO_CATEGORIES];
-  const snapshots = [];
 
+  // ALL-OR-NOTHING snapshot cycle: compute every category first, validate,
+  // then persist. A single failing category must never leave a mixed-state
+  // board (some categories at the new tick, others showing stale data) —
+  // that was the exact production failure mode before the crash fixes.
+  // When any category fails, nothing is written this cycle, the previous
+  // consistent snapshots remain visible, and the next cycle retries.
+  const computed = [];
+  const failures = [];
   for (const category of allCategories) {
     try {
       const rawRankings = await computeFns[category]();
       const previousSnapshot = await getPreviousSnapshot(category, currentTick);
       const rankings = applyRankChanges(rawRankings, previousSnapshot);
-
-      const snapshot = await LeaderboardSnapshot.findOneAndUpdate(
-        { category, tickNumber: currentTick },
-        {
-          category,
-          seasonNumber,
-          tickNumber: currentTick,
-          rankings,
-          computedAt: new Date(),
-        },
-        { upsert: true, new: true },
-      );
-
-      snapshots.push(snapshot);
+      computed.push({ category, rankings });
     } catch (err) {
+      failures.push({ category, message: err.message });
       console.error(`[LEADERBOARD] Error computing ${category}:`, err.message);
     }
+  }
+
+  if (failures.length > 0) {
+    console.error(
+      `[LEADERBOARD] ${failures.length}/${allCategories.length} categories failed at tick ${currentTick} — ` +
+        `persisting NO snapshots this cycle to keep the board consistent. Failed: ${failures.map((f) => f.category).join(', ')}`,
+    );
+    return [];
+  }
+
+  const snapshots = [];
+  for (const { category, rankings } of computed) {
+    const snapshot = await LeaderboardSnapshot.findOneAndUpdate(
+      { category, tickNumber: currentTick },
+      {
+        category,
+        seasonNumber,
+        tickNumber: currentTick,
+        rankings,
+        computedAt: new Date(),
+      },
+      { upsert: true, new: true },
+    );
+    snapshots.push(snapshot);
   }
 
   return snapshots;

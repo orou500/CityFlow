@@ -39,6 +39,22 @@ vi.mock('../../utils/capacitor', () => ({
   getAvatarUrl: () => null,
 }));
 
+const socketHandlers = vi.hoisted(() => ({
+  tick: [],
+}));
+
+vi.mock('../../utils/socket', () => ({
+  onSocketEvent: (event, cb) => {
+    if (event === 'tick:completed') {
+      socketHandlers.tick.push(cb);
+      return () => {
+        socketHandlers.tick = socketHandlers.tick.filter((fn) => fn !== cb);
+      };
+    }
+    return () => {};
+  },
+}));
+
 vi.mock('../../hooks/useNativeAvatarUrl', () => ({
   default: () => null,
 }));
@@ -70,6 +86,7 @@ beforeEach(() => {
   lbState.rewards = null;
   lbState.seasonNumber = null;
   lbState.fetchRankings.mockClear();
+  socketHandlers.tick = [];
 });
 
 describe('LeaderboardPage', () => {
@@ -156,6 +173,39 @@ describe('LeaderboardPage', () => {
     fireEvent.click(tab);
     await waitFor(() => {
       expect(lbState.fetchRankings).toHaveBeenCalledWith('properties', expect.anything());
+    });
+  });
+
+  it('toggles the player-facing explanation for the active category', () => {
+    lbState.rankings = rankFour();
+    lbState.total = 4;
+
+    const { container } = render(<LeaderboardPage />);
+    const infoButton = [...container.querySelectorAll('button')].find(
+      (b) => b.getAttribute('aria-label') === 'leaderboard.info.how',
+    );
+    expect(infoButton).toBeTruthy();
+    expect(screen.queryByText('leaderboard.info.desc.netWorth')).not.toBeInTheDocument();
+
+    fireEvent.click(infoButton);
+    expect(screen.getByText('leaderboard.info.desc.netWorth')).toBeInTheDocument();
+    expect(screen.getByText('leaderboard.info.higher')).toBeInTheDocument();
+    expect(screen.getByText('leaderboard.info.updates')).toBeInTheDocument();
+  });
+
+  it('refreshes rankings and my-rank when a game tick completes', async () => {
+    lbState.rankings = rankFour();
+    lbState.total = 4;
+    lbState.fetchMyRank.mockClear();
+
+    render(<LeaderboardPage />);
+    await waitFor(() => expect(lbState.fetchRankings).toHaveBeenCalled());
+    expect(socketHandlers.tick.length).toBe(1);
+
+    socketHandlers.tick[0]();
+    await waitFor(() => {
+      expect(lbState.fetchRankings).toHaveBeenCalledTimes(2);
+      expect(lbState.fetchMyRank).toHaveBeenCalled();
     });
   });
 
@@ -274,6 +324,22 @@ describe('LeaderboardPage', () => {
       lbState.myRanks = { netWorth: { rank: 5, value: 999 } };
       render(<LeaderboardPage />);
       expect(screen.getAllByText('\u2014').length).toBeGreaterThan(0);
+    });
+
+    it('the info panel opens on mobile without horizontal overflow', () => {
+      setMobile();
+      lbState.rankings = rankFour();
+      lbState.total = 4;
+
+      const { container } = render(<LeaderboardPage />);
+      const infoButton = [...container.querySelectorAll('button')].find(
+        (b) => b.getAttribute('aria-label') === 'leaderboard.info.how',
+      );
+      fireEvent.click(infoButton);
+
+      expect(screen.getByText('leaderboard.info.desc.netWorth')).toBeInTheDocument();
+      const root = container.firstElementChild;
+      expect(root.scrollWidth).toBeLessThanOrEqual(root.clientWidth + 1);
     });
   });
 

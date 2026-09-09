@@ -8,6 +8,7 @@ import { optionalAuth } from '../middleware/auth.js';
 import { requireAdmin } from '../middleware/admin.js';
 import { cacheGet, cacheSet, cacheDelPattern } from '../utils/cache.js';
 import { resolveCurrentUsers } from '../utils/userIdentity.js';
+import { computeCategoryValue } from '../engine/leaderboard.js';
 import { ACHIEVEMENT_DEFINITIONS } from '../config/achievements.js';
 import { MISSION_DEFINITIONS } from '../config/missions.js';
 import { LEADERBOARD_REWARD_TIERS } from '../config/leaderboardRewards.js';
@@ -128,6 +129,11 @@ router.get('/my-rank', authenticate, async (req, res) => {
     const cached = await cacheGet(cacheKey);
     if (cached) return res.json(cached);
 
+    const user = await User.findById(userId).select('companyId deletedAt').lean();
+    if (!user || user.deletedAt) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
     const result = {};
     for (const cat of categories) {
       const snapshot = await LeaderboardSnapshot.findOne({ category: cat, seasonNumber }).sort({ tickNumber: -1 });
@@ -137,14 +143,47 @@ router.get('/my-rank', authenticate, async (req, res) => {
         continue;
       }
 
-      const entry = snapshot.rankings.find((r) => r.userId.toString() === userId);
-      result[cat] = {
-        rank: entry ? entry.rank : snapshot.rankings.length + 1,
-        value: entry ? entry.value : 0,
-        previousRank: entry ? entry.previousRank : null,
-        rankChange: entry ? entry.rankChange : 0,
-        total: snapshot.rankings.length,
-      };
+      // Player categories are keyed by userId; company categories by the
+      // player's company (companyId); IPO categories have no player mapping.
+      const entry = snapshot.rankings.find((r) => {
+        if (r.userId && r.userId.toString() === userId) return true;
+        return !!r.companyId && !!user.companyId && r.companyId.toString() === user.companyId.toString();
+      });
+
+      if (entry) {
+        result[cat] = {
+          rank: entry.rank,
+          value: entry.value,
+          previousRank: entry.previousRank,
+          rankChange: entry.rankChange,
+          total: snapshot.rankings.length,
+        };
+        continue;
+      }
+
+      // Player is missing from the snapshot (new player, zero value, or
+      // truncated entry). Never report a fake rank/value: compute the
+      // authoritative current value and the correct global rank against the
+      // snapshot participants.
+      if (
+        cat === 'netWorth' ||
+        cat === 'properties' ||
+        cat === 'passiveIncome' ||
+        cat === 'dealVolume' ||
+        cat === 'cityInfluence'
+      ) {
+        const liveValue = await computeCategoryValue(cat, userId);
+        const higherCount = snapshot.rankings.filter((r) => r.value > liveValue).length;
+        result[cat] = {
+          rank: higherCount + 1,
+          value: liveValue,
+          previousRank: null,
+          rankChange: 0,
+          total: snapshot.rankings.length,
+        };
+      } else {
+        result[cat] = { rank: null, value: 0, previousRank: null, rankChange: 0, total: snapshot.rankings.length };
+      }
     }
 
     await cacheSet(cacheKey, result, LEADERBOARD_TTL);

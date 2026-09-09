@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useLeaderboardStore } from '../store/useLeaderboardStore';
 import { useAuthStore } from '../store/useAuthStore';
+import { onSocketEvent } from '../utils/socket';
 import CompactValue from './CompactValue';
 import Avatar from './Avatar';
 
@@ -26,6 +27,13 @@ export default function LeaderboardWidget() {
   useEffect(() => {
     fetchSummary().then(() => setLoaded(true));
   }, []);
+
+  // Refresh the top-player summary right after each tick completes.
+  useEffect(() => {
+    return onSocketEvent('tick:completed', () => {
+      fetchSummary();
+    });
+  }, [fetchSummary]);
 
   if (!user || !loaded || !summary) return null;
 

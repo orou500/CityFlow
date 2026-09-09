@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLeaderboardStore } from '../store/useLeaderboardStore';
 import { useAuthStore } from '../store/useAuthStore';
+import { onSocketEvent } from '../utils/socket';
 import { formatCount, formatMoneyExact } from '../utils/format';
 import CompactValue from '../components/CompactValue';
 import Avatar from '../components/Avatar';
@@ -439,6 +440,7 @@ export default function LeaderboardPage() {
   const [activeCategory, setActiveCategory] = useState('netWorth');
   const [page, setPage] = useState(1);
   const [showProfile, setShowProfile] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -464,6 +466,16 @@ export default function LeaderboardPage() {
     loadPage(activeCategory, 1);
     if (user) fetchMyRank();
   }, [activeCategory, user, loadPage, fetchMyRank]);
+
+  // Rankings are snapshot-based; refresh right after each game tick completes
+  // (reuses the existing tick:completed socket channel — no polling timer).
+  useEffect(() => {
+    const unsubscribe = onSocketEvent('tick:completed', () => {
+      loadPage(activeCategory, page);
+      if (user) fetchMyRank();
+    });
+    return unsubscribe;
+  }, [activeCategory, page, user, loadPage, fetchMyRank]);
 
   const handlePageChange = (p) => {
     setPage(p);
@@ -585,7 +597,35 @@ export default function LeaderboardPage() {
             <span className="hidden sm:inline">{CATEGORY_LABELS[cat]}</span>
           </button>
         ))}
+        <button
+          onClick={() => setShowInfo((s) => !s)}
+          aria-expanded={showInfo}
+          aria-label={t('leaderboard.info.how')}
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-colors ${
+            showInfo ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-secondary hover:text-primary'
+          }`}
+        >
+          <span>{'\u2139\uFE0F'}</span>
+          <span className="hidden sm:inline">{t('leaderboard.info.how')}</span>
+        </button>
       </div>
+
+      {showInfo && (
+        <div className="bg-card border border-border rounded-xl p-3 sm:p-4 mb-3 sm:mb-4 min-w-0">
+          <div className="flex items-center justify-between gap-2 mb-2 min-w-0">
+            <div className="text-sm font-semibold text-primary">{CATEGORY_LABELS[activeCategory]}</div>
+            <span className="text-[11px] sm:text-xs text-muted shrink-0">{t('leaderboard.info.higher')}</span>
+          </div>
+          <p className="text-xs sm:text-sm text-secondary leading-relaxed">
+            {t(`leaderboard.info.desc.${activeCategory}`)}
+          </p>
+          <p className="text-xs sm:text-sm text-secondary leading-relaxed mt-2">
+            <span className="text-muted">{t('leaderboard.info.improveLabel')}: </span>
+            {t(`leaderboard.info.improve.${activeCategory}`)}
+          </p>
+          <p className="text-[11px] sm:text-xs text-muted mt-2">{t('leaderboard.info.updates')}</p>
+        </div>
+      )}
 
       <div className="bg-card border border-border rounded-xl overflow-hidden min-w-0">
         {loading ? (
