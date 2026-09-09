@@ -89,6 +89,20 @@ const companySchema = new mongoose.Schema(
     totalTrades: { type: Number, default: 0 },
     activeShareholders: { type: Number, default: 0 },
     floatPercentage: { type: Number, default: 100 },
+    // Corporate actions (server-authoritative, engine-driven):
+    // - initialSharesOutstanding: the float at creation; cumulative share
+    //   issuance is capped relative to it (dilution guard).
+    // - capitalRaised: cumulative proceeds from share issuances.
+    // - sharesBoughtBack: cumulative shares retired via buybacks.
+    // - fundamentalValue: last computed deterministic intrinsic value.
+    // - last*Tick guards make every corporate action idempotent per period.
+    initialSharesOutstanding: { type: Number },
+    capitalRaised: { type: Number, default: 0 },
+    sharesBoughtBack: { type: Number, default: 0 },
+    fundamentalValue: { type: Number, default: 0 },
+    lastShareIssuanceTick: { type: Number, default: 0 },
+    lastBuybackTick: { type: Number, default: 0 },
+    lastSplitTick: { type: Number, default: 0 },
     volumeHistory: [
       {
         tick: { type: Number },

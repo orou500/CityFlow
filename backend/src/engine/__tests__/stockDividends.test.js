@@ -90,10 +90,11 @@ describe('isDividendEligible', () => {
     expect(isDividendEligible(company, 100)).toBe(false);
   });
 
-  it('rejects companies that paid a dividend too recently (cooldown)', () => {
+  it('rejects companies that paid a dividend too recently (quarterly cooldown)', () => {
     const company = makeCompanyDoc({ lastDividendTick: 90 });
-    expect(isDividendEligible(company, 100)).toBe(false);
-    expect(isDividendEligible(company, 110)).toBe(true);
+    // 3-tick (quarterly) cadence: still cooling down at 91, eligible at 93+.
+    expect(isDividendEligible(company, 91)).toBe(false);
+    expect(isDividendEligible(company, 93)).toBe(true);
   });
 });
 

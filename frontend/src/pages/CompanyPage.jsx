@@ -133,6 +133,22 @@ export default function CompanyPage() {
   const isIPO = company.isIPO || false;
   const displayStats = isIPO && stats ? stats : company;
 
+  const officeCount = company.offices?.length || 0;
+  const cityCount = new Set((company.offices || []).map((o) => o.cityId?.toString?.() || o.cityId)).size;
+  const [showInfo, setShowInfo] = useState(false);
+
+  const growth = (() => {
+    const perf = company.performance || [];
+    if (perf.length < 2) return null;
+    const first = perf[0];
+    const last = perf[perf.length - 1];
+    const pct = (v) => (first && v > 0 ? Math.round(((last[v] - first[v]) / first[v]) * 1000) / 10 : 0);
+    return {
+      employees: pct('employees'),
+      revenue: pct('revenue'),
+    };
+  })();
+
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -179,12 +195,63 @@ export default function CompanyPage() {
           </div>
         </div>
         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+          <div className="text-xs text-gray-500 dark:text-gray-400">{t('stocks.offices')}</div>
+          <div className="text-xl font-bold text-gray-900 dark:text-white">{formatCount(officeCount)}</div>
+        </div>
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+          <div className="text-xs text-gray-500 dark:text-gray-400">{t('stocks.cities')}</div>
+          <div className="text-xl font-bold text-gray-900 dark:text-white">{formatCount(cityCount)}</div>
+        </div>
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
           <div className="text-xs text-gray-500 dark:text-gray-400">{t('stocks.revenue')}</div>
           <div className="text-xl font-bold text-gray-900 dark:text-white" title={formatMoneyExact(company.revenue)}>
             {formatMoney(company.revenue)}
           </div>
         </div>
       </div>
+
+      {growth && (
+        <div className="flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-400">
+          <span className="px-2 py-1 rounded bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+            {t('stocks.employees')}: {formatCount(growth.employees) > 0 ? '+' : ''}
+            {growth.employees}%
+          </span>
+          <span className="px-2 py-1 rounded bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+            {t('stocks.revenue')}: {growth.revenue > 0 ? '+' : ''}
+            {growth.revenue}%
+          </span>
+          <span className="text-muted">{t('stocks.growthSinceStart')}</span>
+        </div>
+      )}
+
+      <button
+        onClick={() => setShowInfo((s) => !s)}
+        aria-expanded={showInfo}
+        className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500"
+      >
+        {'\u2139\uFE0F'} {t('stocks.howCalculated')}
+      </button>
+      {showInfo && (
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 text-sm space-y-2">
+          <div className="flex justify-between gap-4">
+            <span className="text-gray-500 dark:text-gray-400">{t('stocks.infoMarketCap')}</span>
+            <span className="text-gray-900 dark:text-white text-end">{t('stocks.infoMarketCapFormula')}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="text-gray-500 dark:text-gray-400">{t('stocks.infoOwnership')}</span>
+            <span className="text-gray-900 dark:text-white text-end">{t('stocks.infoOwnershipFormula')}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="text-gray-500 dark:text-gray-400">{t('stocks.infoDividend')}</span>
+            <span className="text-gray-900 dark:text-white text-end">{t('stocks.infoDividendFormula')}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="text-gray-500 dark:text-gray-400">{t('stocks.infoPrice')}</span>
+            <span className="text-gray-900 dark:text-white text-end">{t('stocks.infoPriceFormula')}</span>
+          </div>
+          <p className="text-xs text-gray-400 dark:text-gray-500">{t('stocks.infoQuarterly')}</p>
+        </div>
+      )}
 
       {isIPO && displayStats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -556,6 +623,25 @@ export default function CompanyPage() {
                     {displayStats.totalReturn}%
                   </span>
                 </div>
+                {(displayStats.capitalRaised > 0 || displayStats.sharesBoughtBack > 0) && (
+                  <>
+                    <div className="flex justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
+                      <span className="text-gray-500 dark:text-gray-400">{t('stocks.capitalRaised')}</span>
+                      <span
+                        className="text-gray-900 dark:text-white"
+                        title={formatMoneyExact(displayStats.capitalRaised)}
+                      >
+                        {formatMoney(displayStats.capitalRaised)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500 dark:text-gray-400">{t('stocks.sharesBoughtBack')}</span>
+                      <span className="text-gray-900 dark:text-white">
+                        {formatCount(displayStats.sharesBoughtBack || 0)}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
             <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">

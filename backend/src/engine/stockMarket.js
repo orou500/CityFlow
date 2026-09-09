@@ -9,7 +9,9 @@ import {
   STOCK_MARKET_CONFIG as CONFIG,
   DIVIDEND_CONFIG as DIVIDENDS,
   COMPANY_EVENTS,
+  CORPORATE_ACTIONS as CORPORATE,
 } from '../config/stockMarket.js';
+import { computeFundamentalValue, processCorporateActions } from './corporateActions.js';
 import { publish, CHANNELS } from '../utils/pubsub.js';
 import { bulkCreateNotifications } from '../utils/notificationQueue.js';
 
@@ -110,6 +112,7 @@ async function initializeCompanies() {
         previousSharePrice: Math.round(sharePrice * 100) / 100,
         marketCap: calculateMarketCap(sharePrice, sharesOutstanding),
         sharesOutstanding,
+        initialSharesOutstanding: sharesOutstanding,
         volatility: industryData.volatility * rand(0.7, 1.3),
         performance: [],
         expansionHistory: [],
@@ -156,14 +159,22 @@ function calculateCompanyGrowth(company, cityEconCondition) {
   return baseGrowth * econMult * sizeMult;
 }
 
-function simulateStockPrice(company, growthRate) {
+function simulateStockPrice(company, growthRate, fundamentalPerShare) {
   const vol = company.volatility;
+  const price = company.sharePrice || 1;
 
-  const drift = growthRate * 0.5;
-  const shock = (Math.random() * 2 - 1) * vol;
-  const priceChange = drift + shock;
+  // Fundamentals anchor the drift: the price is pulled toward the intrinsic
+  // per-share value (tanh-normalized so the pull is bounded), plus the
+  // company's organic growth. Market sentiment contributes only a dampened
+  // random walk — fundamentals dominate, volatility cannot detach the price
+  // from the company.
+  const fundamentalDrift = fundamentalPerShare > 0 ? Math.tanh((fundamentalPerShare - price) / price / 5) * 0.04 : 0;
+  const growthDrift = growthRate * 0.5;
+  const shock = (Math.random() * 2 - 1) * vol * 0.6;
 
-  const newPrice = clamp(company.sharePrice * (1 + priceChange), CONFIG.minSharePrice, CONFIG.maxSharePrice);
+  const priceChange = fundamentalDrift + growthDrift + shock;
+
+  const newPrice = clamp(price * (1 + priceChange), CONFIG.minSharePrice, CONFIG.maxSharePrice);
 
   return Math.round(newPrice * 100) / 100;
 }
@@ -445,12 +456,14 @@ function rollDividendType() {
  * company's cash and each holder receives `perShare * shares` exactly once
  * (accrued on their StockHolding as unclaimedDividends).
  */
-export async function distributeDividend(company, type, tickNumber) {
+export async function distributeDividend(company, type, tickNumber, profitMultiplier = 1) {
   const sharesOutstanding = company.sharesOutstanding || 1;
   const payoutRatio =
     DIVIDENDS.payoutRatioOfProfit * (type === 'exceptional' ? DIVIDENDS.exceptionalPayoutMultiplier : 1);
+  // Quarterly: the engine passes profitMultiplier = 3 on quarter ticks so the
+  // pool represents a full quarter of profit (magnitude preserved).
   const dividendPool = Math.min(
-    Math.floor((company.profit || 0) * payoutRatio),
+    Math.floor((company.profit || 0) * payoutRatio * Math.max(1, profitMultiplier)),
     Math.floor((company.cash || 0) * DIVIDENDS.maxPayoutRatioOfCash),
   );
   if (dividendPool <= 0) return null;
@@ -580,18 +593,46 @@ export async function simulateStockMarket(currentTick) {
     const cityEcon = city?.economicCondition || 'stable';
 
     const growthRate = calculateCompanyGrowth(company, cityEcon);
-    const newPrice = simulateStockPrice(company, growthRate);
 
+    // 1) Financials first so fundamentals/valuation are current.
+    updateCompanyFinances(company);
+    company.lastProfitTick = currentTick;
+
+    // 2) Deterministic fundamental value (cash + revenue multiple − debt).
+    const fundamentalValue = computeFundamentalValue(company);
+    company.fundamentalValue = fundamentalValue;
+    const fundamentalPerShare = fundamentalValue / Math.max(1, company.sharesOutstanding || 1);
+
+    // 3) Market price anchored to fundamentals.
+    const newPrice = simulateStockPrice(company, growthRate, fundamentalPerShare);
     company.previousSharePrice = company.sharePrice;
     company.sharePrice = newPrice;
-    company.marketCap = calculateMarketCap(newPrice, company.sharesOutstanding);
     company.dayChange = Math.round((newPrice - company.previousSharePrice) * 100) / 100;
     company.dayChangePercent =
       Math.round(((newPrice - company.previousSharePrice) / company.previousSharePrice) * 10000) / 100;
-    company.totalReturn = Math.round(((newPrice - CONFIG.minSharePrice) / CONFIG.minSharePrice) * 10000) / 100;
 
-    if (newPrice > (company.high52Week || 0)) company.high52Week = newPrice;
-    if (newPrice < (company.low52Week || Infinity) || company.low52Week === 0) company.low52Week = newPrice;
+    // 4) Corporate actions (issuance / buyback / splits) — these change the
+    //    share count and possibly rebase the price, before market cap.
+    const corporate = await processCorporateActions(company, currentTick);
+    if (corporate?.split) {
+      company.sharePrice = corporate.split.price;
+      company.dayChange = 0;
+      company.dayChangePercent = 0;
+    }
+    if (corporate?.issuance) {
+      company.cash += corporate.issuance.proceeds;
+    }
+    if (corporate?.buyback) {
+      company.cash -= corporate.buyback.cost;
+    }
+
+    company.marketCap = calculateMarketCap(company.sharePrice, company.sharesOutstanding);
+    company.totalReturn =
+      Math.round(((company.sharePrice - CONFIG.minSharePrice) / CONFIG.minSharePrice) * 10000) / 100;
+
+    if (company.sharePrice > (company.high52Week || 0)) company.high52Week = company.sharePrice;
+    if (company.sharePrice < (company.low52Week || Infinity) || company.low52Week === 0)
+      company.low52Week = company.sharePrice;
 
     const companySize = pickCompanySize(company.revenue);
     if (companySize !== company.size) company.size = companySize;
@@ -599,7 +640,7 @@ export async function simulateStockMarket(currentTick) {
     if (!company.performance) company.performance = [];
     company.performance.push({
       tick: currentTick,
-      price: newPrice,
+      price: company.sharePrice,
       employees: company.employees,
       revenue: company.revenue,
       marketCap: company.marketCap,
@@ -621,15 +662,18 @@ export async function simulateStockMarket(currentTick) {
       }
     }
 
-    updateCompanyFinances(company);
-    company.lastProfitTick = currentTick;
-
+    // 5) Quarterly dividends: every 3 ticks, the quarterly profit is
+    //    distributed according to the payout policy when eligible.
     let dividendResult = null;
-    if (isDividendEligible(company, currentTick)) {
-      const dividendType = rollDividendType();
-      if (dividendType) {
-        dividendResult = await distributeDividend(company, dividendType, currentTick);
-      }
+    const quarterTick = currentTick % CORPORATE.quarterly.periodTicks === 0;
+    if (quarterTick && isDividendEligible(company, currentTick)) {
+      const dividendType = rollDividendType() || 'regular';
+      dividendResult = await distributeDividend(
+        company,
+        dividendType,
+        currentTick,
+        CORPORATE.quarterly.quarterProfitMultiplier,
+      );
     }
 
     await company.save();
@@ -643,6 +687,11 @@ export async function simulateStockMarket(currentTick) {
       changePercent: company.dayChangePercent,
       event: eventResult?.description || null,
       dividend: dividendResult,
+      corporate: {
+        issuance: !!corporate?.issuance,
+        buyback: !!corporate?.buyback,
+        split: !!corporate?.split,
+      },
     });
   }
 

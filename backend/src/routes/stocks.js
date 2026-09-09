@@ -346,7 +346,7 @@ router.get('/:id/statistics', async (req, res) => {
   try {
     const company = await Company.findById(req.params.id)
       .select(
-        'name ticker sharePrice previousSharePrice marketCap sharesOutstanding dividendPerShare dividendYield totalDividendsPaid lastDividendPerShare lastDividendTick dividendHistory dayChangePercent totalReturn high52Week low52Week tradingVolume avgDailyVolume totalTrades activeShareholders floatPercentage revenue employees cash debt profit isIPO weeklyVolume monthlyVolume volumeHistory performance ipoPrice',
+        'name ticker sharePrice previousSharePrice marketCap sharesOutstanding initialSharesOutstanding dividendPerShare dividendYield totalDividendsPaid lastDividendPerShare lastDividendTick dividendHistory dayChangePercent totalReturn high52Week low52Week tradingVolume avgDailyVolume totalTrades activeShareholders floatPercentage revenue employees cash debt profit isIPO weeklyVolume monthlyVolume volumeHistory performance ipoPrice capitalRaised sharesBoughtBack fundamentalValue offices lastShareIssuanceTick lastBuybackTick lastSplitTick',
       )
       .lean();
 

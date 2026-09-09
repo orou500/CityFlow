@@ -127,8 +127,12 @@ export async function processPublicCompanies(tickNumber) {
 
       let dividendPerShare = 0;
       let actualDividendDistributed = 0;
-      if (profit > 0 && sharesOutstanding > 0) {
-        const totalDividendPool = Math.floor(profit * DIVIDEND_SHARE_RATIO);
+      // Quarterly cadence (1 tick = 1 month; every 3 ticks = quarter). The
+      // pool covers a full quarter of profit (profit × 3) so the annual
+      // distribution magnitude is preserved.
+      const quarterTick = tickNumber % 3 === 0;
+      if (quarterTick && stockCompany.lastDividendTick !== tickNumber && profit > 0 && sharesOutstanding > 0) {
+        const totalDividendPool = Math.floor(profit * 3 * DIVIDEND_SHARE_RATIO);
         const perShare = Math.round((totalDividendPool / sharesOutstanding) * 100) / 100;
 
         if (perShare > 0) {
@@ -262,16 +266,22 @@ export async function processPublicCompanies(tickNumber) {
         low52Week,
         revenue: Math.round(Math.max(revenue * 12, 10000)),
         employees: reCompany.members.length * 10,
-        dividendPerShare,
+        // Persist the last PAID per-share dividend on non-dividend ticks —
+        // the field always reflects the company's latest distribution.
+        dividendPerShare: dividendPerShare > 0 ? dividendPerShare : stockCompany.lastDividendPerShare || 0,
         dividendYield:
           newPrice > 0 && dividendPerShare > 0
             ? Math.round(((dividendPerShare * DIVIDEND_YIELD_ANNUALIZED_TICKS) / newPrice) * 10000) / 100
-            : 0,
+            : (stockCompany.lastDividendPerShare || 0) > 0 && newPrice > 0
+              ? Math.round(((stockCompany.lastDividendPerShare * DIVIDEND_YIELD_ANNUALIZED_TICKS) / newPrice) * 10000) /
+                100
+              : stockCompany.dividendYield || 0,
         totalDividendsPaid:
           dividendPerShare > 0
             ? stockCompany.totalDividendsPaid + actualDividendDistributed
             : stockCompany.totalDividendsPaid,
         lastDividendTick: dividendPerShare > 0 ? tickNumber : stockCompany.lastDividendTick,
+        lastDividendPerShare: dividendPerShare > 0 ? dividendPerShare : stockCompany.lastDividendPerShare || 0,
         activeShareholders: currentShareholders,
         floatPercentage:
           sharesOutstanding > 0

@@ -96,7 +96,7 @@ describe('Public Company Processing', () => {
     expect(updated.dayChange).not.toBe(0);
   });
 
-  it('pays dividends when profitable', async () => {
+  it('pays dividends when profitable (quarterly cadence)', async () => {
     const { reCompany, stockCompany, ticker } = await createTestPublicCompany();
     reCompany.stats.totalRentalIncome = 10_000_000;
     await reCompany.save();
@@ -108,7 +108,11 @@ describe('Public Company Processing', () => {
     });
     await StockHolding.create({ userId: user._id, companyId: stockCompany._id, shares: 1000, avgBuyPrice: 50 });
 
-    const results = await processPublicCompanies(100);
+    // Dividends are quarterly (every 3 ticks) — tick 102 is a quarter tick.
+    const noDividend = await processPublicCompanies(101);
+    expect(noDividend.find((r) => r.ticker === ticker).dividendPerShare).toBe(0);
+
+    const results = await processPublicCompanies(102);
 
     const divResult = results.find((r) => r.ticker === ticker);
     expect(divResult.dividendPerShare).toBeGreaterThan(0);
@@ -118,7 +122,7 @@ describe('Public Company Processing', () => {
 
     const updatedStock = await Company.findById(stockCompany._id);
     expect(updatedStock.dividendPerShare).toBeGreaterThan(0);
-    expect(updatedStock.lastDividendTick).toBe(100);
+    expect(updatedStock.lastDividendTick).toBe(102);
   });
 
   it('skips dividends when profit is zero', async () => {
@@ -127,7 +131,7 @@ describe('Public Company Processing', () => {
     reCompany.treasury.balance = 0;
     await reCompany.save();
 
-    const results = await processPublicCompanies(100);
+    const results = await processPublicCompanies(102);
 
     const divResult = results.find((r) => r.ticker === ticker);
     expect(divResult.dividendPerShare).toBe(0);

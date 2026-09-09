@@ -192,6 +192,60 @@ export const STOCK_MARKET_CONFIG = {
 };
 
 /**
+ * Server-authoritative corporate actions — share issuance (capital raise with
+ * real dilution), share buybacks, and stock splits / reverse splits.
+ *
+ * Everything here is engine-driven and deterministic from company state; the
+ * client can never trigger or parameterize these actions.
+ */
+export const CORPORATE_ACTIONS = {
+  // Capital raise (new share issuance). Companies raise capital when their
+  // cash buffer is thin; the proceeds enter the treasury, shares outstanding
+  // grow, and every existing holder is diluted proportionally.
+  issuance: {
+    enabled: true,
+    cooldownTicks: 12,
+    issueSizePctOfOutstanding: 0.15,
+    issuePriceDiscount: 0.9,
+    // Never let cumulative raises inflate the share count beyond 50% of the
+    // original float — a hard guard against dilution spirals.
+    maxCumulativeIssuancePctOfInitial: 0.5,
+    // Raise when cash has fallen below this multiple of monthly revenue.
+    minCashToRevenueRatio: 0.3,
+  },
+  // Share buyback. Companies repurchase their own stock when flush with cash
+  // and reasonably profitable, reducing the share count and concentrating
+  // ownership without the holder doing anything.
+  buyback: {
+    enabled: true,
+    cooldownTicks: 12,
+    buybackPctOfOutstanding: 0.05,
+    pricePremium: 1.02,
+    // Require cash >= this multiple of revenue AND keep cash >= this multiple
+    // after the buyback so the company never starves itself.
+    minCashToRevenueRatio: 0.5,
+    minCashToRevenueAfterRatio: 0.3,
+  },
+  // Stock splits. Forward split (2:1) when the price grows very high; reverse
+  // split (1:10) when the price collapses. Splits adjust the share count and
+  // price together so no holder gains or loses economic value, and historical
+  // returns are rebased so splits never create fake gains/losses.
+  splits: {
+    enabled: true,
+    cooldownTicks: 24,
+    forwardPriceThreshold: 200,
+    forwardRatio: 2,
+    reversePriceThreshold: 1.0,
+    reverseRatio: 0.1,
+  },
+  // Quarterly cadence for dividends (1 tick = 1 month).
+  quarterly: {
+    periodTicks: 3,
+    quarterProfitMultiplier: 3,
+  },
+};
+
+/**
  * Dividend policy for non-IPO (auto-generated) companies.
  *
  * Dividends are never created out of thin air: every payout is deducted
@@ -206,8 +260,9 @@ export const DIVIDEND_CONFIG = {
   // Probability per eligible tick
   regularChancePerTick: 0.03,
   exceptionalChancePerTick: 0.01,
-  // Minimum ticks between two dividend payments for the same company
-  minIntervalTicks: 20,
+  // Minimum ticks between two dividend payments for the same company.
+  // 3 ticks = 1 quarter = the dividend cadence.
+  minIntervalTicks: 3,
   // Profit = revenue * margin (margin scales with company size)
   profitMarginBySize: {
     startup: 0.04,
