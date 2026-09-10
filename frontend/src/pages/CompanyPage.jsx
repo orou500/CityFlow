@@ -41,6 +41,7 @@ export default function CompanyPage() {
   const [trading, setTrading] = useState(false);
   const [tab, setTab] = useState('overview');
   const [chartRange, setChartRange] = useState('all');
+  const [showInfo, setShowInfo] = useState(false);
 
   useEffect(() => {
     loadCompany();
@@ -135,7 +136,6 @@ export default function CompanyPage() {
 
   const officeCount = company.offices?.length || 0;
   const cityCount = new Set((company.offices || []).map((o) => o.cityId?.toString?.() || o.cityId)).size;
-  const [showInfo, setShowInfo] = useState(false);
 
   const growth = (() => {
     const perf = company.performance || [];
