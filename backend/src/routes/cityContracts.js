@@ -293,7 +293,11 @@ router.post('/:id/contracts/:contractId/vote', authenticate, async (req, res) =>
         throw contractErr;
       }
       cancelDelayedJob(`vote:contract:${contract._id}`);
-      scheduleContractCompletion(contract._id, company._id, contract.durationTicks, gameState.tickNumber);
+      if (contract.completionRule !== 'deliverable') {
+        // Deliverable contracts are completed by the tick engine when the
+        // building exists; a delayed job must never finish them early.
+        scheduleContractCompletion(contract._id, company._id, contract.durationTicks, gameState.tickNumber);
+      }
       await onContractStarted(company._id);
 
       await CompanyAuditLog.create({

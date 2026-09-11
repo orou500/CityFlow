@@ -3,7 +3,8 @@ import { isRedisConnected } from '../config/redis.js';
 import RealEstateCompany from '../models/RealEstateCompany.js';
 import CityContract from '../models/CityContract.js';
 import CompanyInvestment from '../models/CompanyInvestment.js';
-import { addTreasuryTransaction, grantCompanyXP } from '../engine/companyProcessing.js';
+import { addTreasuryTransaction } from '../engine/companyProcessing.js';
+import { finalizeContractCompletion } from '../engine/cityContracts.js';
 import { getGameState } from '../models/GameState.js';
 import { emitToCompany } from '../socket/index.js';
 import { SOCKET_EVENTS } from '../socket/events.js';
@@ -224,52 +225,17 @@ async function handleContractCompletion(data) {
   const contract = await CityContract.findById(contractId);
   if (!contract || contract.status !== 'active') return;
 
+  // Deliverable contracts are evaluated by the tick engine only — no delayed
+  // "complete" job is scheduled for them, and a stale one must never finish
+  // them before the building exists.
+  if (contract.completionRule === 'deliverable') return;
+
   const company = await RealEstateCompany.findById(companyId);
   if (!company || !company.active) return;
 
   const gameState = await getGameState();
-  const currentTick = gameState.tickNumber;
-
-  contract.status = 'completed';
-  contract.progress = 100;
+  await finalizeContractCompletion(company, contract, gameState.tickNumber);
   await contract.save();
-
-  company.treasury.balance += contract.reward;
-  addTreasuryTransaction(
-    company,
-    {
-      type: 'contract_reward',
-      amount: contract.reward,
-      description: `Contract completed: ${contract.name}`,
-    },
-    currentTick,
-  );
-  await grantCompanyXP(company, 'contract_completion', currentTick, contract.reward);
-  company.reputation = Math.min(100, (company.reputation || 0) + 5);
-  await company.save();
-
-  for (const member of company.members) {
-    await enqueueNotification({
-      userId: member.userId,
-      type: 'system',
-      title: 'City Contract Completed',
-      message: `"${company.name}" completed contract: ${contract.name}. Reward: $${contract.reward.toLocaleString()}`,
-      eventKey: `company:${company._id}:contract:${contractId}:completed:${member.userId}`,
-      route: `/real-estate-companies/${company._id}`,
-      tab: 'contracts',
-      entityType: 'company',
-      entityId: company._id,
-      relatedId: company._id,
-      global: false,
-    });
-  }
-
-  emitToCompany(companyId, SOCKET_EVENTS.CONTRACT_COMPLETED, {
-    contractId,
-    companyId,
-    name: contract.name,
-    reward: contract.reward,
-  });
 }
 
 async function handleInvestmentMaturity(data) {

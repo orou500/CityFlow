@@ -6,6 +6,7 @@ import RealEstateCompany from '../../models/RealEstateCompany.js';
 import CityContract from '../../models/CityContract.js';
 import GameState from '../../models/GameState.js';
 import Notification from '../../models/Notification.js';
+import { getContractDeliverable } from '../../config/cityContracts.js';
 
 const app = createApp();
 
@@ -153,5 +154,64 @@ describe('City Contracts — treasury budget reservation', () => {
     expect(submitted).toBeTruthy();
     expect(submitted.subTab).toBe('proposed');
     expect(submitted.contractId.toString()).toBe(contract._id.toString());
+  });
+});
+
+describe('City Contracts — deliverable-gated serialization & approval', () => {
+  beforeEach(async () => {
+    await GameState.findOneAndUpdate({}, { tickNumber: 100, $setOnInsert: { season: 1 } }, { upsert: true, new: true });
+  });
+
+  it('approved deliverable contract stays active with completionRule + deliverable exposed in the contracts list', async () => {
+    const founder = await createFounder();
+    const memberData = await createFounder({ username: 'member_del', email: 'memberdel@test.com' });
+    const { company, token, city } = await createTestCompany(founder);
+    await addMemberToCompany(company._id, token, memberData);
+
+    const contract = await CityContract.create({
+      companyId: company._id,
+      cityId: city._id,
+      contractType: 'affordable_housing',
+      name: 'Affordable Housing Deliverable',
+      cost: 500_000,
+      reward: 750_000,
+      durationTicks: 10,
+      requiredLevel: 1,
+      requiredTreasury: 0,
+      status: 'available',
+      completionRule: 'deliverable',
+      deliverable: getContractDeliverable('affordable_housing'),
+    });
+
+    company.treasury.balance = 10_000_000;
+    await company.save();
+
+    const proposeRes = await request(app)
+      .post(`/city-contracts/${company._id}/contracts/${contract._id}/propose`)
+      .set(authHeader(token))
+      .send({});
+    expect(proposeRes.status).toBe(200);
+
+    const voteRes = await request(app)
+      .post(`/city-contracts/${company._id}/contracts/${contract._id}/vote`)
+      .set(authHeader(memberData.token))
+      .send({ vote: 'yes' });
+    expect(voteRes.status).toBe(200);
+
+    const contractAfter = await CityContract.findById(contract._id);
+    expect(contractAfter.status).toBe('active');
+    expect(contractAfter.completionRule).toBe('deliverable');
+    expect(contractAfter.startTick).toBe(100);
+    expect(contractAfter.endTick).toBe(110);
+
+    const listRes = await request(app).get(`/city-contracts/${company._id}/contracts`).set(authHeader(token));
+    expect(listRes.status).toBe(200);
+    const listed = listRes.body.find((c) => c._id.toString() === contract._id.toString());
+    expect(listed).toBeTruthy();
+    expect(listed.completionRule).toBe('deliverable');
+    expect(listed.deliverable.buildingTypes).toContain('housing_complex');
+    expect(listed.deliverable.minUnits).toBe(200);
+    expect(listed.deliverable.fulfilled).toBe(false);
+    expect(listed.currentTick).toBe(100);
   });
 });

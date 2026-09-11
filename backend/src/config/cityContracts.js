@@ -1,4 +1,5 @@
 import { calculateXPReward } from './companyProgression.js';
+import { getAllProjects } from './developmentProjects.js';
 
 export const CONTRACT_TIERS = [
   {
@@ -284,7 +285,9 @@ export function generateContractForCity(company, city, tickNumber, _options = {}
   const name = `${city.name} ${template.name}`;
   const description = `${template.description} ${city.name} is currently experiencing ${city.economicCondition} economic conditions.`;
 
-  return {
+  const deliverable = getContractDeliverable(template.type);
+
+  const contract = {
     companyId: company._id,
     cityId: city._id,
     contractType: template.type,
@@ -304,6 +307,15 @@ export function generateContractForCity(company, city, tickNumber, _options = {}
     generatedTick: tickNumber,
     expiresAtTick: tickNumber + 48,
   };
+
+  if (deliverable) {
+    contract.completionRule = 'deliverable';
+    contract.deliverable = deliverable;
+  } else {
+    contract.completionRule = 'timed';
+  }
+
+  return contract;
 }
 
 export function generateContractTypeFromDemand(city, companyLevel) {
@@ -331,6 +343,66 @@ export function generateContractTypeFromDemand(city, companyLevel) {
 
 export function calculateContractXPReward(cost, xpReward) {
   return Math.round(xpReward + calculateXPReward('contract_completed', cost));
+}
+
+// Deliverable-gated contracts: a contract completes (early, or at the deadline)
+// only once the company owns the described building in the target city, and
+// FAILS if the deadline passes without it. Types without an entry stay
+// time-based (`timed`) for backward compatibility. The buildingTypes/units
+// mirror the CONTRACT_BUILDING_CONSTRUCTION comments below (same pairing used
+// to size the achievable deadline), and building names are derived from
+// DEVELOPMENT_PROJECTS so the requirement always shows a real structure.
+const BUILDING_BY_ID = new Map(getAllProjects().map((p) => [p.id, p]));
+const buildingLabels = (ids) =>
+  ids
+    .map((id) => BUILDING_BY_ID.get(id)?.name)
+    .filter(Boolean)
+    .join(' / ');
+
+export const CONTRACT_DELIVERABLES = {
+  small_housing: { buildingTypes: ['apartment_building'], minUnits: 50 },
+  affordable_housing: { buildingTypes: ['housing_complex'], minUnits: 200 },
+  small_office: { buildingTypes: ['retail_complex'], minUnits: 15 },
+  apartment_complex: { buildingTypes: ['luxury_apartments'], minUnits: 100 },
+  shopping_center: { buildingTypes: ['shopping_center'], minUnits: 50 },
+  hotel: { buildingTypes: ['hotel'], minUnits: 150 },
+  office_district: { buildingTypes: ['office_building'], minUnits: 30 },
+  office_tower: { buildingTypes: ['office_building'], minUnits: 30 },
+  mixed_use: {
+    buildingTypes: [
+      'apartment_building',
+      'luxury_apartments',
+      'housing_complex',
+      'office_building',
+      'shopping_center',
+      'hotel',
+    ],
+    minUnits: 50,
+  },
+  district: {
+    buildingTypes: [
+      'apartment_building',
+      'luxury_apartments',
+      'housing_complex',
+      'office_building',
+      'shopping_center',
+      'retail_complex',
+      'hotel',
+      'resort',
+    ],
+    minUnits: 30,
+  },
+};
+
+export function getContractDeliverable(contractType) {
+  const spec = CONTRACT_DELIVERABLES[contractType];
+  if (!spec) return null;
+  return {
+    label: buildingLabels(spec.buildingTypes),
+    buildingTypes: [...spec.buildingTypes],
+    minUnits: spec.minUnits,
+    fulfilled: false,
+  };
 }
 
 // Map contract types to the construction period (ticks) of the most relevant building type.

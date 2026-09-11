@@ -26,4 +26,12 @@ describe('tick.js phase ordering (rent-growth correctness)', () => {
     expect(accrualIdx).toBeGreaterThan(-1);
     expect(growthIdx).toBeLessThan(accrualIdx);
   });
+
+  it('runs construction BEFORE city contracts so a building finished this tick satisfies its contract', () => {
+    const constructionIdx = tickSource.indexOf('processConstruction(');
+    const contractIdx = tickSource.indexOf('processCityContracts(');
+    expect(constructionIdx).toBeGreaterThan(-1);
+    expect(contractIdx).toBeGreaterThan(-1);
+    expect(constructionIdx).toBeLessThan(contractIdx);
+  });
 });

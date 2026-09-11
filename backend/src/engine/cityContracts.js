@@ -1,14 +1,18 @@
 import RealEstateCompany from '../models/RealEstateCompany.js';
 import CityContract from '../models/CityContract.js';
 import City from '../models/City.js';
+import Property from '../models/Property.js';
 import { enqueueNotification } from '../utils/notificationQueue.js';
 import CompanyAuditLog from '../models/CompanyAuditLog.js';
 import { getCompanyLevelBenefits, addTreasuryTransaction, grantCompanyXP } from './companyProcessing.js';
 import { cancelDelayedJob } from '../utils/delayedJobs.js';
 import { triggerMissionProgressForMany } from '../utils/missionTrigger.js';
+import { emitToCompany } from '../socket/index.js';
+import { SOCKET_EVENTS } from '../socket/events.js';
 import {
   generateContractForCity,
   getContractTypesForLevel,
+  getContractDeliverable,
   CONTRACT_PROPOSAL_EXPIRE_TICKS,
   VOTE_THRESHOLD,
 } from '../config/cityContracts.js';
@@ -97,41 +101,45 @@ export async function processCityContracts(tickNumber) {
     contract.progress = progress;
     contract.budgetSpent = budgetSpent;
 
-    if (tickNumber >= contract.endTick || contract.progress >= 100) {
-      contract.status = 'completed';
-      contract.completedAt = new Date();
-      contract.progress = 100;
-      contract.budgetSpent = contract.totalBudget;
+    const isDeliverable = contract.completionRule === 'deliverable';
+    let delivered = false;
 
-      company.treasury.balance += contract.reward;
-      addTreasuryTransaction(
-        company,
-        {
-          type: 'contract_reward',
-          amount: contract.reward,
-          description: `Contract completed: ${contract.name} in ${cityName(contract)} — Profit: $${contract.expectedProfit.toLocaleString()}`,
-        },
-        tickNumber,
-      );
+    if (isDeliverable) {
+      const evaluation = await evaluateContractDeliverable(contract, company);
+      const spec = evaluation.spec;
+      contract.deliverable = spec
+        ? {
+            label: spec.label || '',
+            buildingTypes: spec.buildingTypes || [],
+            minUnits: spec.minUnits || 0,
+            fulfilled: evaluation.fulfilled,
+          }
+        : null;
+      delivered = evaluation.fulfilled;
+    }
 
-      company.reputation += contract.reputationReward;
-      await grantCompanyXP(company, 'contract_completed', tickNumber, contract.xpReward);
-      company.stats.contractsCompleted = (company.stats.contractsCompleted || 0) + 1;
+    if (delivered || (!isDeliverable && (tickNumber >= contract.endTick || contract.progress >= 100))) {
+      await finalizeContractCompletion(company, contract, tickNumber);
+      results.push({ companyId: company._id, contractId: contract._id, status: 'completed' });
+      await contract.save();
+      continue;
+    }
 
-      await company.save();
+    if (isDeliverable && tickNumber >= contract.endTick) {
+      // The deliverable never arrived before the deadline — the contract fails.
+      contract.status = 'failed';
+      contract.failedReason = 'Deliverable not delivered by the deadline';
+      cancelDelayedJob(`contract:${contract._id}`);
 
       await CompanyAuditLog.create({
         companyId: company._id,
-        action: 'contract_completed',
+        action: 'contract_failed',
         details: {
           contractId: contract._id,
           name: contract.name,
           cityId: contract.cityId,
           cost: contract.cost,
-          reward: contract.reward,
-          profit: contract.expectedProfit,
-          xpReward: contract.xpReward,
-          reputationReward: contract.reputationReward,
+          reason: 'deliverable_not_met',
         },
         tick: tickNumber,
       });
@@ -141,9 +149,9 @@ export async function processCityContracts(tickNumber) {
         await enqueueNotification({
           userId,
           type: 'system',
-          title: 'City Contract Completed',
-          message: `"${company.name}" completed contract: ${contract.name}. Reward: $${contract.reward.toLocaleString()}`,
-          eventKey: `company:${company._id}:contract:${contract._id}:completed:${userId}`,
+          title: 'City Contract Failed',
+          message: `"${company.name}" failed contract: ${contract.name}. The required deliverable was not completed before the deadline.`,
+          eventKey: `company:${company._id}:contract:${contract._id}:failed:${userId}`,
           route: `/real-estate-companies/${company._id}`,
           tab: 'contracts',
           subTab: 'history',
@@ -155,15 +163,116 @@ export async function processCityContracts(tickNumber) {
         });
       }
 
-      triggerMissionProgressForMany(memberUserIds, 'contract_complete');
-
-      results.push({ companyId: company._id, contractId: contract._id, status: 'completed' });
+      await contract.save();
+      continue;
     }
 
     await contract.save();
   }
 
   return results;
+}
+
+/**
+ * Check whether the company currently owns an eligible building for a
+ * deliverable contract. A matching property must be company-owned, located in
+ * the target city, use one of the required building types, and contain at
+ * least the required number of units.
+ */
+async function evaluateContractDeliverable(contract, company) {
+  const spec = contract.deliverable || getContractDeliverable(contract.contractType);
+  if (!spec || !Array.isArray(spec.buildingTypes) || spec.buildingTypes.length === 0) {
+    return { fulfilled: false, spec: null };
+  }
+
+  const properties = await Property.find({
+    companyId: company._id,
+    cityId: contract.cityId,
+    buildingType: { $in: spec.buildingTypes },
+  });
+
+  const fulfilled = properties.some((p) => {
+    const units = Array.isArray(p.units) ? p.units.length : typeof p.units === 'number' ? p.units : 0;
+    return units >= (spec.minUnits || 0);
+  });
+
+  return { fulfilled, spec };
+}
+
+/**
+ * Single authoritative completion path shared by the tick engine and the
+ * delayed "contract:complete" job so both produce identical rewards, XP,
+ * reputation, treasury transactions, audit logs, notifications and socket
+ * events (previously the two paths diverged: the job skipped completedAt and
+ * the audit log, granted X from the reward amount with a wrong action name,
+ * and used a different reputation delta).
+ */
+export async function finalizeContractCompletion(company, contract, tickNumber) {
+  contract.status = 'completed';
+  contract.completedAt = new Date();
+  contract.progress = 100;
+  contract.budgetSpent = contract.totalBudget;
+
+  company.treasury.balance += contract.reward;
+  addTreasuryTransaction(
+    company,
+    {
+      type: 'contract_reward',
+      amount: contract.reward,
+      description: `Contract completed: ${contract.name}${cityLabel(contract)} — Profit: $${contract.expectedProfit.toLocaleString()}`,
+    },
+    tickNumber,
+  );
+
+  company.reputation += contract.reputationReward;
+  await grantCompanyXP(company, 'contract_completed', tickNumber, contract.xpReward);
+  company.stats.contractsCompleted = (company.stats.contractsCompleted || 0) + 1;
+
+  await company.save();
+
+  await CompanyAuditLog.create({
+    companyId: company._id,
+    action: 'contract_completed',
+    details: {
+      contractId: contract._id,
+      name: contract.name,
+      cityId: contract.cityId,
+      cost: contract.cost,
+      reward: contract.reward,
+      profit: contract.expectedProfit,
+      xpReward: contract.xpReward,
+      reputationReward: contract.reputationReward,
+    },
+    tick: tickNumber,
+  });
+
+  const memberUserIds = company.members.map((m) => m.userId);
+  for (const userId of memberUserIds) {
+    await enqueueNotification({
+      userId,
+      type: 'system',
+      title: 'City Contract Completed',
+      message: `"${company.name}" completed contract: ${contract.name}. Reward: $${contract.reward.toLocaleString()}`,
+      eventKey: `company:${company._id}:contract:${contract._id}:completed:${userId}`,
+      route: `/real-estate-companies/${company._id}`,
+      tab: 'contracts',
+      subTab: 'history',
+      contractId: contract._id,
+      entityType: 'company',
+      entityId: company._id,
+      relatedId: company._id,
+      global: false,
+    });
+  }
+
+  triggerMissionProgressForMany(memberUserIds, 'contract_complete');
+
+  emitToCompany(company._id, SOCKET_EVENTS.CONTRACT_COMPLETED, {
+    contractId: contract._id,
+    companyId: company._id,
+    name: contract.name,
+    reward: contract.reward,
+  });
 }
 
 export async function processContractProposals(tickNumber) {
@@ -361,8 +470,12 @@ async function approveContract(contract, company, tickNumber) {
   contract.startTick = tickNumber;
   contract.endTick = tickNumber + contract.durationTicks;
   cancelDelayedJob(`vote:contract:${contract._id}`);
-  const { scheduleContractCompletion } = await import('../utils/delayedJobs.js');
-  scheduleContractCompletion(contract._id, company._id, contract.durationTicks, tickNumber);
+  if (contract.completionRule !== 'deliverable') {
+    // Deliverable contracts are evaluated by the tick engine only; a delayed
+    // "complete" job must never finish them before the deliverable exists.
+    const { scheduleContractCompletion } = await import('../utils/delayedJobs.js');
+    scheduleContractCompletion(contract._id, company._id, contract.durationTicks, tickNumber);
+  }
   contract.progress = 0;
   contract.budgetSpent = 0;
   contract.acceptedAt = new Date();
@@ -373,7 +486,7 @@ async function approveContract(contract, company, tickNumber) {
     {
       type: 'contract_reward',
       amount: contract.cost,
-      description: `Contract budget reserved: ${contract.name} in ${cityName(contract)}`,
+      description: `Contract budget reserved: ${contract.name}${cityLabel(contract)}`,
     },
     tickNumber,
   );
@@ -415,8 +528,8 @@ async function approveContract(contract, company, tickNumber) {
   }
 }
 
-function cityName(contract) {
-  return contract.cityId?.name || 'Unknown City';
+function cityLabel(contract) {
+  return contract.cityId?.name ? ` in ${contract.cityId.name}` : '';
 }
 
 export { getContractTypesForLevel };

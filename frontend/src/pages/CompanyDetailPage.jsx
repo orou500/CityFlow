@@ -3127,6 +3127,11 @@ function ContractAvailableList({
                     {formatMoney(contract.cost)} · {t('companies.duration')}: {contract.durationTicks}{' '}
                     {t('companies.months')}
                   </div>
+                  {contract.completionRule === 'deliverable' && contract.deliverable?.label && (
+                    <div className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
+                      {t('companies.requiresDeliverable')}: {contract.deliverable.label}
+                    </div>
+                  )}
                   {contract.requiredLevel > 1 && (
                     <div className="text-xs text-orange-600 dark:text-orange-400 mt-0.5">
                       {t('companies.requiredLevel')}: {contract.requiredLevel}
@@ -3319,6 +3324,20 @@ function ContractActiveList({ contracts, t, highlightId }) {
                 {formatMoney(contract.cost)} · {t('companies.completionIn')}:{' '}
                 {Math.max(0, (contract.endTick || 0) - (contract.currentTick || 0))} {t('companies.months')}
               </div>
+              {contract.completionRule === 'deliverable' && (
+                <div
+                  className={`text-xs mb-2 ${
+                    contract.deliverable?.fulfilled
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-orange-600 dark:text-orange-400'
+                  }`}
+                >
+                  {t('companies.requiresDeliverable')}: {contract.deliverable?.label || ''} ·{' '}
+                  {contract.deliverable?.fulfilled
+                    ? t('companies.deliverableMet')
+                    : t('companies.deliverableNotMet')}
+                </div>
+              )}
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                 <div className="bg-yellow-500 h-2 rounded-full transition-all" style={{ width: `${progress}%` }} />
               </div>

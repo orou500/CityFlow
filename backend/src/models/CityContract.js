@@ -26,6 +26,16 @@ const proposalSchema = new mongoose.Schema(
   { _id: true },
 );
 
+const deliverableSchema = new mongoose.Schema(
+  {
+    label: { type: String, default: '' },
+    buildingTypes: { type: [String], default: [] },
+    minUnits: { type: Number, default: 0 },
+    fulfilled: { type: Boolean, default: false },
+  },
+  { _id: false },
+);
+
 const cityContractSchema = new mongoose.Schema(
   {
     companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'RealEstateCompany', required: true },
@@ -65,6 +75,8 @@ const cityContractSchema = new mongoose.Schema(
     durationTicks: { type: Number, required: true },
     startTick: { type: Number, default: 0 },
     endTick: { type: Number, default: 0 },
+    completionRule: { type: String, enum: ['timed', 'deliverable'], default: 'timed' },
+    deliverable: { type: deliverableSchema, default: null },
     progress: { type: Number, default: 0 },
     budgetSpent: { type: Number, default: 0 },
     totalBudget: { type: Number, default: 0 },

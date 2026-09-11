@@ -54,6 +54,7 @@ const companyAuditLogSchema = new mongoose.Schema(
         'contract_approved',
         'contract_rejected',
         'contract_completed',
+        'contract_failed',
         'development_requested',
         'development_vote_cast',
         'development_executed',
