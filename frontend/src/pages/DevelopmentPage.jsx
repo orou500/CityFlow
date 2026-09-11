@@ -903,11 +903,13 @@ export default function DevelopmentPage() {
                         improvementStatus.currentPeriod != null && (
                           <span className="ms-1 text-yellow-500 dark:text-yellow-500 font-normal">
                             (
-                            {Math.max(
-                              0,
-                              improvementStatus.activeImprovement.completionPeriod - improvementStatus.currentPeriod,
-                            )}{' '}
-                            {t('development.periodsRemaining') || 'months left'})
+                            {t('companyDevelopment.monthsLeft', {
+                              count: Math.max(
+                                0,
+                                improvementStatus.activeImprovement.completionPeriod - improvementStatus.currentPeriod,
+                              ),
+                            })}
+                            )
                           </span>
                         )}
                     </p>

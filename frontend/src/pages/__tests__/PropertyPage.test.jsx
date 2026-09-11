@@ -27,21 +27,60 @@ vi.mock('../../store/useGameStore', () => ({
   useGameStore: () => gameState,
 }));
 
+const companyState = vi.hoisted(() => ({
+  fetchDevelopmentRequests: vi.fn().mockResolvedValue([]),
+}));
+
 vi.mock('../../store/useCompanyStore', () => ({
   useCompanyStore: () => ({
     myCompanies: [],
     fetchMyCompanies: vi.fn().mockResolvedValue([]),
     createPropertyPurchaseRequest: vi.fn(),
     createDevelopmentRequest: vi.fn(),
-    fetchDevelopmentRequests: vi.fn().mockResolvedValue([]),
+    fetchDevelopmentRequests: companyState.fetchDevelopmentRequests,
     voteDevelopmentRequest: vi.fn(),
   }),
 }));
 
 const i18nState = vi.hoisted(() => ({ language: 'en' }));
 
+const translations = vi.hoisted(() => ({
+  en: {
+    'companyDevelopment.pendingProposals': 'Development Proposals',
+    'companyDevelopment.constructionProgress': 'Construction Progress',
+    'companyDevelopment.monthsLeft_one': '{{count}} month left',
+    'companyDevelopment.monthsLeft_two': '{{count}} months left',
+    'companyDevelopment.monthsLeft_other': '{{count}} months left',
+    'companyDevelopment.underConstruction': 'Under Construction',
+    'companyDevelopment.completed': 'Completed',
+    'construction.finalMonth': 'Final Month — Preparing for Occupancy',
+  },
+  he: {
+    'companyDevelopment.pendingProposals': 'הצעות פיתוח',
+    'companyDevelopment.constructionProgress': 'התקדמות בנייה',
+    'companyDevelopment.monthsLeft_one': 'נותר חודש אחד',
+    'companyDevelopment.monthsLeft_two': 'נותרו חודשיים',
+    'companyDevelopment.monthsLeft_other': 'נותרו {{count}} חודשים',
+    'companyDevelopment.underConstruction': 'בבנייה',
+    'companyDevelopment.completed': 'הושלם',
+    'construction.finalMonth': 'החודש האחרון — הכנה לאכלוס',
+  },
+}));
+
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key) => key, i18n: i18nState }),
+  useTranslation: () => ({
+    t: (key, opts = {}) => {
+      const lang = i18nState.language || 'en';
+      if (opts && opts.count != null) {
+        const suffix = opts.count === 1 ? 'one' : opts.count === 2 ? 'two' : 'other';
+        const plural = translations[lang][`${key}_${suffix}`];
+        if (plural != null) return plural.replace(/{{count}}/g, String(opts.count));
+      }
+      const val = translations[lang][key];
+      return val != null ? val : key;
+    },
+    i18n: i18nState,
+  }),
 }));
 
 vi.mock('../../utils/capacitor', () => ({
@@ -410,5 +449,141 @@ describe('PropertyPage — authoritative rent maximum (GET == POST)', () => {
     );
 
     expect(await screen.findAllByText('100%').then((els) => els.length)).toBeGreaterThan(0);
+  });
+});
+
+describe('PropertyPage — construction progress section (development.left regression)', () => {
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+    i18nState.language = 'en';
+    gameState.fetchSentOffers.mockResolvedValue([]);
+    authState.user = { _id: 'owner1', username: 'owner', balance: 1000000 };
+  });
+
+  function makeDevReq(overrides = {}) {
+    return {
+      _id: 'dr1',
+      status: 'executed',
+      actionType: 'construction',
+      actionData: { projectType: 'apartment_building' },
+      requestedBy: { _id: 'owner1', username: 'owner' },
+      votes: [],
+      estimatedCost: 500000,
+      estimatedValueIncrease: 100000,
+      propertyId: { _id: PROPERTY_ID },
+      constructionProjectId: {
+        _id: 'cp1',
+        status: 'under_construction',
+        progress: 75,
+        completionPeriod: 50,
+        startPeriod: 30,
+      },
+      ...overrides,
+    };
+  }
+
+  function companyOwnedFetchMock(devRequests, { currentCycle = 46 } = {}) {
+    companyState.fetchDevelopmentRequests.mockResolvedValue(devRequests);
+    return vi.fn((url) => {
+      const u = String(url);
+      if (u.includes('/properties/p123/detail')) {
+        return jsonResponse({
+          property: makePropertyDoc({ ownerId: null, companyId: { _id: 'c1', name: 'Test Co' } }),
+        });
+      }
+      if (u.includes('/offers/property/')) return jsonResponse([]);
+      if (u.includes('/management/')) return jsonResponse({ perUnitRent: 100, rent: 5000, monthlyIncrease: 100 });
+      if (u.includes('/world/status')) return jsonResponse({ currentCycle });
+      if (u.includes('/development/improvements/status/')) return jsonResponse({});
+      return jsonResponse({});
+    });
+  }
+
+  it('English: shows "Construction Progress: 75% · 4 months left" with no literal key', async () => {
+    renderPage(companyOwnedFetchMock([makeDevReq()]));
+
+    expect(await screen.findByText(/Construction Progress: 75%/)).toBeInTheDocument();
+    expect(screen.getByText('4 months left')).toBeInTheDocument();
+    expect(screen.getByText('·')).toBeInTheDocument();
+    expect(screen.queryByText(/development\.left/)).not.toBeInTheDocument();
+
+    // The whole progress row must read as "<progress>% · <countdown>" — the `·`
+    // separator guarantees the two values are not concatenated without spacing.
+    const row = screen.getByText('·').closest('div');
+    expect(row.textContent).toMatch(/75%\s*·\s*4 months left/);
+    expect(row.textContent).not.toMatch(/75%4 months/);
+  });
+
+  it('Hebrew: renders "התקדמות בנייה: 75% · נותרו 4 חודשים" in RTL text', async () => {
+    i18nState.language = 'he';
+    renderPage(companyOwnedFetchMock([makeDevReq()]));
+
+    expect(await screen.findByText(/התקדמות בנייה: 75%/)).toBeInTheDocument();
+    expect(screen.getByText('נותרו 4 חודשים')).toBeInTheDocument();
+    expect(screen.getByText('·')).toBeInTheDocument();
+    expect(screen.queryByText(/development\.left/)).not.toBeInTheDocument();
+  });
+
+  it('progress 0% renders "Construction Progress: 0%" and a plural countdown', async () => {
+    renderPage(
+      companyOwnedFetchMock(
+        [makeDevReq({ constructionProjectId: { ...makeDevReq().constructionProjectId, progress: 0 } })],
+        {
+          currentCycle: 42,
+        },
+      ),
+    );
+
+    expect(await screen.findByText(/Construction Progress: 0%/)).toBeInTheDocument();
+    expect(screen.getByText('8 months left')).toBeInTheDocument();
+  });
+
+  it('progress 100% and remaining = 0 shows the localized Final Month message', async () => {
+    renderPage(
+      companyOwnedFetchMock(
+        [
+          makeDevReq({
+            constructionProjectId: {
+              ...makeDevReq().constructionProjectId,
+              progress: 100,
+              completionPeriod: 60,
+              currentPeriod: 60,
+              status: 'completed',
+            },
+          }),
+        ],
+        { currentCycle: 60 },
+      ),
+    );
+
+    expect(await screen.findByText(/Construction Progress: 100%/)).toBeInTheDocument();
+    expect(screen.getByText('Final Month — Preparing for Occupancy')).toBeInTheDocument();
+  });
+
+  it('a property with no development requests shows no broken translation key', async () => {
+    renderPage(companyOwnedFetchMock([]));
+
+    await waitFor(() => expect(screen.queryByText(/Construction Progress/)).not.toBeInTheDocument());
+    expect(screen.queryByText(/development\.left/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/monthsLeft/)).not.toBeInTheDocument();
+  });
+
+  it('switching language updates the countdown on the mounted page without a reload', async () => {
+    const { rerender } = renderPage(companyOwnedFetchMock([makeDevReq()]));
+
+    expect(await screen.findByText('4 months left')).toBeInTheDocument();
+
+    i18nState.language = 'he';
+    rerender(
+      <MemoryRouter initialEntries={[`/property/${PROPERTY_ID}`]}>
+        <Routes>
+          <Route path="/property/:id" element={<PropertyPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('נותרו 4 חודשים')).toBeInTheDocument();
+    expect(screen.queryByText('4 months left')).not.toBeInTheDocument();
+    expect(screen.queryByText(/development\.left/)).not.toBeInTheDocument();
   });
 });

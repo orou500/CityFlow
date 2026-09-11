@@ -1569,13 +1569,15 @@ export default function PropertyPage() {
                     {Math.round(improvementStatus.activeImprovement.progress || 0)}%
                     {improvementStatus.activeImprovement.completionPeriod &&
                       improvementStatus.currentPeriod != null && (
-                        <span className="ml-1 text-gray-400 dark:text-gray-500">
+                        <span className="ms-1 text-gray-400 dark:text-gray-500">
                           (
-                          {Math.max(
-                            0,
-                            improvementStatus.activeImprovement.completionPeriod - improvementStatus.currentPeriod,
-                          )}{' '}
-                          {t('development.periodsRemaining') || 'months left'})
+                          {t('companyDevelopment.monthsLeft', {
+                            count: Math.max(
+                              0,
+                              improvementStatus.activeImprovement.completionPeriod - improvementStatus.currentPeriod,
+                            ),
+                          })}
+                          )
                         </span>
                       )}
                   </div>
@@ -1698,18 +1700,21 @@ export default function PropertyPage() {
                       )}
                       {dr.status === 'executed' && dr.actionType === 'construction' && dr.constructionProjectId && (
                         <div className="mt-2">
-                          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+                          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-gray-500 dark:text-gray-400 mb-1">
                             <span>
                               {t('companyDevelopment.constructionProgress') || 'Construction'}:{' '}
                               {dr.constructionProjectId.progress || 0}%
                             </span>
                             {dr.constructionProjectId.completionPeriod &&
                               dr.constructionProjectId.startPeriod != null && (
-                                <span className="text-gray-400 dark:text-gray-500">
-                                  <ConstructionTimeRemaining
-                                    completionPeriod={dr.constructionProjectId.completionPeriod}
-                                    currentPeriod={currentPeriod}
-                                  />
+                                <span className="flex items-center gap-x-1.5 text-gray-400 dark:text-gray-500">
+                                  <span aria-hidden="true">·</span>
+                                  <span>
+                                    <ConstructionTimeRemaining
+                                      completionPeriod={dr.constructionProjectId.completionPeriod}
+                                      currentPeriod={currentPeriod}
+                                    />
+                                  </span>
                                 </span>
                               )}
                           </div>
