@@ -3333,9 +3333,7 @@ function ContractActiveList({ contracts, t, highlightId }) {
                   }`}
                 >
                   {t('companies.requiresDeliverable')}: {contract.deliverable?.label || ''} ·{' '}
-                  {contract.deliverable?.fulfilled
-                    ? t('companies.deliverableMet')
-                    : t('companies.deliverableNotMet')}
+                  {contract.deliverable?.fulfilled ? t('companies.deliverableMet') : t('companies.deliverableNotMet')}
                 </div>
               )}
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
