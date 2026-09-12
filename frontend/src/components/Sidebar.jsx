@@ -179,7 +179,7 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
 
       <button
         onClick={() => setMobileOpen(true)}
-        className="lg:hidden fixed top-3 start-3 z-30 p-2 rounded-md bg-card border border-border text-secondary hover:text-primary transition-colors"
+        className="lg:hidden fixed top-[calc(0.75rem+env(safe-area-inset-top,0px))] start-3 z-30 p-2 rounded-md bg-card border border-border text-secondary hover:text-primary transition-colors"
         aria-label="Open menu"
       >
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -188,7 +188,7 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
       </button>
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-card border-r border-border transition-all duration-300 ${collapsed ? 'w-16' : 'w-60'} ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-card border-r border-border transition-all duration-300 pt-[env(safe-area-inset-top,0px)] ${collapsed ? 'w-16' : 'w-60'} ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
         <div
           className={`flex items-center h-14 px-4 border-b border-border shrink-0 overflow-hidden ${collapsed ? '' : 'justify-center'}`}

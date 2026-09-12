@@ -90,13 +90,21 @@ body {
    unit so the layout (and the map) track mobile URL-bar show/hide; 100vh is the
    fallback for browsers without dvh support. MapResize re-measures the map on
    viewport changes, so the dynamic unit never leaves stale tiles. */
+/* Top safe-area: in a standalone PWA (iOS/Android with viewport-fit=cover) the
+   viewport extends under the status bar / Dynamic Island, so the app shell and
+   every fixed top-chrome element must honor env(safe-area-inset-top). The env()
+   inset is 0 in normal mobile browsers (content already starts below the system
+   chrome) and on desktop, so these rules are additive no-ops there. The inset is
+   ALSO added to min-height so short pages still pin the footer to the screen
+   bottom — padding alone would shrink the content box and float the footer up. */
 .app-shell {
-  min-height: 100vh;
+  min-height: calc(100vh + env(safe-area-inset-top, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 @supports (min-height: 100dvh) {
   .app-shell {
-    min-height: 100dvh;
+    min-height: calc(100dvh + env(safe-area-inset-top, 0px));
   }
 }
 
