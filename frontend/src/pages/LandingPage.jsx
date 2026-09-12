@@ -16,6 +16,9 @@ import {
 import { formatMoney } from '../utils/format';
 import CompactValue from '../components/CompactValue';
 import WorldResetCountdown from '../components/WorldResetCountdown';
+import PwaInstallDialog from '../components/PwaInstallDialog';
+import usePwaInstall from '../hooks/usePwaInstall';
+import { PWA_STATUS } from '../utils/pwa';
 
 function AnimatedCounter({ target, suffix = '' }) {
   const [value, setValue] = useState(0);
@@ -141,7 +144,10 @@ export default function LandingPage() {
   const [leaderboard, setLeaderboard] = useState([]);
   const [activity, setActivity] = useState([]);
   const [worldAge, setWorldAge] = useState(null);
+  const [installDialogOpen, setInstallDialogOpen] = useState(false);
+  const install = usePwaInstall();
   const isRtl = i18n.language?.toLowerCase().startsWith('he');
+  const installAvailable = install.status === PWA_STATUS.INSTALLABLE || install.status === PWA_STATUS.IOS;
 
   useEffect(() => {
     if (!loading && user) {
@@ -267,6 +273,26 @@ export default function LandingPage() {
               {t('landing.hero.learnMore')}
             </a>
           </div>
+          {installAvailable && (
+            <div className="mt-5">
+              <button
+                type="button"
+                onClick={() => setInstallDialogOpen(true)}
+                aria-haspopup="dialog"
+                className="inline-flex items-center gap-2 text-sm text-muted hover:text-secondary transition-colors underline underline-offset-4 decoration-border hover:decoration-muted"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v12m0 0l-4-4m4 4l4-4M4 19h16"
+                  />
+                </svg>
+                {t('pwa.ctaLabel')}
+              </button>
+            </div>
+          )}
         </div>
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
           <svg className="w-6 h-6 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -459,6 +485,15 @@ export default function LandingPage() {
           </Link>
         </div>
       </section>
+
+      <PwaInstallDialog
+        open={installDialogOpen}
+        status={install.status}
+        onClose={() => setInstallDialogOpen(false)}
+        onInstall={() => {
+          install.promptInstall().then(() => setInstallDialogOpen(false));
+        }}
+      />
     </div>
   );
 }

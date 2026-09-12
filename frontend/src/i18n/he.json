@@ -1476,6 +1476,20 @@
       "button": "הצטרף ל-Discord"
     }
   },
+  "pwa": {
+    "ctaLabel": "התקנת האפליקציה",
+    "appIconAlt": "סמל CityFlow",
+    "title": "התקנת CityFlow",
+    "description": "קבלו את CityFlow במהירות רבה יותר ובחלון ייעודי — אפשר להפעיל אותה ישירות ממסך הבית.",
+    "installButton": "התקנה",
+    "cancelButton": "לא עכשיו",
+    "iosTitle": "הוספת CityFlow למסך הבית",
+    "iosIntro": "אפשר להתקין את CityFlow באייפון דרך Safari:",
+    "iosStep1": "הקישו על כפתור השיתוף בסרגל הכלים של Safari.",
+    "iosStep2": "בחרו \"הוספה למסך הבית\".",
+    "iosStep3": "הקישו על \"הוספה\" (בפינה הימנית העליונה) לאישור.",
+    "gotItButton": "הבנתי"
+  },
   "profile": {
     "editProfile": "עריכת פרופיל",
     "changePassword": "שינוי סיסמה",

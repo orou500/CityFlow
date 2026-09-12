@@ -1476,6 +1476,20 @@
       "button": "Join Discord"
     }
   },
+  "pwa": {
+    "ctaLabel": "Install App",
+    "appIconAlt": "CityFlow icon",
+    "title": "Install CityFlow",
+    "description": "Get a faster, always accessible CityFlow in its own window — launch it right from your home screen.",
+    "installButton": "Install",
+    "cancelButton": "Not Now",
+    "iosTitle": "Add CityFlow to Your Home Screen",
+    "iosIntro": "You can install CityFlow on your iPhone from Safari:",
+    "iosStep1": "Tap the Share button in the Safari toolbar.",
+    "iosStep2": "Choose “Add to Home Screen”.",
+    "iosStep3": "Tap “Add” (top-right) to confirm.",
+    "gotItButton": "Got It"
+  },
   "profile": {
     "editProfile": "Edit Profile",
     "changePassword": "Change Password",

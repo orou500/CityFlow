@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
 import { isNativePlatform } from './utils/capacitor';
+import { registerServiceWorker } from './utils/pwa';
 import { setupNetworkListener } from './utils/network';
 
 if (import.meta.env.VITE_ENABLE_LICENSE_KEY) {
@@ -24,6 +25,10 @@ async function bootstrap() {
       console.warn('Network listener setup failed, continuing anyway:', err);
     }
   }
+
+  // Production + web only: the util no-ops in dev, Vitest and native builds.
+  // Required for Chrome/Edge installability and enables offline app-shell.
+  registerServiceWorker();
 
   ReactDOM.createRoot(document.getElementById('root')).render(
     <React.StrictMode>
