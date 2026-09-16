@@ -7,7 +7,8 @@ metadata:
     app.kubernetes.io/name: frontend
     app.kubernetes.io/part-of: cityflow
 spec:
-  replicas: 2
+  # Reduced 2 -> 1 to fit Zaroon on the shared 2-core k3s node.
+  replicas: 1
   strategy:
     type: RollingUpdate
     rollingUpdate:
