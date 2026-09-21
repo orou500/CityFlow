@@ -10,7 +10,20 @@ import { enqueueNotification } from '../utils/notificationQueue.js';
 import { cacheGetOrSet } from '../utils/cache.js';
 import { cacheKeys, cacheTTL } from '../utils/cacheKeys.js';
 import { onPropertyPurchased, onPropertySold, onPropertyUpgraded } from '../utils/cacheInvalidation.js';
+import { invalidateProperty, invalidateUser, onDevelopmentStarted } from '../utils/cacheInvalidation.js';
 import { processPlayerProgress } from '../utils/playerProgress.js';
+import { getTickNumber } from '../models/GameState.js';
+import Auction from '../models/Auction.js';
+import RealEstateCompany from '../models/RealEstateCompany.js';
+import { addTreasuryTransaction } from '../engine/companyProcessing.js';
+import { bulkCreateNotifications } from '../utils/notificationQueue.js';
+import {
+  calculateDemolitionCost,
+  calculateDemolitionSalvage,
+  calculateClearedLandValue,
+} from '../config/redevelopment.js';
+import { getAllProjects, calculateProjectCost } from '../config/developmentProjects.js';
+import { finalizeRedevelopmentIfDue } from '../engine/redevelopmentProcessing.js';
 import { getPropertyRiskProfile } from '../engine/propertyRisk.js';
 import { trackEvent, EVENTS } from '../utils/analytics.js';
 import { getAvailableBalance } from '../utils/auctionMoney.js';
@@ -275,6 +288,9 @@ router.post('/buy', authenticate, async (req, res) => {
             lastPurchasePrice: price,
             lastPurchaseDate: new Date(),
             activeImprovement: undefined,
+            // Buying resets the demolition/redevelopment lifecycle: a cleared
+            // plot starts fresh (normal land) for its new owner.
+            'redevelopment.status': 'none',
           },
           $push: {
             investmentHistory: {
@@ -487,6 +503,9 @@ router.post('/grade/upgrade', authenticate, async (req, res) => {
     if (!property.ownerId || property.ownerId.toString() !== req.user._id.toString()) {
       return res.status(403).json({ error: 'You do not own this property' });
     }
+    if (property.redevelopment?.status === REDEVELOPING_STATUS) {
+      return res.status(400).json({ error: 'Property is being redeveloped and cannot be upgraded' });
+    }
 
     const currentGrade = property.grade || 1;
     if (currentGrade >= MAX_GRADE) {
@@ -578,6 +597,570 @@ router.post('/grade/upgrade', authenticate, async (req, res) => {
 
     res.json({ property, balance: user.balance, grade: newGrade, upgradeCost: cost });
   } catch (err) {
+    res.serverError(err);
+  }
+});
+
+async function isAuthorizedForProperty(property, userId) {
+  if (property.ownerId && property.ownerId.toString() === userId.toString()) return true;
+  if (property.companyId) {
+    const company = await RealEstateCompany.findById(property.companyId);
+    if (company) {
+      const member = company.members.find((m) => m.userId?.toString() === userId.toString());
+      if (member && ['ceo', 'director'].includes(member.role)) return true;
+    }
+  }
+  return false;
+}
+
+async function hasLiveAuction(propertyId) {
+  return !!(await Auction.findOne({ propertyId, status: { $in: ['upcoming', 'active', 'ending'] } }).lean());
+}
+
+const REDEVELOPING_STATUS = 'redeveloping';
+
+/**
+ * Redevelopment status & quote. Also acts as the lazy completion hook: a
+ * redevelopment whose completion tick has already passed is finalized here so
+ * the player sees the finished building the moment they look at it.
+ */
+router.get('/:id/redevelopment/status', authenticate, async (req, res) => {
+  try {
+    let property = await Property.findById(req.params.id).populate('cityId');
+    if (!property) return res.status(404).json({ error: 'Property not found' });
+    if (!(await isAuthorizedForProperty(property, req.user._id))) {
+      return res.status(403).json({ error: 'You do not own this property' });
+    }
+
+    const currentTick = await getTickNumber();
+
+    if (property.redevelopment?.status === 'redeveloping') {
+      await finalizeRedevelopmentIfDue(property, currentTick);
+      if (property.redevelopment?.status === 'none') {
+        property = await Property.findById(req.params.id).populate('cityId');
+      }
+    }
+
+    const status = property.redevelopment?.status || 'none';
+
+    if (status === 'land') {
+      const allProjects = getAllProjects();
+      const options = allProjects.map((p) => {
+        const projectLoc = property.location || null;
+        return {
+          id: p.id,
+          name: p.name,
+          category: p.category,
+          propertyType: p.propertyType,
+          unitsGenerated: p.unitsGenerated,
+          constructionPeriods: p.constructionPeriods,
+          baseRentPerUnit: p.baseRentPerUnit,
+          estimatedCost: calculateProjectCost(p, property.cityId, projectLoc),
+          minLandSize: p.minLandSize,
+          eligible: !property.size || property.size >= p.minLandSize,
+        };
+      });
+      return res.json({
+        status: 'land',
+        landValue: property.currentPrice,
+        landSize: property.size,
+        clearedAtTick: property.redevelopment.demolishedAtTick,
+        options,
+      });
+    }
+
+    if (status === 'redeveloping') {
+      return res.json({
+        status: 'redeveloping',
+        projectType: property.redevelopment.projectType,
+        projectName: property.redevelopment.projectName,
+        constructionCost: property.redevelopment.constructionCost,
+        constructionPeriods: property.redevelopment.constructionPeriods,
+        startedTick: property.redevelopment.startedTick,
+        completionTick: property.redevelopment.completionTick,
+        remainingTicks: Math.max(0, property.redevelopment.completionTick - currentTick),
+      });
+    }
+
+    const demolitionCost = calculateDemolitionCost(property.currentPrice);
+    const demolitionSalvage = calculateDemolitionSalvage(property.currentPrice);
+    const eligibleForDemolition =
+      property.type !== 'land' &&
+      property.developmentLevel !== 1 &&
+      !property.forSale &&
+      !property.activeImprovement?.improvementId &&
+      !property.parentBuilding &&
+      !(await hasLiveAuction(property._id)) &&
+      !(await Property.exists({ parentBuilding: property._id }));
+
+    res.json({
+      status: 'none',
+      eligibleForDemolition,
+      demolitionCost,
+      demolitionSalvage,
+      netProceeds: demolitionSalvage - demolitionCost,
+      buildingValue: property.currentPrice,
+    });
+  } catch (err) {
+    res.serverError(err);
+  }
+});
+
+async function applyDemolitionMoney(property, user, salvage, cost) {
+  const net = salvage - cost;
+  if (property.companyId) {
+    const company = await RealEstateCompany.findById(property.companyId);
+    if (!company) {
+      const err = new Error('Company not found');
+      err.status = 404;
+      throw err;
+    }
+    if (net < 0) {
+      if (company.treasury.balance < -net) {
+        const err = new Error(`Insufficient treasury. Required: $${(-net).toLocaleString()}`);
+        err.status = 400;
+        throw err;
+      }
+      company.treasury.balance -= -net;
+      addTreasuryTransaction(
+        company,
+        { type: 'demolition', amount: -net },
+        property.redevelopment.demolishedAtTick || 0,
+      );
+    } else if (net > 0) {
+      company.treasury.balance += net;
+      addTreasuryTransaction(
+        company,
+        { type: 'demolition', amount: net },
+        property.redevelopment.demolishedAtTick || 0,
+      );
+    }
+    await company.save();
+  } else if (net < 0) {
+    const debited = await debitUserBalance(user._id, -net);
+    if (!debited) {
+      const err = new Error('Insufficient balance');
+      err.status = 400;
+      throw err;
+    }
+  } else if (net > 0) {
+    await creditUserBalance(user._id, net);
+  }
+}
+
+/**
+ * Demolish a building into a cleared plot (server-authoritative cost/salvage).
+ * Atomic claim-then-money; restores the claim if the payment fails.
+ */
+router.post('/:id/demolish', authenticate, async (req, res) => {
+  try {
+    const property = await Property.findById(req.params.id).populate('cityId');
+    if (!property) return res.status(404).json({ error: 'Property not found' });
+    if (!(await isAuthorizedForProperty(property, req.user._id))) {
+      return res.status(403).json({ error: 'You do not own this property' });
+    }
+    if (property.type === 'land') return res.status(400).json({ error: 'Only buildings can be demolished' });
+    if (property.forSale)
+      return res.status(400).json({ error: 'Property is listed for sale and cannot be demolished' });
+    if (property.developmentLevel === 1) {
+      return res.status(400).json({ error: 'Property is under construction and cannot be demolished' });
+    }
+    if (property.redevelopment?.status === REDEVELOPING_STATUS) {
+      return res.status(400).json({ error: 'Property is being redeveloped and cannot be demolished' });
+    }
+    if (property.activeImprovement?.improvementId) {
+      return res.status(400).json({ error: 'Cancel the active improvement before demolishing' });
+    }
+    if (property.parentBuilding) {
+      return res.status(400).json({ error: 'This property is part of a larger building and cannot be demolished' });
+    }
+    if (await Property.exists({ parentBuilding: property._id })) {
+      return res.status(400).json({ error: 'This building contains sub-properties that must be removed first' });
+    }
+    if (await hasLiveAuction(property._id)) {
+      return res.status(400).json({ error: 'Property is in an auction and cannot be demolished' });
+    }
+
+    const user = await User.findById(req.user._id);
+    const currentTick = await getTickNumber();
+    const demolitionCost = calculateDemolitionCost(property.currentPrice);
+    const demolitionSalvage = calculateDemolitionSalvage(property.currentPrice);
+    const net = demolitionSalvage - demolitionCost;
+
+    const city = property.cityId;
+
+    let claimed = null;
+    await withUserLock(`demolish:${property._id}`, async () => {
+      claimed = await Property.findOneAndUpdate(
+        {
+          _id: property._id,
+          type: { $ne: 'land' },
+          developmentLevel: { $ne: 1 },
+          forSale: false,
+          'redevelopment.status': 'none',
+        },
+        {
+          $set: {
+            type: 'land',
+            developmentLevel: 0,
+            name: `Cleared Land - ${city?.name || 'City'}`,
+            forSale: false,
+            rent: 0,
+            condition: 100,
+            qualityScore: 70,
+            maintenanceLevel: 'none',
+            occupancy: 0,
+            improvements: [],
+            activeImprovement: undefined,
+            upgrades: [],
+            upgradeLevel: 0,
+            rentPerUnit: 0,
+            maxValidatedRentPerUnit: 0,
+            rentPotential: 0,
+            previousMonthRent: 0,
+            'redevelopment.status': 'land',
+            'redevelopment.demolitionCost': demolitionCost,
+            'redevelopment.demolitionSalvage': demolitionSalvage,
+            'redevelopment.previousType': property.type,
+            'redevelopment.demolishedAtTick': currentTick,
+            'redevelopment.startedByUserId': null,
+          },
+          $push: {
+            investmentHistory: {
+              type: 'demolition',
+              amount: demolitionCost,
+              tick: currentTick,
+              description: `Demolished ${property.name}`,
+            },
+          },
+        },
+        { new: true },
+      );
+      if (!claimed) {
+        const err = new Error('This property is no longer demolishable');
+        err.status = 409;
+        throw err;
+      }
+
+      const landValue = calculateClearedLandValue(city, property.location, property.currentPrice);
+      claimed.basePrice = landValue;
+      claimed.currentPrice = landValue;
+      await claimed.save();
+
+      try {
+        await applyDemolitionMoney(claimed, user, demolitionSalvage, demolitionCost);
+      } catch (moneyErr) {
+        await Property.updateOne(
+          { _id: claimed._id },
+          {
+            $set: {
+              type: property.type,
+              developmentLevel: property.developmentLevel,
+              name: property.name,
+              rent: property.rent,
+              condition: property.condition,
+              qualityScore: property.qualityScore,
+              maintenanceLevel: property.maintenanceLevel,
+              occupancy: property.occupancy,
+              improvements: property.improvements,
+              upgrades: property.upgrades,
+              upgradeLevel: property.upgradeLevel,
+              rentPerUnit: property.rentPerUnit,
+              maxValidatedRentPerUnit: property.maxValidatedRentPerUnit,
+              rentPotential: property.rentPotential,
+              previousMonthRent: property.previousMonthRent,
+              basePrice: property.basePrice,
+              currentPrice: property.currentPrice,
+              'redevelopment.status': 'none',
+              'redevelopment.demolitionCost': 0,
+              'redevelopment.demolitionSalvage': 0,
+              'redevelopment.previousType': null,
+            },
+            $pop: { investmentHistory: 1 },
+          },
+        );
+        throw moneyErr;
+      }
+
+      await Transaction.create({
+        propertyId: claimed._id,
+        buyerId: property.companyId ? undefined : user._id,
+        companyId: property.companyId || undefined,
+        price: demolitionCost,
+        type: 'demolition',
+      });
+    });
+
+    const claimedFresh = await Property.findById(claimed._id).populate('cityId');
+
+    const ownerIdStr = claimedFresh.ownerId?.toString?.() || '';
+    if (claimedFresh.companyId) {
+      const company = await RealEstateCompany.findById(claimedFresh.companyId);
+      if (company?.members?.length) {
+        await bulkCreateNotifications(
+          company.members.map((m) => ({
+            userId: m.userId,
+            type: 'system',
+            title: 'Building Demolished',
+            message: `${property.name} was demolished. Salvage $${demolitionSalvage.toLocaleString()} (cost $${demolitionCost.toLocaleString()}).`,
+            eventKey: `redevelopment:${claimed._id}:demolished:${m.userId}`,
+            route: `/property/${claimed._id}`,
+            entityType: 'property',
+            entityId: claimed._id,
+            relatedId: claimed._id,
+            global: false,
+          })),
+        );
+      }
+    } else if (ownerIdStr) {
+      await enqueueNotification({
+        userId: ownerIdStr,
+        type: 'system',
+        title: 'Building Demolished',
+        message: `${property.name} was demolished. Salvage $${demolitionSalvage.toLocaleString()} (cost $${demolitionCost.toLocaleString()}).`,
+        eventKey: `redevelopment:${claimed._id}:demolished`,
+        route: `/property/${claimed._id}`,
+        entityType: 'property',
+        entityId: claimed._id,
+        relatedId: claimed._id,
+        global: false,
+      });
+    }
+
+    if (ownerIdStr) {
+      await User.updateOne(
+        { _id: ownerIdStr },
+        { $inc: { 'lifetimeStats.totalDemolitions': 1, 'lifetimeStats.totalTransactions': 1 } },
+      );
+      await processPlayerProgress(ownerIdStr, 'property_demolish', { skipXp: true });
+    }
+
+    await Promise.all([
+      invalidateProperty(claimed._id).catch(() => {}),
+      invalidateUser(ownerIdStr).catch(() => {}),
+      onDevelopmentStarted(ownerIdStr, claimedFresh.companyId).catch(() => {}),
+    ]);
+
+    const freshUser = await User.findById(user._id);
+
+    res.json({
+      property: claimedFresh,
+      status: 'land',
+      landValue: claimedFresh.currentPrice,
+      netProceeds: net,
+      balance: freshUser ? freshUser.balance : user.balance,
+    });
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    res.serverError(err);
+  }
+});
+
+/**
+ * Start redevelopment on a cleared plot (land). The construction is
+ * tick-scheduled (completionTick = start + constructionPeriods) and finalized
+ * server-side by the tick engine or the lazy status hook. Owner pays from
+ * their wallet; company properties are charged to the company treasury.
+ */
+router.post('/:id/redevelop', authenticate, async (req, res) => {
+  try {
+    const { projectType } = req.body;
+    const property = await Property.findById(req.params.id).populate('cityId');
+    if (!property) return res.status(404).json({ error: 'Property not found' });
+    if (!(await isAuthorizedForProperty(property, req.user._id))) {
+      return res.status(403).json({ error: 'You do not own this property' });
+    }
+    if (property.type !== 'land') return res.status(400).json({ error: 'Only cleared land can be redeveloped' });
+    if (property.redevelopment?.status !== 'land') {
+      return res.status(400).json({ error: 'This land is not cleared for redevelopment' });
+    }
+    if (property.developmentLevel !== 0) {
+      return res.status(400).json({ error: 'This land already has a building' });
+    }
+    if (property.forSale) return res.status(400).json({ error: 'Land is listed for sale' });
+    if (await hasLiveAuction(property._id)) {
+      return res.status(400).json({ error: 'Land is in an auction and cannot be redeveloped' });
+    }
+
+    const allProjects = getAllProjects();
+    const project = allProjects.find((p) => p.id === projectType);
+    if (!project) return res.status(400).json({ error: 'Invalid project type' });
+
+    if (property.size && property.size < project.minLandSize) {
+      return res.status(400).json({
+        error: `Land too small. Minimum size required: ${project.minLandSize} sq ft`,
+      });
+    }
+
+    const user = await User.findById(req.user._id);
+    const currentTick = await getTickNumber();
+    const constructionCost = calculateProjectCost(project, property.cityId, property.location);
+
+    if (!property.companyId && user.balance < constructionCost) {
+      return res.status(400).json({
+        error: `Insufficient funds. Required: $${constructionCost.toLocaleString()}`,
+        required: constructionCost,
+        balance: user.balance,
+      });
+    }
+
+    let claimed = null;
+    await withUserLock(`redevelop:${property._id}`, async () => {
+      claimed = await Property.findOneAndUpdate(
+        {
+          _id: property._id,
+          type: 'land',
+          developmentLevel: 0,
+          forSale: false,
+          'redevelopment.status': 'land',
+        },
+        {
+          $set: {
+            developmentLevel: 1,
+            forSale: false,
+            'redevelopment.status': REDEVELOPING_STATUS,
+            'redevelopment.startedByUserId': user._id,
+            'redevelopment.startedAt': new Date(),
+            'redevelopment.startedTick': currentTick,
+            'redevelopment.completionTick': currentTick + project.constructionPeriods,
+            'redevelopment.projectType': project.id,
+            'redevelopment.projectName': project.name,
+            'redevelopment.constructionCost': constructionCost,
+            'redevelopment.constructionPeriods': project.constructionPeriods,
+          },
+          $push: {
+            investmentHistory: {
+              type: 'redevelopment',
+              amount: constructionCost,
+              tick: currentTick,
+              description: `Redevelopment: ${project.name}`,
+            },
+          },
+        },
+        { new: true },
+      );
+      if (!claimed) {
+        const err = new Error('This land is no longer available for redevelopment');
+        err.status = 409;
+        throw err;
+      }
+
+      try {
+        if (property.companyId) {
+          const company = await RealEstateCompany.findById(property.companyId);
+          if (!company) {
+            const err = new Error('Company not found');
+            err.status = 404;
+            throw err;
+          }
+          if (company.treasury.balance < constructionCost) {
+            const err = new Error(
+              `Insufficient treasury. Required: $${constructionCost.toLocaleString()}, Balance: $${company.treasury.balance.toLocaleString()}`,
+            );
+            err.status = 400;
+            throw err;
+          }
+          company.treasury.balance -= constructionCost;
+          addTreasuryTransaction(company, { type: 'redevelopment', amount: constructionCost }, currentTick);
+          await company.save();
+        } else {
+          const debited = await debitUserBalance(user._id, constructionCost);
+          if (!debited) {
+            const err = new Error('Insufficient balance');
+            err.status = 400;
+            throw err;
+          }
+        }
+      } catch (moneyErr) {
+        await Property.updateOne(
+          { _id: claimed._id },
+          {
+            $set: {
+              developmentLevel: 0,
+              'redevelopment.status': 'land',
+              'redevelopment.startedByUserId': null,
+              'redevelopment.startedAt': null,
+              'redevelopment.startedTick': 0,
+              'redevelopment.completionTick': 0,
+              'redevelopment.projectType': null,
+              'redevelopment.projectName': null,
+              'redevelopment.constructionCost': 0,
+              'redevelopment.constructionPeriods': 0,
+            },
+            $pop: { investmentHistory: 1 },
+          },
+        );
+        throw moneyErr;
+      }
+
+      await Transaction.create({
+        propertyId: claimed._id,
+        buyerId: property.companyId ? undefined : user._id,
+        companyId: property.companyId || undefined,
+        price: constructionCost,
+        type: 'redevelopment',
+      });
+    });
+
+    const claimedFresh = await Property.findById(claimed._id).populate('cityId');
+    const ownerIdStr = claimedFresh.ownerId?.toString?.() || '';
+
+    if (claimedFresh.companyId) {
+      const company = await RealEstateCompany.findById(claimedFresh.companyId);
+      if (company?.members?.length) {
+        await bulkCreateNotifications(
+          company.members.map((m) => ({
+            userId: m.userId,
+            type: 'system',
+            title: 'Redevelopment Started',
+            message: `Redevelopment of ${project.name} has started (${project.constructionPeriods} ticks).`,
+            eventKey: `redevelopment:${claimed._id}:started:${m.userId}`,
+            route: `/property/${claimed._id}`,
+            entityType: 'property',
+            entityId: claimed._id,
+            relatedId: claimed._id,
+            global: false,
+          })),
+        );
+      }
+    } else if (ownerIdStr) {
+      await enqueueNotification({
+        userId: ownerIdStr,
+        type: 'system',
+        title: 'Redevelopment Started',
+        message: `${project.name} will be completed in ${project.constructionPeriods} ticks (${project.constructionPeriods * 6} hours).`,
+        eventKey: `redevelopment:${claimed._id}:started`,
+        route: `/property/${claimed._id}`,
+        entityType: 'property',
+        entityId: claimed._id,
+        relatedId: claimed._id,
+        global: false,
+      });
+    }
+
+    if (ownerIdStr) {
+      await User.updateOne(
+        { _id: ownerIdStr },
+        { $inc: { 'lifetimeStats.totalTransactions': 1, 'lifetimeStats.totalConstructionStarted': 1 } },
+      );
+      await processPlayerProgress(ownerIdStr, 'construction_start', { skipXp: true });
+    }
+
+    await Promise.all([
+      invalidateProperty(claimed._id).catch(() => {}),
+      onDevelopmentStarted(ownerIdStr, claimedFresh.companyId).catch(() => {}),
+    ]);
+
+    const freshUser = await User.findById(user._id);
+
+    res.status(201).json({
+      property: claimedFresh,
+      status: REDEVELOPING_STATUS,
+      completionTick: claimedFresh.redevelopment.completionTick,
+      balance: freshUser ? freshUser.balance : user.balance,
+    });
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
     res.serverError(err);
   }
 });

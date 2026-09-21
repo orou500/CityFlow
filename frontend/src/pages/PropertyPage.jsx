@@ -12,6 +12,7 @@ import PropertyImage from '../components/PropertyImage';
 import RentInfoPanel from '../components/RentInfoPanel';
 import ConfirmDialog from '../components/ConfirmDialog';
 import ConstructionTimeRemaining from '../components/ConstructionTimeRemaining';
+import RedevelopmentPanel from '../components/RedevelopmentPanel';
 import { getApiBaseUrl } from '../utils/capacitor';
 
 const API = getApiBaseUrl();
@@ -870,6 +871,18 @@ export default function PropertyPage() {
                 })()}
               </div>
             </div>
+          )}
+
+          {hasManageAccess && (
+            <RedevelopmentPanel
+              property={property}
+              hasManageAccess={hasManageAccess}
+              onMutated={async () => {
+                await load();
+                await fetchMe();
+                await fetchUserData();
+              }}
+            />
           )}
 
           {hasManageAccess && managementData && property?.type !== 'land' && (

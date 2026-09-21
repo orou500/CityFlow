@@ -99,6 +99,10 @@ async function evaluateAchievementCondition(user, condition) {
       return userData.lifetimeStats?.totalLoansTaken || 0;
     case 'total_construction_completed':
       return await ConstructionProject.countDocuments({ ownerId: userId, status: 'completed' });
+    case 'demolitions_completed':
+      return userData.lifetimeStats?.totalDemolitions || 0;
+    case 'redevelopments_completed':
+      return userData.lifetimeStats?.totalRedevelopments || 0;
     case 'unique_cities': {
       const cities = await Property.distinct('cityId', { ownerId: userId });
       return cities.length;

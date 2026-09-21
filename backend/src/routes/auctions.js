@@ -424,6 +424,13 @@ router.post(
         return res.status(403).json({ success: false, error: 'You do not own this property' });
       }
 
+      if (property.redevelopment?.status === 'redeveloping') {
+        return res.status(400).json({
+          success: false,
+          error: 'Property is being redeveloped and cannot be auctioned',
+        });
+      }
+
       const existingAuction = await Auction.findOne({
         propertyId,
         status: { $in: ['upcoming', 'active'] },

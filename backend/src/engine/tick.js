@@ -10,6 +10,7 @@ import { balanceMarket } from './marketBalancing.js';
 import { generateProperties } from './propertyGeneration.js';
 import { generateEvents, tickEvents } from './events.js';
 import { processConstruction } from './constructionProcessing.js';
+import { processRedevelopments } from './redevelopmentProcessing.js';
 import { processImprovements } from './improvementProcessing.js';
 import { processPropertyRisks } from './propertyRisk.js';
 import { processPropertyManagement } from './propertyManagement.js';
@@ -111,6 +112,8 @@ export async function executeTick() {
 
     const constructionResults = await processConstruction();
 
+    const redevelopmentResults = await processRedevelopments();
+
     const improvementResults = await processImprovements();
 
     const riskResults = await processPropertyRisks(tickNumber);
@@ -124,7 +127,8 @@ export async function executeTick() {
     if (
       newEvents.length > 0 ||
       constructionResults.some((r) => r.status === 'completed') ||
-      improvementResults.some((r) => r.status === 'completed')
+      improvementResults.some((r) => r.status === 'completed') ||
+      redevelopmentResults.some((r) => r.status === 'completed')
     ) {
       const fields = [];
       if (newEvents.length > 0) {
@@ -133,6 +137,10 @@ export async function executeTick() {
       const completedConstruction = constructionResults.filter((r) => r.status === 'completed').length;
       if (completedConstruction > 0) {
         fields.push({ name: 'Construction Complete', value: String(completedConstruction), inline: true });
+      }
+      const completedRedevelopments = redevelopmentResults.filter((r) => r.status === 'completed').length;
+      if (completedRedevelopments > 0) {
+        fields.push({ name: 'Redevelopments Complete', value: String(completedRedevelopments), inline: true });
       }
       const completedImprovements = improvementResults.filter((r) => r.status === 'completed').length;
       if (completedImprovements > 0) {
@@ -234,6 +242,7 @@ export async function executeTick() {
     console.log(`  Credit scores updated: ${creditResults.length}`);
     console.log(`  New properties generated: ${propertyGeneration.reduce((s, r) => s + r.generated, 0)}`);
     console.log(`  Construction: ${constructionResults.length}, Improvements: ${improvementResults.length}`);
+    console.log(`  Redevelopments: ${redevelopmentResults.length}`);
     console.log(`  Company rent/loans: ${companyRentResults.length}/${companyLoanResults.length}`);
     console.log(`  Personal assistant payroll: ${assistantPayrollResults.length} charged`);
     console.log(`  Company level ups: ${companyLevelUps}, Treasury pruned: ${prunedTransactions}`);

@@ -150,7 +150,7 @@ export function getNotificationMeta(eventKey = '', type = 'system') {
   } else if (key.startsWith('property:')) {
     category = CATEGORY.PROPERTY;
     priority = PRIORITY.MEDIUM;
-  } else if (key.startsWith('construction:') || key.startsWith('improvement:')) {
+  } else if (key.startsWith('construction:') || key.startsWith('improvement:') || key.startsWith('redevelopment:')) {
     category = CATEGORY.PROPERTY;
     priority = PRIORITY.HIGH;
   } else if (key.startsWith('loan:')) {

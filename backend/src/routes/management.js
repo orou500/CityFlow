@@ -186,6 +186,10 @@ router.post('/:propertyId/rent', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
+    if (property.redevelopment?.status === 'redeveloping') {
+      return res.status(400).json({ error: 'Property is being redeveloped' });
+    }
+
     const gameState = await GameState.findOne({ key: 'global' });
     const currentTick = gameState?.tickNumber || 0;
 
@@ -246,6 +250,10 @@ router.post('/:propertyId/maintenance', authenticate, async (req, res) => {
 
     if (!(await isAuthorizedForProperty(property, req.user._id))) {
       return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    if (property.redevelopment?.status === 'redeveloping') {
+      return res.status(400).json({ error: 'Property is being redeveloped' });
     }
 
     property.maintenanceLevel = level;

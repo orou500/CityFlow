@@ -29,6 +29,8 @@ const treasuryTransactionSchema = new mongoose.Schema(
         'property_purchase',
         'property_sale',
         'construction',
+        'demolition',
+        'redevelopment',
         'operating_fee',
         'contract_reward',
         'investment_return',

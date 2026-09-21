@@ -115,6 +115,11 @@ const userSchema = new mongoose.Schema(
       totalSeasonsCompleted: { type: Number, default: 0 },
       totalRentCollected: { type: Number, default: 0 },
       stockProfit: { type: Number, default: 0 },
+      // Demolition & redevelopment counters. Incremented atomically by the
+      // server inside the same write path that performs the action; feeds the
+      // demolition/redevelopment achievements (server-authoritative).
+      totalDemolitions: { type: Number, default: 0 },
+      totalRedevelopments: { type: Number, default: 0 },
     },
     supporter: {
       badge: { type: String, enum: ['none', 'supporter', 'early_supporter', 'founding_supporter'], default: 'none' },

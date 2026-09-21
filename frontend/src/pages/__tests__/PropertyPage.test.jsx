@@ -99,6 +99,9 @@ vi.mock('../../components/RiskDashboard', () => ({
 vi.mock('../../components/CompactValue', () => ({
   default: () => null,
 }));
+vi.mock('../../components/RedevelopmentPanel', () => ({
+  default: () => null,
+}));
 
 import PropertyPage from '../PropertyPage';
 

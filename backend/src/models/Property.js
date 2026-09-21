@@ -122,13 +122,41 @@ const propertySchema = new mongoose.Schema(
     ],
     investmentHistory: [
       {
-        type: { type: String, enum: ['purchase', 'upgrade', 'improvement', 'grade_upgrade', 'construction'] },
+        type: {
+          type: String,
+          enum: ['purchase', 'upgrade', 'improvement', 'grade_upgrade', 'construction', 'demolition', 'redevelopment'],
+        },
         amount: { type: Number, required: true },
         tick: { type: Number },
         description: { type: String },
       },
     ],
     intrinsicValue: { type: Number, default: 0 },
+
+    // Property Demolition & Redevelopment lifecycle. `none` is the default for
+    // a normal property. A demolished building becomes `land` (cleared plot,
+    // type=land, developmentLevel=0); when the owner picks a project it flips
+    // to `redeveloping` (type=land, developmentLevel=1) until the completion
+    // tick arrives, at which point the tick engine / lazy finalizer rebuilds
+    // the building. Safe defaults keep pre-existing documents untouched.
+    redevelopment: {
+      status: { type: String, enum: ['none', 'land', 'redeveloping'], default: 'none' },
+      demolitionCost: { type: Number, default: 0 },
+      demolitionSalvage: { type: Number, default: 0 },
+      previousType: { type: String, default: null },
+      demolishedAtTick: { type: Number, default: 0 },
+      startedByUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+      startedAt: { type: Date, default: null },
+      startedTick: { type: Number, default: 0 },
+      completionTick: { type: Number, default: 0 },
+      completedAt: { type: Date, default: null },
+      completedTick: { type: Number, default: 0 },
+      projectType: { type: String, default: null },
+      projectName: { type: String, default: null },
+      constructionCost: { type: Number, default: 0 },
+      constructionPeriods: { type: Number, default: 0 },
+      completedCount: { type: Number, default: 0 },
+    },
 
     riskScore: { type: Number, default: 20, min: 0, max: 100 },
     hazards: [
@@ -174,6 +202,7 @@ propertySchema.index({ districtId: 1 });
 propertySchema.index({ type: 1 });
 propertySchema.index({ forSale: 1 });
 propertySchema.index({ name: 1 });
+propertySchema.index({ 'redevelopment.status': 1, 'redevelopment.completionTick': 1 });
 propertySchema.index({ createdAt: -1 });
 
 propertySchema.set('toJSON', {
