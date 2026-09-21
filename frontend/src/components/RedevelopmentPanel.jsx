@@ -122,6 +122,48 @@ export default function RedevelopmentPanel({ property, hasManageAccess, onMutate
     </p>
   );
 
+  const demolishDialogBody =
+    status.status === 'none' ? (
+      <div className="space-y-3 text-sm">
+        {property?.name ? (
+          <p className="font-semibold text-gray-900 dark:text-white break-words">{property.name}</p>
+        ) : null}
+
+        <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t('redevelopment.landRemaining')}</p>
+          {status.landSize != null && status.landSize > 0 ? (
+            <p className="font-semibold text-gray-900 dark:text-white break-words">
+              {t('redevelopment.availableArea')}: {formatCompact(status.landSize)} {t('development.sqft')}
+            </p>
+          ) : (
+            <p className="text-sm text-gray-400 dark:text-gray-500">{t('redevelopment.landUnknown')}</p>
+          )}
+        </div>
+
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
+            <p className="text-xs text-gray-500 dark:text-gray-400">{t('redevelopment.demolitionCost')}</p>
+            <p className="font-semibold text-red-500 break-words">{formatMoney(status.demolitionCost)}</p>
+          </div>
+          <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
+            <p className="text-xs text-gray-500 dark:text-gray-400">{t('redevelopment.salvage')}</p>
+            <p className="font-semibold text-green-600 dark:text-green-400 break-words">
+              {formatMoney(status.demolitionSalvage)}
+            </p>
+          </div>
+          <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded min-w-0">
+            <p className="text-xs text-gray-500 dark:text-gray-400">{t('redevelopment.netProceeds')}</p>
+            <p
+              className={`font-semibold break-words ${status.netProceeds >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}
+            >
+              {status.netProceeds >= 0 ? '+' : ''}
+              {formatMoney(status.netProceeds)}
+            </p>
+          </div>
+        </div>
+      </div>
+    ) : null;
+
   return (
     <div className="bg-white dark:bg-gray-900 rounded-lg p-6">
       {heading}
@@ -267,16 +309,15 @@ export default function RedevelopmentPanel({ property, hasManageAccess, onMutate
       <ConfirmDialog
         open={confirmDemolish}
         title={t('redevelopment.demolishConfirmTitle')}
-        message={t('redevelopment.demolishConfirmMessage', {
-          cost: formatMoney(status.demolitionCost),
-          salvage: formatMoney(status.demolitionSalvage),
-        })}
-        confirmLabel={t('redevelopment.demolish')}
+        message={t('redevelopment.demolishConfirmMessage')}
+        confirmLabel={t('redevelopment.demolishConfirmAction')}
         cancelLabel={t('common.cancel')}
         onConfirm={handleDemolish}
         onCancel={() => setConfirmDemolish(false)}
         loading={demolishLoading}
-      />
+      >
+        {demolishDialogBody}
+      </ConfirmDialog>
 
       <ConfirmDialog
         open={!!confirmProject}

@@ -11,6 +11,7 @@ export default function ConfirmDialog({
   onCancel,
   destructive = true,
   loading = false,
+  children,
 }) {
   const { t, i18n } = useTranslation();
 
@@ -38,10 +39,11 @@ export default function ConfirmDialog({
         if (e.target === e.currentTarget) onCancel();
       }}
     >
-      <div className="w-full max-w-sm bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 sm:p-6 shadow-xl">
+      <div className="w-full max-w-sm bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 sm:p-6 shadow-xl max-h-[85vh] overflow-y-auto">
         <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-2">{title}</h3>
-        {message && <p className="text-sm text-gray-500 dark:text-gray-400 mb-5 leading-relaxed">{message}</p>}
-        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+        {message && <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{message}</p>}
+        {children}
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-5">
           <button
             type="button"
             onClick={onCancel}

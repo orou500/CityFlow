@@ -700,6 +700,11 @@ router.get('/:id/redevelopment/status', authenticate, async (req, res) => {
       demolitionSalvage,
       netProceeds: demolitionSalvage - demolitionCost,
       buildingValue: property.currentPrice,
+      // Demolition preserves the entire plot (the demolish $set never touches
+      // `size`), so the cleared land keeps the property's current plot size.
+      // `null` when the property has no recorded size — the UI must not
+      // fabricate an area in that case.
+      landSize: property.size ?? null,
     });
   } catch (err) {
     res.serverError(err);

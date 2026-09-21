@@ -66,6 +66,18 @@ describe('Property Demolition & Redevelopment', () => {
       expect(res.body.demolitionCost).toBeGreaterThan(0);
       expect(res.body.demolitionSalvage).toBeGreaterThan(0);
       expect(res.body.demolitionSalvage).toBeLessThan(property.currentPrice);
+      // Properties without a recorded size surface a null landSize so the UI
+      // never fabricates an area (buildings are generated without `size`).
+      expect(res.body.landSize).toBeNull();
+    });
+
+    it('exposes the preserved plot size in the demolition quote', async () => {
+      const { token, property } = await createOwnedBuilding(city, {
+        property: { size: 20000 },
+      });
+      const res = await request(app).get(`/properties/${property._id}/redevelopment/status`).set(authHeader(token));
+      expect(res.status).toBe(200);
+      expect(res.body.landSize).toBe(20000);
     });
 
     it('flags a for-sale property as ineligible for demolition', async () => {
@@ -107,6 +119,18 @@ describe('Property Demolition & Redevelopment', () => {
 
       const notif = await Notification.findOne({ eventKey: `redevelopment:${property._id}:demolished` });
       expect(notif).toBeTruthy();
+    });
+
+    it('preserves the entire plot size when demolishing', async () => {
+      const { token, property } = await createOwnedBuilding(city, {
+        property: { size: 20000 },
+      });
+      const res = await request(app).post(`/properties/${property._id}/demolish`).set(authHeader(token));
+      expect(res.status).toBe(200);
+
+      const refreshed = await Property.findById(property._id);
+      expect(refreshed.type).toBe('land');
+      expect(refreshed.size).toBe(20000);
     });
 
     it('enforces land + net cash <= building value (no net-worth exploit)', async () => {
