@@ -5,6 +5,15 @@ import '@testing-library/jest-dom/vitest';
 
 const languageState = vi.hoisted(() => ({ language: 'en' }));
 
+const authState = vi.hoisted(() => ({ user: { _id: 'u1', balance: 5000 }, fetchMe: vi.fn() }));
+
+vi.mock('../../store/useAuthStore', () => ({
+  useAuthStore: Object.assign((selector) => (selector ? selector(authState) : authState), {
+    getState: () => authState,
+  }),
+  __esModule: true,
+}));
+
 const DICT = vi.hoisted(() => ({
   en: {
     'common.loading': 'Loading...',
@@ -138,6 +147,10 @@ function routeFetch(overrides = {}) {
       );
     if (path.endsWith('/stocks/public/events/c1'))
       return jsonResponse(overrides.publicEvents ?? overrides.events ?? []);
+    if (path.endsWith('/stocks/sell') && options.method === 'POST')
+      return jsonResponse(overrides.sell ?? { success: true, balance: 4329933.36 });
+    if (path.endsWith('/stocks/buy') && options.method === 'POST')
+      return jsonResponse(overrides.buy ?? { success: true, balance: 1000 });
     return jsonResponse({ error: 'not found' }, false, 404);
   });
 }
@@ -271,5 +284,45 @@ describe('CompanyPage (stock company) — no React error #310 (Rendered fewer ho
     const toggle = screen.getByRole('button', { name: /How is this calculated/ });
     fireEvent.click(toggle);
     expect(screen.getByText('Quarterly dividends')).toBeInTheDocument();
+  });
+
+  it('refreshes the authenticated user (balance) after a successful sell', async () => {
+    const fetchMock = routeFetch();
+    globalThis.fetch = fetchMock;
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText('Vertex Financials')).toBeInTheDocument());
+    expect(authState.fetchMe).not.toHaveBeenCalled();
+
+    const sellInput = screen.getAllByRole('spinbutton')[1];
+    fireEvent.change(sellInput, { target: { value: '5' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sell' }));
+
+    await waitFor(() => expect(authState.fetchMe).toHaveBeenCalledTimes(1));
+
+    const sellCall = fetchMock.mock.calls.find(([url, opts]) => String(url).endsWith('/stocks/sell'));
+    expect(sellCall).toBeTruthy();
+    expect(sellCall[1].method).toBe('POST');
+    expect(JSON.parse(sellCall[1].body)).toEqual({ companyId: 'c1', shares: 5 });
+  });
+
+  it('refreshes the authenticated user (balance) after a successful buy', async () => {
+    const fetchMock = routeFetch();
+    globalThis.fetch = fetchMock;
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText('Vertex Financials')).toBeInTheDocument());
+    expect(authState.fetchMe).not.toHaveBeenCalled();
+
+    const buyInput = screen.getAllByRole('spinbutton')[0];
+    fireEvent.change(buyInput, { target: { value: '10' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Buy' }));
+
+    await waitFor(() => expect(authState.fetchMe).toHaveBeenCalledTimes(1));
+
+    const buyCall = fetchMock.mock.calls.find(([url, opts]) => String(url).endsWith('/stocks/buy'));
+    expect(buyCall).toBeTruthy();
+    expect(buyCall[1].method).toBe('POST');
+    expect(JSON.parse(buyCall[1].body)).toEqual({ companyId: 'c1', shares: 10 });
   });
 });

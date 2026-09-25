@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { formatMoney, formatMoneyExact, formatCompact, formatCount } from '../utils/format';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { getApiBaseUrl } from '../utils/capacitor';
+import { useAuthStore } from '../store/useAuthStore';
 
 const API = getApiBaseUrl();
 
@@ -31,6 +32,7 @@ const INDUSTRY_ICONS = {
 export default function CompanyPage() {
   const { id } = useParams();
   const { t } = useTranslation();
+  const fetchMe = useAuthStore((s) => s.fetchMe);
   const [company, setCompany] = useState(null);
   const [history, setHistory] = useState([]);
   const [events, setEvents] = useState([]);
@@ -82,6 +84,7 @@ export default function CompanyPage() {
         body: JSON.stringify({ companyId: id, shares: numShares }),
       });
       setBuyShares('');
+      fetchMe();
       loadCompany();
     } catch (e) {
       alert(e.message);
@@ -99,6 +102,7 @@ export default function CompanyPage() {
         body: JSON.stringify({ companyId: id, shares: numShares }),
       });
       setSellShares('');
+      fetchMe();
       loadCompany();
     } catch (e) {
       alert(e.message);

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { formatMoney, formatMoneyExact, formatPrice, formatCount } from '../utils/format';
 import { getApiBaseUrl } from '../utils/capacitor';
+import { useAuthStore } from '../store/useAuthStore';
 
 const API = getApiBaseUrl();
 
@@ -27,6 +28,7 @@ async function apiPost(path, body) {
 
 export default function StockPortfolio() {
   const { t } = useTranslation();
+  const fetchMe = useAuthStore((s) => s.fetchMe);
   const [stockPortfolio, setStockPortfolio] = useState(null);
   const [indexPortfolio, setIndexPortfolio] = useState(null);
   const [stockTransactions, setStockTransactions] = useState([]);
@@ -68,12 +70,13 @@ export default function StockPortfolio() {
       const result = await apiPost('/stocks/dividends/claim', {});
       setClaimResult({ success: true, totalClaimed: result.totalClaimed });
       setDividends({ dividends: [], totalUnclaimed: 0 });
+      fetchMe();
       loadData();
     } catch (e) {
       setClaimResult({ success: false, error: e.message });
     }
     setClaiming(false);
-  }, []);
+  }, [fetchMe]);
 
   if (loading) {
     return (
